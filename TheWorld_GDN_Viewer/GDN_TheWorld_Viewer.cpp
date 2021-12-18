@@ -10,18 +10,21 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("_input", &GDN_TheWorld_Viewer::_input);
 
 	register_method("debug_print", &GDN_TheWorld_Viewer::debugPrint);
-	register_method("hello", &GDN_TheWorld_Viewer::hello);
 	register_method("set_debug_enabled", &GDN_TheWorld_Viewer::setDebugEnabled);
 	register_method("is_debug_enabled", &GDN_TheWorld_Viewer::isDebugEnabled);
+	register_method("globals", &GDN_TheWorld_Viewer::Globals);
+	register_method("destroy", &GDN_TheWorld_Viewer::destroy);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_isDebugEnabled = false;
+	m_globals = GDN_TheWorld_Globals::_new();
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
 {
+	destroy();
 }
 
 void GDN_TheWorld_Viewer::_init(void)
@@ -43,4 +46,13 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Godot::print("GD_ClientApp::_process");
+}
+
+void GDN_TheWorld_Viewer::destroy(void)
+{
+	if (m_globals)
+	{
+		m_globals->call_deferred("free");
+		m_globals = NULL;
+	}
 }

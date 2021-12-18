@@ -4,18 +4,16 @@
 #include <Reference.hpp>
 #include <InputEvent.hpp>
 
-#include "GDN_TheWorld_Globals.h"
-
 namespace godot
 {
 
-	class GDN_TheWorld_Viewer : public Node
+	class GDN_Template : public Node
 	{
-		GODOT_CLASS(GDN_TheWorld_Viewer, Node)
+		GODOT_CLASS(GDN_Template, Node)
 
 	public:
-		GDN_TheWorld_Viewer();
-		~GDN_TheWorld_Viewer();
+		GDN_Template();
+		~GDN_Template();
 
 		static void _register_methods();
 
@@ -27,16 +25,17 @@ namespace godot
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
 
+		//
+		// Test
+		//
 		void debugPrint(String message) { if (m_isDebugEnabled) Godot::print(message); }
+		String hello(String target1, String target2, int target3) { return String("Test, {0} {1} {2}!").format(Array::make(target1, target2, target3)); };
+
 		bool isDebugEnabled(void) { return m_isDebugEnabled; }
 		void setDebugEnabled(bool b = true) { m_isDebugEnabled = b; }
-		void destroy(void);
-	
-		Node* Globals(void) { return m_globals; }
-	
+
 	private:
 		bool m_isDebugEnabled;
-		GDN_TheWorld_Globals* m_globals;
 	};
 
 }
