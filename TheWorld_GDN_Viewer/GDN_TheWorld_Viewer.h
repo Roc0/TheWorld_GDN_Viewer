@@ -22,8 +22,8 @@ namespace godot
 		//
 		// Godot Standard Functions
 		//
-		void _init(); // our initializer called by Godot
-		void _ready();
+		void _init(void); // our initializer called by Godot
+		void _ready(void);
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
 

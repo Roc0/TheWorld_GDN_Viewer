@@ -29,7 +29,7 @@ void GDN_Template::_init(void)
 	//Godot::print("GD_ClientApp::Init");
 }
 
-void GDN_Template::_ready()
+void GDN_Template::_ready(void)
 {
 	//Godot::print("GD_ClientApp::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");

@@ -4,7 +4,11 @@
 #include <Reference.hpp>
 #include <InputEvent.hpp>
 
-#define THEWORLD_CHUNK_SIZE	32
+#include <MapManager.h>
+
+#define THEWORLD_CHUNK_SIZE_SHIFT				5
+#define THEWORLD_BITMAP_RESOLUTION_SHIFT		10
+
 
 namespace godot
 {
@@ -14,23 +18,70 @@ namespace godot
 		GODOT_CLASS(GDN_TheWorld_Globals, Node)
 
 	public:
-		GDN_TheWorld_Globals();
-		~GDN_TheWorld_Globals();
+		GDN_TheWorld_Globals()
+		{
+			m_mapManager = new TheWorld_MapManager::MapManager();
+			m_mapManager->instrument(true);
+			m_mapManager->debugMode(true);
 
-		static void _register_methods();
+			m_numVerticesPerChuckSide = 1 << THEWORLD_CHUNK_SIZE_SHIFT;
+			m_bitmapResolution = 1 << THEWORLD_BITMAP_RESOLUTION_SHIFT;
+			m_lodMaxDepth = THEWORLD_BITMAP_RESOLUTION_SHIFT - THEWORLD_CHUNK_SIZE_SHIFT;
+			m_numLods = m_lodMaxDepth + 1;
+		}
+
+		~GDN_TheWorld_Globals()
+		{
+			delete m_mapManager;
+		};
+
+		static void _register_methods()
+		{
+			register_method("_ready", &GDN_TheWorld_Globals::_ready);
+			register_method("_process", &GDN_TheWorld_Globals::_process);
+			register_method("_input", &GDN_TheWorld_Globals::_input);
+
+			register_method("get_num_vertices_per_chunk_side", &GDN_TheWorld_Globals::numVerticesPerChuckSide);
+			register_method("get_bitmap_resolution", &GDN_TheWorld_Globals::bitmapResolution);
+			register_method("get_lod_max_depth", &GDN_TheWorld_Globals::lodMaxDepth);
+			register_method("get_num_lods", &GDN_TheWorld_Globals::numLods);
+			register_method("get_chunks_per_bitmap_side", &GDN_TheWorld_Globals::numChunksPerBitmapSide);
+			register_method("get_grid_step_in_wu", &GDN_TheWorld_Globals::gridStepInWU);
+		}
 
 		//
 		// Godot Standard Functions
 		//
-		void _init(); // our initializer called by Godot
-		void _ready();
+		void _init(void); // our initializer called by Godot
+		void _ready(void);
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
 
-		int chuckSize(void) { return m_chunkSize; }
+		TheWorld_MapManager::MapManager* mapManager(void) { return m_mapManager; };
+
+		int numVerticesPerChuckSide(void) { return m_numVerticesPerChuckSide; }					// Chunk num vertices -1
+		int bitmapResolution(void) { return m_bitmapResolution; }	// Resolution of the bitmap = num point of the bitmap -1;
+		int lodMaxDepth(void) {	return m_lodMaxDepth; }
+		int numLods(void) { return m_numLods; }
+		int numChunksPerBitmapSide(int lod)
+		{
+			if (lod < 0 || lod > lodMaxDepth())
+				return -1;
+			return (bitmapResolution() / numVerticesPerChuckSide()) >> lod;
+		}
+		float gridStepInWU(int lod)
+		{
+			if (lod < 0 || lod > lodMaxDepth())
+				return -1;
+			return (bitmapResolution() / (numChunksPerBitmapSide(lod) * (numVerticesPerChuckSide()))) * m_mapManager->gridStepInWU();
+		}
 
 	private:
-		int m_chunkSize;	// Chunk num vertices
+		int m_numVerticesPerChuckSide;
+		int m_bitmapResolution;
+		int m_lodMaxDepth;
+		int m_numLods;
+		TheWorld_MapManager::MapManager *m_mapManager;
 	};
 
 }

@@ -127,14 +127,14 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgodot-cpp.windows.debug.64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\bin;$(SolutionDir)x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libgodot-cpp.windows.debug.64.lib;TheWorld_MapManager_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -147,7 +147,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -155,8 +155,8 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\bin;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgodot-cpp.windows.release.64.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\bin;$(SolutionDir)x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>libgodot-cpp.windows.release.64.lib;TheWorld_MapManager.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
