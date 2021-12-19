@@ -9,31 +9,18 @@
 #define THEWORLD_CHUNK_SIZE_SHIFT				5
 #define THEWORLD_BITMAP_RESOLUTION_SHIFT		10
 
-
 namespace godot
 {
+
+	class TheWorld_MapManager::MapManager;
 
 	class GDN_TheWorld_Globals : public Node
 	{
 		GODOT_CLASS(GDN_TheWorld_Globals, Node)
 
 	public:
-		GDN_TheWorld_Globals()
-		{
-			m_mapManager = new TheWorld_MapManager::MapManager();
-			m_mapManager->instrument(true);
-			m_mapManager->debugMode(true);
-
-			m_numVerticesPerChuckSide = 1 << THEWORLD_CHUNK_SIZE_SHIFT;
-			m_bitmapResolution = 1 << THEWORLD_BITMAP_RESOLUTION_SHIFT;
-			m_lodMaxDepth = THEWORLD_BITMAP_RESOLUTION_SHIFT - THEWORLD_CHUNK_SIZE_SHIFT;
-			m_numLods = m_lodMaxDepth + 1;
-		}
-
-		~GDN_TheWorld_Globals()
-		{
-			delete m_mapManager;
-		};
+		GDN_TheWorld_Globals();
+		~GDN_TheWorld_Globals();
 
 		static void _register_methods()
 		{
@@ -46,7 +33,7 @@ namespace godot
 			register_method("get_lod_max_depth", &GDN_TheWorld_Globals::lodMaxDepth);
 			register_method("get_num_lods", &GDN_TheWorld_Globals::numLods);
 			register_method("get_chunks_per_bitmap_side", &GDN_TheWorld_Globals::numChunksPerBitmapSide);
-			register_method("get_grid_step_in_wu", &GDN_TheWorld_Globals::gridStepInWU);
+			register_method("get_grid_step_in_wu", &GDN_TheWorld_Globals::gridStepInBitmapWU);
 		}
 
 		//
@@ -69,11 +56,17 @@ namespace godot
 				return -1;
 			return (bitmapResolution() / numVerticesPerChuckSide()) >> lod;
 		}
-		float gridStepInWU(int lod)
+		float gridStepInBitmapWU(int lod)
 		{
 			if (lod < 0 || lod > lodMaxDepth())
 				return -1;
-			return (bitmapResolution() / (numChunksPerBitmapSide(lod) * (numVerticesPerChuckSide()))) * m_mapManager->gridStepInWU();
+			return (gridStepInBitmap(lod) * m_mapManager->gridStepInWU());
+		}
+		float gridStepInBitmap(int lod)
+		{
+			if (lod < 0 || lod > lodMaxDepth())
+				return -1;
+			return (bitmapResolution() / (numChunksPerBitmapSide(lod) * (numVerticesPerChuckSide())));
 		}
 
 	private:

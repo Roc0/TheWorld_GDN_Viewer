@@ -4,10 +4,10 @@
 #include <Reference.hpp>
 #include <InputEvent.hpp>
 
-#include "GDN_TheWorld_Globals.h"
-
 namespace godot
 {
+	class MeshCache;
+	class GDN_TheWorld_Globals;
 
 	class GDN_TheWorld_Viewer : public Node
 	{
@@ -32,11 +32,12 @@ namespace godot
 		void setDebugEnabled(bool b = true) { m_isDebugEnabled = b; }
 		void destroy(void);
 	
-		Node* Globals(void) { return m_globals; }
+		GDN_TheWorld_Globals* Globals(void) { return m_globals; }
 	
 	private:
 		bool m_isDebugEnabled;
 		GDN_TheWorld_Globals* m_globals;
+		MeshCache* m_meshCache;
 	};
 
 }

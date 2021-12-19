@@ -1,5 +1,7 @@
 //#include "pch.h"
 #include "GDN_TheWorld_Viewer.h"
+#include "GDN_TheWorld_Globals.h"
+#include "MeshCache.h"
 
 using namespace godot;
 
@@ -20,6 +22,8 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_isDebugEnabled = false;
 	m_globals = GDN_TheWorld_Globals::_new();
+	m_meshCache = new MeshCache(this);
+	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -50,6 +54,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 void GDN_TheWorld_Viewer::destroy(void)
 {
+	if (m_meshCache)
+	{
+		delete m_meshCache;
+		m_meshCache = NULL;
+	}
+
 	if (m_globals)
 	{
 		m_globals->call_deferred("free");
