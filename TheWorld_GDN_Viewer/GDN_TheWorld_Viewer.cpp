@@ -21,9 +21,8 @@ void GDN_TheWorld_Viewer::_register_methods()
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_isDebugEnabled = false;
-	m_globals = GDN_TheWorld_Globals::_new();
-	m_meshCache = new MeshCache(this);
-	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
+	m_globals = NULL;
+	m_meshCache = NULL;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -34,6 +33,9 @@ GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
 void GDN_TheWorld_Viewer::_init(void)
 {
 	//Godot::print("GD_ClientApp::Init");
+	m_globals = GDN_TheWorld_Globals::_new();
+	m_meshCache = new MeshCache(this);
+	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 }
 
 void GDN_TheWorld_Viewer::_ready(void)

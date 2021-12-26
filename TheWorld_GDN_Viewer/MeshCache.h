@@ -1,14 +1,15 @@
 #pragma 
-#include <map>
+#include <vector>
 
 #include <Godot.hpp>
 #include <Node.hpp>
 #include <Reference.hpp>
 #include <InputEvent.hpp>
-#include <Mesh.hpp>
+#include <ArrayMesh.hpp>
 
 namespace godot
 {
+	class GDN_TheWorld_Viewer;
 
 	class MeshCache
 	{
@@ -19,19 +20,23 @@ namespace godot
 #define SEAM_TOP			8
 #define SEAM_CONFIG_COUNT	16
 
-		// lod ==> Mesh
-		typedef std::map<int, Mesh*> _lodMesh;
-		// seam ==> _lodMesh (lod ==> Mesh)
-		typedef std::map<int, _lodMesh*> _mesh;
+		// _lodMesh[lod] ==> Mesh*
+		typedef std::vector<ArrayMesh*> _lodMesh;
+		// _meshCache[seams] ==> _lodMesh		_meshCache[seams][lod] ==> Mesh*
+		typedef std::vector<_lodMesh> _meshCache;
 
-		MeshCache(Node *viewer);
+		MeshCache(GDN_TheWorld_Viewer* viewer);
 		~MeshCache();
 		
 		void initCache(int numVerticesPerChuckSide, int numLods);
 
 	private:
-		_mesh m_mesh;
-		Node* m_viewer;
+		ArrayMesh* makeFlatChunk(int numVerticesPerChuckSide, int lod, int seams);
+		void resetCache(void);
+
+	private:
+		_meshCache m_meshCache;
+		GDN_TheWorld_Viewer* m_viewer;
 	};
 
 }
