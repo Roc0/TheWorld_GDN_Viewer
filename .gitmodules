@@ -2,3 +2,6 @@
 	path = godot-cpp
 	url = https://github.com/godotengine/godot-cpp
 	branch = 3.4
+[submodule "Quadtree"]
+	path = Quadtree
+	url = https://github.com/pvigier/Quadtree.git
