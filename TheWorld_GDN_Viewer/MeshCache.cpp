@@ -41,7 +41,8 @@ namespace godot
 		{
 			for (int idxLod = 0; idxLod < m_meshCache[seams].size(); idxLod++)
 			{
-				m_meshCache[seams][idxLod]->call_deferred("free");
+				//m_meshCache[seams][idxLod]->call_deferred("free");
+				m_meshCache[seams][idxLod]->unreference();
 			}
 			m_meshCache[seams].clear();
 		}
