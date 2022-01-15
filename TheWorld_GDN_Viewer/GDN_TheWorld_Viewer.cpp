@@ -17,6 +17,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("globals", &GDN_TheWorld_Viewer::Globals);
 	register_method("destroy", &GDN_TheWorld_Viewer::destroy);
 	register_method("init", &GDN_TheWorld_Viewer::init);
+	register_method("set_initial_world_viewer_pos", &GDN_TheWorld_Viewer::setInitialWordlViewerPos);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -79,4 +80,10 @@ void GDN_TheWorld_Viewer::destroy(void)
 		m_globals->call_deferred("free");
 		m_globals = NULL;
 	}
+}
+
+void GDN_TheWorld_Viewer::setInitialWordlViewerPos(float x, float z)
+{
+	worldViewerPos.x = x;
+	worldViewerPos.z = z;
 }
