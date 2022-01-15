@@ -1,6 +1,7 @@
 #pragma once
 #include <Godot.hpp>
 #include <Node.hpp>
+#include <Spatial.hpp>
 #include <Reference.hpp>
 #include <InputEvent.hpp>
 
@@ -9,9 +10,9 @@ namespace godot
 	class MeshCache;
 	class GDN_TheWorld_Globals;
 
-	class GDN_TheWorld_Viewer : public Node
+	class GDN_TheWorld_Viewer : public Spatial
 	{
-		GODOT_CLASS(GDN_TheWorld_Viewer, Node)
+		GODOT_CLASS(GDN_TheWorld_Viewer, Spatial)
 
 	public:
 		GDN_TheWorld_Viewer();
@@ -31,7 +32,8 @@ namespace godot
 		bool isDebugEnabled(void) { return m_isDebugEnabled; }
 		void setDebugEnabled(bool b = true) { m_isDebugEnabled = b; }
 		void destroy(void);
-	
+		bool init(Node* pWorldNode);
+
 		GDN_TheWorld_Globals* Globals(void) { return m_globals; }
 	
 	private:

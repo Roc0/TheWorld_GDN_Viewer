@@ -21,7 +21,7 @@ namespace godot
 #define SEAM_CONFIG_COUNT	16
 
 		// _lodMesh[lod] ==> Mesh*
-		typedef std::vector<ArrayMesh*> _lodMesh;
+		typedef std::vector<Ref<ArrayMesh>> _lodMesh;
 		// _meshCache[seams] ==> _lodMesh		_meshCache[seams][lod] ==> Mesh*
 		typedef std::vector<_lodMesh> _meshCache;
 

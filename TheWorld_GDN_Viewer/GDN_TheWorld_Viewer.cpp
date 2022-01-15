@@ -16,6 +16,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("is_debug_enabled", &GDN_TheWorld_Viewer::isDebugEnabled);
 	register_method("globals", &GDN_TheWorld_Viewer::Globals);
 	register_method("destroy", &GDN_TheWorld_Viewer::destroy);
+	register_method("init", &GDN_TheWorld_Viewer::init);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -46,6 +47,17 @@ void GDN_TheWorld_Viewer::_ready(void)
 
 void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 {
+}
+
+bool GDN_TheWorld_Viewer::init(Node* pWorldNode)
+{
+	if (!pWorldNode)
+		return false;
+	
+	// Must exist a Spatial Node acting as the world; the viewer will be a child of this node
+	pWorldNode->add_child(this);
+	
+	return true;
 }
 
 void GDN_TheWorld_Viewer::_process(float _delta)
