@@ -32,8 +32,8 @@ namespace godot
 		bool isDebugEnabled(void) { return m_isDebugEnabled; }
 		void setDebugEnabled(bool b = true) { m_isDebugEnabled = b; }
 		void destroy(void);
-		bool init(Node* pWorldNode);
-		void setInitialWordlViewerPos(float x, float z);
+		bool init(Node* pWorldNode, float x, float z, int level);
+		void setInitialWordlViewerPos(float x, float z, int level);
 
 		GDN_TheWorld_Globals* Globals(void) { return m_globals; }
 	
@@ -41,7 +41,8 @@ namespace godot
 		bool m_isDebugEnabled;
 		GDN_TheWorld_Globals* m_globals;
 		MeshCache* m_meshCache;
-		Vector3 worldViewerPos;
+		Vector3 m_worldViewerPos;
+		int m_worldViewerLevel;
 	};
 
 }

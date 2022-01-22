@@ -3,6 +3,8 @@
 #include "GDN_TheWorld_Globals.h"
 #include "MeshCache.h"
 
+#include <algorithm>
+
 using namespace godot;
 
 void GDN_TheWorld_Viewer::_register_methods()
@@ -17,7 +19,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("globals", &GDN_TheWorld_Viewer::Globals);
 	register_method("destroy", &GDN_TheWorld_Viewer::destroy);
 	register_method("init", &GDN_TheWorld_Viewer::init);
-	register_method("set_initial_world_viewer_pos", &GDN_TheWorld_Viewer::setInitialWordlViewerPos);
+	//register_method("set_initial_world_viewer_pos", &GDN_TheWorld_Viewer::setInitialWordlViewerPos);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -25,6 +27,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_isDebugEnabled = false;
 	m_globals = NULL;
 	m_meshCache = NULL;
+	m_worldViewerLevel = 0;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -50,14 +53,18 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 {
 }
 
-bool GDN_TheWorld_Viewer::init(Node* pWorldNode)
+bool GDN_TheWorld_Viewer::init(Node* pWorldNode, float x, float z, int level)
 {
+	PLOGI << "TheWorld Viewer Initializing ...";
+	
 	if (!pWorldNode)
 		return false;
 	
+	setInitialWordlViewerPos(x, z, level);
+
 	// Must exist a Spatial Node acting as the world; the viewer will be a child of this node
 	pWorldNode->add_child(this);
-	
+
 	return true;
 }
 
@@ -82,8 +89,41 @@ void GDN_TheWorld_Viewer::destroy(void)
 	}
 }
 
-void GDN_TheWorld_Viewer::setInitialWordlViewerPos(float x, float z)
+void GDN_TheWorld_Viewer::setInitialWordlViewerPos(float x, float z, int level)
 {
-	worldViewerPos.x = x;
-	worldViewerPos.z = z;
+	m_worldViewerPos.x = x;
+	m_worldViewerPos.z = z;
+	m_worldViewerLevel = level;
+
+	vector<TheWorld_MapManager::SQLInterface::GridVertex> vertices;
+	int numPointX, numPointZ;
+	float gridStepInWU;
+	Globals()->mapManager()->getVertices(m_worldViewerPos.x, m_worldViewerPos.z, TheWorld_MapManager::MapManager::anchorType::center, Globals()->bitmapSizeInWUs(),	vertices, numPointX, numPointZ, gridStepInWU, 0);
+
+	try
+	{
+		TheWorld_MapManager::SQLInterface::GridVertex viewerPos(x, z, level);
+		vector<TheWorld_MapManager::SQLInterface::GridVertex>::iterator it = std::find(vertices.begin(), vertices.end(), viewerPos);
+		if (it == vertices.end())
+		{
+			Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Not found WorldViewer Pos");
+			return;
+		}
+
+	}
+	catch (TheWorld_MapManager::MapManagerException& e)
+	{
+		Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, e.exceptionName() + string(" caught - ") + e.what());
+		return;
+	}
+	catch (std::exception& e)
+	{
+		Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, string("std::exception caught - ") + e.what());
+		return;
+	}
+	catch (...)
+	{
+		Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "std::exception caught - ");
+		return;
+	}
 }

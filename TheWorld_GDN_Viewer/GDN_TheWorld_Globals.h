@@ -6,10 +6,13 @@
 
 #include "assert.h"
 
+#include <plog/Log.h>
 #include <MapManager.h>
 
-#define THEWORLD_CHUNK_SIZE_SHIFT				5
-#define THEWORLD_BITMAP_RESOLUTION_SHIFT		10
+#define THEWORLD_VIEWER_CHUNK_SIZE_SHIFT				5
+#define THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT		10
+
+#define PLOG_LEVEL plog::info
 
 namespace godot
 {
@@ -79,16 +82,18 @@ namespace godot
 		//		of chunks of a side of the bitmap (bitmapResolution / numVerticesPerChuckSide), the number of lods (numLods) is equal to lodMaxDepth + 1
 
 		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
-		int numVerticesPerChuckSide(void) { return m_numVerticesPerChuckSide; }					// Chunk num vertices -1
+		int numVerticesPerChuckSide(void) { return m_numVerticesPerChuckSide; /*m_numVerticesPerChuckSide = 32 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5*/ }	// Chunk num vertices -1
 		
 		// Number of vertices of the side of the bitmap (-1) with the elevations which is fixed and is a multiple of the number of vertices of the side of a chunk (numVerticesPerChuckSide) and is for this a multiple of 2 too
-		int bitmapResolution(void) { return m_bitmapResolution; }	// Resolution of the bitmap = num point of the bitmap -1;
+		int bitmapResolution(void) { return m_bitmapResolution; /*m_bitmapResolution = 1024 con THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT = 10*/ }	// Resolution of the bitmap = num point of the bitmap -1;
+		// Size of the bitmap in WUs
+		float bitmapSizeInWUs(void) { return (bitmapResolution() + 1) * m_mapManager->gridStepInWU(); }
 
 		// Max value of the lod index (numLods - 1)
-		int lodMaxDepth(void) {	return m_lodMaxDepth; }
+		int lodMaxDepth(void) {	return m_lodMaxDepth; /*m_lodMaxDepth = 5 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 e THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT = 10*/ }
 
 		// Max number of quad split that can be done until the the granularity of the vertices is the same of the World Grid map and of the bitmap (lodMaxDepth + 1)
-		int numLods(void) { return m_numLods; }
+		int numLods(void) { return m_numLods; /*m_numLods = 6 m_lodMaxDepth = 5*/ }
 
 		// The number of chunks required to cover every side of the bitmap at the specified lod value
 		int numChunksPerBitmapSide(int lod)
@@ -121,14 +126,30 @@ namespace godot
 			return (gridStepInBitmap(lod) * m_mapManager->gridStepInWU());
 		}
 
+		void setAppInError(int errorCode, string errorText) {
+			m_lastErrorCode = errorCode;
+			m_lastErrorText = errorText;
+			m_bAppInError = true;
+			PLOG_ERROR << errorText;
+		}
+		bool getAppInError(void) { return m_bAppInError; }
+		bool getAppInError(int& lastErrorCode, string& lastErrorText) {
+			lastErrorCode = m_lastErrorCode;
+			lastErrorText = m_lastErrorText;
+			return m_bAppInError;
+		}
+
 	private:
 		int m_numVerticesPerChuckSide;
 		int m_bitmapResolution;
 		int m_lodMaxDepth;
 		int m_numLods;
 		TheWorld_MapManager::MapManager *m_mapManager;
+		bool m_bAppInError;
+		int m_lastErrorCode;
+		string m_lastErrorText;
 	};
-
 }
 
+#define THEWORLD_VIEWER_GENERIC_ERROR				1
 
