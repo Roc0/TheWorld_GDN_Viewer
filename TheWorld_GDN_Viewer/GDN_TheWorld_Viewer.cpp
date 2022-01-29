@@ -28,6 +28,8 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_globals = NULL;
 	m_meshCache = NULL;
 	m_worldViewerLevel = 0;
+	m_numWordlVerticesX = 0;
+	m_numWordlVerticesZ = 0;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -89,27 +91,49 @@ void GDN_TheWorld_Viewer::destroy(void)
 	}
 }
 
+void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
+{
+	try
+	{
+		float gridStepInWU;
+		m_numWordlVerticesX = m_numWordlVerticesZ = Globals()->bitmapResolution() + 1;
+		Globals()->mapManager()->getVertices(x, z, TheWorld_MapManager::MapManager::anchorType::center, m_numWordlVerticesX, m_numWordlVerticesZ, m_worldVertices, gridStepInWU, level);
+	}
+	catch (TheWorld_MapManager::MapManagerException& e)
+	{
+		Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, e.exceptionName() + string(" caught - ") + e.what());
+		throw(e);
+	}
+	catch (std::exception& e)
+	{
+		Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, string("std::exception caught - ") + e.what());
+		throw(e);
+	}
+	catch (...)
+	{
+		Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "exception caught");
+		throw(new exception("exception caught"));
+	}
+}
+
 void GDN_TheWorld_Viewer::setInitialWordlViewerPos(float x, float z, int level)
 {
 	m_worldViewerPos.x = x;
 	m_worldViewerPos.z = z;
 	m_worldViewerLevel = level;
 
-	vector<TheWorld_MapManager::SQLInterface::GridVertex> vertices;
-	int numPointX, numPointZ;
-	float gridStepInWU;
-	Globals()->mapManager()->getVertices(m_worldViewerPos.x, m_worldViewerPos.z, TheWorld_MapManager::MapManager::anchorType::center, Globals()->bitmapSizeInWUs(),	vertices, numPointX, numPointZ, gridStepInWU, 0);
-
 	try
 	{
+		loadWorldData(x, z, level);
+
 		TheWorld_MapManager::SQLInterface::GridVertex viewerPos(x, z, level);
-		vector<TheWorld_MapManager::SQLInterface::GridVertex>::iterator it = std::find(vertices.begin(), vertices.end(), viewerPos);
-		if (it == vertices.end())
+		vector<TheWorld_MapManager::SQLInterface::GridVertex>::iterator it = std::find(m_worldVertices.begin(), m_worldVertices.end(), viewerPos);
+		if (it == m_worldVertices.end())
 		{
 			Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Not found WorldViewer Pos");
 			return;
 		}
-
+		m_worldViewerPos.y = it->altitude() + 100;
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
@@ -123,7 +147,7 @@ void GDN_TheWorld_Viewer::setInitialWordlViewerPos(float x, float z, int level)
 	}
 	catch (...)
 	{
-		Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "std::exception caught - ");
+		Globals()->setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "std::exception caught");
 		return;
 	}
 }

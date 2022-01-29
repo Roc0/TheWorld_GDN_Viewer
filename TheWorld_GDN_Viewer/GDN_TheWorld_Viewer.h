@@ -5,6 +5,8 @@
 #include <Reference.hpp>
 #include <InputEvent.hpp>
 
+#include <MapManager.h>
+
 namespace godot
 {
 	class MeshCache;
@@ -34,6 +36,7 @@ namespace godot
 		void destroy(void);
 		bool init(Node* pWorldNode, float x, float z, int level);
 		void setInitialWordlViewerPos(float x, float z, int level);
+		void loadWorldData(float& x, float& z, int level);
 
 		GDN_TheWorld_Globals* Globals(void) { return m_globals; }
 	
@@ -41,8 +44,15 @@ namespace godot
 		bool m_isDebugEnabled;
 		GDN_TheWorld_Globals* m_globals;
 		MeshCache* m_meshCache;
+		
+		// Viewer (Camera)
 		Vector3 m_worldViewerPos;
 		int m_worldViewerLevel;
+		
+		// World Data
+		std::vector<TheWorld_MapManager::SQLInterface::GridVertex> m_worldVertices;
+		int m_numWordlVerticesX;
+		int m_numWordlVerticesZ;
 	};
 
 }

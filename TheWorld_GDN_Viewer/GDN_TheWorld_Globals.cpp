@@ -19,7 +19,7 @@ namespace godot
 		PLOG_INFO << "Log initilized!";
 		PLOG_INFO << "***************";
 
-		m_mapManager = new TheWorld_MapManager::MapManager(NULL, PLOG_LEVEL);
+		m_mapManager = new TheWorld_MapManager::MapManager(NULL, PLOG_LEVEL, plog::get());
 		m_mapManager->instrument(true);
 		m_mapManager->consoleDebugMode(false);
 
@@ -34,7 +34,7 @@ namespace godot
 		delete m_mapManager;
 
 		PLOG_INFO << "*****************";
-		PLOG_INFO << "Log Deinitilized!";
+		PLOG_INFO << "Log Terminated!";
 		PLOG_INFO << "*****************";
 	};
 
