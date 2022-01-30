@@ -3,20 +3,27 @@
 #include <Node.hpp>
 #include <Reference.hpp>
 #include <InputEvent.hpp>
+#include <SceneTree.hpp>
+#include <Viewport.hpp>
 
 #include "assert.h"
 
 #include <plog/Log.h>
 #include <MapManager.h>
+#include "Utils.h"
 
-#define THEWORLD_VIEWER_CHUNK_SIZE_SHIFT				5
+#define THEWORLD_VIEWER_CHUNK_SIZE_SHIFT			5
 #define THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT		10
 
 #define PLOG_LEVEL plog::info
 
+#define THEWORLD_GLOBALS_NODE_NAME	"GDN_TheWorld_Globals"
+#define THEWORLD_VIEWER_NODE_NAME	"GDN_TheWorld_Viewer"
+
 namespace godot
 {
 
+	class GDN_TheWorld_Viewer;
 	class TheWorld_MapManager::MapManager;
 
 	class GDN_TheWorld_Globals : public Node
@@ -33,12 +40,18 @@ namespace godot
 			register_method("_process", &GDN_TheWorld_Globals::_process);
 			register_method("_input", &GDN_TheWorld_Globals::_input);
 
+			register_method("set_debug_enabled", &GDN_TheWorld_Globals::setDebugEnabled);
+			register_method("is_debug_enabled", &GDN_TheWorld_Globals::isDebugEnabled);
+			register_method("debug_print", &GDN_TheWorld_Globals::debugPrint);
+			
 			register_method("get_num_vertices_per_chunk_side", &GDN_TheWorld_Globals::numVerticesPerChuckSide);
 			register_method("get_bitmap_resolution", &GDN_TheWorld_Globals::bitmapResolution);
 			register_method("get_lod_max_depth", &GDN_TheWorld_Globals::lodMaxDepth);
 			register_method("get_num_lods", &GDN_TheWorld_Globals::numLods);
 			register_method("get_chunks_per_bitmap_side", &GDN_TheWorld_Globals::numChunksPerBitmapSide);
 			register_method("get_grid_step_in_wu", &GDN_TheWorld_Globals::gridStepInBitmapWUs);
+
+			register_method("viewer", &GDN_TheWorld_Globals::Viewer);
 		}
 
 		//
@@ -48,6 +61,17 @@ namespace godot
 		void _ready(void);
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
+
+		void debugPrint(String message)
+		{
+			if (m_isDebugEnabled)
+			{
+				Godot::print(message);
+				char* m = message.alloc_c_string();
+				PLOGI << m;
+				godot::api->godot_free(m);
+			}
+		}
 
 		TheWorld_MapManager::MapManager* mapManager(void) { return m_mapManager; };
 
@@ -82,7 +106,10 @@ namespace godot
 		//		of chunks of a side of the bitmap (bitmapResolution / numVerticesPerChuckSide), the number of lods (numLods) is equal to lodMaxDepth + 1
 
 		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
-		int numVerticesPerChuckSide(void) { return m_numVerticesPerChuckSide; /*m_numVerticesPerChuckSide = 32 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5*/ }	// Chunk num vertices -1
+		int numVerticesPerChuckSide(void)
+		{
+			return m_numVerticesPerChuckSide; /*m_numVerticesPerChuckSide = 32 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5*/
+		}	// Chunk num vertices -1
 		
 		// Number of vertices of the side of the bitmap (-1) with the elevations which is fixed and is a multiple of the number of vertices of the side of a chunk (numVerticesPerChuckSide) and is for this a multiple of 2 too
 		int bitmapResolution(void) { return m_bitmapResolution; /*m_bitmapResolution = 1024 con THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT = 10*/ }	// Resolution of the bitmap = num point of the bitmap -1;
@@ -126,6 +153,9 @@ namespace godot
 			return (gridStepInBitmap(lod) * m_mapManager->gridStepInWU());
 		}
 
+		bool isDebugEnabled(void) { return m_isDebugEnabled; }
+		void setDebugEnabled(bool b = true) { m_isDebugEnabled = b; }
+
 		void setAppInError(int errorCode, string errorText) {
 			m_lastErrorCode = errorCode;
 			m_lastErrorText = errorText;
@@ -139,7 +169,10 @@ namespace godot
 			return m_bAppInError;
 		}
 
+		GDN_TheWorld_Viewer* Viewer(bool useCache = true);
+
 	private:
+		bool m_isDebugEnabled;
 		int m_numVerticesPerChuckSide;
 		int m_bitmapResolution;
 		int m_lodMaxDepth;
@@ -148,6 +181,9 @@ namespace godot
 		bool m_bAppInError;
 		int m_lastErrorCode;
 		string m_lastErrorText;
+
+		// Node cache
+		GDN_TheWorld_Viewer* m_viewer;
 	};
 }
 

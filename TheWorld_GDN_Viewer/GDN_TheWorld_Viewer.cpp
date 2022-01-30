@@ -1,6 +1,9 @@
 //#include "pch.h"
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Globals.h"
+#include <SceneTree.hpp>
+#include <Viewport.hpp>
+
 #include "MeshCache.h"
 
 #include <algorithm>
@@ -13,18 +16,13 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("_process", &GDN_TheWorld_Viewer::_process);
 	register_method("_input", &GDN_TheWorld_Viewer::_input);
 
-	register_method("debug_print", &GDN_TheWorld_Viewer::debugPrint);
-	register_method("set_debug_enabled", &GDN_TheWorld_Viewer::setDebugEnabled);
-	register_method("is_debug_enabled", &GDN_TheWorld_Viewer::isDebugEnabled);
-	register_method("globals", &GDN_TheWorld_Viewer::Globals);
-	register_method("destroy", &GDN_TheWorld_Viewer::destroy);
-	register_method("init", &GDN_TheWorld_Viewer::init);
-	//register_method("set_initial_world_viewer_pos", &GDN_TheWorld_Viewer::setInitialWordlViewerPos);
+	//register_method("init", &GDN_TheWorld_Viewer::init);
+	//register_method("destroy", &GDN_TheWorld_Viewer::destroy);
+	register_method("set_initial_world_viewer_pos", &GDN_TheWorld_Viewer::setInitialWordlViewerPos);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
-	m_isDebugEnabled = false;
 	m_globals = NULL;
 	m_meshCache = NULL;
 	m_worldViewerLevel = 0;
@@ -39,15 +37,12 @@ GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
 
 void GDN_TheWorld_Viewer::_init(void)
 {
-	//Godot::print("GD_ClientApp::Init");
-	m_globals = GDN_TheWorld_Globals::_new();
-	m_meshCache = new MeshCache(this);
-	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
+	//Godot::print("GDN_TheWorld_Viewer::Init");
 }
 
 void GDN_TheWorld_Viewer::_ready(void)
 {
-	//Godot::print("GD_ClientApp::_ready");
+	//Godot::print("GDN_TheWorld_Viewer::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 }
 
@@ -55,17 +50,19 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 {
 }
 
-bool GDN_TheWorld_Viewer::init(Node* pWorldNode, float x, float z, int level)
+bool GDN_TheWorld_Viewer::init(void)
 {
-	PLOGI << "TheWorld Viewer Initializing ...";
+	PLOGI << "TheWorld Viewer Initializing...";
 	
-	if (!pWorldNode)
-		return false;
-	
-	setInitialWordlViewerPos(x, z, level);
+	/* DEBUG */
+	//int n = Globals()->numVerticesPerChuckSide();
+	/* DEBUG */
 
-	// Must exist a Spatial Node acting as the world; the viewer will be a child of this node
-	pWorldNode->add_child(this);
+	
+	m_meshCache = new MeshCache(this);
+	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
+
+	PLOGI << "TheWorld Viewer Initialized!";
 
 	return true;
 }
@@ -73,7 +70,7 @@ bool GDN_TheWorld_Viewer::init(Node* pWorldNode, float x, float z, int level)
 void GDN_TheWorld_Viewer::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
-	//Godot::print("GD_ClientApp::_process");
+	//Godot::print("GDN_TheWorld_Viewer::_process");
 }
 
 void GDN_TheWorld_Viewer::destroy(void)
@@ -83,12 +80,20 @@ void GDN_TheWorld_Viewer::destroy(void)
 		delete m_meshCache;
 		m_meshCache = NULL;
 	}
+}
 
-	if (m_globals)
+GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(void)
+{
+	if (m_globals == NULL)
 	{
-		m_globals->call_deferred("free");
-		m_globals = NULL;
+		m_globals = Object::cast_to<GDN_TheWorld_Globals>(get_tree()->get_root()->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
+		//m_globals = (GDN_TheWorld_Globals*)get_tree()->get_root()->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false);		// WRONG
+		//SceneTree* scene = get_tree();
+		//Viewport* root = scene->get_root();
+		//m_globals = (GDN_TheWorld_Globals*)root->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false);
 	}
+
+	return m_globals;
 }
 
 void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)

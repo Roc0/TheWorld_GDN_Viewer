@@ -30,19 +30,16 @@ namespace godot
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
 
-		void debugPrint(String message) { if (m_isDebugEnabled) Godot::print(message); }
-		bool isDebugEnabled(void) { return m_isDebugEnabled; }
-		void setDebugEnabled(bool b = true) { m_isDebugEnabled = b; }
 		void destroy(void);
-		bool init(Node* pWorldNode, float x, float z, int level);
+		bool init(void);
 		void setInitialWordlViewerPos(float x, float z, int level);
 		void loadWorldData(float& x, float& z, int level);
 
-		GDN_TheWorld_Globals* Globals(void) { return m_globals; }
+		GDN_TheWorld_Globals* Globals(void);
 	
 	private:
-		bool m_isDebugEnabled;
 		GDN_TheWorld_Globals* m_globals;
+
 		MeshCache* m_meshCache;
 		
 		// Viewer (Camera)
@@ -56,4 +53,3 @@ namespace godot
 	};
 
 }
-

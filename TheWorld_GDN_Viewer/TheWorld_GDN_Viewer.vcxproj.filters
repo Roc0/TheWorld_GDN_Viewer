@@ -33,6 +33,15 @@
     <ClInclude Include="GDN_TheWorld_Globals.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GDN_TheWorld_Camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GDN_TheWorld_MainNode.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -54,6 +63,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GDN_TheWorld_Globals.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GDN_TheWorld_Camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GDN_TheWorld_MainNode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

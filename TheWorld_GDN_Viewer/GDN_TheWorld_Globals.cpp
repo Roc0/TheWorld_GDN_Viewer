@@ -1,5 +1,7 @@
 //#include "pch.h"
 #include "GDN_TheWorld_Globals.h"
+#include "GDN_TheWorld_Viewer.h"
+
 #include <MapManager.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 
@@ -9,15 +11,17 @@ namespace godot
 {
 	GDN_TheWorld_Globals::GDN_TheWorld_Globals()
 	{
+		m_isDebugEnabled = false;
 		m_bAppInError = false;
 		m_lastErrorCode = 0;
 
 		string logPath = getModuleLoadPath() + "\\TheWorld_Viewer_log.txt";
 		plog::init(PLOG_LEVEL, logPath.c_str(), 1000000, 3);
-		PLOG_INFO << endl;
 		PLOG_INFO << "***************";
 		PLOG_INFO << "Log initilized!";
 		PLOG_INFO << "***************";
+
+		PLOGI << "TheWorld Globals Initializing...";
 
 		m_mapManager = new TheWorld_MapManager::MapManager(NULL, PLOG_LEVEL, plog::get());
 		m_mapManager->instrument(true);
@@ -27,6 +31,10 @@ namespace godot
 		m_bitmapResolution = 1 << THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT;
 		m_lodMaxDepth = THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT - THEWORLD_VIEWER_CHUNK_SIZE_SHIFT;
 		m_numLods = m_lodMaxDepth + 1;
+
+		m_viewer = NULL;
+
+		PLOGI << "TheWorld Globals Initialized!";
 	}
 
 	GDN_TheWorld_Globals::~GDN_TheWorld_Globals()
@@ -57,6 +65,22 @@ namespace godot
 	{
 		// To activate _process method add this Node to a Godot Scene
 		//Godot::print("GD_ClientApp::_process");
+	}
+
+	GDN_TheWorld_Viewer* GDN_TheWorld_Globals::Viewer(bool useCache)
+	{
+		if (m_viewer == NULL || !useCache)
+		{
+			SceneTree* scene = get_tree();
+			if (!scene)
+				return NULL;
+			Viewport* root = scene->get_root();
+			if (!root)
+				return NULL;
+			m_viewer = Object::cast_to<GDN_TheWorld_Viewer>(root->find_node(THEWORLD_VIEWER_NODE_NAME, true, false));
+		}
+
+		return m_viewer;
 	}
 }
 
