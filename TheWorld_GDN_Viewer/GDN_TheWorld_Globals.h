@@ -33,6 +33,7 @@ namespace godot
 	public:
 		GDN_TheWorld_Globals();
 		~GDN_TheWorld_Globals();
+		void deinit(void);
 
 		static void _register_methods()
 		{
@@ -172,6 +173,7 @@ namespace godot
 		GDN_TheWorld_Viewer* Viewer(bool useCache = true);
 
 	private:
+		bool m_initialized;
 		bool m_isDebugEnabled;
 		int m_numVerticesPerChuckSide;
 		int m_bitmapResolution;

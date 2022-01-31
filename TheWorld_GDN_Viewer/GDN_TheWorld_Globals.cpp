@@ -11,6 +11,7 @@ namespace godot
 {
 	GDN_TheWorld_Globals::GDN_TheWorld_Globals()
 	{
+		m_initialized = false;
 		m_isDebugEnabled = false;
 		m_bAppInError = false;
 		m_lastErrorCode = 0;
@@ -34,17 +35,33 @@ namespace godot
 
 		m_viewer = NULL;
 
+		m_initialized = true;
 		PLOGI << "TheWorld Globals Initialized!";
 	}
 
 	GDN_TheWorld_Globals::~GDN_TheWorld_Globals()
 	{
-		delete m_mapManager;
+		deinit();
+	}
 
-		PLOG_INFO << "*****************";
-		PLOG_INFO << "Log Terminated!";
-		PLOG_INFO << "*****************";
-	};
+	void GDN_TheWorld_Globals::deinit(void)
+	{
+		if (m_initialized)
+		{
+			PLOGI << "TheWorld Globals Deinitializing...";
+
+			delete m_mapManager;
+
+			PLOGI << "TheWorld Globals Deinitialized!";
+
+			PLOG_INFO << "*****************";
+			PLOG_INFO << "Log Terminated!";
+			PLOG_INFO << "*****************";
+
+			//call_deferred("free");
+			m_initialized = false;
+		}
+	}
 
 	void GDN_TheWorld_Globals::_init(void)
 	{

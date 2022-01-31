@@ -19,6 +19,8 @@ namespace godot
 	public:
 		GDN_TheWorld_Viewer();
 		~GDN_TheWorld_Viewer();
+		bool init(void);
+		void deinit(void);
 
 		static void _register_methods();
 
@@ -30,14 +32,14 @@ namespace godot
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
 
-		void destroy(void);
-		bool init(void);
 		void setInitialWordlViewerPos(float x, float z, int level);
 		void loadWorldData(float& x, float& z, int level);
 
 		GDN_TheWorld_Globals* Globals(void);
 	
 	private:
+		bool m_initialized;
+		
 		GDN_TheWorld_Globals* m_globals;
 
 		MeshCache* m_meshCache;

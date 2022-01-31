@@ -15,6 +15,8 @@ namespace godot
 	public:
 		GDN_TheWorld_MainNode();
 		~GDN_TheWorld_MainNode();
+		bool init(Node* pWorldMainNode);
+		void deinit(void);
 
 		static void _register_methods();
 
@@ -26,10 +28,12 @@ namespace godot
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
 
-		bool init(Node* pWorldMainNode);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 
 	private:
+		bool m_initialized;
+
+		// Node cache
 		GDN_TheWorld_Globals* m_globals;
 	};
 

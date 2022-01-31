@@ -16,13 +16,12 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("_process", &GDN_TheWorld_Viewer::_process);
 	register_method("_input", &GDN_TheWorld_Viewer::_input);
 
-	//register_method("init", &GDN_TheWorld_Viewer::init);
-	//register_method("destroy", &GDN_TheWorld_Viewer::destroy);
 	register_method("set_initial_world_viewer_pos", &GDN_TheWorld_Viewer::setInitialWordlViewerPos);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
+	m_initialized = false;
 	m_globals = NULL;
 	m_meshCache = NULL;
 	m_worldViewerLevel = 0;
@@ -32,7 +31,25 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
 {
-	destroy();
+	deinit();
+}
+
+void GDN_TheWorld_Viewer::deinit(void)
+{
+	if (m_initialized)
+	{
+		PLOGI << "TheWorld Viewer Deinitializing...";
+
+		if (m_meshCache)
+		{
+			delete m_meshCache;
+			m_meshCache = NULL;
+		}
+
+		//call_deferred("free");
+		m_initialized = false;
+		PLOGI << "TheWorld Viewer Deinitialized!";
+	}
 }
 
 void GDN_TheWorld_Viewer::_init(void)
@@ -54,14 +71,10 @@ bool GDN_TheWorld_Viewer::init(void)
 {
 	PLOGI << "TheWorld Viewer Initializing...";
 	
-	/* DEBUG */
-	//int n = Globals()->numVerticesPerChuckSide();
-	/* DEBUG */
-
-	
 	m_meshCache = new MeshCache(this);
 	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 
+	m_initialized = true;
 	PLOGI << "TheWorld Viewer Initialized!";
 
 	return true;
@@ -71,15 +84,6 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Godot::print("GDN_TheWorld_Viewer::_process");
-}
-
-void GDN_TheWorld_Viewer::destroy(void)
-{
-	if (m_meshCache)
-	{
-		delete m_meshCache;
-		m_meshCache = NULL;
-	}
 }
 
 GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(void)
