@@ -14,6 +14,8 @@ namespace godot
 	public:
 		GDN_Template();
 		~GDN_Template();
+		void init(void);
+		void deinit(void);
 
 		static void _register_methods();
 
@@ -28,14 +30,10 @@ namespace godot
 		//
 		// Test
 		//
-		void debugPrint(String message) { if (m_isDebugEnabled) Godot::print(message); }
 		String hello(String target1, String target2, int target3) { return String("Test, {0} {1} {2}!").format(Array::make(target1, target2, target3)); };
 
-		bool isDebugEnabled(void) { return m_isDebugEnabled; }
-		void setDebugEnabled(bool b = true) { m_isDebugEnabled = b; }
-
 	private:
-		bool m_isDebugEnabled;
+		bool m_initialized;
 	};
 
 }

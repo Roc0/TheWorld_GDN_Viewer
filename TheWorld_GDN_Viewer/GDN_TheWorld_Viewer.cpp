@@ -46,7 +46,6 @@ void GDN_TheWorld_Viewer::deinit(void)
 			m_meshCache = NULL;
 		}
 
-		//call_deferred("free");
 		m_initialized = false;
 		PLOGI << "TheWorld Viewer Deinitialized!";
 	}
@@ -86,15 +85,18 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	//Godot::print("GDN_TheWorld_Viewer::_process");
 }
 
-GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(void)
+GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
 {
-	if (m_globals == NULL)
+	if (m_globals == NULL || !useCache)
 	{
-		m_globals = Object::cast_to<GDN_TheWorld_Globals>(get_tree()->get_root()->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
-		//m_globals = (GDN_TheWorld_Globals*)get_tree()->get_root()->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false);		// WRONG
-		//SceneTree* scene = get_tree();
-		//Viewport* root = scene->get_root();
-		//m_globals = (GDN_TheWorld_Globals*)root->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false);
+		SceneTree* scene = get_tree();
+		if (!scene)
+			return NULL;
+		Viewport* root = scene->get_root();
+		if (!root)
+			return NULL;
+		m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
+		//m_globals = Object::cast_to<GDN_TheWorld_Globals>(get_tree()->get_root()->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
 	}
 
 	return m_globals;

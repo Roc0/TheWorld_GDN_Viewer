@@ -9,29 +9,40 @@ void GDN_Template::_register_methods()
 	register_method("_process", &GDN_Template::_process);
 	register_method("_input", &GDN_Template::_input);
 
-	register_method("debug_print", &GDN_Template::debugPrint);
 	register_method("hello", &GDN_Template::hello);
-	register_method("set_debug_enabled", &GDN_Template::setDebugEnabled);
-	register_method("is_debug_enabled", &GDN_Template::isDebugEnabled);
 }
 
 GDN_Template::GDN_Template()
 {
-	m_isDebugEnabled = false;
+	m_initialized = false;
 }
 
 GDN_Template::~GDN_Template()
 {
+	deinit();
+}
+
+void GDN_Template::init(void)
+{
+	m_initialized = true;
+}
+
+void GDN_Template::deinit(void)
+{
+	if (m_initialized)
+	{
+		m_initialized = false;
+	}
 }
 
 void GDN_Template::_init(void)
 {
-	//Godot::print("GD_ClientApp::Init");
+	//Godot::print("GDN_Template::Init");
 }
 
 void GDN_Template::_ready(void)
 {
-	//Godot::print("GD_ClientApp::_ready");
+	//Godot::print("GDN_Template::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 }
 
@@ -42,5 +53,5 @@ void GDN_Template::_input(const Ref<InputEvent> event)
 void GDN_Template::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
-	//Godot::print("GD_ClientApp::_process");
+	//Godot::print("GDN_Template::_process");
 }

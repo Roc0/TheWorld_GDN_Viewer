@@ -36,19 +36,19 @@ static T min2(const T& a, const T& b) {
 
 template <typename T>
 static T max3(const T& a, const T& b, const T& c) {
-	return max(a, max(b, c));
+	return max2(a, max2(b, c));
 }
 
 /// Return the maximum of the three arguments.
 template <typename T>
 static T min3(const T& a, const T& b, const T& c) {
-	return min(a, min(b, c));
+	return min2(a, min2(b, c));
 }
 
 /// Clamp between two values.
 template <typename T>
 static T clamp(const T& x, const T& a, const T& b) {
-	return min(max(x, a), b);
+	return min2(max2(x, a), b);
 }
 
 template <typename T>

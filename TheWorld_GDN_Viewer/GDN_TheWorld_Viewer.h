@@ -35,7 +35,7 @@ namespace godot
 		void setInitialWordlViewerPos(float x, float z, int level);
 		void loadWorldData(float& x, float& z, int level);
 
-		GDN_TheWorld_Globals* Globals(void);
+		GDN_TheWorld_Globals* Globals(bool useCache = true);
 	
 	private:
 		bool m_initialized;

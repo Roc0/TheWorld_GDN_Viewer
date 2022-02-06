@@ -15,7 +15,8 @@
 #define THEWORLD_VIEWER_CHUNK_SIZE_SHIFT			5
 #define THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT		10
 
-#define PLOG_LEVEL plog::info
+#define PLOG_DEFAULT_LEVEL plog::Severity::info
+#define PLOG_DEBUG_LEVEL plog::Severity::verbose
 
 #define THEWORLD_GLOBALS_NODE_NAME	"GDN_TheWorld_Globals"
 #define THEWORLD_VIEWER_NODE_NAME	"GDN_TheWorld_Viewer"
@@ -33,6 +34,7 @@ namespace godot
 	public:
 		GDN_TheWorld_Globals();
 		~GDN_TheWorld_Globals();
+		void init(void);
 		void deinit(void);
 
 		static void _register_methods()
@@ -74,7 +76,9 @@ namespace godot
 			}
 		}
 
-		TheWorld_MapManager::MapManager* mapManager(void) { return m_mapManager; };
+		TheWorld_MapManager::MapManager* mapManager(void) { 
+			return m_mapManager;
+		};
 
 		// WORLD GRID
 		// The world is rapresented by a grid map (World Grid) streamed from external source which defines also the distance of each vertex of the grid map in WUs. Such a grid is a flat grid of vertices whose elevations
@@ -115,7 +119,9 @@ namespace godot
 		// Number of vertices of the side of the bitmap (-1) with the elevations which is fixed and is a multiple of the number of vertices of the side of a chunk (numVerticesPerChuckSide) and is for this a multiple of 2 too
 		int bitmapResolution(void) { return m_bitmapResolution; /*m_bitmapResolution = 1024 con THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT = 10*/ }	// Resolution of the bitmap = num point of the bitmap -1;
 		// Size of the bitmap in WUs
-		float bitmapSizeInWUs(void) { return (bitmapResolution() + 1) * m_mapManager->gridStepInWU(); }
+		float bitmapSizeInWUs(void) { 
+			return (bitmapResolution() + 1) * m_mapManager->gridStepInWU();
+		}
 
 		// Max value of the lod index (numLods - 1)
 		int lodMaxDepth(void) {	return m_lodMaxDepth; /*m_lodMaxDepth = 5 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 e THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT = 10*/ }
@@ -155,16 +161,16 @@ namespace godot
 		}
 
 		bool isDebugEnabled(void) { return m_isDebugEnabled; }
-		void setDebugEnabled(bool b = true) { m_isDebugEnabled = b; }
+		void setDebugEnabled(bool b = true);
 
-		void setAppInError(int errorCode, string errorText) {
+		void setAppInError(int errorCode, std::string errorText) {
 			m_lastErrorCode = errorCode;
 			m_lastErrorText = errorText;
 			m_bAppInError = true;
 			PLOG_ERROR << errorText;
 		}
 		bool getAppInError(void) { return m_bAppInError; }
-		bool getAppInError(int& lastErrorCode, string& lastErrorText) {
+		bool getAppInError(int& lastErrorCode, std::string& lastErrorText) {
 			lastErrorCode = m_lastErrorCode;
 			lastErrorText = m_lastErrorText;
 			return m_bAppInError;
@@ -182,7 +188,7 @@ namespace godot
 		TheWorld_MapManager::MapManager *m_mapManager;
 		bool m_bAppInError;
 		int m_lastErrorCode;
-		string m_lastErrorText;
+		std::string m_lastErrorText;
 
 		// Node cache
 		GDN_TheWorld_Viewer* m_viewer;

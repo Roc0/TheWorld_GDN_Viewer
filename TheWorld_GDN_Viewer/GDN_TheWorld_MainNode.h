@@ -7,6 +7,7 @@
 namespace godot
 {
 	class GDN_TheWorld_Globals;
+	class GDN_Template;
 
 	class GDN_TheWorld_MainNode : public Node
 	{
@@ -15,7 +16,7 @@ namespace godot
 	public:
 		GDN_TheWorld_MainNode();
 		~GDN_TheWorld_MainNode();
-		bool init(Node* pWorldMainNode);
+		bool init(Node* pMainNode, Node* pWorldMainNode);
 		void deinit(void);
 
 		static void _register_methods();
@@ -35,14 +36,15 @@ namespace godot
 
 		// Node cache
 		GDN_TheWorld_Globals* m_globals;
+		//GDN_Template* m_temp;
 	};
 
 }
 
 //	/root
-//		/Main
-//			/TheWorld_MainNode										==> Under this node are attached all other GDN Nodes, it is created in Godot Editor
-//				/GDN_TheWorld_MainNode
-//					/GDN_TheWorld_Globals
+//		/Main										created in Godot editor
+//			/GDN_TheWorld_MainNode
+//			/GDN_TheWorld_Globals
+//			/TheWorld_Main							created in Godot editor
 //					/GDN_TheWorld_Viewer
 //						/GDN_TheWorld_Camera

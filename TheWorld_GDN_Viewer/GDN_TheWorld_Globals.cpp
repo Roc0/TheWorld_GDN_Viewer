@@ -16,17 +16,7 @@ namespace godot
 		m_bAppInError = false;
 		m_lastErrorCode = 0;
 
-		string logPath = getModuleLoadPath() + "\\TheWorld_Viewer_log.txt";
-		plog::init(PLOG_LEVEL, logPath.c_str(), 1000000, 3);
-		PLOG_INFO << "***************";
-		PLOG_INFO << "Log initilized!";
-		PLOG_INFO << "***************";
-
-		PLOGI << "TheWorld Globals Initializing...";
-
-		m_mapManager = new TheWorld_MapManager::MapManager(NULL, PLOG_LEVEL, plog::get());
-		m_mapManager->instrument(true);
-		m_mapManager->consoleDebugMode(false);
+		m_mapManager = NULL;
 
 		m_numVerticesPerChuckSide = 1 << THEWORLD_VIEWER_CHUNK_SIZE_SHIFT;
 		m_bitmapResolution = 1 << THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT;
@@ -34,6 +24,21 @@ namespace godot
 		m_numLods = m_lodMaxDepth + 1;
 
 		m_viewer = NULL;
+	}
+
+	void GDN_TheWorld_Globals::init(void)
+	{
+		string logPath = getModuleLoadPath() + "\\TheWorld_Viewer_log.txt";
+		plog::init(PLOG_DEFAULT_LEVEL, logPath.c_str(), 1000000, 3);
+		PLOG_INFO << "***************";
+		PLOG_INFO << "Log initilized!";
+		PLOG_INFO << "***************";
+
+		PLOGI << "TheWorld Globals Initializing...";
+
+		m_mapManager = new TheWorld_MapManager::MapManager(NULL, PLOG_DEFAULT_LEVEL, plog::get());
+		m_mapManager->instrument(true);
+		m_mapManager->consoleDebugMode(false);
 
 		m_initialized = true;
 		PLOGI << "TheWorld Globals Initialized!";
@@ -58,19 +63,18 @@ namespace godot
 			PLOG_INFO << "Log Terminated!";
 			PLOG_INFO << "*****************";
 
-			//call_deferred("free");
 			m_initialized = false;
 		}
 	}
 
 	void GDN_TheWorld_Globals::_init(void)
 	{
-		//Godot::print("GD_ClientApp::Init");
+		//Godot::print("GDN_TheWorld_Globals::Init");
 	}
 
 	void GDN_TheWorld_Globals::_ready(void)
 	{
-		//Godot::print("GD_ClientApp::_ready");
+		//Godot::print("GDN_TheWorld_Globals::_ready");
 		//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 	}
 
@@ -81,7 +85,7 @@ namespace godot
 	void GDN_TheWorld_Globals::_process(float _delta)
 	{
 		// To activate _process method add this Node to a Godot Scene
-		//Godot::print("GD_ClientApp::_process");
+		//Godot::print("GDN_TheWorld_Globals::_process");
 	}
 
 	GDN_TheWorld_Viewer* GDN_TheWorld_Globals::Viewer(bool useCache)
@@ -98,6 +102,22 @@ namespace godot
 		}
 
 		return m_viewer;
+	}
+
+	void GDN_TheWorld_Globals::setDebugEnabled(bool b)
+	{
+		m_isDebugEnabled = b;
+		
+		if (b)
+		{
+			plog::get()->setMaxSeverity(PLOG_DEBUG_LEVEL);
+			m_mapManager->setLogMaxSeverity(PLOG_DEBUG_LEVEL);
+		}
+		else
+		{
+			plog::get()->setMaxSeverity(PLOG_DEFAULT_LEVEL);
+			m_mapManager->setLogMaxSeverity(PLOG_DEFAULT_LEVEL);
+		}
 	}
 }
 

@@ -2,6 +2,7 @@
 #include "GDN_TheWorld_MainNode.h"
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
+#include "GDN_Template.h"
 
 using namespace godot;
 
@@ -20,6 +21,7 @@ GDN_TheWorld_MainNode::GDN_TheWorld_MainNode()
 {
 	m_initialized = false;
 	m_globals = NULL;
+	//m_temp = NULL;
 }
 
 GDN_TheWorld_MainNode::~GDN_TheWorld_MainNode()
@@ -33,6 +35,16 @@ void GDN_TheWorld_MainNode::deinit(void)
 	{
 		PLOGI << "TheWorld Main Node Deinitializing...";
 
+		//if (m_temp)
+		//{
+		//	Node* parent = m_temp->get_parent();
+		//	if (parent)
+		//		parent->remove_child(m_temp);
+		//	m_temp->deinit();
+		//	m_temp->queue_free();
+		//	m_temp = NULL;
+		//}
+		
 		GDN_TheWorld_Globals* globals = Globals();
 		if (globals)
 		{
@@ -56,20 +68,18 @@ void GDN_TheWorld_MainNode::deinit(void)
 			//globals->call_deferred("free");
 		}
 
-		//queue_free();
-		//call_deferred("free");
 		m_initialized = false;
 	}
 }
 
 void GDN_TheWorld_MainNode::_init(void)
 {
-	//Godot::print("GD_ClientApp::Init");
+	//Godot::print("GDN_TheWorld_MainNode::Init");
 }
 
 void GDN_TheWorld_MainNode::_ready(void)
 {
-	//Godot::print("GD_ClientApp::_ready");
+	//Godot::print("GDN_TheWorld_MainNode::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 }
 
@@ -80,48 +90,48 @@ void GDN_TheWorld_MainNode::_input(const Ref<InputEvent> event)
 void GDN_TheWorld_MainNode::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
-	//Godot::print("GD_ClientApp::_process");
+	//Godot::print("GDN_TheWorld_MainNode::_process");
 }
 
-bool GDN_TheWorld_MainNode::init(Node* pWorldMainNode)
+bool GDN_TheWorld_MainNode::init(Node* pMainNode, Node* pWorldMainNode)
 {
-	if (!pWorldMainNode)
+	// Must exist a Node acting as Main and a Node acting as the world; globals will be child of the first and the viewer will be a child of this second
+	if (!pWorldMainNode || !pMainNode)
 		return false;
 
-	// Must exist a Node acting as the world; the viewer will be a child of this node
-	//pWorldMainNode->add_child(this);		/* DEBUG */
+	pMainNode->add_child(this);
 
+	//GDN_Template* temp = GDN_Template::_new();
+	//if (temp)
+	//{
+	//	pWorldMainNode->add_child(temp);
+	//	temp->set_name("GDN_Template");
+	//	temp->init();
+	//	m_temp = temp;
+	//}
+	
 	GDN_TheWorld_Globals* globals = GDN_TheWorld_Globals::_new();
 	if (globals)
 	{
-		/* DEBUG */
-		pWorldMainNode->add_child(globals);		// critical poin on exit
-		//Node* parent = globals->get_parent();
-		//if (parent)
-		//	parent->remove_child(globals);
-		/* DEBUG */
+		pMainNode->add_child(globals);
 		globals->set_name(THEWORLD_GLOBALS_NODE_NAME);
-		m_globals = globals;
+		globals->init();
+		//m_globals = globals;
 	}
 	else
 		return false;
 
 	PLOGI << "TheWorld Main Node Initializing...";
 
-	/* DEBUG */
-	/*
 	GDN_TheWorld_Viewer* viewer = GDN_TheWorld_Viewer::_new();
 	if (viewer)
 	{
 		pWorldMainNode->add_child(viewer);
 		viewer->set_name(THEWORLD_VIEWER_NODE_NAME);
+		viewer->init();
 	}
 	else
 		return false;
-
-	viewer->init();
-	*/
-	/* DEBUG */
 
 	m_initialized = true;
 	PLOGI << "TheWorld Main Node Initialized!";
@@ -131,9 +141,6 @@ bool GDN_TheWorld_MainNode::init(Node* pWorldMainNode)
 
 GDN_TheWorld_Globals* GDN_TheWorld_MainNode::Globals(bool useCache)
 {
-	if (m_globals == NULL)
-		return NULL;
-	
 	if (m_globals == NULL || !useCache)
 	{
 		SceneTree* scene = get_tree();

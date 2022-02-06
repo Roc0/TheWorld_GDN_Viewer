@@ -1,3 +1,7 @@
+git submodule add -b 3.4 https://github.com/godotengine/godot-cpp
+cd godot-cpp
+git submodule update --init --recursive
+
 git submodule add https://github.com/pvigier/Quadtree.git
 cd Quadtree
 git submodule update --init
