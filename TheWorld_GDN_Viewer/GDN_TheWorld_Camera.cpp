@@ -1,5 +1,6 @@
 //#include "pch.h"
 #include "GDN_TheWorld_Camera.h"
+#include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Globals.h"
 
 #include <SceneTree.hpp>
@@ -21,7 +22,6 @@ void GDN_TheWorld_Camera::_register_methods()
 
 GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 {
-	m_pSpaceWorldNode = NULL;
 	m_isActive = false;
 	m_instanceId = -1;
 	m_PlayerCamera = false;
@@ -53,7 +53,7 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	m_pitchLimit = 360;
 	// Camera Rotation
 
-	//resetDebugEnabled();
+	m_globals = NULL;
 }
 
 GDN_TheWorld_Camera::~GDN_TheWorld_Camera()
@@ -77,7 +77,7 @@ void GDN_TheWorld_Camera::_process(float _delta)
 	// To activate _process method add this Node to a Godot Scene
 	//Godot::print("GDN_TheWorld_Camera::_process");
 
-	if (!m_isActive)
+	if (!isActiveCamera())
 	{
 		return;
 	}
@@ -92,7 +92,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	// To activate _process method add this Node to a Godot Scene
 	//Godot::print("GDN_TheWorld_Camera::_physics_process");
 
-	if (!m_isActive)
+	if (!isActiveCamera())
 	{
 		return;
 	}
@@ -120,7 +120,7 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 {
 	//Godot::print("GDN_TheWorld_Camera::_input: " + event->as_text());
 
-	if (!m_isActive)
+	if (!isActiveCamera())
 	{
 		return;
 	}
@@ -161,22 +161,39 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 
 void GDN_TheWorld_Camera::activateCamera(void)
 {
-	GDN_TheWorld_Camera* activeCamera = (GDN_TheWorld_Camera*)getActiveCamera();
-	if (activeCamera)
+	if (!isActiveCamera())
 	{
-		activeCamera->set_process_input(false);
-		activeCamera->set_process(false);
-		activeCamera->set_physics_process(false);
-		activeCamera->remove_from_group(GD_ACTIVE_CAMERA_GROUP);
-		m_isActive = false;
-	}
+		GDN_TheWorld_Camera* activeCamera = (GDN_TheWorld_Camera*)getActiveCamera();
+		if (activeCamera)
+		{
+			activeCamera->set_process_input(false);
+			activeCamera->set_process(false);
+			activeCamera->set_physics_process(false);
+			activeCamera->remove_from_group(GD_ACTIVE_CAMERA_GROUP);
+			//m_isActive = false;
+			activeCamera->notifyActiveCameraFlag(false);
+		}
 
-	make_current();
-	set_process_input(true);
-	set_process(true);
-	set_physics_process(true);
-	add_to_group(GD_ACTIVE_CAMERA_GROUP);
-	m_isActive = true;
+		make_current();
+		set_process_input(true);
+		set_process(true);
+		set_physics_process(true);
+		add_to_group(GD_ACTIVE_CAMERA_GROUP);
+		notifyActiveCameraFlag(true);
+	}
+}
+
+void GDN_TheWorld_Camera::deactivateCamera(void)
+{
+	if (isActiveCamera())
+	{
+		clear_current(true);
+		set_process_input(false);
+		set_process(false);
+		set_physics_process(false);
+		remove_from_group(GD_ACTIVE_CAMERA_GROUP);
+		notifyActiveCameraFlag(false);
+	}
 }
 
 bool GDN_TheWorld_Camera::isActiveCamera(void)
@@ -185,7 +202,13 @@ bool GDN_TheWorld_Camera::isActiveCamera(void)
 	//return is_in_group(GD_ACTIVE_CAMERA_GROUP);
 }
 
-Node* GDN_TheWorld_Camera::getActiveCamera(void)
+void GDN_TheWorld_Camera::notifyActiveCameraFlag(bool active)
+{
+	m_isActive = active;
+}
+
+
+GDN_TheWorld_Camera* GDN_TheWorld_Camera::getActiveCamera(void)
 {
 	SceneTree* scene = get_tree();
 	if (scene == NULL)
@@ -193,7 +216,14 @@ Node* GDN_TheWorld_Camera::getActiveCamera(void)
 
 	Array camArray = scene->get_nodes_in_group(GD_ACTIVE_CAMERA_GROUP);
 
-	if (camArray.size() > 0)
+	
+	if (camArray.size() > 1)
+	{
+		Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Too many active cameras");
+		return NULL;
+	}
+
+	if (camArray.size() == 1)
 		return camArray[0];
 	else
 		return NULL;
@@ -218,10 +248,8 @@ bool GDN_TheWorld_Camera::initOtherEntityCamera(void)
 }
 
 
-bool GDN_TheWorld_Camera::initCameraInWorld(Node* pSpaceWorld)
+bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 {
-	m_pSpaceWorldNode = pSpaceWorld;
-
 	set_name("WorldCamera");
 
 	activateCamera();
@@ -240,6 +268,12 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Node* pSpaceWorld)
 	Vector3 lookAt = aabb.position + aabb.size / 2;
 
 	look_at_from_position(cameraPos, lookAt, Vector3(0, 1, 0));*/
+
+	// cameraPos and lookAt are in WorldNode local coordinates and must be transformed in godot global coordinates
+	Vector3 worldNodePosGlobalCoord = Globals()->Viewer()->getWorldNode()->get_global_transform().origin;
+	Vector3 cameraPosGlobalCoord = cameraPos + worldNodePosGlobalCoord;
+	Vector3 lookAtGlobalCoord = lookAt + worldNodePosGlobalCoord;
+	look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
 
 	m_WorldCamera = true;
 
@@ -315,3 +349,18 @@ bool GDN_TheWorld_Camera::updateCamera()
 	return true;
 }
 
+GDN_TheWorld_Globals* GDN_TheWorld_Camera::Globals(bool useCache)
+{
+	if (m_globals == NULL || !useCache)
+	{
+		SceneTree* scene = get_tree();
+		if (!scene)
+			return NULL;
+		Viewport* root = scene->get_root();
+		if (!root)
+			return NULL;
+		m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
+	}
+
+	return m_globals;
+}

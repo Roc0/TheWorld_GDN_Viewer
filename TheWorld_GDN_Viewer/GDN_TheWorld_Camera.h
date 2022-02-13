@@ -9,6 +9,8 @@
 
 namespace godot {
 
+	class GDN_TheWorld_Globals;
+
 	class GDN_TheWorld_Camera : public Camera
 	{
 		GODOT_CLASS(GDN_TheWorld_Camera, Camera)
@@ -24,21 +26,21 @@ namespace godot {
 		void _process(float _delta);
 		void _physics_process(float _delta);
 		void _input(const Ref<InputEvent> event);
-		bool initCameraInWorld(Node* pSpaceWorld);
+		bool initCameraInWorld(Vector3 cameraPos, Vector3 lookAt);
 		bool initPlayerCamera(void);
 		bool initOtherEntityCamera(void);
 		bool updateCamera(void);
 		void activateCamera(void);
-		Node* getActiveCamera(void);
+		void deactivateCamera(void);
+		GDN_TheWorld_Camera* getActiveCamera(void);
 		bool isActiveCamera(void);
 		bool isPlayerCamera() { return m_PlayerCamera; }
 		bool isOtherEntityCamera() { return m_OtherEntityCamera; }
 		bool isWorldCamera() { return m_WorldCamera; }
-		//bool isDebugEnabled(void);
-		//void resetDebugEnabled(void);
+		void notifyActiveCameraFlag(bool active);
+		GDN_TheWorld_Globals* Globals(bool useCache = true);
 
 	private:
-		Node* m_pSpaceWorldNode;
 		Transform m_lastCameraPosInWorld;
 		bool m_PlayerCamera;
 		bool m_OtherEntityCamera;
@@ -46,7 +48,6 @@ namespace godot {
 		bool m_updateCameraRequired;
 		bool m_isActive;
 		int64_t m_instanceId;
-		//int m_isDebugEnabled;
 
 		// Camera Movement
 		int m_numMoveStep;
@@ -71,6 +72,9 @@ namespace godot {
 		float m_totalPitch;
 		int m_pitchLimit;
 		// Camera Rotation
+		
+		// Node cache
+		GDN_TheWorld_Globals* m_globals;
 	};
 
 }

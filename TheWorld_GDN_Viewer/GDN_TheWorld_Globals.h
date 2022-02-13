@@ -7,6 +7,7 @@
 #include <Viewport.hpp>
 
 #include "assert.h"
+#include "vector"
 
 #include <plog/Log.h>
 #include <MapManager.h>
@@ -46,7 +47,15 @@ namespace godot
 			register_method("set_debug_enabled", &GDN_TheWorld_Globals::setDebugEnabled);
 			register_method("is_debug_enabled", &GDN_TheWorld_Globals::isDebugEnabled);
 			register_method("debug_print", &GDN_TheWorld_Globals::debugPrint);
-			
+			register_method("error_print", &GDN_TheWorld_Globals::errorPrint);
+			register_method("warning_print", &GDN_TheWorld_Globals::warningPrint);
+			register_method("print", &GDN_TheWorld_Globals::print);
+
+			register_method("set_app_in_error", &GDN_TheWorld_Globals::setAppInError);
+			register_method("get_app_in_error", &GDN_TheWorld_Globals::getAppInError);
+			register_method("get_app_in_error_code", &GDN_TheWorld_Globals::getAppInErrorCode);
+			register_method("get_app_in_error_message", &GDN_TheWorld_Globals::getAppInErrorMsg);
+
 			register_method("get_num_vertices_per_chunk_side", &GDN_TheWorld_Globals::numVerticesPerChuckSide);
 			register_method("get_bitmap_resolution", &GDN_TheWorld_Globals::bitmapResolution);
 			register_method("get_lod_max_depth", &GDN_TheWorld_Globals::lodMaxDepth);
@@ -69,14 +78,41 @@ namespace godot
 		{
 			if (m_isDebugEnabled)
 			{
-				Godot::print(message);
-				char* m = message.alloc_c_string();
-				PLOGI << m;
+				String msg = "DEBUG - " + message;
+				Godot::print(msg);
+				char* m = msg.alloc_c_string();
+				PLOGD << m;
 				godot::api->godot_free(m);
 			}
 		}
 
-		TheWorld_MapManager::MapManager* mapManager(void) { 
+		void warningPrint(String message)
+		{
+			String msg = "WARNING - " + message;
+			Godot::print(msg);
+			char* m = msg.alloc_c_string();
+			PLOGW << m;
+			godot::api->godot_free(m);
+		}
+
+		void errorPrint(String message)
+		{
+			String msg = "ERROR - " + message;
+			Godot::print(msg);
+			char* m = msg.alloc_c_string();
+			PLOGE << m;
+			godot::api->godot_free(m);
+		}
+
+		void print(String message)
+		{
+			Godot::print(message);
+			char* m = message.alloc_c_string();
+			PLOGI << m;
+			godot::api->godot_free(m);
+		}
+
+		TheWorld_MapManager::MapManager* mapManager(void) {
 			return m_mapManager;
 		};
 
@@ -113,21 +149,21 @@ namespace godot
 		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int numVerticesPerChuckSide(void)
 		{
-			return m_numVerticesPerChuckSide; /*m_numVerticesPerChuckSide = 32 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5*/
+			return m_numVerticesPerChuckSide; /* m_numVerticesPerChuckSide = 32 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 */
 		}	// Chunk num vertices -1
 		
 		// Number of vertices of the side of the bitmap (-1) with the elevations which is fixed and is a multiple of the number of vertices of the side of a chunk (numVerticesPerChuckSide) and is for this a multiple of 2 too
-		int bitmapResolution(void) { return m_bitmapResolution; /*m_bitmapResolution = 1024 con THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT = 10*/ }	// Resolution of the bitmap = num point of the bitmap -1;
+		int bitmapResolution(void) { return m_bitmapResolution; /* m_bitmapResolution = 1024 con THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT = 10 */ }	// Resolution of the bitmap = num point of the bitmap -1;
 		// Size of the bitmap in WUs
 		float bitmapSizeInWUs(void) { 
 			return (bitmapResolution() + 1) * m_mapManager->gridStepInWU();
 		}
 
 		// Max value of the lod index (numLods - 1)
-		int lodMaxDepth(void) {	return m_lodMaxDepth; /*m_lodMaxDepth = 5 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 e THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT = 10*/ }
+		int lodMaxDepth(void) {	return m_lodMaxDepth; /* m_lodMaxDepth = 5 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 e THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT = 10 */ }
 
 		// Max number of quad split that can be done until the the granularity of the vertices is the same of the World Grid map and of the bitmap (lodMaxDepth + 1)
-		int numLods(void) { return m_numLods; /*m_numLods = 6 m_lodMaxDepth = 5*/ }
+		int numLods(void) { return m_numLods; /* m_numLods = 6 m_lodMaxDepth = 5 */ }
 
 		// The number of chunks required to cover every side of the bitmap at the specified lod value
 		int numChunksPerBitmapSide(int lod)
@@ -160,17 +196,46 @@ namespace godot
 			return (gridStepInBitmap(lod) * m_mapManager->gridStepInWU());
 		}
 
+		float splitScale(void) { return 2.0F; }
+
 		bool isDebugEnabled(void) { return m_isDebugEnabled; }
 		void setDebugEnabled(bool b = true);
 
-		void setAppInError(int errorCode, std::string errorText) {
+		void setAppInError(int errorCode, String errorText)
+		{
+			char* m = errorText.alloc_c_string();
+			_setAppInError(errorCode, m);
+			godot::api->godot_free(m);
+		}
+		void _setAppInError(int errorCode, std::string errorText)
+		{
 			m_lastErrorCode = errorCode;
 			m_lastErrorText = errorText;
+			m_errorText.push_back(errorText);
 			m_bAppInError = true;
 			PLOG_ERROR << errorText;
 		}
-		bool getAppInError(void) { return m_bAppInError; }
-		bool getAppInError(int& lastErrorCode, std::string& lastErrorText) {
+		bool getAppInError(void)
+		{
+			return _getAppInError();
+		}
+		int getAppInErrorCode(void)
+		{
+			int lastErrorCode = 0;
+			string message;
+			_getAppInError(lastErrorCode, message);
+			return lastErrorCode;
+		}
+		String getAppInErrorMsg(void)
+		{
+			int lastErrorCode = 0;
+			string message;
+			_getAppInError(lastErrorCode, message);
+			return message.c_str();
+		}
+		bool _getAppInError(void) { return m_bAppInError; }
+		bool _getAppInError(int& lastErrorCode, std::string& lastErrorText)
+		{
 			lastErrorCode = m_lastErrorCode;
 			lastErrorText = m_lastErrorText;
 			return m_bAppInError;
@@ -189,6 +254,7 @@ namespace godot
 		bool m_bAppInError;
 		int m_lastErrorCode;
 		std::string m_lastErrorText;
+		std::vector<std::string> m_errorText;
 
 		// Node cache
 		GDN_TheWorld_Viewer* m_viewer;

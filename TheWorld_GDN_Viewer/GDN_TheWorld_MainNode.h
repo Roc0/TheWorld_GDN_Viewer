@@ -40,11 +40,3 @@ namespace godot
 	};
 
 }
-
-//	/root
-//		/Main										created in Godot editor
-//			/GDN_TheWorld_MainNode
-//			/GDN_TheWorld_Globals
-//			/TheWorld_Main							created in Godot editor
-//					/GDN_TheWorld_Viewer
-//						/GDN_TheWorld_Camera
