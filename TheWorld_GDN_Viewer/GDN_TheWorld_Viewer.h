@@ -16,6 +16,11 @@ namespace godot
 	class GDN_TheWorld_Globals;
 	class GDN_TheWorld_Camera;
 
+#define MIN_MAP_SCALE 0.01F
+
+	// World Node Local Coordinate System is the same as MapManager coordinate system
+	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
+	// Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 	class GDN_TheWorld_Viewer : public Spatial
 	{
 		GODOT_CLASS(GDN_TheWorld_Viewer, Spatial)
@@ -35,12 +40,19 @@ namespace godot
 		void _ready(void);
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
+		void _notification(int p_what);
 
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		void resetInitialWordlViewerPos(float x, float z, int level);
 		Spatial* getWorldNode(void);
-	
+		QuadTree* getQuadTree(void) { return m_quadTree.get(); }
+		MeshCache* getMeshCache(void) { return m_meshCache.get(); }
+		void getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
+		Transform internalTransformGlobalCoord(void);
+		void setMapScale(Vector3 mapScaleVector);
+
 	private:
+		void onTransformChanged(void);
 		GDN_TheWorld_Camera* WorldCamera(bool useCache = true)
 		{ 
 			return m_worldCamera;
@@ -50,7 +62,6 @@ namespace godot
 			m_worldCamera = camera;
 		};
 		void loadWorldData(float& x, float& z, int level);
-		Transform internalTransformGlobalCoord(void);
 
 	private:
 		bool m_initialized;
@@ -61,14 +72,14 @@ namespace godot
 		Vector3 m_mapScaleVector;
 
 		// Viewer (Camera)
-		Vector3 m_worldViewerPos;	// in local coordinate of WorldNode
+		//Vector3 m_worldViewerPos;	// in local coordinate of WorldNode
 		int m_worldViewerLevel;
 		GDN_TheWorld_Camera* m_worldCamera;
 		
 		// World Data
 		std::vector<TheWorld_MapManager::SQLInterface::GridVertex> m_worldVertices;
-		int m_numWordlVerticesX;
-		int m_numWordlVerticesZ;
+		int m_numWorldVerticesX;
+		int m_numWorldVerticesZ;
 
 		// Node cache
 		GDN_TheWorld_Globals* m_globals;

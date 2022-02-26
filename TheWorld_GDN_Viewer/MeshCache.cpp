@@ -76,6 +76,11 @@ namespace godot
 
 		return mesh;
 	}
+
+	Mesh* MeshCache::getMesh(int seams, int lod)
+	{
+		return m_meshCache[seams][lod].ptr();
+	}
 }
 
 void makeFlatChunk_makeIndices(godot::PoolIntArray& indices, int numVerticesPerChuckSide, int seams)

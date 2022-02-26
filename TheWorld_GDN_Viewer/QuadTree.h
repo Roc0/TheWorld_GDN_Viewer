@@ -2,6 +2,8 @@
 #include <Godot.hpp>
 #include <Node.hpp>
 
+#include <map>
+#include <vector>
 #include <array>
 #include <memory>
 
@@ -10,20 +12,21 @@
 namespace godot
 {
 	class GDN_TheWorld_Viewer;
+	class QuadTree;
 
 	class Quad
 	{
 	public:
-		Quad(int posX, int posZ, Chunk* chunk, int lod);
+		Quad(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Chunk* chunk = nullptr);
 		~Quad();
 
-		int PosX()
+		int slotPosX()
 		{
-			return m_posX;
+			return m_slotPosX;
 		}
-		int PosZ()
+		int slotPosZ()
 		{
-			return m_posZ;
+			return m_slotPosZ;
 		}
 		int Lod()
 		{
@@ -36,13 +39,16 @@ namespace godot
 		void split(void);
 		void clearChildren(void);
 		void createChunk(void);
+		Chunk* getChunk(void) { return m_chunk; }
 
 	private:
 		std::array<std::unique_ptr<Quad>, 4> m_children;
 		Chunk* m_chunk;
-		int m_posX;	// express the orizzontal (X) and vertical (Z) position of the chunk in the grid of chunks
-		int m_posZ;	// at the specific lod : 0 the first chunk, 1 the following to the max number of chunks for the specific lod
+		int m_slotPosX;	// express the orizzontal (X) and vertical (Z) position of the quad (and of the corrispondig chunk) in the grid of chunks
+		int m_slotPosZ;	// at the specific lod : 0 the first chunk, 1 the following to the max number of chunks on a size for the specific lod
 		int m_lod;
+		GDN_TheWorld_Viewer* m_viewer;
+		QuadTree* m_quadTree;
 	};
 
 
@@ -53,6 +59,13 @@ namespace godot
 		~QuadTree();
 
 		void update(Vector3 viewerPosLocalCoord, Vector3 viewerPosGlobalCoord);
+		Chunk* getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir);
+		Chunk* getChunkAt(Chunk::ChunkPos pos);
+		void addChunk(Chunk* chunk);
+		void addChunkUpdate(Chunk* chunk);
+		void clearChunkUpdate(void);
+		std::vector<Chunk*>& getChunkUpdate(void) { return m_vectChunkUpdate; }
+		void ForAllChunk(Chunk::ChunkAction& chunkAction);
 
 	private:
 		void internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 viewerPosGlobalCoord, Quad* quadTreeNode);
@@ -60,5 +73,7 @@ namespace godot
 	private:
 		std::unique_ptr<Quad> m_root;
 		GDN_TheWorld_Viewer* m_viewer;
+		Chunk::MapChunk m_mapChunk;
+		std::vector<Chunk*> m_vectChunkUpdate;
 	};
 }

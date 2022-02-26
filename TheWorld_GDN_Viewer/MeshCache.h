@@ -29,6 +29,7 @@ namespace godot
 		~MeshCache();
 		
 		void initCache(int numVerticesPerChuckSide, int numLods);
+		Mesh* getMesh(int lod, int seams);
 
 	private:
 		ArrayMesh* makeFlatChunk(int numVerticesPerChuckSide, int lod, int seams);
