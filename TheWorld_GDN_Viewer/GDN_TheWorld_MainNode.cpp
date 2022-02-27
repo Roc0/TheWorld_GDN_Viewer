@@ -11,6 +11,7 @@ void GDN_TheWorld_MainNode::_register_methods()
 	register_method("_ready", &GDN_TheWorld_MainNode::_ready);
 	register_method("_process", &GDN_TheWorld_MainNode::_process);
 	register_method("_input", &GDN_TheWorld_MainNode::_input);
+	register_method("_notification", &GDN_TheWorld_MainNode::_notification);
 
 	register_method("init", &GDN_TheWorld_MainNode::init);
 	register_method("deinit", &GDN_TheWorld_MainNode::deinit);
@@ -69,28 +70,44 @@ void GDN_TheWorld_MainNode::deinit(void)
 		}
 
 		m_initialized = false;
+
+		Globals()->debugPrint("GDN_TheWorld_MainNode::deinit DONE!");
 	}
 }
 
 void GDN_TheWorld_MainNode::_init(void)
 {
+	//Cannot find Globals pointer as current node is not yet in the scene
 	//Godot::print("GDN_TheWorld_MainNode::Init");
 }
 
 void GDN_TheWorld_MainNode::_ready(void)
 {
-	//Godot::print("GDN_TheWorld_MainNode::_ready");
+	Globals()->debugPrint("GDN_TheWorld_MainNode::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
+}
+
+void GDN_TheWorld_MainNode::_notification(int p_what)
+{
+	switch (p_what)
+	{
+	case NOTIFICATION_PREDELETE:
+	{
+		Globals()->debugPrint("GDN_TheWorld_MainNode::_notification - Destroy Main Node");
+	}
+	break;
+	}
 }
 
 void GDN_TheWorld_MainNode::_input(const Ref<InputEvent> event)
 {
+	//Globals()->debugPrint("GDN_TheWorld_MainNode::_ready");
 }
 
 void GDN_TheWorld_MainNode::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
-	//Godot::print("GDN_TheWorld_MainNode::_process");
+	//Globals()->debugPrint("GDN_TheWorld_MainNode::_process");
 }
 
 bool GDN_TheWorld_MainNode::init(Node* pMainNode, Node* pWorldMainNode)

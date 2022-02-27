@@ -26,6 +26,7 @@ namespace godot {
 		void _process(float _delta);
 		void _physics_process(float _delta);
 		void _input(const Ref<InputEvent> event);
+		void _notification(int p_what);
 		bool initCameraInWorld(Vector3 cameraPos, Vector3 lookAt);
 		bool initPlayerCamera(void);
 		bool initOtherEntityCamera(void);

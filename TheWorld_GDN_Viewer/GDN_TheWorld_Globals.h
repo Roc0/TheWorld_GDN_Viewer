@@ -43,6 +43,7 @@ namespace godot
 			register_method("_ready", &GDN_TheWorld_Globals::_ready);
 			register_method("_process", &GDN_TheWorld_Globals::_process);
 			register_method("_input", &GDN_TheWorld_Globals::_input);
+			register_method("_notification", &GDN_TheWorld_Globals::_notification);
 
 			register_method("set_debug_enabled", &GDN_TheWorld_Globals::setDebugEnabled);
 			register_method("is_debug_enabled", &GDN_TheWorld_Globals::isDebugEnabled);
@@ -73,6 +74,7 @@ namespace godot
 		void _ready(void);
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
+		void _notification(int p_what);
 
 		void debugPrint(String message)
 		{
@@ -178,6 +180,7 @@ namespace godot
 		int strideInWorldGrid(int lod) { return gridStepInBitmap(lod); }
 		int gridStepInBitmap(int lod)
 		{
+			assert(!(lod < 0 || lod > lodMaxDepth()));
 			if (lod < 0 || lod > lodMaxDepth())
 				return -1;
 			//int ret = bitmapResolution() / (numChunksPerBitmapSide(lod) * numVerticesPerChuckSide());

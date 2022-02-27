@@ -49,6 +49,7 @@ bool Quad::isLeaf(void)
 void Quad::split(void)
 {
 	assert(m_lod > 0);
+	assert(m_children[0] == nullptr);
 	
 	for (int i = 0; i < 4; i++)
 	{
@@ -72,11 +73,16 @@ void Quad::recycleChunk(void)
 
 void Quad::clearChildren(void)
 {
-	for (int i = 0; i < 4; i++)
-	{
-		m_children[i]->recycleChunk();
-		m_children[i].reset();
-	}
+	assert(m_children.size() == 0 || m_children.size() == 4);
+	if (m_children.size() != 0)
+		for (int i = 0; i < 4; i++)
+		{
+			if (m_children[i] != nullptr)
+			{
+				m_children[i]->recycleChunk();
+				m_children[i].reset();
+			}
+		}
 }
 
 void Quad::createChunk(void)
@@ -102,6 +108,13 @@ void Quad::createChunk(void)
 QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer)
 {
 	m_viewer = viewer;
+	m_numSplits = 0;
+	m_numJoin = 0;
+	m_numLeaf = 0;
+}
+
+void QuadTree::init(void)
+{
 	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), m_viewer);
 }
 
@@ -131,26 +144,34 @@ void QuadTree::ForAllChunk(Chunk::ChunkAction& chunkAction)
 		{
 			chunkAction.exec(it1->second);
 		}
-		it->second.clear();
 	}
 }
 
 void QuadTree::update(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGlobalCoord)
 {
+	m_numLeaf = 0;
 	return internalUpdate(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord, m_root.get());
 }
 
 void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGlobalCoord, Quad* quad)
 {
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
-	int gridStep = globals->gridStepInBitmap(quad->Lod());	// The number of World Grid vertices (-1) or bitmap vertices (-1) which separate the vertices of the mesh at the specified lod value 
-	int chunkSize = gridStep * globals->numVerticesPerChuckSide();	// chunk size in number of World Grid vertices
-	Vector3 chunkCenter = real_t(chunkSize) * (Vector3(real_t(quad->slotPosX()), 0, real_t(quad->slotPosZ())) + Vector3(0.5, 0, 0.5));
-	real_t splitDistance = chunkSize * globals->splitScale();
+	float chunkSizeInWUs = globals->gridStepInBitmapWUs(quad->Lod()) * globals->numVerticesPerChuckSide();									// chunk size in World Units
+	Vector3 chunkCenter = real_t(chunkSizeInWUs) * (Vector3(real_t(quad->slotPosX()), 0, real_t(quad->slotPosZ())) + Vector3(0.5, 0, 0.5));	// chunk center in local coord. respect Viewer Node (or the grid of chunks)
+	real_t splitDistance = chunkSizeInWUs * globals->splitScale();
 	if (quad->isLeaf())
 	{
-		if (quad->Lod() > 0 && chunkCenter.distance_to(cameraPosViewerNodeLocalCoord) < splitDistance)
-			quad->split();
+		
+		m_numLeaf++;
+		if (quad->Lod() > 0)
+		{
+			real_t distance = chunkCenter.distance_to(cameraPosViewerNodeLocalCoord);
+			if (distance < splitDistance)
+			{
+				quad->split();
+				m_numSplits++;
+			}
+		}
 	}
 	else
 	{
@@ -168,6 +189,7 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 			quad->clearChildren();
 			quad->createChunk();
 			quad->getChunk()->setJustJoined(true);
+			m_numJoin++;
 		}
 	}
 }
@@ -180,33 +202,47 @@ Chunk* QuadTree::getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot
 	{
 	case Chunk::DirectionSlot::Center:
 		chunk = getChunkAt(pos);
+		break;
 	case Chunk::DirectionSlot::Left:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(-1, 0, -1));
+		break;
 	case Chunk::DirectionSlot::Right:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(1, 0, -1));
+		break;
 	case Chunk::DirectionSlot::Bottom:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(0, -1, -1));
+		break;
 	case Chunk::DirectionSlot::Top:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(0, 1, -1));
+		break;
 	case Chunk::DirectionSlot::LeftTop:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(-1, 0, -1));
+		break;
 	case Chunk::DirectionSlot::LeftBottom:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(-1, 1, -1));
+		break;
 	case Chunk::DirectionSlot::RightTop:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(2, 0, -1));
+		break;
 	case Chunk::DirectionSlot::RightBottom:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(2, 1, -1));
+		break;
 	case Chunk::DirectionSlot::BottomLeft:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(0, -1, -1));
+		break;
 	case Chunk::DirectionSlot::BottomRight:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(1, -1, -1));
+		break;
 	case Chunk::DirectionSlot::TopLeft:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(0, 2, -1));
+		break;
 	case Chunk::DirectionSlot::TopRight:
 		chunk = getChunkAt(pos + Chunk::ChunkPos(1, 2, -1));
-	default:
-		return chunk;
+		break;
+	//default:
 	}
+
+	return chunk;
 }
 
 Chunk* QuadTree::getChunkAt(Chunk::ChunkPos pos)
@@ -251,4 +287,38 @@ void QuadTree::addChunkUpdate(Chunk* chunk)
 void QuadTree::clearChunkUpdate(void)
 {
 	m_vectChunkUpdate.clear();
+}
+
+void QuadTree::dump(void)
+{
+	GDN_TheWorld_Globals* globals = m_viewer->Globals();
+
+	globals->debugPrint(String("Num vert. X chunk side: ") + String(to_string(globals->numVerticesPerChuckSide()).c_str())
+				+ String("\t") + String("Num vert. X grid size: ") + String(to_string(globals->bitmapResolution()).c_str())
+				+ String("\t") + String("Grid size [WUs]: ") + String(to_string(globals->bitmapSizeInWUs()).c_str())
+				+ String("\t") + String("Lod max depth: ") + String(to_string(globals->lodMaxDepth()).c_str()));
+
+	globals->debugPrint(String("Num quad split: ") + String(to_string(m_numSplits).c_str())
+				+ String("\t") + String("Num quad join: ") + String(to_string(m_numJoin).c_str())
+				+ String("\t") + String("Num leaves: ") + String(to_string(m_numLeaf).c_str()));
+
+	int numChunks = 0;
+	for (int i = globals->lodMaxDepth(); i >= 0; i--)
+	{
+		int numChunksAtLod = 0;
+		Chunk::MapChunk::iterator it = m_mapChunk.find(i);
+		if (it != m_mapChunk.end())
+			numChunksAtLod = int(m_mapChunk[i].size());
+		int numChunksActiveAtLod = 0;
+		for (Chunk::MapChunkPerLod::iterator it1 = m_mapChunk[i].begin(); it1 != m_mapChunk[i].end(); it1++)
+			if (it1->second->isActive())
+				numChunksActiveAtLod++;
+		globals->debugPrint("Num chunks at lod " + String(to_string(i).c_str()) + ": " + String(to_string(numChunksAtLod).c_str())
+			+ String("\t") + " Active " + String(to_string(numChunksActiveAtLod).c_str()));
+		numChunks += numChunksAtLod;
+	}
+	globals->debugPrint("Num chunks: " + String(to_string(numChunks).c_str()));
+
+	m_numSplits = 0;
+	m_numJoin = 0;
 }

@@ -148,7 +148,7 @@ void Chunk::update(bool isVisible)
 	if (chunk && chunk->isActive())
 		seams |= SEAM_TOP;
 
-	setMesh(m_viewer->getMeshCache()->getMesh(m_lod, seams));
+	setMesh(m_viewer->getMeshCache()->getMesh(seams, m_lod));
 
 	// TODORIC Is this needed at every update?
 	setAABB(m_aabb);

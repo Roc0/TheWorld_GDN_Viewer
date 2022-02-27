@@ -18,6 +18,7 @@ namespace godot
 		~GDN_TheWorld_MainNode();
 		bool init(Node* pMainNode, Node* pWorldMainNode);
 		void deinit(void);
+		void _notification(int p_what);
 
 		static void _register_methods();
 

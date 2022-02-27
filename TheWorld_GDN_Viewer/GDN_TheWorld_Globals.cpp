@@ -64,17 +64,19 @@ namespace godot
 			PLOG_INFO << "*****************";
 
 			m_initialized = false;
+			
+			debugPrint("GDN_TheWorld_Globals::deinit DONE!");
 		}
 	}
 
 	void GDN_TheWorld_Globals::_init(void)
 	{
-		//Godot::print("GDN_TheWorld_Globals::Init");
+		//debugPrint("GDN_TheWorld_Globals::_init");
 	}
 
 	void GDN_TheWorld_Globals::_ready(void)
 	{
-		//Godot::print("GDN_TheWorld_Globals::_ready");
+		debugPrint("GDN_TheWorld_Globals::_ready");
 		//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 	}
 
@@ -82,10 +84,22 @@ namespace godot
 	{
 	}
 
+	void GDN_TheWorld_Globals::_notification(int p_what)
+	{
+		switch (p_what)
+		{
+		case NOTIFICATION_PREDELETE:
+		{
+			debugPrint("GDN_TheWorld_Globals::_notification - Destroy Globals");
+		}
+		break;
+		}
+	}
+
 	void GDN_TheWorld_Globals::_process(float _delta)
 	{
 		// To activate _process method add this Node to a Godot Scene
-		//Godot::print("GDN_TheWorld_Globals::_process");
+		//debugPrint("GDN_TheWorld_Globals::_process");
 	}
 
 	GDN_TheWorld_Viewer* GDN_TheWorld_Globals::Viewer(bool useCache)

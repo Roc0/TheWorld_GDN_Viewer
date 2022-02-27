@@ -16,6 +16,7 @@ void GDN_TheWorld_Camera::_register_methods()
 	register_method("_process", &GDN_TheWorld_Camera::_process);
 	register_method("_physics_process", &GDN_TheWorld_Camera::_physics_process);
 	register_method("_input", &GDN_TheWorld_Camera::_input);
+	register_method("_notification", &GDN_TheWorld_Camera::_notification);
 	register_method("is_active_camera", &GDN_TheWorld_Camera::isActiveCamera);
 	register_method("get_active_camera", &GDN_TheWorld_Camera::getActiveCamera);
 }
@@ -62,20 +63,36 @@ GDN_TheWorld_Camera::~GDN_TheWorld_Camera()
 
 void GDN_TheWorld_Camera::_init()
 {
-	//Godot::print("GDN_TheWorld_Camera::Init");
+	//Cannot find Globals pointer as current node is not yet in the scene
+	//Godot::print("GDN_TheWorld_Camera::_init");
 
 	m_instanceId = get_instance_id();
 }
 
 void GDN_TheWorld_Camera::_ready()
 {
-	//Godot::print("GDN_TheWorld_Camera::_ready");
+	Globals()->debugPrint("GDN_TheWorld_Camera::_ready");
+	//Node* parent = get_parent();
+	//String parentName = parent->get_name();
+	//Globals()->debugPrint("GDN_TheWorld_Camera::_ready - Parent name: " + parentName);
+}
+
+void GDN_TheWorld_Camera::_notification(int p_what)
+{
+	switch (p_what)
+	{
+	case NOTIFICATION_PREDELETE:
+	{
+		Globals()->debugPrint("GDN_TheWorld_Camera::_notification - Destroy Camera");
+	}
+	break;
+	}
 }
 
 void GDN_TheWorld_Camera::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
-	//Godot::print("GDN_TheWorld_Camera::_process");
+	//Globals()->debugPrint("GDN_TheWorld_Camera::_process");
 
 	if (!isActiveCamera())
 	{
@@ -83,14 +100,12 @@ void GDN_TheWorld_Camera::_process(float _delta)
 	}
 
 	bool b = updateCamera();
-
-	//resetDebugEnabled();
 }
 
 void GDN_TheWorld_Camera::_physics_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
-	//Godot::print("GDN_TheWorld_Camera::_physics_process");
+	//Globals()->debugPrint("GDN_TheWorld_Camera::_physics_process");
 
 	if (!isActiveCamera())
 	{
@@ -118,7 +133,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 {
-	//Godot::print("GDN_TheWorld_Camera::_input: " + event->as_text());
+	//Globals()->debugPrint("GDN_TheWorld_Camera::_input: " + event->as_text());
 
 	if (!isActiveCamera())
 	{
@@ -128,7 +143,7 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 	InputEventMouseMotion* eventMouseMotion = cast_to<InputEventMouseMotion>(event.ptr());
 	if (eventMouseMotion != nullptr)
 	{
-		//Godot::print("GDN_TheWorld_Camera::_input: " + event->as_text());
+		//Globals()->debugPrint("GDN_TheWorld_Camera::_input: " + event->as_text());
 		if (m_rotateCameraOn)
 		{
 			m_mouseRelativePosToRotate = eventMouseMotion->get_relative();
@@ -269,11 +284,19 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 
 	look_at_from_position(cameraPos, lookAt, Vector3(0, 1, 0));*/
 
+	//Transform t = get_transform();
+	//t.origin = cameraPos;
+	//set_transform(t);
+	//Vector3 posGlobal = get_global_transform().origin;	// DEBUG
+	//Vector3 posLocal = get_transform().origin;			// DEBUG
+
 	// cameraPos and lookAt are in WorldNode local coordinates and must be transformed in godot global coordinates
 	Vector3 worldNodePosGlobalCoord = Globals()->Viewer()->getWorldNode()->get_global_transform().origin;
 	Vector3 cameraPosGlobalCoord = cameraPos + worldNodePosGlobalCoord;
 	Vector3 lookAtGlobalCoord = lookAt + worldNodePosGlobalCoord;
 	look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
+	Vector3 posGlobal1 = get_global_transform().origin;	// DEBUG
+	Vector3 posLocal1 = get_transform().origin;			// DEBUG
 
 	m_WorldCamera = true;
 

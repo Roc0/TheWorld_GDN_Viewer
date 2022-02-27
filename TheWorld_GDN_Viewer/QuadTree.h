@@ -58,6 +58,8 @@ namespace godot
 		QuadTree(GDN_TheWorld_Viewer* viewer);
 		~QuadTree();
 
+		void init(void);
+		
 		void update(Vector3 viewerPosLocalCoord, Vector3 viewerPosGlobalCoord);
 		Chunk* getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir);
 		Chunk* getChunkAt(Chunk::ChunkPos pos);
@@ -66,6 +68,7 @@ namespace godot
 		void clearChunkUpdate(void);
 		std::vector<Chunk*>& getChunkUpdate(void) { return m_vectChunkUpdate; }
 		void ForAllChunk(Chunk::ChunkAction& chunkAction);
+		void dump(void);
 
 	private:
 		void internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 viewerPosGlobalCoord, Quad* quadTreeNode);
@@ -75,5 +78,10 @@ namespace godot
 		GDN_TheWorld_Viewer* m_viewer;
 		Chunk::MapChunk m_mapChunk;
 		std::vector<Chunk*> m_vectChunkUpdate;
+
+		// Statistics
+		int m_numSplits;
+		int m_numJoin;
+		int m_numLeaf;
 	};
 }

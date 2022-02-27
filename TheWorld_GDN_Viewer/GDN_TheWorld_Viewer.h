@@ -17,6 +17,7 @@ namespace godot
 	class GDN_TheWorld_Camera;
 
 #define MIN_MAP_SCALE 0.01F
+#define NUM_PROCESS_BETWEEN_DUMP 300
 
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -65,6 +66,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		int m_numProcessFromLastDump;
 		
 		std::unique_ptr<MeshCache> m_meshCache;
 		std::unique_ptr<QuadTree> m_quadTree;

@@ -4,6 +4,7 @@
 #include "GDN_TheWorld_Camera.h"
 #include <SceneTree.hpp>
 #include <Viewport.hpp>
+#include <Engine.hpp>
 
 #include "MeshCache.h"
 #include "QuadTree.h"
@@ -23,7 +24,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("_input", &GDN_TheWorld_Viewer::_input);
 	register_method("_notification", &GDN_TheWorld_Viewer::_notification);
 
-	register_method("set_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
+	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -35,6 +36,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numWorldVerticesZ = 0;
 	m_globals = NULL;
 	m_mapScaleVector = Vector3(1, 1, 1);
+	m_numProcessFromLastDump = 0;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -53,18 +55,33 @@ void GDN_TheWorld_Viewer::deinit(void)
 		
 		m_initialized = false;
 		PLOGI << "TheWorld Viewer Deinitialized!";
+		
+		Globals()->debugPrint("GDN_TheWorld_Viewer::deinit DONE!");
 	}
+
 }
 
 void GDN_TheWorld_Viewer::_init(void)
 {
-	//Godot::print("GDN_TheWorld_Viewer::Init");
+	//Cannot find Globals pointer as current node is not yet in the scene
+	//Godot::print("GDN_TheWorld_Viewer::_init");
 }
 
 void GDN_TheWorld_Viewer::_ready(void)
 {
-	//Godot::print("GDN_TheWorld_Viewer::_ready");
+	Globals()->debugPrint("GDN_TheWorld_Viewer::_ready");
+
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
+
+	// Camera stuff
+	if (WorldCamera())
+	{
+		WorldCamera()->deactivateCamera();
+		WorldCamera()->queue_free();
+	}
+	assignWorldCamera(GDN_TheWorld_Camera::_new());
+	//getWorldNode()->add_child(WorldCamera());		// Viewer and WorldCamera are at the same level : both child of WorldNode
+	getWorldNode()->call_deferred("add_child", WorldCamera());
 }
 
 void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
@@ -77,33 +94,45 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 	{
 		case NOTIFICATION_PREDELETE:
 		{
-			Globals()->debugPrint("Destroy Viewer");
+			Globals()->debugPrint("GDN_TheWorld_Viewer::_notification - Destroy Viewer");
 			deinit();
 		}
 		break;
 		case NOTIFICATION_ENTER_WORLD:
 		{
-			Globals()->debugPrint("Enter world");
-			Chunk::EnterWorldChunkAction action;
-			m_quadTree->ForAllChunk(action);
+			if (m_quadTree)
+			{
+				Globals()->debugPrint("Enter world");
+				Chunk::EnterWorldChunkAction action;
+				m_quadTree->ForAllChunk(action);
+			}
 		}
 		break;
 		case NOTIFICATION_EXIT_WORLD:
 		{
-			Globals()->debugPrint("Exit world");
-			Chunk::ExitWorldChunkAction action;
-			m_quadTree->ForAllChunk(action);
+			if (m_quadTree)
+			{
+				Globals()->debugPrint("Exit world");
+				Chunk::ExitWorldChunkAction action;
+				m_quadTree->ForAllChunk(action);
+			}
 		}
 		break;
 		case NOTIFICATION_VISIBILITY_CHANGED:
 		{
-			Globals()->debugPrint("Visibility changed");
-			Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
-			m_quadTree->ForAllChunk(action);
+			if (m_quadTree)
+			{
+				Globals()->debugPrint("Visibility changed");
+				Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
+				m_quadTree->ForAllChunk(action);
+			}
 		}
 		break;
 		case NOTIFICATION_TRANSFORM_CHANGED:
-			onTransformChanged();
+			if (m_quadTree)
+			{
+				onTransformChanged();
+			}
 			break;
 	// TODORIC
 	}
@@ -116,8 +145,6 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_meshCache = make_unique<MeshCache>(this);
 	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 
-	m_quadTree = make_unique<QuadTree>(this);
-	
 	m_initialized = true;
 	PLOGI << "TheWorld Viewer Initialized!";
 
@@ -139,13 +166,17 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	Vector3 cameraPosGlobalCoord = activeCamera->get_global_transform().get_origin();
 	Transform globalTransform = internalTransformGlobalCoord();
 	Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node local coordinates of the camera pos
+	// DEBUG: verify
 	{
-		// verify
 		Vector3 cameraPosWorldNodeLocalCoord = activeCamera->get_transform().get_origin();		// WorldNode local coordinates of the camera pos
 		Vector3 viewerNodePosWordlNodeLocalCoord = get_transform().get_origin();				// WorldNode local coordinates of the Viewer Node pos
 		Vector3 cameraPosViewerNodeLocalCoord2 = cameraPosWorldNodeLocalCoord - viewerNodePosWordlNodeLocalCoord;	// Viewer Node local coordinates of the camera pos
 		// cameraPosViewerNodeLocalCoord2 must be equal to cameraPosViewerNodeLocalCoord
+		Vector3 viewerPosGlobalCoord = get_global_transform().get_origin();		// da mettere in relazione con cameraPosGlobalCoord
+		
+		Transform globalTransform = internalTransformGlobalCoord();
 	}
+	// DEBUG: verify
 
 	m_quadTree->update(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);
 
@@ -156,20 +187,23 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	std::vector<Chunk*> vectAdditionalUpdateChunk;
 	for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
 	{
+		if (!(*it)->isActive())
+			continue;
+		
 		Chunk::ChunkPos pos = (*it)->getPos();
 
 		// In case the chunk got split forcing update to left, right, bottom, top chunks
 		Chunk* chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Left);
-		if (chunk != nullptr && chunk->isActive())
+		if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 			vectAdditionalUpdateChunk.push_back(chunk);
 		chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Right);
-		if (chunk != nullptr && chunk->isActive())
+		if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 			vectAdditionalUpdateChunk.push_back(chunk);
 		chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Bottom);
-		if (chunk != nullptr && chunk->isActive())
+		if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 			vectAdditionalUpdateChunk.push_back(chunk);
 		chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Top);
-		if (chunk != nullptr && chunk->isActive())
+		if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 			vectAdditionalUpdateChunk.push_back(chunk);
 
 		// In case the chunk got joined
@@ -180,28 +214,28 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 			Chunk::ChunkPos pos1(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
 			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::LeftTop);
-			if (chunk != nullptr && chunk->isActive())
+			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
 			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::LeftBottom);
-			if (chunk != nullptr && chunk->isActive())
+			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
 			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::RightTop);
-			if (chunk != nullptr && chunk->isActive())
+			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
 			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::RightBottom);
-			if (chunk != nullptr && chunk->isActive())
+			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
 			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::BottomLeft);
-			if (chunk != nullptr && chunk->isActive())
+			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
 			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::BottomRight);
-			if (chunk != nullptr && chunk->isActive())
+			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
 			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::TopLeft);
-			if (chunk != nullptr && chunk->isActive())
+			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
 			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::TopRight);
-			if (chunk != nullptr && chunk->isActive())
+			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
 		}
 	}
@@ -209,7 +243,27 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
 		(*it)->update(is_visible_in_tree());
 
+	for (std::vector<Chunk*>::iterator it = vectAdditionalUpdateChunk.begin(); it != vectAdditionalUpdateChunk.end(); it++)
+		(*it)->update(is_visible_in_tree());
+
 	m_quadTree->clearChunkUpdate();
+	vectAdditionalUpdateChunk.clear();
+
+	// Check for Dump
+	if (m_numProcessFromLastDump == 0)
+	{
+		if (Globals()->isDebugEnabled())
+		{
+			float f = Engine::get_singleton()->get_frames_per_second();
+			Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
+			m_quadTree->dump();
+		}
+		m_numProcessFromLastDump++;
+	}
+	else if (m_numProcessFromLastDump > NUM_PROCESS_BETWEEN_DUMP)
+		m_numProcessFromLastDump = 0;	// Next time Dump
+	else
+		m_numProcessFromLastDump++;
 }
 
 Transform GDN_TheWorld_Viewer::internalTransformGlobalCoord(void)
@@ -266,7 +320,6 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, int level
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 	// Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 
-	Vector3 worldViewerPos(x, 0, z);
 	m_worldViewerLevel = level;
 
 	try
@@ -280,24 +333,20 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, int level
 			Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Not found WorldViewer Pos");
 			return;
 		}
-		worldViewerPos.y = it->altitude();
+		Vector3 cameraPos(x, it->altitude() + 100, z);		// MapManager coordinates are local coordinates of WorldNode
+		Vector3 lookAt(x + 100, it->altitude(), z + 100);	
 
 		// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
 		Transform t = get_transform();
 		t.origin = Vector3(m_worldVertices[0].posX(), 0, m_worldVertices[0].posZ());
 		set_transform(t);
 		
-		// Camera stuff
-		if (WorldCamera())
-		{
-			WorldCamera()->deactivateCamera();
-			WorldCamera()->queue_free();
-		}
-		assignWorldCamera(GDN_TheWorld_Camera::_new());
-		getWorldNode()->add_child(WorldCamera());		// Viewer and WorldCamera are at the same level : both child of WorldNode
-		Vector3 cameraPos(worldViewerPos.x, worldViewerPos.y + 100, worldViewerPos.z);	// MapManager coordinates are local coordinates of WorldNode
-		Vector3 lookAt(worldViewerPos.x, worldViewerPos.y, worldViewerPos.z);
 		WorldCamera()->initCameraInWorld(cameraPos, lookAt);
+
+		if (m_quadTree)
+			m_quadTree.reset();
+		m_quadTree = make_unique<QuadTree>(this);
+		m_quadTree->init();
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
