@@ -314,7 +314,7 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 	}
 }
 
-void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, int level)
+void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level)
 {
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -333,8 +333,8 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, int level
 			Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Not found WorldViewer Pos");
 			return;
 		}
-		Vector3 cameraPos(x, it->altitude() + 100, z);		// MapManager coordinates are local coordinates of WorldNode
-		Vector3 lookAt(x + 100, it->altitude(), z + 100);	
+		Vector3 cameraPos(x, it->altitude() + cameraDistanceFromTerrain, z);		// MapManager coordinates are local coordinates of WorldNode
+		Vector3 lookAt(x + cameraDistanceFromTerrain, it->altitude(), z + cameraDistanceFromTerrain);
 
 		// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
 		Transform t = get_transform();

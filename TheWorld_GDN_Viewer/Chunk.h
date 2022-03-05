@@ -10,6 +10,8 @@
 
 namespace godot
 {
+#define DEBUG_WIRECUBE_MESH	"debug_wirecube_mesh"
+	
 	class GDN_TheWorld_Viewer;
 
 	class Chunk
@@ -36,7 +38,7 @@ namespace godot
 		{
 		public:
 			ChunkAction() {}
-			~ChunkAction() {}
+			virtual ~ChunkAction() {}
 			virtual void exec(Chunk* chunk) = 0;
 		private:
 		};
@@ -45,7 +47,7 @@ namespace godot
 		{
 		public:
 			EnterWorldChunkAction() {}
-			~EnterWorldChunkAction() {}
+			virtual ~EnterWorldChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
 				chunk->enterWorld();
@@ -57,7 +59,7 @@ namespace godot
 		{
 		public:
 			ExitWorldChunkAction() {}
-			~ExitWorldChunkAction() {}
+			virtual ~ExitWorldChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
 				chunk->exitWorld();
@@ -69,7 +71,7 @@ namespace godot
 		{
 		public:
 			VisibilityChangedChunkAction(bool isVisibleInTree) { m_isVisibleInTree = isVisibleInTree; }
-			~VisibilityChangedChunkAction() {}
+			virtual ~VisibilityChangedChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
 				chunk->setVisible(m_isVisibleInTree);
@@ -82,7 +84,7 @@ namespace godot
 		{
 		public:
 			TransformChangedChunkAction(Transform globalT) { m_globalT = globalT; }
-			~TransformChangedChunkAction() {}
+			virtual ~TransformChangedChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
 				chunk->parentTransformChanged(m_globalT);
@@ -144,6 +146,7 @@ namespace godot
 			int getLod(void) { return m_lod; }
 			int getSlotPosX(void) { return m_slotPosX; }
 			int getSlotPosZ(void) { return m_slotPosZ; }
+		
 		private:
 			int m_slotPosX;
 			int m_slotPosZ;
@@ -154,18 +157,18 @@ namespace godot
 		typedef std::map<int, MapChunkPerLod> MapChunk;
 
 		Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Material* mat);
-		~Chunk();
+		virtual ~Chunk();
 		
 		void initVisual(void);
 		void deinit(void);
 
 		// Actions
-		void enterWorld(void);
-		void exitWorld(void);
-		void parentTransformChanged(Transform t);
-		void setVisible(bool b);
+		virtual void enterWorld(void);
+		virtual void exitWorld(void);
+		virtual void parentTransformChanged(Transform t);
+		virtual void setVisible(bool b);
+		virtual void setAABB(AABB& aabb);
 
-		void setMesh(Mesh* mesh);
 		void update(bool isVsisible);
 		bool isActive(void) { return m_active; }
 		void setActive(bool b) { m_active = b; }
@@ -176,13 +179,11 @@ namespace godot
 		void setJustJoined(bool b) { m_justJoined = b; }
 		int getLod(void) { return m_lod; }
 		ChunkPos getPos(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod); }
-		void setAABB(AABB& aabb);
 	
 	private:
-		int m_slotPosX;	// express the orizzontal (X) and vertical (Z) position of the chunk in the grid of chunks
-		int m_slotPosZ;	// at the specific lod : 0 the first chunk, 1 the following to the max number of chunks on a size for the specific lod
-		int m_lod;
-		Material* m_mat;
+		void setMesh(Ref<Mesh> mesh);
+
+	protected:
 		GDN_TheWorld_Viewer* m_viewer;
 
 		int m_numVerticesPerChuckSide;		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
@@ -196,13 +197,45 @@ namespace godot
 		int m_firstWorldVertRow;			// 0-based starting row in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
 		int m_lastWorldVertRow;				// 0-based endif row in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
 
+	private:
+		int m_slotPosX;	// express the orizzontal (X) and vertical (Z) position of the chunk in the grid of chunks
+		int m_slotPosZ;	// at the specific lod : 0 the first chunk, 1 the following to the max number of chunks on a size for the specific lod
+		int m_lod;
+		Material* m_mat;
+
 		bool m_active;
 		bool m_visible;
 		bool m_pendingUpdate;
 		bool m_justJoined;
+		AABB m_aabb;
 		RID m_meshInstance;
 		RID m_meshRID;
+		Ref<Mesh> m_mesh;
+	};
+
+	class ChunkDebug : public Chunk
+	{
+	public:
+		ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Material* mat);
+		virtual ~ChunkDebug();
+
+		virtual void enterWorld(void);
+		virtual void exitWorld(void);
+		virtual void parentTransformChanged(Transform t);
+		virtual void setVisible(bool b);
+		virtual void setAABB(AABB& aabb);
+
+	private:
+		void setMesh(Ref<Mesh> mesh);
+		Transform computeAABB(void);
+		Mesh* createWirecubeMesh(Color c = Color(255, 255, 255));
+
+	private:
+		RID m_meshInstance;
+		RID m_meshRID;
+		Ref<Mesh> m_mesh;
 		AABB m_aabb;
+		Transform m_parentTransform;
 	};
 }
 

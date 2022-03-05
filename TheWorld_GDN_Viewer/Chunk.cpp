@@ -8,7 +8,9 @@
 
 #include <VisualServer.hpp>
 #include <World.hpp>
+#include <SpatialMaterial.hpp>
 #include <Material.hpp>
+//#include <DirectMesh.hpp>
 
 using namespace godot;
 
@@ -55,6 +57,7 @@ void Chunk::initVisual(void)
 	if (m_mat != nullptr)
 		vs->instance_geometry_set_material_override(m_meshInstance, m_mat->get_rid());
 
+	//enterWorld();
 	Ref<World> world = m_viewer->get_world();
 	if (world != nullptr && world.is_valid())
 		vs->instance_set_scenario(m_meshInstance, world->get_scenario());
@@ -76,10 +79,8 @@ void Chunk::deinit(void)
 	}
 }
 
-void Chunk::setMesh(Mesh* mesh)
+void Chunk::setMesh(Ref<Mesh> mesh)
 {
-	RID r = RID();	// DEBUG
-
 	assert(m_meshInstance != RID());
 
 	RID meshRID = (mesh != nullptr ? mesh->get_rid() : RID());
@@ -90,6 +91,7 @@ void Chunk::setMesh(Mesh* mesh)
 	VisualServer::get_singleton()->instance_set_base(m_meshInstance, meshRID);
 
 	m_meshRID = meshRID;
+	m_mesh = mesh;
 }
 
 void Chunk::enterWorld(void)
@@ -98,14 +100,12 @@ void Chunk::enterWorld(void)
 	Ref<World> world = m_viewer->get_world();
 	if (world != nullptr && world.is_valid())
 		VisualServer::get_singleton()->instance_set_scenario(m_meshInstance, world->get_scenario());
-
 }
 
 void Chunk::exitWorld(void)
 {
 	assert(m_meshInstance != RID());
 	VisualServer::get_singleton()->instance_set_scenario(m_meshInstance, RID());
-
 }
 
 void Chunk::parentTransformChanged(Transform parentT)
@@ -170,4 +170,147 @@ void Chunk::setAABB(AABB& aabb)
 {
 	assert(m_meshInstance != RID());
 	VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstance, aabb);
+}
+
+ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Material* mat) : Chunk(slotPosX, slotPosZ, lod, viewer, mat)
+{
+	Variant mesh;
+
+	if (!m_viewer->has_meta(DEBUG_WIRECUBE_MESH))
+	{
+		Mesh* _mesh = createWirecubeMesh();
+		SpatialMaterial* mat = SpatialMaterial::_new();
+		mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+		_mesh->surface_set_material(0, mat);
+		mesh = _mesh;
+		m_viewer->set_meta(DEBUG_WIRECUBE_MESH, mesh);
+	}
+	else
+		mesh = m_viewer->get_meta(DEBUG_WIRECUBE_MESH);
+	
+	VisualServer* vs = VisualServer::get_singleton();
+	m_meshInstance = vs->instance_create();
+	vs->instance_set_visible(m_meshInstance, true);
+	setMesh(mesh);
+
+	//enterWorld();
+	Ref<World> world = m_viewer->get_world();
+	if (world != nullptr && world.is_valid())
+		vs->instance_set_scenario(m_meshInstance, world->get_scenario());
+}
+
+ChunkDebug::~ChunkDebug()
+{
+	if (m_meshInstance != RID())
+	{
+		VisualServer::get_singleton()->free_rid(m_meshInstance);
+		m_meshInstance = RID();
+	}
+}
+
+void ChunkDebug::enterWorld(void)
+{
+	Chunk::enterWorld();
+
+	assert(m_meshInstance != RID());
+	Ref<World> world = m_viewer->get_world();
+	if (world != nullptr && world.is_valid())
+		VisualServer::get_singleton()->instance_set_scenario(m_meshInstance, world->get_scenario());
+}
+
+void ChunkDebug::exitWorld(void)
+{
+	Chunk::exitWorld();
+	
+	assert(m_meshInstance != RID());
+	VisualServer::get_singleton()->instance_set_scenario(m_meshInstance, RID());
+}
+
+void ChunkDebug::parentTransformChanged(Transform t)
+{
+	Chunk::parentTransformChanged(t);
+
+	m_parentTransform = t;
+	assert(m_meshInstance != RID());
+	Transform worldTransform = computeAABB();
+	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldTransform);
+}
+
+void ChunkDebug::setVisible(bool b)
+{
+	Chunk::setVisible(b);
+	
+	assert(m_meshInstance != RID());
+	VisualServer::get_singleton()->instance_set_visible(m_meshInstance, b);
+}
+
+void ChunkDebug::setAABB(AABB& aabb)
+{
+	Chunk::setAABB(aabb);
+
+	m_aabb = aabb;
+	assert(m_meshInstance != RID());
+	VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstance, aabb);
+	Transform worldTransform = computeAABB();
+	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldTransform);
+}
+
+
+void ChunkDebug::setMesh(Ref<Mesh> mesh)
+{
+	assert(m_meshInstance != RID());
+	RID meshRID = mesh->get_rid();
+	VisualServer::get_singleton()->instance_set_base(m_meshInstance, meshRID);
+	m_meshRID = meshRID;
+
+	m_mesh = mesh;
+}
+
+Transform ChunkDebug::computeAABB(void)
+{
+	// TODORIC
+	Vector3 pos((real_t)m_originXInGrid, 0, (real_t)m_originZInGrid);
+	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
+}
+
+Mesh* ChunkDebug::createWirecubeMesh(Color c)
+{
+	PoolVector3Array positions;
+	positions.append(Vector3(0, 0, 0));
+	positions.append(Vector3(1, 0, 0));
+	positions.append(Vector3(1, 0, 1));
+	positions.append(Vector3(0, 0, 1));
+	positions.append(Vector3(0, 1, 0));
+	positions.append(Vector3(1, 1, 0));
+	positions.append(Vector3(1, 1, 1));
+	positions.append(Vector3(0, 1, 1));
+
+	PoolColorArray colors;
+	for (int i = 0; i < 8; i++)
+		colors.append(c);
+
+	PoolIntArray indices;
+	indices.append(0); indices.append(1);
+	indices.append(1);	indices.append(2);
+	indices.append(2); indices.append(3);
+	indices.append(3); indices.append(0);
+	indices.append(4); indices.append(5);
+	indices.append(5); indices.append(6);
+	indices.append(6); indices.append(7);
+	indices.append(7); indices.append(4);
+	indices.append(0); indices.append(4);
+	indices.append(1); indices.append(5);
+	indices.append(2); indices.append(6);
+	indices.append(3); indices.append(7);
+
+	godot::Array arrays;
+	arrays.resize(ArrayMesh::ARRAY_MAX);
+	arrays[ArrayMesh::ARRAY_VERTEX] = positions;
+	arrays[ArrayMesh::ARRAY_COLOR] = colors;
+	arrays[ArrayMesh::ARRAY_INDEX] = indices;
+
+	ArrayMesh* mesh = ArrayMesh::_new();
+	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
+	
+	return mesh;
 }

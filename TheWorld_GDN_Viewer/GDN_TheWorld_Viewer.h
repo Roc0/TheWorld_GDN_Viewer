@@ -44,7 +44,7 @@ namespace godot
 		void _notification(int p_what);
 
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
-		void resetInitialWordlViewerPos(float x, float z, int level);
+		void resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level);
 		Spatial* getWorldNode(void);
 		QuadTree* getQuadTree(void) { return m_quadTree.get(); }
 		MeshCache* getMeshCache(void) { return m_meshCache.get(); }

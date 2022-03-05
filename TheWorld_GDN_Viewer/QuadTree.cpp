@@ -40,10 +40,6 @@ Quad* Quad::getChild(int idx)
 bool Quad::isLeaf(void)
 {
 	return (m_children[0].get() == nullptr ? true : false);
-	/*if (m_children[0].get() == nullptr)
-		return true;
-	else
-		return false;*/
 }
 
 void Quad::split(void)
@@ -96,7 +92,10 @@ void Quad::createChunk(void)
 		// TODORIC Material stuff
 
 		// create chunk for current quad because this is the first time that is needed for current lod and pos
-		m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, nullptr);
+		if (_DEBUG_AAB)
+			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, nullptr);
+		else
+			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, nullptr);
 		m_chunk->parentTransformChanged(m_viewer->internalTransformGlobalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}

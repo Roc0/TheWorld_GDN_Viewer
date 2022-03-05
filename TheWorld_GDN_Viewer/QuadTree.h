@@ -9,6 +9,8 @@
 
 #include "Chunk.h"
 
+#define _DEBUG_AAB	1
+
 namespace godot
 {
 	class GDN_TheWorld_Viewer;
