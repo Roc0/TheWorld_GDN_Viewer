@@ -150,7 +150,6 @@ void Chunk::update(bool isVisible)
 
 	setMesh(m_viewer->getMeshCache()->getMesh(seams, m_lod));
 
-	// TODORIC Is this needed at every update?
 	setAABB(m_aabb);
 
 	setVisible(isVisible);
@@ -170,6 +169,27 @@ void Chunk::setAABB(AABB& aabb)
 {
 	assert(m_meshInstance != RID());
 	VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstance, aabb);
+}
+
+void Chunk::dump(void)
+{
+	//if (!m_viewer->Globals()->isDebugEnabled())
+	//	return;
+
+	if (!isActive())
+		return;
+	
+	GDN_TheWorld_Globals* globals = m_viewer->Globals();
+
+	globals->debugPrint(String("PosX = ") + String(to_string(m_slotPosX).c_str())
+		+ String(" - ") + String("PosZ = ") + String(to_string(m_slotPosZ).c_str())
+		+ String(" - ") + String("lod = ") + String(to_string(m_lod).c_str())
+		+ String(" - ") + String("AABB - x = ") + String(to_string(m_aabb.position.x).c_str())
+		+ String(" - ") + String("y = ") + String(to_string(m_aabb.position.y).c_str())
+		+ String(" - ") + String("z = ") + String(to_string(m_aabb.position.z).c_str())
+		+ String(" - ") + String("sx = ") + String(to_string(m_aabb.size.x).c_str())
+		+ String(" - ") + String("sy = ") + String(to_string(m_aabb.size.y).c_str())
+		+ String(" - ") + String("sz = ") + String(to_string(m_aabb.size.z).c_str()));
 }
 
 ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Material* mat) : Chunk(slotPosX, slotPosZ, lod, viewer, mat)
@@ -313,4 +333,12 @@ Mesh* ChunkDebug::createWirecubeMesh(Color c)
 	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
 	
 	return mesh;
+}
+
+void ChunkDebug::dump(void)
+{
+	//if (!m_viewer->Globals()->isDebugEnabled())
+	//	return;
+
+	Chunk::dump();
 }

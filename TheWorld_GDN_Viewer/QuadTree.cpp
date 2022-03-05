@@ -316,7 +316,11 @@ void QuadTree::dump(void)
 			+ String("\t") + " Active " + String(to_string(numChunksActiveAtLod).c_str()));
 		numChunks += numChunksAtLod;
 	}
+
 	globals->debugPrint("Num chunks: " + String(to_string(numChunks).c_str()));
+	Chunk::DumpChunkAction action;
+	ForAllChunk(action);
+
 
 	m_numSplits = 0;
 	m_numJoin = 0;

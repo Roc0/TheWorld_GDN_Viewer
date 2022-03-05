@@ -93,6 +93,18 @@ namespace godot
 			Transform m_globalT;
 		};
 
+		class DumpChunkAction : public ChunkAction
+		{
+		public:
+			DumpChunkAction(void) {}
+			virtual ~DumpChunkAction() {}
+			virtual void exec(Chunk* chunk)
+			{
+				chunk->dump();
+			}
+		private:
+		};
+
 		class ChunkPos
 		{
 		public:
@@ -168,8 +180,9 @@ namespace godot
 		virtual void parentTransformChanged(Transform t);
 		virtual void setVisible(bool b);
 		virtual void setAABB(AABB& aabb);
+		virtual void dump(void);
 
-		void update(bool isVsisible);
+		virtual void update(bool isVsisible);
 		bool isActive(void) { return m_active; }
 		void setActive(bool b) { m_active = b; }
 		bool isVisible(void) { return m_visible; }
@@ -224,6 +237,7 @@ namespace godot
 		virtual void parentTransformChanged(Transform t);
 		virtual void setVisible(bool b);
 		virtual void setAABB(AABB& aabb);
+		virtual void dump(void);
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
