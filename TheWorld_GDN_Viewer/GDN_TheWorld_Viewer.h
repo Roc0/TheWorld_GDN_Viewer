@@ -67,6 +67,7 @@ namespace godot
 	private:
 		bool m_initialized;
 		int m_numProcessFromLastDump;
+		bool m_initialWordlViewerPosSet;
 		
 		std::unique_ptr<MeshCache> m_meshCache;
 		std::unique_ptr<QuadTree> m_quadTree;

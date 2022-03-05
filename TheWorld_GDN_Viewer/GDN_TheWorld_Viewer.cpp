@@ -30,6 +30,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_initialized = false;
+	m_initialWordlViewerPosSet = false;
 	m_worldViewerLevel = 0;
 	m_worldCamera = NULL;
 	m_numWorldVerticesX = 0;
@@ -100,9 +101,9 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		break;
 		case NOTIFICATION_ENTER_WORLD:
 		{
-			if (m_quadTree)
+			Globals()->debugPrint("Enter world");
+			if (m_quadTree && m_initialWordlViewerPosSet)
 			{
-				Globals()->debugPrint("Enter world");
 				Chunk::EnterWorldChunkAction action;
 				m_quadTree->ForAllChunk(action);
 			}
@@ -110,9 +111,9 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		break;
 		case NOTIFICATION_EXIT_WORLD:
 		{
-			if (m_quadTree)
+			Globals()->debugPrint("Exit world");
+			if (m_quadTree && m_initialWordlViewerPosSet)
 			{
-				Globals()->debugPrint("Exit world");
 				Chunk::ExitWorldChunkAction action;
 				m_quadTree->ForAllChunk(action);
 			}
@@ -120,16 +121,16 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		break;
 		case NOTIFICATION_VISIBILITY_CHANGED:
 		{
-			if (m_quadTree)
+			Globals()->debugPrint("Visibility changed");
+			if (m_quadTree && m_initialWordlViewerPosSet)
 			{
-				Globals()->debugPrint("Visibility changed");
 				Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
 				m_quadTree->ForAllChunk(action);
 			}
 		}
 		break;
 		case NOTIFICATION_TRANSFORM_CHANGED:
-			if (m_quadTree)
+			if (m_quadTree && m_initialWordlViewerPosSet)
 			{
 				onTransformChanged();
 			}
@@ -156,7 +157,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	// To activate _process method add this Node to a Godot Scene
 	//Godot::print("GDN_TheWorld_Viewer::_process");
 
-	if (!WorldCamera())
+	if (!WorldCamera() || !m_initialWordlViewerPosSet)
 		return;
 
 	GDN_TheWorld_Camera* activeCamera = WorldCamera()->getActiveCamera();
@@ -347,6 +348,8 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 			m_quadTree.reset();
 		m_quadTree = make_unique<QuadTree>(this);
 		m_quadTree->init();
+
+		m_initialWordlViewerPosSet = true;
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
