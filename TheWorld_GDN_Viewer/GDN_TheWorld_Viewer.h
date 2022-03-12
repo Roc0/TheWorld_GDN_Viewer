@@ -17,7 +17,7 @@ namespace godot
 	class GDN_TheWorld_Camera;
 
 #define MIN_MAP_SCALE 0.01F
-#define NUM_PROCESS_BETWEEN_DUMP 300
+#define TIME_INTERVAL_BETWEEN_DUMP 0	// secs, 0 = diasble periodic dump
 
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -40,6 +40,7 @@ namespace godot
 		void _init(void); // our initializer called by Godot
 		void _ready(void);
 		void _process(float _delta);
+		void _physics_process(float _delta);
 		void _input(const Ref<InputEvent> event);
 		void _notification(int p_what);
 
@@ -50,7 +51,10 @@ namespace godot
 		MeshCache* getMeshCache(void) { return m_meshCache.get(); }
 		void getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
 		Transform internalTransformGlobalCoord(void);
+		Transform internalTransformLocalCoord(void);
 		void setMapScale(Vector3 mapScaleVector);
+		void setDumpRequired(void) { m_dumpRequired = true; }
+		void dump(void);
 
 	private:
 		void onTransformChanged(void);
@@ -66,8 +70,9 @@ namespace godot
 
 	private:
 		bool m_initialized;
-		int m_numProcessFromLastDump;
+		int64_t m_timeElapsedFromLastDump;
 		bool m_initialWordlViewerPosSet;
+		bool m_dumpRequired;
 		
 		std::unique_ptr<MeshCache> m_meshCache;
 		std::unique_ptr<QuadTree> m_quadTree;

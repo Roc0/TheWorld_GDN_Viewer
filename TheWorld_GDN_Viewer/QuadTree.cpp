@@ -92,11 +92,13 @@ void Quad::createChunk(void)
 		// TODORIC Material stuff
 
 		// create chunk for current quad because this is the first time that is needed for current lod and pos
+		Ref<Material> mat;
 		if (_DEBUG_AAB)
-			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, nullptr);
+			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
 		else
-			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, nullptr);
-		m_chunk->parentTransformChanged(m_viewer->internalTransformGlobalCoord());
+			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
+		//m_chunk->parentTransformChanged(m_viewer->internalTransformGlobalCoord());
+		m_chunk->parentTransformChanged(m_viewer->internalTransformLocalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}
 
@@ -292,14 +294,18 @@ void QuadTree::dump(void)
 {
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 
-	globals->debugPrint(String("Num vert. X chunk side: ") + String(to_string(globals->numVerticesPerChuckSide()).c_str())
-				+ String("\t") + String("Num vert. X grid size: ") + String(to_string(globals->bitmapResolution()).c_str())
-				+ String("\t") + String("Grid size [WUs]: ") + String(to_string(globals->bitmapSizeInWUs()).c_str())
-				+ String("\t") + String("Lod max depth: ") + String(to_string(globals->lodMaxDepth()).c_str()));
+	globals->debugPrint(String("Num vertices per chunk side: ") + String(to_string(globals->numVerticesPerChuckSide()).c_str())
+				+ String(" - ") + String("Num vertices pert grid size: ") + String(to_string(globals->bitmapResolution()).c_str())
+				+ String(" - ") + String("Grid size [WUs]: ") + String(to_string(globals->bitmapSizeInWUs()).c_str())
+				+ String(" - ") + String("Lod max depth: ") + String(to_string(globals->lodMaxDepth()).c_str()));
 
-	globals->debugPrint(String("Num quad split: ") + String(to_string(m_numSplits).c_str())
-				+ String("\t") + String("Num quad join: ") + String(to_string(m_numJoin).c_str())
-				+ String("\t") + String("Num leaves: ") + String(to_string(m_numLeaf).c_str()));
+	globals->debugPrint(String("FROM LAST DUMP - Num quad split: ") + String(to_string(m_numSplits).c_str())
+				+ String(" - ") + String("Num quad join: ") + String(to_string(m_numJoin).c_str())
+				+ String(" - ") + String("Num leaves: ") + String(to_string(m_numLeaf).c_str()));
+
+	globals->debugPrint(String("GRID POS (global)")
+		+ String(" - ") + String("X = ") + String(to_string(m_viewer->get_global_transform().origin.x).c_str())
+		+ String(" - ") + String("Z = ") + String(to_string(m_viewer->get_global_transform().origin.z).c_str()));
 
 	int numChunks = 0;
 	for (int i = globals->lodMaxDepth(); i >= 0; i--)

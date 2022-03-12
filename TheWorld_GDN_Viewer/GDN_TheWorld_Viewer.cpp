@@ -5,6 +5,8 @@
 #include <SceneTree.hpp>
 #include <Viewport.hpp>
 #include <Engine.hpp>
+#include <OS.hpp>
+#include <Input.hpp>
 
 #include "MeshCache.h"
 #include "QuadTree.h"
@@ -21,23 +23,26 @@ void GDN_TheWorld_Viewer::_register_methods()
 {
 	register_method("_ready", &GDN_TheWorld_Viewer::_ready);
 	register_method("_process", &GDN_TheWorld_Viewer::_process);
+	register_method("_physics_process", &GDN_TheWorld_Viewer::_physics_process);
 	register_method("_input", &GDN_TheWorld_Viewer::_input);
 	register_method("_notification", &GDN_TheWorld_Viewer::_notification);
 
 	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
+	register_method("dump_required", &GDN_TheWorld_Viewer::setDumpRequired);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_initialized = false;
 	m_initialWordlViewerPosSet = false;
+	m_dumpRequired = false;
 	m_worldViewerLevel = 0;
 	m_worldCamera = NULL;
 	m_numWorldVerticesX = 0;
 	m_numWorldVerticesZ = 0;
 	m_globals = NULL;
 	m_mapScaleVector = Vector3(1, 1, 1);
-	m_numProcessFromLastDump = 0;
+	m_timeElapsedFromLastDump = 0;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -251,27 +256,47 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	vectAdditionalUpdateChunk.clear();
 
 	// Check for Dump
-	if (m_numProcessFromLastDump == 0)
+	if (TIME_INTERVAL_BETWEEN_DUMP != 0 && Globals()->isDebugEnabled())
 	{
-		if (Globals()->isDebugEnabled())
+		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
+		if (timeElapsed - m_timeElapsedFromLastDump > TIME_INTERVAL_BETWEEN_DUMP * 1000)
 		{
-			float f = Engine::get_singleton()->get_frames_per_second();
-			Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
-			m_quadTree->dump();
+			m_dumpRequired = true;
+			m_timeElapsedFromLastDump = timeElapsed;
 		}
-		m_numProcessFromLastDump++;
 	}
-	else if (m_numProcessFromLastDump > NUM_PROCESS_BETWEEN_DUMP)
-		m_numProcessFromLastDump = 0;	// Next time Dump
-	else
-		m_numProcessFromLastDump++;
+	if (m_dumpRequired)
+	{
+		m_dumpRequired = false;
+		dump();
+	}
+}
+
+void GDN_TheWorld_Viewer::_physics_process(float _delta)
+{
+	//Input* input = Input::get_singleton();
+	//if (input->is_action_pressed("ui_dump"))
+	//	m_dumpRequired = true;
+	//	m_dumpRequired = true;
 }
 
 Transform GDN_TheWorld_Viewer::internalTransformGlobalCoord(void)
 {
 	// TODORIC mah
-	// Return the transformation in global coordinates of the viewer Node appling a scale factor (m_mapScaleVector)
+	// Return the transformation of the viewer Node in global coordinates appling a scale factor (m_mapScaleVector)
 	return Transform(Basis().scaled(m_mapScaleVector), get_global_transform().origin);
+}
+
+Transform GDN_TheWorld_Viewer::internalTransformLocalCoord(void)
+{
+	// TODORIC mah
+	// Return the transformation of the viewer Node in local coordinates relative to itself appling a scale factor (m_mapScaleVector)
+	
+	Transform local = get_transform();
+	Transform global = get_global_transform();
+	
+	//return Transform(Basis().scaled(m_mapScaleVector), get_transform().origin);
+	return Transform(Basis().scaled(m_mapScaleVector), Vector3(0, 0, 0));
 }
 
 GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
@@ -383,17 +408,27 @@ void GDN_TheWorld_Viewer::getPartialAABB(AABB& aabb, int firstWorldVertCol, int 
 
 	// altitudes
 	float minHeigth = 0, maxHeigth = 0;
+	bool firstTime = true;
 	for (int idxRow = 0; idxRow < lastWorldVertRow - firstWorldVertRow + 1; idxRow += step)
 	{
 		for (int idxVert = idxlowerLeftVert + idxRow * m_numWorldVerticesX; idxVert < idxlowerRightVert + idxRow * m_numWorldVerticesX + 1; idxVert += step)
 		{
-			minHeigth = min2(minHeigth, m_worldVertices[idxVert].altitude());
-			maxHeigth = max2(maxHeigth, m_worldVertices[idxVert].altitude());
+			if (firstTime)
+			{
+				minHeigth = maxHeigth = m_worldVertices[idxVert].altitude();
+				firstTime = false;
+			}
+			else
+			{
+				minHeigth = min2(minHeigth, m_worldVertices[idxVert].altitude());
+				maxHeigth = max2(maxHeigth, m_worldVertices[idxVert].altitude());
+			}
 		}
 	}
 	
 	Vector3 startPosition(m_worldVertices[idxlowerLeftVert].posX(), minHeigth, m_worldVertices[idxlowerLeftVert].posZ());
-	Vector3 size(m_worldVertices[idxUpperRightVert].posX() - m_worldVertices[idxlowerLeftVert].posX(), maxHeigth, m_worldVertices[idxUpperRightVert].posZ() - m_worldVertices[idxlowerLeftVert].posZ());
+	Vector3 endPorsition(m_worldVertices[idxUpperRightVert].posX() - m_worldVertices[idxlowerLeftVert].posX(), maxHeigth, m_worldVertices[idxUpperRightVert].posZ() - m_worldVertices[idxlowerLeftVert].posZ());
+	Vector3 size = endPorsition - startPosition;
 
 	aabb.set_position(startPosition);
 	aabb.set_size(size);
@@ -407,8 +442,9 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 	if (!is_inside_tree())
 		return;
 
-	Transform gt = internalTransformGlobalCoord();
-	
+	//Transform gt = internalTransformGlobalCoord();
+	Transform gt = internalTransformLocalCoord();
+
 	Chunk::TransformChangedChunkAction action(gt);
 	m_quadTree->ForAllChunk(action);
 
@@ -428,4 +464,17 @@ void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
 	m_mapScaleVector = mapScaleVector;
 
 	onTransformChanged();
+}
+
+void GDN_TheWorld_Viewer::dump()
+{
+	Globals()->debugPrint("*************");
+	Globals()->debugPrint("STARTING DUMP");
+
+	float f = Engine::get_singleton()->get_frames_per_second();
+	Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
+	m_quadTree->dump();
+
+	Globals()->debugPrint("DUMP COMPLETE");
+	Globals()->debugPrint("*************");
 }
