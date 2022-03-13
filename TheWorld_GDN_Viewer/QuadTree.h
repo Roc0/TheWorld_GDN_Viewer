@@ -42,6 +42,8 @@ namespace godot
 		void clearChildren(void);
 		void createChunk(void);
 		Chunk* getChunk(void) { return m_chunk; }
+		AABB getChunkAABB(void) { return m_chunkAABB; }
+		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
 
 	private:
 		std::array<std::unique_ptr<Quad>, 4> m_children;
@@ -51,6 +53,8 @@ namespace godot
 		int m_lod;
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
+		AABB m_chunkAABB;
+		float m_chunkSizeInWUs;
 	};
 
 

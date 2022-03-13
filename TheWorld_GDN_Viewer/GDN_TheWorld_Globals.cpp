@@ -7,6 +7,30 @@
 
 std::string getModuleLoadPath(void);
 
+const godot::Color godot::GDN_TheWorld_Globals::g_color_white = godot::Color(255, 255, 255); 
+const godot::Color godot::GDN_TheWorld_Globals::g_color_red = godot::Color(255, 0, 0);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_dark_red = godot::Color(139, 0, 0);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_red_salmon = godot::Color(250, 128, 114);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pink = godot::Color(255, 192, 203);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_light_pink = godot::Color(255, 182, 193);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pink_amaranth = godot::Color(159, 43, 104);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pink_bisque = godot::Color(242, 210, 189);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pink_cerise = godot::Color(222, 49, 99);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_green = godot::Color(0, 255, 0);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_green1 = godot::Color(0, 128, 0);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pale_green = godot::Color(152, 251, 152);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_light_green = godot::Color(144, 238, 144);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_darksea_green = godot::Color(143, 188, 143);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_aquamarine_green = godot::Color(127, 255, 212);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_blue = godot::Color(0, 0, 255);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_cyan = godot::Color(0, 255, 255);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_light_cyan = godot::Color(150, 255, 255);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow = godot::Color(255, 255, 0);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_almond = godot::Color(234, 221, 202);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_amber = godot::Color(255, 191, 0);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_apricot = godot::Color(251, 206, 177);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_black = godot::Color(0, 0, 0);
+
 namespace godot
 {
 	GDN_TheWorld_Globals::GDN_TheWorld_Globals()

@@ -33,6 +33,30 @@ namespace godot
 		GODOT_CLASS(GDN_TheWorld_Globals, Node)
 
 	public:
+		const static Color g_color_white;
+		const static Color g_color_red;
+		const static Color g_color_dark_red;
+		const static Color g_color_red_salmon;
+		const static Color g_color_pink;
+		const static Color g_color_light_pink;
+		const static Color g_color_pink_amaranth;
+		const static Color g_color_pink_bisque;
+		const static Color g_color_pink_cerise;
+		const static Color g_color_green;
+		const static Color g_color_green1;
+		const static Color g_color_pale_green;
+		const static Color g_color_light_green;
+		const static Color g_color_darksea_green;
+		const static Color g_color_aquamarine_green;
+		const static Color g_color_blue;
+		const static Color g_color_yellow;
+		const static Color g_color_yellow_almond;
+		const static Color g_color_yellow_amber;
+		const static Color g_color_yellow_apricot;
+		const static Color g_color_cyan;
+		const static Color g_color_light_cyan;
+		const static Color g_color_black;
+
 		GDN_TheWorld_Globals();
 		~GDN_TheWorld_Globals();
 		void init(void);

@@ -3,10 +3,14 @@
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Globals.h"
 
+#include <math.h> 
+
 #include <SceneTree.hpp>
 #include <Math.hpp>
 #include <Input.hpp>
 #include <InputEventMouseMotion.hpp>
+#include <Viewport.hpp>
+#include <ArrayMesh.hpp>
 
 using namespace godot;
 
@@ -32,7 +36,7 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 
 	// Camera Movement
 	m_numMoveStep = 0;
-	m_wheelVelocity = 5.0;
+	m_wheelVelocity = 10.0;	// 5.0;
 	// Camera Movement
 
 	// Camera Rotation
@@ -42,7 +46,7 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	m_mouseRelativePosToShiftOriz = Vector2(0, 0);
 	m_mouseRelativePosToShiftVert = Vector2(0, 0);
 	m_mouseRelativePosToRotate = Vector2(0, 0);
-	m_sensitivity = 0.5;
+	m_sensitivity = 1.0;	// 0.5;
 	m_smoothness = 0.5;
 	m_yaw = 0.0;
 	m_lastYaw = m_yaw;
@@ -287,16 +291,25 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 	//Transform t = get_transform();
 	//t.origin = cameraPos;
 	//set_transform(t);
-	//Vector3 posGlobal = get_global_transform().origin;	// DEBUG
-	//Vector3 posLocal = get_transform().origin;			// DEBUG
+	//Vector3 posGlobal = get_global_transform().origin;	// DEBUGRIC
+	//Vector3 posLocal = get_transform().origin;			// DEBUGRIC
 
 	// cameraPos and lookAt are in WorldNode local coordinates and must be transformed in godot global coordinates
 	Vector3 worldNodePosGlobalCoord = Globals()->Viewer()->getWorldNode()->get_global_transform().origin;
 	Vector3 cameraPosGlobalCoord = cameraPos + worldNodePosGlobalCoord;
 	Vector3 lookAtGlobalCoord = lookAt + worldNodePosGlobalCoord;
-	look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
-	Vector3 posGlobal1 = get_global_transform().origin;	// DEBUG
-	Vector3 posLocal1 = get_transform().origin;			// DEBUG
+	Camera::look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
+	//Vector3 posGlobal1 = Camera::get_global_transform().origin;	// DEBUGRIC
+	//Vector3 posLocal1 = Camera::get_transform().origin;			// DEBUGRIC
+
+	real_t z_near = Camera::get_znear();
+	real_t z_far = Camera::get_zfar();
+	real_t size = Camera::get_size();
+	Vector2 offset = Camera::get_frustum_offset();
+	// TODORIC mah
+	Camera::set_frustum(size / 2, offset, z_near, z_far * 100);
+
+	//Camera::set_orthogonal(size, z_near, z_far);
 
 	m_WorldCamera = true;
 
@@ -386,4 +399,83 @@ GDN_TheWorld_Globals* GDN_TheWorld_Camera::Globals(bool useCache)
 	}
 
 	return m_globals;
+}
+
+Mesh* GDN_TheWorld_Camera::DrawViewFrustum(Color c)
+{
+	float m_FarOffset = Camera::get_zfar();
+	float m_NearOffset = Camera::get_znear();
+	float m_ScreenWidth = Camera::get_viewport()->get_size().x;
+	float m_ScreenHeight = Camera::get_viewport()->get_size().y;
+
+	float m_AspectRatio = (m_ScreenWidth > m_ScreenHeight) ? (m_ScreenWidth / m_ScreenHeight) : (m_ScreenHeight / m_ScreenWidth);
+
+	float m_FarHeight = 2.0f * ((float)tan(Camera::get_fov() / 2.0f)) * m_FarOffset;
+	//float m_FarWidth = m_FarOffset * m_AspectRatio;	// TODORIC mah
+	float m_FarWidth = m_FarHeight * m_AspectRatio;
+
+	m_FarHeight = m_FarHeight + ((m_FarHeight / 7) * 3);
+	m_FarWidth = m_FarWidth + ((m_FarWidth / 7) * 3);
+
+	Vector3 m_Forward = Camera::get_global_transform().origin + Vector3::FORWARD * m_FarOffset;
+
+	//--> Near World
+	Vector3 m_NearTopLeft = Camera::project_position(Vector2(0, 0), Camera::get_znear());
+	Vector3 m_NearTopRight = Camera::project_position(Vector2(m_ScreenWidth, 0), Camera::get_znear());
+	Vector3 m_NearBottomLeft = Camera::project_position(Vector2(0, m_ScreenHeight), Camera::get_znear());
+	Vector3 m_NearBottomRight = Camera::project_position(Vector2(m_ScreenWidth, m_ScreenHeight), Camera::get_znear());
+	
+	//--> Far LOCAL
+	Vector3 m_FarTopLeft = m_Forward + (Vector3::UP * m_FarHeight / 2.0f) - (Vector3::RIGHT * m_FarWidth / 2.0f);
+	Vector3 m_FarTopRight = m_Forward + (Vector3::UP * m_FarHeight / 2.0f) + (Vector3::RIGHT * m_FarWidth / 2.0f);
+	Vector3 m_FarBottomLeft = m_Forward - (Vector3::UP * m_FarHeight / 2.0f) - (Vector3::RIGHT * m_FarWidth / 2.0f);
+	Vector3 m_FarBottomRight = m_Forward - (Vector3::UP * m_FarHeight / 2.0f) + (Vector3::RIGHT * m_FarWidth / 2.0f);
+
+	//--> Far WORLD
+	m_FarTopLeft = Camera::get_transform().xform(m_FarTopLeft);
+	m_FarTopRight = Camera::get_transform().xform(m_FarTopRight);
+	m_FarBottomRight = Camera::get_transform().xform(m_FarBottomRight);
+	m_FarBottomLeft = Camera::get_transform().xform(m_FarBottomLeft);
+	
+	PoolVector3Array positions;
+	PoolColorArray colors;
+	PoolIntArray indices;
+
+	//--> Draw lines
+	positions.append(m_FarTopLeft);			colors.append(c);	// index 0
+	positions.append(m_FarTopRight);		colors.append(c);	// index 1
+	positions.append(m_FarBottomRight);		colors.append(c);	// index 2
+	positions.append(m_FarBottomLeft);		colors.append(c);	// index 3
+	positions.append(m_NearTopLeft);		colors.append(c);	// index 4
+	positions.append(m_NearTopRight);		colors.append(c);	// index 5
+	positions.append(m_NearBottomRight);	colors.append(c);	// index 6
+	positions.append(m_NearBottomLeft);		colors.append(c);	// index 7
+
+	// Far rect lines
+	indices.append(0); indices.append(1);
+	indices.append(1); indices.append(2);
+	indices.append(2); indices.append(3);
+	indices.append(3); indices.append(0);
+	// Near rect lines
+	indices.append(4); indices.append(5);
+	indices.append(5); indices.append(6);
+	indices.append(6); indices.append(7);
+	indices.append(7); indices.append(4);
+	// Left lines        
+	indices.append(4); indices.append(0);
+	indices.append(7); indices.append(3);
+	// Right lines        
+	indices.append(5); indices.append(1);
+	indices.append(6); indices.append(2);
+
+	godot::Array arrays;
+	arrays.resize(ArrayMesh::ARRAY_MAX);
+	arrays[ArrayMesh::ARRAY_VERTEX] = positions;
+	arrays[ArrayMesh::ARRAY_COLOR] = colors;
+	arrays[ArrayMesh::ARRAY_INDEX] = indices;
+
+	ArrayMesh* mesh = ArrayMesh::_new();
+	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
+
+	return mesh;
 }

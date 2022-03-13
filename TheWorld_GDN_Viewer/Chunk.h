@@ -11,7 +11,7 @@
 
 namespace godot
 {
-#define DEBUG_WIRECUBE_MESH	"debug_wirecube_mesh"
+#define DEBUG_WIRECUBE_MESH	"debug_wirecube_mesh_lod_"
 	
 	class GDN_TheWorld_Viewer;
 
@@ -193,6 +193,8 @@ namespace godot
 		void setJustJoined(bool b) { m_justJoined = b; }
 		int getLod(void) { return m_lod; }
 		ChunkPos getPos(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod); }
+		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
+		AABB getAABB(void) { return m_aabb; };
 	
 	private:
 		void setMesh(Ref<Mesh> mesh);
@@ -200,18 +202,20 @@ namespace godot
 	protected:
 		GDN_TheWorld_Viewer* m_viewer;
 		Transform m_parentTransform;
-		AABB m_aabb;
+		AABB m_aabb;						// AABB of the chunk in WUs relative to the chunk so X and Z are 0
+		AABB m_gridRelativeAABB;			// AABB of the chunk in WUs relative to the grid (the viewer)
+		int m_lod;
 
 		int m_numVerticesPerChuckSide;		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int m_numChunksPerWorldGridSide;	// The number of chunks required to cover every side of the grid at the current lod value
-		int m_gridStepInGridInWGUs;			// The number of World Grid vertices (-1) or grid vertices (-1) which separate the vertices of the mesh at the specified lod value
+		int m_gridStepInGridInWGVs;			// The number of World Grid vertices (-1) or grid vertices (-1) which separate the vertices of the mesh at the specified lod value
 		float m_gridStepInWUs;				// The number of World Units which separate the vertices of the mesh at the specified lod value
-		int m_chunkSizeInWGUs;			// The number of World Grid vertices (-1) of the chunk at the current lod
+		int m_chunkSizeInWGVs;				// The number of World Grid vertices (-1) of the chunk at the current lod
 		float m_chunkSizeInWUs;				// The size in Word Units of the chunk at the current lod
-		int m_originXInGridInWGUs;			// X coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is expressed in number of grid vertices
-		int m_originZInGridInWGUs;			// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is expressed in number of grid vertices
-		float m_originXInGridInWUs;			// X coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is local to the Grid Map and is expressed in Viewer Node local coordinate System
-		float m_originZInGridInWUs;			// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is local to the Grid Map and is expressed in Viewer Node local coordinate System
+		int m_originXInGridInWGVs;			// X coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is expressed in number of grid vertices
+		int m_originZInGridInWGVs;			// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is expressed in number of grid vertices
+		float m_originXInWUsLocalToGrid;	// X coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is local to the Grid Map and is expressed in Viewer Node local coordinate System
+		float m_originZInWUsLocalToGrid;	// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is local to the Grid Map and is expressed in Viewer Node local coordinate System
 		int m_firstWorldVertCol;			// 0-based starting column in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
 		int m_lastWorldVertCol;				// 0-based ending column in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
 		int m_firstWorldVertRow;			// 0-based starting row in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
@@ -220,7 +224,6 @@ namespace godot
 	private:
 		int m_slotPosX;	// express the orizzontal (X) and vertical (Z) position of the chunk in the grid of chunks
 		int m_slotPosZ;	// at the specific lod : 0 the first chunk, 1 the following to the max number of chunks on a size for the specific lod
-		int m_lod;
 		Ref<Material> m_mat;
 
 		bool m_active;
@@ -247,7 +250,7 @@ namespace godot
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
-		Transform computeAABB(void);
+		Transform computeWorldTranforsmOfAABB(void);
 		Mesh* createWirecubeMesh(Color c = Color(255, 255, 255));
 
 	private:

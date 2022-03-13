@@ -97,13 +97,16 @@ void Quad::createChunk(void)
 			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
 		else
 			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
-		//m_chunk->parentTransformChanged(m_viewer->internalTransformGlobalCoord());
-		m_chunk->parentTransformChanged(m_viewer->internalTransformLocalCoord());
+		// TODORIC mah
+		m_chunk->parentTransformChanged(m_viewer->internalTransformGlobalCoord());
+		//m_chunk->parentTransformChanged(m_viewer->internalTransformLocalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}
 
 	m_quadTree->addChunkUpdate(m_chunk);
 	m_chunk->setActive(true);
+	m_chunkAABB = m_chunk->getAABB();
+	m_chunkSizeInWUs = m_chunk->getChunkSizeInWUs();
 }
 	
 QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer)
@@ -151,14 +154,19 @@ void QuadTree::ForAllChunk(Chunk::ChunkAction& chunkAction)
 void QuadTree::update(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGlobalCoord)
 {
 	m_numLeaf = 0;
-	return internalUpdate(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord, m_root.get());
+	internalUpdate(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord, m_root.get());
+	assert(!m_root->isLeaf() || m_root->getChunk() != nullptr);
+	return;
 }
 
 void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGlobalCoord, Quad* quad)
 {
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
-	float chunkSizeInWUs = globals->gridStepInBitmapWUs(quad->Lod()) * globals->numVerticesPerChuckSide();									// chunk size in World Units
+	//float chunkSizeInWUs = globals->gridStepInBitmapWUs(quad->Lod()) * globals->numVerticesPerChuckSide();									// chunk size in World Units
+	float chunkSizeInWUs = quad->getChunkSizeInWUs();
 	Vector3 chunkCenter = real_t(chunkSizeInWUs) * (Vector3(real_t(quad->slotPosX()), 0, real_t(quad->slotPosZ())) + Vector3(0.5, 0, 0.5));	// chunk center in local coord. respect Viewer Node (or the grid of chunks)
+	AABB chunkAABB = quad->getChunkAABB();
+	chunkCenter.y = (chunkAABB.position + chunkAABB.size / 2).y;
 	real_t splitDistance = chunkSizeInWUs * globals->splitScale();
 	if (quad->isLeaf())
 	{
@@ -169,6 +177,7 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 			real_t distance = chunkCenter.distance_to(cameraPosViewerNodeLocalCoord);
 			if (distance < splitDistance)
 			{
+				// Split
 				quad->split();
 				m_numSplits++;
 			}
@@ -187,6 +196,7 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 		
 		if (allChildrenAreLeaf && chunkCenter.distance_to(cameraPosViewerNodeLocalCoord) > splitDistance)
 		{
+			// Join
 			quad->clearChildren();
 			quad->createChunk();
 			quad->getChunk()->setJustJoined(true);
@@ -308,6 +318,7 @@ void QuadTree::dump(void)
 		+ String(" - ") + String("Z = ") + String(to_string(m_viewer->get_global_transform().origin.z).c_str()));
 
 	int numChunks = 0;
+	int numActiveChunks = 0;
 	for (int i = globals->lodMaxDepth(); i >= 0; i--)
 	{
 		int numChunksAtLod = 0;
@@ -321,9 +332,11 @@ void QuadTree::dump(void)
 		globals->debugPrint("Num chunks at lod " + String(to_string(i).c_str()) + ": " + String(to_string(numChunksAtLod).c_str())
 			+ String("\t") + " Active " + String(to_string(numChunksActiveAtLod).c_str()));
 		numChunks += numChunksAtLod;
+		numActiveChunks += numChunksActiveAtLod;
 	}
 
 	globals->debugPrint("Num chunks: " + String(to_string(numChunks).c_str()));
+	globals->debugPrint("Num active chunks: " + String(to_string(numActiveChunks).c_str()));
 	Chunk::DumpChunkAction action;
 	ForAllChunk(action);
 

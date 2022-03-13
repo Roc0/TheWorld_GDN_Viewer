@@ -7,6 +7,7 @@
 #include <Engine.hpp>
 #include <OS.hpp>
 #include <Input.hpp>
+#include <VisualServer.hpp>
 
 #include "MeshCache.h"
 #include "QuadTree.h"
@@ -34,6 +35,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_initialized = false;
+	m_firstProcess = true;
 	m_initialWordlViewerPosSet = false;
 	m_dumpRequired = false;
 	m_worldViewerLevel = 0;
@@ -169,6 +171,26 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (!activeCamera)
 		return;
 
+	if (m_firstProcess)
+	{
+		// TODORIC
+		Ref<Mesh> _mesh = activeCamera->DrawViewFrustum(GDN_TheWorld_Globals::g_color_green);
+		SpatialMaterial* mat = SpatialMaterial::_new();
+		mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+		mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+		mat->set_albedo(GDN_TheWorld_Globals::g_color_green);
+		_mesh->surface_set_material(0, mat);
+		//m_viewFrustumMesh = _mesh;
+		VisualServer* vs = VisualServer::get_singleton();
+		m_viewFrustumMeshInstance = vs->instance_create();
+		vs->instance_set_visible(m_viewFrustumMeshInstance, true);
+		RID meshRID = _mesh->get_rid();
+		VisualServer::get_singleton()->instance_set_base(m_viewFrustumMeshInstance, meshRID);
+		m_viewFrustumMeshRID = meshRID;
+		m_viewFrustumMesh = _mesh;
+		m_firstProcess = false;
+	}
+	
 	Vector3 cameraPosGlobalCoord = activeCamera->get_global_transform().get_origin();
 	Transform globalTransform = internalTransformGlobalCoord();
 	Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node local coordinates of the camera pos
@@ -292,8 +314,8 @@ Transform GDN_TheWorld_Viewer::internalTransformLocalCoord(void)
 	// TODORIC mah
 	// Return the transformation of the viewer Node in local coordinates relative to itself appling a scale factor (m_mapScaleVector)
 	
-	Transform local = get_transform();
-	Transform global = get_global_transform();
+	//Transform local = get_transform();
+	//Transform global = get_global_transform();
 	
 	//return Transform(Basis().scaled(m_mapScaleVector), get_transform().origin);
 	return Transform(Basis().scaled(m_mapScaleVector), Vector3(0, 0, 0));
@@ -401,17 +423,17 @@ Spatial* GDN_TheWorld_Viewer::getWorldNode(void)
 
 void GDN_TheWorld_Viewer::getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step)
 {
-	int idxlowerLeftVert = m_numWorldVerticesX * firstWorldVertRow + firstWorldVertCol;
-	int idxlowerRightVert = m_numWorldVerticesX * firstWorldVertRow + lastWorldVertCol;
-	int idxUpperLeftVert = m_numWorldVerticesX * lastWorldVertRow + firstWorldVertCol;
-	int idxUpperRightVert = m_numWorldVerticesX * lastWorldVertRow + lastWorldVertCol;
+	int idxFirstColFirstRowWorldVert = m_numWorldVerticesX * firstWorldVertRow + firstWorldVertCol;
+	int idxLastColFirstRowWorldVert = m_numWorldVerticesX * firstWorldVertRow + lastWorldVertCol;
+	int idxFirstColLastRowWorldVert = m_numWorldVerticesX * lastWorldVertRow + firstWorldVertCol;
+	int idxLastColLastRowWorldVert = m_numWorldVerticesX * lastWorldVertRow + lastWorldVertCol;
 
 	// altitudes
 	float minHeigth = 0, maxHeigth = 0;
 	bool firstTime = true;
 	for (int idxRow = 0; idxRow < lastWorldVertRow - firstWorldVertRow + 1; idxRow += step)
 	{
-		for (int idxVert = idxlowerLeftVert + idxRow * m_numWorldVerticesX; idxVert < idxlowerRightVert + idxRow * m_numWorldVerticesX + 1; idxVert += step)
+		for (int idxVert = idxFirstColFirstRowWorldVert + idxRow * m_numWorldVerticesX; idxVert < idxLastColFirstRowWorldVert + idxRow * m_numWorldVerticesX + 1; idxVert += step)
 		{
 			if (firstTime)
 			{
@@ -426,9 +448,10 @@ void GDN_TheWorld_Viewer::getPartialAABB(AABB& aabb, int firstWorldVertCol, int 
 		}
 	}
 	
-	Vector3 startPosition(m_worldVertices[idxlowerLeftVert].posX(), minHeigth, m_worldVertices[idxlowerLeftVert].posZ());
-	Vector3 endPorsition(m_worldVertices[idxUpperRightVert].posX() - m_worldVertices[idxlowerLeftVert].posX(), maxHeigth, m_worldVertices[idxUpperRightVert].posZ() - m_worldVertices[idxlowerLeftVert].posZ());
-	Vector3 size = endPorsition - startPosition;
+	Vector3 startPosition(m_worldVertices[idxFirstColFirstRowWorldVert].posX(), minHeigth, m_worldVertices[idxFirstColFirstRowWorldVert].posZ());
+	//Vector3 endPosition(m_worldVertices[idxLastColLastRowWorldVert].posX() - m_worldVertices[idxFirstColFirstRowWorldVert].posX(), maxHeigth, m_worldVertices[idxLastColLastRowWorldVert].posZ() - m_worldVertices[idxFirstColFirstRowWorldVert].posZ());
+	Vector3 endPosition(m_worldVertices[idxLastColLastRowWorldVert].posX(), maxHeigth, m_worldVertices[idxLastColLastRowWorldVert].posZ());
+	Vector3 size = endPosition - startPosition;
 
 	aabb.set_position(startPosition);
 	aabb.set_size(size);
@@ -442,8 +465,9 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 	if (!is_inside_tree())
 		return;
 
-	//Transform gt = internalTransformGlobalCoord();
-	Transform gt = internalTransformLocalCoord();
+	// TODORIC mah
+	Transform gt = internalTransformGlobalCoord();
+	//Transform gt = internalTransformLocalCoord();
 
 	Chunk::TransformChangedChunkAction action(gt);
 	m_quadTree->ForAllChunk(action);

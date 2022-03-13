@@ -4,6 +4,7 @@
 #include <Spatial.hpp>
 #include <Reference.hpp>
 #include <InputEvent.hpp>
+#include <Mesh.hpp>
 
 #include <memory>
 
@@ -70,18 +71,22 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_firstProcess;
 		int64_t m_timeElapsedFromLastDump;
 		bool m_initialWordlViewerPosSet;
 		bool m_dumpRequired;
 		
+		RID m_viewFrustumMeshInstance;
+		RID m_viewFrustumMeshRID;
+		Ref<Mesh> m_viewFrustumMesh;
+
 		std::unique_ptr<MeshCache> m_meshCache;
 		std::unique_ptr<QuadTree> m_quadTree;
 
 		Vector3 m_mapScaleVector;
 
 		// Viewer (Camera)
-		//Vector3 m_worldViewerPos;	// in local coordinate of WorldNode
-		int m_worldViewerLevel;
+		int m_worldViewerLevel;		// actually world viewer manage one level at the time, otherwise we should have multiple quadtrees
 		GDN_TheWorld_Camera* m_worldCamera;
 		
 		// World Data

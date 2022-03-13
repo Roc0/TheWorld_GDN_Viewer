@@ -52,14 +52,16 @@ namespace godot
 	{
 		//	https://gist.github.com/bnolan/01a7d240774f1e02056d6607e5b621da
 
-		int stride = m_viewer->Globals()->strideInWorldGrid(idxLod);
+		// TODORIC mah
+		//int stride = m_viewer->Globals()->strideInWorldGrid(idxLod);
+		float strideInWUs = m_viewer->Globals()->strideInWorldGridWUs(idxLod);
 
 		// Determines the vertices in a flat mesh at the required lod using Worl Grid vertices
 		PoolVector3Array positions;
 		positions.resize((int)pow(numVerticesPerChuckSide + 1, 2));
 		for (real_t z = 0; z < numVerticesPerChuckSide + 1; z++)
 			for (real_t x = 0; x < numVerticesPerChuckSide + 1; x++)
-				positions.append(Vector3(x * stride, 0, z * stride));
+				positions.append(Vector3(x * strideInWUs, 0, z * strideInWUs));
 		
 		PoolIntArray indices;
 		// Preparing array of indices releate to vertex array to form the triangles of the mesh: a tringle every three indices

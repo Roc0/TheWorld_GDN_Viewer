@@ -23,26 +23,27 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	m_numVerticesPerChuckSide = globals->numVerticesPerChuckSide();
 	m_numChunksPerWorldGridSide = globals->numChunksPerBitmapSide(m_lod);
-	m_gridStepInGridInWGUs = globals->gridStepInBitmap(m_lod);
+	m_gridStepInGridInWGVs = globals->gridStepInBitmap(m_lod);
 	m_gridStepInWUs = globals->gridStepInBitmapWUs(m_lod);
-	m_chunkSizeInWGUs = m_numVerticesPerChuckSide * m_gridStepInGridInWGUs;
+	m_chunkSizeInWGVs = m_numVerticesPerChuckSide * m_gridStepInGridInWGVs;
 	m_chunkSizeInWUs = m_numVerticesPerChuckSide * m_gridStepInWUs;
-	m_originXInGridInWGUs = m_slotPosX * m_numVerticesPerChuckSide * m_gridStepInGridInWGUs;
-	m_originZInGridInWGUs = m_slotPosZ * m_numVerticesPerChuckSide * m_gridStepInGridInWGUs;
-	m_originXInGridInWUs = m_slotPosX * m_numVerticesPerChuckSide * m_gridStepInWUs;
-	m_originZInGridInWUs = m_slotPosZ * m_numVerticesPerChuckSide * m_gridStepInWUs;
-	m_firstWorldVertCol = m_slotPosX * m_chunkSizeInWGUs;
-	m_lastWorldVertCol = (m_slotPosX + 1) * m_chunkSizeInWGUs;
-	m_firstWorldVertRow = m_slotPosZ * m_chunkSizeInWGUs;
-	m_lastWorldVertRow = (m_slotPosZ + 1) * m_chunkSizeInWGUs;
+	m_originXInGridInWGVs = m_slotPosX * m_numVerticesPerChuckSide * m_gridStepInGridInWGVs;
+	m_originZInGridInWGVs = m_slotPosZ * m_numVerticesPerChuckSide * m_gridStepInGridInWGVs;
+	m_originXInWUsLocalToGrid = m_slotPosX * m_numVerticesPerChuckSide * m_gridStepInWUs;
+	m_originZInWUsLocalToGrid = m_slotPosZ * m_numVerticesPerChuckSide * m_gridStepInWUs;
+	m_firstWorldVertCol = m_slotPosX * m_chunkSizeInWGVs;
+	m_lastWorldVertCol = (m_slotPosX + 1) * m_chunkSizeInWGVs;
+	m_firstWorldVertRow = m_slotPosZ * m_chunkSizeInWGVs;
+	m_lastWorldVertRow = (m_slotPosZ + 1) * m_chunkSizeInWGVs;
 	m_active = false;
 	m_visible = false;
 	m_pendingUpdate = false;
 	m_justJoined = false;
 	m_mat = mat;
 
-	m_viewer->getPartialAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGUs);
-	m_aabb.position.x = 0;
+	m_viewer->getPartialAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGVs);
+	m_gridRelativeAABB = m_aabb;
+	m_aabb.position.x = 0;	// AABB is relative to the chunk
 	m_aabb.position.z = 0;
 
 	initVisual();
@@ -124,11 +125,11 @@ void Chunk::parentTransformChanged(Transform parentT)
 	assert(m_meshInstance != RID());
 	// TODORIC mah
 	m_parentTransform = parentT;
-	Transform localT(Basis(), Vector3((real_t)m_originXInGridInWUs, 0, (real_t)m_originZInGridInWUs));
-	//Transform worldT = parentT * localT;
-	//VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldT);
-	Transform chunkTranform = parentT * localT;
-	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, chunkTranform);
+	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));
+	Transform worldT = parentT * localT;
+	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldT);		// World coordinates
+	//Transform chunkTranform = parentT * localT;
+	//VisualServer::get_singleton()->instance_set_transform(m_meshInstance, chunkTranform);
 }
 
 // TODORIC Material stuff
@@ -193,23 +194,23 @@ void Chunk::dump(void)
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 
 	// TODORIC
-	Transform localT(Basis(), Vector3((real_t)m_originXInGridInWUs, 0, (real_t)m_originZInGridInWUs));
+	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));
 	Transform worldT = m_parentTransform * localT;
-	Vector3 v1 = worldT * Vector3((real_t)m_originXInGridInWUs, 0, (real_t)m_originZInGridInWUs);
-	Vector3 v2 = m_parentTransform * Vector3((real_t)m_originXInGridInWUs, 0, (real_t)m_originZInGridInWUs);
-	Vector3 v3 = m_viewer->to_global(Vector3((real_t)m_originXInGridInWUs, 0, (real_t)m_originZInGridInWUs));
+	Vector3 v1 = worldT * Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
+	Vector3 v2 = m_parentTransform * Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
+	Vector3 v3 = m_viewer->to_global(Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));
 	// TODORIC
 
-	float globalOriginXInGridInWUs = m_viewer->get_global_transform().origin.x + m_originXInGridInWUs;
-	float globalOriginZInGridInWUs = m_viewer->get_global_transform().origin.z + m_originZInGridInWUs;
+	float globalOriginXInGridInWUs = m_viewer->get_global_transform().origin.x + m_originXInWUsLocalToGrid;
+	float globalOriginZInGridInWUs = m_viewer->get_global_transform().origin.z + m_originZInWUsLocalToGrid;
 
 	globals->debugPrint(String("Slot in GRID (X, Z)")
 		+ String(" - ") + String(to_string(m_slotPosX).c_str())	+ String(",") + String(to_string(m_slotPosZ).c_str())
 		+ String(" - ") + String("lod ") + String(to_string(m_lod).c_str())
 		+ String(" - ") + String("chunk sixe (WUs) ") + String(to_string(m_chunkSizeInWUs).c_str())
 		+ String(" - ") + String("Pos in GRID (local):")
-		+ String(" ") + String("X = ") + String(to_string(m_originXInGridInWUs).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_originZInGridInWUs).c_str())
+		+ String(" ") + String("X = ") + String(to_string(m_originXInWUsLocalToGrid).c_str())
+		+ String(", ") + String("Z = ") + String(to_string(m_originZInWUsLocalToGrid).c_str())
 		+ String(" - ") + String("Pos in GRID (global):")
 		+ String(" ") + String("X = ") + String(to_string(globalOriginXInGridInWUs).c_str())
 		+ String(", ") + String("Z = ") + String(to_string(globalOriginZInGridInWUs).c_str())
@@ -262,21 +263,42 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 {
 	Variant mesh;
 
-	if (!m_viewer->has_meta(DEBUG_WIRECUBE_MESH))
+	string metaName = DEBUG_WIRECUBE_MESH + to_string(m_lod);
+
+	if (!m_viewer->has_meta(metaName.c_str()))
 	{
-		Mesh* _mesh = createWirecubeMesh();
+		Color wiredCubeMeshColor;
+		if (m_lod == 0)
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_white;
+		else if (m_lod == 1)
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_blue;
+		else if (m_lod == 2)
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_green;
+		else if (m_lod == 3)
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_cyan;
+		else if (m_lod == 4)
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
+		else
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_red;
+
+		Mesh* _mesh = createWirecubeMesh(wiredCubeMeshColor);
 		SpatialMaterial* mat = SpatialMaterial::_new();
 		mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+		mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+		mat->set_albedo(wiredCubeMeshColor);
 		_mesh->surface_set_material(0, mat);
 		mesh = _mesh;
-		m_viewer->set_meta(DEBUG_WIRECUBE_MESH, mesh);
+		//m_viewer->set_meta(metaName.c_str(), mesh);	// DEBUGRIC
 	}
 	else
-		mesh = m_viewer->get_meta(DEBUG_WIRECUBE_MESH);
+		mesh = m_viewer->get_meta(metaName.c_str());
 	
 	VisualServer* vs = VisualServer::get_singleton();
 	m_debugCubeMeshInstance = vs->instance_create();
-	vs->instance_set_visible(m_debugCubeMeshInstance, true);
+	//if (m_aabb.position.y == 0)
+	//	vs->instance_set_visible(m_debugCubeMeshInstance, false);
+	//else
+		vs->instance_set_visible(m_debugCubeMeshInstance, true);
 	setMesh(mesh);
 
 	//enterWorld();
@@ -317,10 +339,11 @@ void ChunkDebug::parentTransformChanged(Transform parentT)
 	Chunk::parentTransformChanged(parentT);
 
 	assert(m_debugCubeMeshInstance != RID());
-	//Transform worldTransform = computeAABB();
-	//VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
-	Transform chunkTransform = computeAABB();
-	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, chunkTransform);
+	// TODORIC mah
+	Transform worldTransform = computeWorldTranforsmOfAABB();
+	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
+	//Transform chunkTransform = computeAABB();
+	//VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, chunkTransform);
 }
 
 void ChunkDebug::setVisible(bool b)
@@ -328,7 +351,10 @@ void ChunkDebug::setVisible(bool b)
 	Chunk::setVisible(b);
 	
 	assert(m_debugCubeMeshInstance != RID());
-	VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, b);
+	//if (m_aabb.position.y == 0)
+	//	VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, false);
+	//else
+		VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, b);
 }
 
 void ChunkDebug::setAABB(AABB& aabb)
@@ -337,10 +363,15 @@ void ChunkDebug::setAABB(AABB& aabb)
 
 	assert(m_debugCubeMeshInstance != RID());
 	VisualServer::get_singleton()->instance_set_custom_aabb(m_debugCubeMeshInstance, aabb);
-	//Transform worldTransform = computeAABB();
-	//VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
-	Transform chunkTransform = computeAABB();
-	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, chunkTransform);
+
+	// TODORIC mah
+	Transform worldTransform = computeWorldTranforsmOfAABB();
+	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
+	//Transform chunkTransform = computeAABB();
+	//VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, chunkTransform);
+	
+	//if (m_aabb.position.y == 0)
+	//	VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, false);
 }
 
 
@@ -354,42 +385,68 @@ void ChunkDebug::setMesh(Ref<Mesh> mesh)
 	m_debugCubeMesh = mesh;
 }
 
-Transform ChunkDebug::computeAABB(void)
+Transform ChunkDebug::computeWorldTranforsmOfAABB(void)
 {
-	// TODORIC
-	Vector3 pos((real_t)m_originXInGridInWUs, 0, (real_t)m_originZInGridInWUs);
-	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
+	// TODORIC mah
+	//Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
+	//return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position); 
+	Vector3 pos((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid);
+	//if (m_aabb.position.y != 0)
+	//	m_viewer->Globals()->debugPrint("trovato!");
+	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos);
 }
 
 Mesh* ChunkDebug::createWirecubeMesh(Color c)
 {
 	PoolVector3Array positions;
-	positions.append(Vector3(0, 0, 0));
-	positions.append(Vector3(1, 0, 0));
-	positions.append(Vector3(1, 0, 1));
-	positions.append(Vector3(0, 0, 1));
-	positions.append(Vector3(0, 1, 0));
-	positions.append(Vector3(1, 1, 0));
-	positions.append(Vector3(1, 1, 1));
-	positions.append(Vector3(0, 1, 1));
-
 	PoolColorArray colors;
-	for (int i = 0; i < 8; i++)
-		colors.append(c);
-
 	PoolIntArray indices;
+
+	positions.append(Vector3(0, 0, 0));		colors.append(c);
+	positions.append(Vector3(1, 0, 0));		colors.append(c);
+	positions.append(Vector3(1, 0, 1));		colors.append(c);
+	positions.append(Vector3(0, 0, 1));		colors.append(c);
+	positions.append(Vector3(0, 1, 0));		colors.append(c);
+	positions.append(Vector3(1, 1, 0));		colors.append(c);
+	positions.append(Vector3(1, 1, 1));		colors.append(c);
+	positions.append(Vector3(0, 1, 1));		colors.append(c);
+
+	// lower face quad
 	indices.append(0); indices.append(1);
-	indices.append(1);	indices.append(2);
+	indices.append(1); indices.append(2);
 	indices.append(2); indices.append(3);
 	indices.append(3); indices.append(0);
+	// upper face quad
 	indices.append(4); indices.append(5);
 	indices.append(5); indices.append(6);
 	indices.append(6); indices.append(7);
 	indices.append(7); indices.append(4);
+	// vertical lines
 	indices.append(0); indices.append(4);
 	indices.append(1); indices.append(5);
 	indices.append(2); indices.append(6);
 	indices.append(3); indices.append(7);
+	// lower face diagonals // DEBUGRIC
+	indices.append(0); indices.append(2);
+	indices.append(1); indices.append(3);
+
+	/*
+	if (m_aabb.position.y != 0)
+	{
+		// Vertical faces diagonals	// DEBUGRIC
+		indices.append(0); indices.append(5);
+		indices.append(1); indices.append(4);
+		
+		indices.append(2); indices.append(7);
+		indices.append(3); indices.append(6);
+
+		indices.append(1); indices.append(6);
+		indices.append(2); indices.append(5);
+
+		indices.append(3); indices.append(4);
+		indices.append(0); indices.append(7);
+	}
+	*/
 
 	godot::Array arrays;
 	arrays.resize(ArrayMesh::ARRAY_MAX);
