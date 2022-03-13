@@ -174,20 +174,20 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (m_firstProcess)
 	{
 		// TODORIC
-		Ref<Mesh> _mesh = activeCamera->DrawViewFrustum(GDN_TheWorld_Globals::g_color_green);
-		SpatialMaterial* mat = SpatialMaterial::_new();
-		mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
-		mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-		mat->set_albedo(GDN_TheWorld_Globals::g_color_green);
-		_mesh->surface_set_material(0, mat);
+		//Ref<Mesh> _mesh = activeCamera->DrawViewFrustum(GDN_TheWorld_Globals::g_color_green);
+		//SpatialMaterial* mat = SpatialMaterial::_new();
+		//mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+		//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+		//mat->set_albedo(GDN_TheWorld_Globals::g_color_green);
+		//_mesh->surface_set_material(0, mat);
+		//VisualServer* vs = VisualServer::get_singleton();
+		//m_viewFrustumMeshInstance = vs->instance_create();
+		//vs->instance_set_visible(m_viewFrustumMeshInstance, true);
+		//RID meshRID = _mesh->get_rid();
+		//VisualServer::get_singleton()->instance_set_base(m_viewFrustumMeshInstance, meshRID);
+		//m_viewFrustumMeshRID = meshRID;
 		//m_viewFrustumMesh = _mesh;
-		VisualServer* vs = VisualServer::get_singleton();
-		m_viewFrustumMeshInstance = vs->instance_create();
-		vs->instance_set_visible(m_viewFrustumMeshInstance, true);
-		RID meshRID = _mesh->get_rid();
-		VisualServer::get_singleton()->instance_set_base(m_viewFrustumMeshInstance, meshRID);
-		m_viewFrustumMeshRID = meshRID;
-		m_viewFrustumMesh = _mesh;
+
 		m_firstProcess = false;
 	}
 	

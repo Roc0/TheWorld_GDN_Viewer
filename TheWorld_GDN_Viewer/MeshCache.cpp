@@ -56,7 +56,7 @@ namespace godot
 		//int stride = m_viewer->Globals()->strideInWorldGrid(idxLod);
 		float strideInWUs = m_viewer->Globals()->strideInWorldGridWUs(idxLod);
 
-		// Determines the vertices in a flat mesh at the required lod using Worl Grid vertices
+		// Determines the vertices in a flat mesh at the required lod using World Grid vertices: coordinates are expressed in WUs and are realtive to the lower vertex of the chunk
 		PoolVector3Array positions;
 		positions.resize((int)pow(numVerticesPerChuckSide + 1, 2));
 		for (real_t z = 0; z < numVerticesPerChuckSide + 1; z++)

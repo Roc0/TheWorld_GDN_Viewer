@@ -63,7 +63,7 @@ void Chunk::initVisual(void)
 	{
 		Ref<SpatialMaterial> mat = SpatialMaterial::_new();
 		mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-		mat->set_albedo(Color(255, 255, 255));	// white
+		mat->set_albedo(GDN_TheWorld_Globals::g_color_pink_amaranth);
 		m_mat = mat;
 	}
 
@@ -99,6 +99,10 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 
 	if (meshRID == m_meshRID)
 		return;
+
+	// TODORIC mah
+	if (mesh != nullptr)
+		mesh->surface_set_material(0, m_mat);
 
 	VisualServer::get_singleton()->instance_set_base(m_meshInstance, meshRID);
 
