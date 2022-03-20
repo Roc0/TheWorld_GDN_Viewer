@@ -44,6 +44,7 @@ namespace godot
 		Chunk* getChunk(void) { return m_chunk; }
 		AABB getChunkAABB(void) { return m_chunkAABB; }
 		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
+		void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
 
 	private:
 		std::array<std::unique_ptr<Quad>, 4> m_children;

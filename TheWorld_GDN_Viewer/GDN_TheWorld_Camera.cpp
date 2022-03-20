@@ -36,7 +36,7 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 
 	// Camera Movement
 	m_numMoveStep = 0;
-	m_wheelVelocity = 10.0;	// 5.0;
+	m_wheelVelocity = 2.5;	// 5.0;	// 10.0;
 	// Camera Movement
 
 	// Camera Rotation
@@ -307,7 +307,8 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 	real_t size = Camera::get_size();
 	Vector2 offset = Camera::get_frustum_offset();
 	// TODORIC mah
-	Camera::set_frustum(size / 2, offset, z_near, z_far * 100);
+	//Camera::set_frustum(size / 2, offset, z_near, z_far * 100);
+	Camera::set_frustum(size, offset, z_near, z_far * 100);
 
 	//Camera::set_orthogonal(size, z_near, z_far);
 

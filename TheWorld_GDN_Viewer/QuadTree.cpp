@@ -17,6 +17,7 @@ Quad::Quad(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Chu
 	m_chunk = chunk;
 	m_lod = lod;
 	m_viewer = viewer;
+	m_chunkSizeInWUs = 0;
 
 	m_quadTree = m_viewer->getQuadTree();
 	
@@ -108,6 +109,16 @@ void Quad::createChunk(void)
 	m_chunkAABB = m_chunk->getAABB();
 	m_chunkSizeInWUs = m_chunk->getChunkSizeInWUs();
 }
+
+void Quad::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos)
+{
+	if (isLeaf())
+	{
+		Chunk* chunk = getChunk();
+		if (chunk != nullptr)
+			chunk->setCameraPos(localToGriddCoordCameraLastPos, globalCoordCameraLastPos);
+	}
+}
 	
 QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer)
 {
@@ -161,6 +172,8 @@ void QuadTree::update(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGl
 
 void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGlobalCoord, Quad* quad)
 {
+	// cameraPosViewerNodeLocalCoord are in grid local coordinates (WUs)
+
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	//float chunkSizeInWUs = globals->gridStepInBitmapWUs(quad->Lod()) * globals->numVerticesPerChuckSide();									// chunk size in World Units
 	float chunkSizeInWUs = quad->getChunkSizeInWUs();
@@ -179,6 +192,8 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 			{
 				// Split
 				quad->split();
+				for (int i = 0; i < 4; i++)
+					quad->getChild(i)->setCameraPos(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);;
 				m_numSplits++;
 			}
 		}
@@ -203,6 +218,9 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 			m_numJoin++;
 		}
 	}
+	
+	// after all if quad is leaf: just joined or was leaf and it has not been splitted
+	quad->setCameraPos(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);
 }
 
 Chunk* QuadTree::getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir)

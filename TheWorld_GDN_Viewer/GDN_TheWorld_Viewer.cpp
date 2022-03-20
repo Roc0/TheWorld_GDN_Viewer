@@ -30,6 +30,9 @@ void GDN_TheWorld_Viewer::_register_methods()
 
 	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
 	register_method("dump_required", &GDN_TheWorld_Viewer::setDumpRequired);
+	register_method("get_camera_chunk_global_transform", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransform);
+	register_method("get_camera_chunk_aabb", &GDN_TheWorld_Viewer::getCameraChunkAABB);
+	register_method("get_camera_chunk_id", &GDN_TheWorld_Viewer::getCameraChunkId);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -39,10 +42,11 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_initialWordlViewerPosSet = false;
 	m_dumpRequired = false;
 	m_worldViewerLevel = 0;
-	m_worldCamera = NULL;
+	m_worldCamera = nullptr;
+	m_cameraChunk = nullptr;
 	m_numWorldVerticesX = 0;
 	m_numWorldVerticesZ = 0;
-	m_globals = NULL;
+	m_globals = nullptr;
 	m_mapScaleVector = Vector3(1, 1, 1);
 	m_timeElapsedFromLastDump = 0;
 }
@@ -193,7 +197,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	
 	Vector3 cameraPosGlobalCoord = activeCamera->get_global_transform().get_origin();
 	Transform globalTransform = internalTransformGlobalCoord();
-	Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node local coordinates of the camera pos
+	Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 	// DEBUG: verify
 	{
 		Vector3 cameraPosWorldNodeLocalCoord = activeCamera->get_transform().get_origin();		// WorldNode local coordinates of the camera pos
@@ -266,6 +270,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
 		}
+		// Anycase clear flag just joined
+		if ((*it)->gotJustJoined())
+			(*it)->setJustJoined(false);
 	}
 
 	for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
@@ -488,6 +495,30 @@ void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
 	m_mapScaleVector = mapScaleVector;
 
 	onTransformChanged();
+}
+
+Transform GDN_TheWorld_Viewer::getCameraChunkGlobalTransform(void)
+{
+	if (m_cameraChunk)
+		return m_cameraChunk->getGlobalTransform();
+	else
+		return Transform();
+}
+
+AABB GDN_TheWorld_Viewer::getCameraChunkAABB(void)
+{
+	if (m_cameraChunk)
+		return m_cameraChunk->getAABB();
+	else
+		return AABB();
+}
+
+String GDN_TheWorld_Viewer::getCameraChunkId(void)
+{
+	if (m_cameraChunk)
+		return m_cameraChunk->getPos().getId().c_str();
+	else
+		return "";
 }
 
 void GDN_TheWorld_Viewer::dump()

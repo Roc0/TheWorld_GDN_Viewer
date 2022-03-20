@@ -8,10 +8,12 @@
 #include <SpatialMaterial.hpp>
 
 #include <map>
+#include <string>
 
 namespace godot
 {
-#define DEBUG_WIRECUBE_MESH	"debug_wirecube_mesh_lod_"
+#define DEBUG_WIRECUBE_MESH			"debug_wirecube_mesh_lod_"
+#define DEBUG_WIRECUBE_MESH_COLOR	"debug_wirecube_mesh_color_lod_"
 	
 	class GDN_TheWorld_Viewer;
 
@@ -159,6 +161,10 @@ namespace godot
 			int getLod(void) { return m_lod; }
 			int getSlotPosX(void) { return m_slotPosX; }
 			int getSlotPosZ(void) { return m_slotPosZ; }
+			std::string getId(void)
+			{
+				return "LOD:" + std::to_string(m_lod) + "-X:" + std::to_string(m_slotPosX) + "-Z:" + std::to_string(m_slotPosZ);
+			}
 		
 		private:
 			int m_slotPosX;
@@ -182,10 +188,11 @@ namespace godot
 		virtual void setVisible(bool b);
 		virtual void setAABB(AABB& aabb);
 		virtual void dump(void);
+		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
 
 		virtual void update(bool isVsisible);
 		bool isActive(void) { return m_active; }
-		void setActive(bool b) { m_active = b; }
+		void setActive(bool b);
 		bool isVisible(void) { return m_visible; }
 		bool isPendingUpdate(void) { return m_pendingUpdate; }
 		void setPendingUpdate(bool b) { m_pendingUpdate = b; }
@@ -195,6 +202,9 @@ namespace godot
 		ChunkPos getPos(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod); }
 		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
 		AABB getAABB(void) { return m_aabb; };
+		void getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globalCoordCameraLastPos);
+		bool isCameraVerticalOnChunk(void) { return m_isCameraVerticalOnChunk; }
+		Transform getGlobalTransform(void);
 	
 	private:
 		void setMesh(Ref<Mesh> mesh);
@@ -205,6 +215,9 @@ namespace godot
 		AABB m_aabb;						// AABB of the chunk in WUs relative to the chunk so X and Z are 0
 		AABB m_gridRelativeAABB;			// AABB of the chunk in WUs relative to the grid (the viewer)
 		int m_lod;
+		Vector3 m_localToGriddCoordCameraLastPos;
+		Vector3 m_globalCoordCameraLastPos;
+		bool m_isCameraVerticalOnChunk;
 
 		int m_numVerticesPerChuckSide;		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int m_numChunksPerWorldGridSide;	// The number of chunks required to cover every side of the grid at the current lod value
@@ -247,6 +260,7 @@ namespace godot
 		virtual void setVisible(bool b);
 		virtual void setAABB(AABB& aabb);
 		virtual void dump(void);
+		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
 
 	private:
 		void setMesh(Ref<Mesh> mesh);

@@ -14,6 +14,7 @@ namespace godot
 {
 	class MeshCache;
 	class QuadTree;
+	class Chunk;
 	class GDN_TheWorld_Globals;
 	class GDN_TheWorld_Camera;
 
@@ -56,6 +57,10 @@ namespace godot
 		void setMapScale(Vector3 mapScaleVector);
 		void setDumpRequired(void) { m_dumpRequired = true; }
 		void dump(void);
+		void setCameraChunk(Chunk* chunk) { m_cameraChunk = chunk; }
+		Transform getCameraChunkGlobalTransform(void);
+		AABB getCameraChunkAABB(void);
+		String getCameraChunkId(void);
 
 	private:
 		void onTransformChanged(void);
@@ -88,6 +93,7 @@ namespace godot
 		// Viewer (Camera)
 		int m_worldViewerLevel;		// actually world viewer manage one level at the time, otherwise we should have multiple quadtrees
 		GDN_TheWorld_Camera* m_worldCamera;
+		Chunk* m_cameraChunk;
 		
 		// World Data
 		std::vector<TheWorld_MapManager::SQLInterface::GridVertex> m_worldVertices;
@@ -102,7 +108,7 @@ namespace godot
 
 //	/root
 //		/Main										created in Godot editor
-//			/GDN_TheWorld_MainNode
+//			/GDN_TheWorld_MainNode					Only to startup the viewer
 //			/GDN_TheWorld_Globals
 //			/TheWorld_Main							created in Godot editor
 //				/GDN_TheWorld_Viewer

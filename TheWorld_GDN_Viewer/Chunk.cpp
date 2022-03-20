@@ -19,6 +19,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	m_slotPosX = slotPosX;
 	m_slotPosZ = slotPosZ;
 	m_lod = lod;
+	m_isCameraVerticalOnChunk = false;
 	m_viewer = viewer;
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	m_numVerticesPerChuckSide = globals->numVerticesPerChuckSide();
@@ -168,7 +169,6 @@ void Chunk::update(bool isVisible)
 		seams |= SEAM_TOP;
 
 	setMesh(m_viewer->getMeshCache()->getMesh(seams, m_lod));
-
 	setAABB(m_aabb);
 
 	setVisible(isVisible);
@@ -187,7 +187,57 @@ void Chunk::setVisible(bool b)
 void Chunk::setAABB(AABB& aabb)
 {
 	assert(m_meshInstance != RID());
-	VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstance, aabb);
+	
+	if (m_meshRID != RID())
+		VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstance, aabb);
+}
+
+void Chunk::setActive(bool b)
+{
+	m_active = b;
+	if (!b)
+	{
+		m_justJoined = false;
+		m_isCameraVerticalOnChunk = false;
+		m_localToGriddCoordCameraLastPos = Vector3(0, 0, 0);
+		m_globalCoordCameraLastPos = Vector3(0, 0, 0);
+	}
+}
+
+void Chunk::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos)
+{
+	if (!isActive())
+	{
+		m_localToGriddCoordCameraLastPos = Vector3(0, 0, 0);
+		m_globalCoordCameraLastPos = Vector3(0, 0, 0);
+		m_isCameraVerticalOnChunk = false;
+	}
+	else
+	{
+		m_localToGriddCoordCameraLastPos = localToGriddCoordCameraLastPos;
+		m_globalCoordCameraLastPos = globalCoordCameraLastPos;
+
+		if (localToGriddCoordCameraLastPos.x >= m_originXInWUsLocalToGrid && localToGriddCoordCameraLastPos.x <= m_originXInWUsLocalToGrid + m_chunkSizeInWUs
+			&& localToGriddCoordCameraLastPos.z >= m_originZInWUsLocalToGrid && localToGriddCoordCameraLastPos.z <= m_originZInWUsLocalToGrid + m_chunkSizeInWUs)
+			m_isCameraVerticalOnChunk = true;
+		else
+			m_isCameraVerticalOnChunk = false;
+	}
+
+	if (m_isCameraVerticalOnChunk)
+		m_viewer->setCameraChunk(this);
+}
+
+void Chunk::getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globalCoordCameraLastPos)
+{
+	localToGriddCoordCameraLastPos = m_localToGriddCoordCameraLastPos;
+	globalCoordCameraLastPos = m_globalCoordCameraLastPos;
+}
+
+Transform Chunk::getGlobalTransform(void)
+{
+	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
+	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
 }
 
 void Chunk::dump(void)
@@ -209,17 +259,18 @@ void Chunk::dump(void)
 	float globalOriginZInGridInWUs = m_viewer->get_global_transform().origin.z + m_originZInWUsLocalToGrid;
 
 	globals->debugPrint(String("Slot in GRID (X, Z)")
-		+ String(" - ") + String(to_string(m_slotPosX).c_str())	+ String(",") + String(to_string(m_slotPosZ).c_str())
-		+ String(" - ") + String("lod ") + String(to_string(m_lod).c_str())
-		+ String(" - ") + String("chunk sixe (WUs) ") + String(to_string(m_chunkSizeInWUs).c_str())
-		+ String(" - ") + String("Pos in GRID (local):")
-		+ String(" ") + String("X = ") + String(to_string(m_originXInWUsLocalToGrid).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_originZInWUsLocalToGrid).c_str())
-		+ String(" - ") + String("Pos in GRID (global):")
-		+ String(" ") + String("X = ") + String(to_string(globalOriginXInGridInWUs).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(globalOriginZInGridInWUs).c_str())
-		+ String(" - ") + String("MinH = ") + String(to_string(m_aabb.position.y).c_str())
-		+ String(" - ") + String("MaxH = ") + String(to_string((m_aabb.position + m_aabb.size).y).c_str()));
+		+ " - " + to_string(m_slotPosX).c_str()	+ "," + to_string(m_slotPosZ).c_str()
+		+ " - lod " + to_string(m_lod).c_str()
+		+ " - chunk sixe (WUs) " + to_string(m_chunkSizeInWUs).c_str()
+		+ " - Pos in GRID (local):"
+		+ " X = " + to_string(m_originXInWUsLocalToGrid).c_str()
+		+ ", Z = " + to_string(m_originZInWUsLocalToGrid).c_str()
+		+ " - Pos in GRID (global):"
+		+ " X = " + to_string(globalOriginXInGridInWUs).c_str()
+		+ ", Z = " + to_string(globalOriginZInGridInWUs).c_str()
+		+ " - MinH = " + to_string(m_aabb.position.y).c_str()
+		+ " - MaxH = " + to_string((m_aabb.position + m_aabb.size).y).c_str()
+		+ (m_isCameraVerticalOnChunk ? " - Camera IN" : ""));
 
 	/*globals->debugPrint(String("\t") + String("AABB - point 0:")
 		+ String(" ") + String("X = ") + String(to_string(m_aabb.get_endpoint(0).x).c_str())
@@ -267,9 +318,9 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 {
 	Variant mesh;
 
-	string metaName = DEBUG_WIRECUBE_MESH + to_string(m_lod);
+	string metaNameMesh = DEBUG_WIRECUBE_MESH + to_string(m_lod);
 
-	if (!m_viewer->has_meta(metaName.c_str()))
+	if (!m_viewer->has_meta(metaNameMesh.c_str()))
 	{
 		Color wiredCubeMeshColor;
 		if (m_lod == 0)
@@ -292,23 +343,29 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 		mat->set_albedo(wiredCubeMeshColor);
 		_mesh->surface_set_material(0, mat);
 		mesh = _mesh;
-		//m_viewer->set_meta(metaName.c_str(), mesh);	// DEBUGRIC
+		m_viewer->set_meta(metaNameMesh.c_str(), mesh);
+		string metaNameColor = DEBUG_WIRECUBE_MESH_COLOR + to_string(m_lod);
+		m_viewer->set_meta(metaNameColor.c_str(), Variant(wiredCubeMeshColor));
 	}
 	else
-		mesh = m_viewer->get_meta(metaName.c_str());
+		mesh = m_viewer->get_meta(metaNameMesh.c_str());
 	
 	VisualServer* vs = VisualServer::get_singleton();
 	m_debugCubeMeshInstance = vs->instance_create();
+	// DEBUGRIC
 	//if (m_aabb.position.y == 0)
 	//	vs->instance_set_visible(m_debugCubeMeshInstance, false);
 	//else
 		vs->instance_set_visible(m_debugCubeMeshInstance, true);
+	
 	setMesh(mesh);
+	setAABB(m_aabb);
 
 	//enterWorld();
 	Ref<World> world = m_viewer->get_world();
 	if (world != nullptr && world.is_valid())
 		vs->instance_set_scenario(m_debugCubeMeshInstance, world->get_scenario());
+
 }
 
 ChunkDebug::~ChunkDebug()
@@ -346,8 +403,6 @@ void ChunkDebug::parentTransformChanged(Transform parentT)
 	// TODORIC mah
 	Transform worldTransform = computeWorldTranforsmOfAABB();
 	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
-	//Transform chunkTransform = computeAABB();
-	//VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, chunkTransform);
 }
 
 void ChunkDebug::setVisible(bool b)
@@ -355,6 +410,7 @@ void ChunkDebug::setVisible(bool b)
 	Chunk::setVisible(b);
 	
 	assert(m_debugCubeMeshInstance != RID());
+	// DEBUGRIC
 	//if (m_aabb.position.y == 0)
 	//	VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, false);
 	//else
@@ -371,9 +427,8 @@ void ChunkDebug::setAABB(AABB& aabb)
 	// TODORIC mah
 	Transform worldTransform = computeWorldTranforsmOfAABB();
 	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
-	//Transform chunkTransform = computeAABB();
-	//VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, chunkTransform);
 	
+	// DEBUGRIC
 	//if (m_aabb.position.y == 0)
 	//	VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, false);
 }
@@ -391,13 +446,42 @@ void ChunkDebug::setMesh(Ref<Mesh> mesh)
 
 Transform ChunkDebug::computeWorldTranforsmOfAABB(void)
 {
-	// TODORIC mah
-	//Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
-	//return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position); 
-	Vector3 pos((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid);
-	//if (m_aabb.position.y != 0)
-	//	m_viewer->Globals()->debugPrint("trovato!");
-	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos);
+	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
+	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position); 
+	//Vector3 pos((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid);	// same as m_aabb if in local chunk coordinates and pos in in local grid coordinates (both WUs)
+	//return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos);
+}
+
+void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos)
+{
+	//Vector3 prevLocalToGriddCoordCameraLastPos, prevGlobalCoordCameraLastPos;
+	//getCameraPos(prevLocalToGriddCoordCameraLastPos, prevGlobalCoordCameraLastPos);
+	//bool cameraMoved = (prevLocalToGriddCoordCameraLastPos != localToGriddCoordCameraLastPos || prevGlobalCoordCameraLastPos != globalCoordCameraLastPos) ? true : false;
+	
+	bool prevCameraVerticalOnChunk = isCameraVerticalOnChunk();
+
+	Chunk::setCameraPos(localToGriddCoordCameraLastPos, globalCoordCameraLastPos);
+
+	return;
+	if (isCameraVerticalOnChunk() != prevCameraVerticalOnChunk)
+	{
+		VisualServer* vs = VisualServer::get_singleton();
+
+		string metaNameMesh = DEBUG_WIRECUBE_MESH + to_string(m_lod);
+		string metaNameColor = DEBUG_WIRECUBE_MESH_COLOR + to_string(m_lod);
+		Variant wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
+		Variant mesh = m_viewer->get_meta(metaNameMesh.c_str());
+		if (!isCameraVerticalOnChunk())
+			wiredCubeMeshColor = m_viewer->get_meta(metaNameColor.c_str());		// reset to normal color
+		//vs->instance_set_visible(m_debugCubeMeshInstance, isVisible());
+		SpatialMaterial* mat = SpatialMaterial::_new();
+		//mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+		//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+		//mat->set_albedo(wiredCubeMeshColor);
+		//((Mesh*)mesh)->surface_set_material(0, mat);
+		setMesh(mesh);
+		setAABB(m_aabb);
+	}
 }
 
 Mesh* ChunkDebug::createWirecubeMesh(Color c)
@@ -435,9 +519,10 @@ Mesh* ChunkDebug::createWirecubeMesh(Color c)
 	indices.append(1); indices.append(3);
 
 	/*
+	// DEBUGRIC
 	if (m_aabb.position.y != 0)
 	{
-		// Vertical faces diagonals	// DEBUGRIC
+		// Vertical faces diagonals
 		indices.append(0); indices.append(5);
 		indices.append(1); indices.append(4);
 		
