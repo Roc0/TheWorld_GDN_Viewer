@@ -36,12 +36,14 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 
 	// Camera Movement
 	m_numMoveStep = 0;
-	m_wheelVelocity = 2.5;	// 5.0;	// 10.0;
+	m_wheelVelocity = 5.0;	// 10.0;
+	m_wheelVelocityWithShift = 1.0;	// 10.0;
 	// Camera Movement
 
 	// Camera Rotation
 	m_shiftOriCameraOn = false;
 	m_shiftVertCameraOn = false;
+	m_shiftPressed = false;
 	m_rotateCameraOn = false;
 	m_mouseRelativePosToShiftOriz = Vector2(0, 0);
 	m_mouseRelativePosToShiftVert = Vector2(0, 0);
@@ -122,17 +124,22 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	else
 		m_rotateCameraOn = false;
 
-	input = Input::get_singleton();
+	//input = Input::get_singleton();
 	if (input->is_action_pressed("ui_mouse_button_left"))
 		m_shiftOriCameraOn = true;
 	else
 		m_shiftOriCameraOn = false;
 
-	input = Input::get_singleton();
+	//input = Input::get_singleton();
 	if (input->is_action_pressed("ui_mouse_button_mid"))
 		m_shiftVertCameraOn = true;
 	else
 		m_shiftVertCameraOn = false;
+
+	if (input->is_action_pressed("ui_shift"))
+		m_shiftPressed = true;
+	else
+		m_shiftPressed = false;
 }
 
 void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
@@ -379,8 +386,16 @@ bool GDN_TheWorld_Camera::updateCamera()
 
 	if (m_numMoveStep)
 	{
-		translate_object_local(Vector3(0, 0, m_numMoveStep * m_wheelVelocity));
-		m_numMoveStep = 0;
+		if (m_shiftPressed)
+		{
+			translate_object_local(Vector3(0, 0, m_numMoveStep * m_wheelVelocityWithShift));
+			m_numMoveStep = 0;
+		}
+		else
+		{
+			translate_object_local(Vector3(0, 0, m_numMoveStep * m_wheelVelocity));
+			m_numMoveStep = 0;
+		}
 	}
 
 	return true;

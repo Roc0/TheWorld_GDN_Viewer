@@ -261,7 +261,7 @@ void Chunk::dump(void)
 	globals->debugPrint(String("Slot in GRID (X, Z)")
 		+ " - " + to_string(m_slotPosX).c_str()	+ "," + to_string(m_slotPosZ).c_str()
 		+ " - lod " + to_string(m_lod).c_str()
-		+ " - chunk sixe (WUs) " + to_string(m_chunkSizeInWUs).c_str()
+		+ " - chunk size (WUs) " + to_string(m_chunkSizeInWUs).c_str()
 		+ " - Pos in GRID (local):"
 		+ " X = " + to_string(m_originXInWUsLocalToGrid).c_str()
 		+ ", Z = " + to_string(m_originZInWUsLocalToGrid).c_str()
