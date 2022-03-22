@@ -13,7 +13,6 @@
 namespace godot
 {
 #define DEBUG_WIRECUBE_MESH			"debug_wirecube_mesh_lod_"
-#define DEBUG_WIRECUBE_MESH_COLOR	"debug_wirecube_mesh_color_lod_"
 	
 	class GDN_TheWorld_Viewer;
 

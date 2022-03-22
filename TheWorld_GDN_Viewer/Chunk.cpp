@@ -147,6 +147,7 @@ void Chunk::update(bool isVisible)
 {
 	if (!isActive())
 	{
+		setVisible(false);
 		setPendingUpdate(false);
 		return;
 	}
@@ -324,17 +325,19 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 	{
 		Color wiredCubeMeshColor;
 		if (m_lod == 0)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_white;
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_yellow;
 		else if (m_lod == 1)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_blue;
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_aquamarine_green;
 		else if (m_lod == 2)
 			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_green;
 		else if (m_lod == 3)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_cyan;
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_cyan;	//g_color_cyan;
 		else if (m_lod == 4)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_blue;		//g_color_pink_cerise;
 		else
 			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_red;
+
+		//wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_cyan;	// DEBUGRIC
 
 		Mesh* _mesh = createWirecubeMesh(wiredCubeMeshColor);
 		SpatialMaterial* mat = SpatialMaterial::_new();
@@ -344,28 +347,27 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 		_mesh->surface_set_material(0, mat);
 		mesh = _mesh;
 		m_viewer->set_meta(metaNameMesh.c_str(), mesh);
-		string metaNameColor = DEBUG_WIRECUBE_MESH_COLOR + to_string(m_lod);
-		m_viewer->set_meta(metaNameColor.c_str(), Variant(wiredCubeMeshColor));
 	}
 	else
 		mesh = m_viewer->get_meta(metaNameMesh.c_str());
 	
 	VisualServer* vs = VisualServer::get_singleton();
 	m_debugCubeMeshInstance = vs->instance_create();
-	// DEBUGRIC
-	//if (m_aabb.position.y == 0)
-	//	vs->instance_set_visible(m_debugCubeMeshInstance, false);
-	//else
-		vs->instance_set_visible(m_debugCubeMeshInstance, true);
 	
-	setMesh(mesh);
-	setAABB(m_aabb);
-
 	//enterWorld();
 	Ref<World> world = m_viewer->get_world();
 	if (world != nullptr && world.is_valid())
 		vs->instance_set_scenario(m_debugCubeMeshInstance, world->get_scenario());
 
+	// DEBUGRIC
+	//if (m_aabb.position.y == 0)
+	//	vs->instance_set_visible(m_debugCubeMeshInstance, false);
+	//else
+	vs->instance_set_visible(m_debugCubeMeshInstance, true);
+
+	//if (m_lod == 3)
+	setMesh(mesh);
+	setAABB(m_aabb);
 }
 
 ChunkDebug::~ChunkDebug()
@@ -410,6 +412,10 @@ void ChunkDebug::setVisible(bool b)
 	Chunk::setVisible(b);
 	
 	assert(m_debugCubeMeshInstance != RID());
+
+	if (!isActive())
+		b = false;
+
 	// DEBUGRIC
 	//if (m_aabb.position.y == 0)
 	//	VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, false);
@@ -437,10 +443,15 @@ void ChunkDebug::setAABB(AABB& aabb)
 void ChunkDebug::setMesh(Ref<Mesh> mesh)
 {
 	assert(m_debugCubeMeshInstance != RID());
-	RID meshRID = mesh->get_rid();
-	VisualServer::get_singleton()->instance_set_base(m_debugCubeMeshInstance, meshRID);
-	m_debugCubeMeshRID = meshRID;
 
+	RID meshRID = (mesh != nullptr ? mesh->get_rid() : RID());
+
+	if (m_debugCubeMeshRID == meshRID)
+		return;
+
+	VisualServer::get_singleton()->instance_set_base(m_debugCubeMeshInstance, meshRID);
+	
+	m_debugCubeMeshRID = meshRID;
 	m_debugCubeMesh = mesh;
 }
 
@@ -463,22 +474,32 @@ void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 gl
 	Chunk::setCameraPos(localToGriddCoordCameraLastPos, globalCoordCameraLastPos);
 
 	return;
+	
 	if (isCameraVerticalOnChunk() != prevCameraVerticalOnChunk)
 	{
-		VisualServer* vs = VisualServer::get_singleton();
-
-		string metaNameMesh = DEBUG_WIRECUBE_MESH + to_string(m_lod);
-		string metaNameColor = DEBUG_WIRECUBE_MESH_COLOR + to_string(m_lod);
-		Variant wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
-		Variant mesh = m_viewer->get_meta(metaNameMesh.c_str());
-		if (!isCameraVerticalOnChunk())
-			wiredCubeMeshColor = m_viewer->get_meta(metaNameColor.c_str());		// reset to normal color
-		//vs->instance_set_visible(m_debugCubeMeshInstance, isVisible());
-		SpatialMaterial* mat = SpatialMaterial::_new();
-		//mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
-		//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-		//mat->set_albedo(wiredCubeMeshColor);
-		//((Mesh*)mesh)->surface_set_material(0, mat);
+		Variant mesh;
+		if (isCameraVerticalOnChunk())
+		{
+			string id = getPos().getId();	// DEBUGRIC
+			// set special Wirecube
+			setMesh(nullptr);
+			Ref<Mesh> _mesh = createWirecubeMesh(GDN_TheWorld_Globals::g_color_white);
+			SpatialMaterial* mat = SpatialMaterial::_new();
+			mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+			mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+			mat->set_albedo(GDN_TheWorld_Globals::g_color_white);
+			_mesh->surface_set_material(0, mat);
+			mesh = _mesh;
+		}
+		else
+		{
+			string id = getPos().getId();	// DEBUGRIC
+			// reset normal Wirecube
+			setMesh(nullptr);
+			string metaNameMesh = DEBUG_WIRECUBE_MESH + to_string(m_lod);
+			mesh = m_viewer->get_meta(metaNameMesh.c_str());
+		}
+		
 		setMesh(mesh);
 		setAABB(m_aabb);
 	}

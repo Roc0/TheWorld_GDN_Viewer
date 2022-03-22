@@ -59,7 +59,6 @@ namespace godot
 		void dump(void);
 		void setCameraChunk(Chunk* chunk) { m_cameraChunk = chunk; }
 		Transform getCameraChunkGlobalTransform(void);
-		AABB getCameraChunkAABB(void);
 		String getCameraChunkId(void);
 
 	private:
@@ -80,7 +79,10 @@ namespace godot
 		int64_t m_timeElapsedFromLastDump;
 		bool m_initialWordlViewerPosSet;
 		bool m_dumpRequired;
-		
+
+		bool m_terrainVibility;
+		bool m_updateTerrainVibilityRequired;
+
 		RID m_viewFrustumMeshInstance;
 		RID m_viewFrustumMeshRID;
 		Ref<Mesh> m_viewFrustumMesh;
