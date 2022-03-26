@@ -223,7 +223,7 @@ namespace godot
 			return (gridStepInBitmap(lod) * m_mapManager->gridStepInWU());
 		}
 
-		float splitScale(void) { return 2.0F; }
+		float splitScale(void) { return 1.0F; }
 
 		bool isDebugEnabled(void) { return m_isDebugEnabled; }
 		void setDebugEnabled(bool b = true);

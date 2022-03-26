@@ -235,7 +235,7 @@ void Chunk::getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globa
 	globalCoordCameraLastPos = m_globalCoordCameraLastPos;
 }
 
-Transform Chunk::getGlobalTransform(void)
+Transform Chunk::getGlobalTransformOfAABB(void)
 {
 	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
 	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
@@ -325,19 +325,17 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 	{
 		Color wiredCubeMeshColor;
 		if (m_lod == 0)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_yellow;
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
 		else if (m_lod == 1)
 			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_aquamarine_green;
 		else if (m_lod == 2)
 			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_green;
 		else if (m_lod == 3)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_cyan;	//g_color_cyan;
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_cyan;
 		else if (m_lod == 4)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_blue;		//g_color_pink_cerise;
+			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_pink;
 		else
 			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_red;
-
-		//wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_cyan;	// DEBUGRIC
 
 		Mesh* _mesh = createWirecubeMesh(wiredCubeMeshColor);
 		SpatialMaterial* mat = SpatialMaterial::_new();
@@ -403,7 +401,7 @@ void ChunkDebug::parentTransformChanged(Transform parentT)
 
 	assert(m_debugCubeMeshInstance != RID());
 	// TODORIC mah
-	Transform worldTransform = computeWorldTranforsmOfAABB();
+	Transform worldTransform = getGlobalTransformOfAABB();
 	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
 }
 
@@ -431,7 +429,7 @@ void ChunkDebug::setAABB(AABB& aabb)
 	VisualServer::get_singleton()->instance_set_custom_aabb(m_debugCubeMeshInstance, aabb);
 
 	// TODORIC mah
-	Transform worldTransform = computeWorldTranforsmOfAABB();
+	Transform worldTransform = getGlobalTransformOfAABB();
 	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
 	
 	// DEBUGRIC
@@ -455,25 +453,13 @@ void ChunkDebug::setMesh(Ref<Mesh> mesh)
 	m_debugCubeMesh = mesh;
 }
 
-Transform ChunkDebug::computeWorldTranforsmOfAABB(void)
-{
-	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
-	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position); 
-	//Vector3 pos((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid);	// same as m_aabb if in local chunk coordinates and pos in in local grid coordinates (both WUs)
-	//return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos);
-}
-
 void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos)
 {
-	//Vector3 prevLocalToGriddCoordCameraLastPos, prevGlobalCoordCameraLastPos;
-	//getCameraPos(prevLocalToGriddCoordCameraLastPos, prevGlobalCoordCameraLastPos);
-	//bool cameraMoved = (prevLocalToGriddCoordCameraLastPos != localToGriddCoordCameraLastPos || prevGlobalCoordCameraLastPos != globalCoordCameraLastPos) ? true : false;
-	
 	bool prevCameraVerticalOnChunk = isCameraVerticalOnChunk();
 
 	Chunk::setCameraPos(localToGriddCoordCameraLastPos, globalCoordCameraLastPos);
 
-	return;
+	//return;
 	
 	if (isCameraVerticalOnChunk() != prevCameraVerticalOnChunk)
 	{
@@ -483,11 +469,11 @@ void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 gl
 			string id = getPos().getId();	// DEBUGRIC
 			// set special Wirecube
 			setMesh(nullptr);
-			Ref<Mesh> _mesh = createWirecubeMesh(GDN_TheWorld_Globals::g_color_white);
+			Ref<Mesh> _mesh = createWirecubeMesh(GDN_TheWorld_Globals::g_color_blue);
 			SpatialMaterial* mat = SpatialMaterial::_new();
 			mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
 			mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-			mat->set_albedo(GDN_TheWorld_Globals::g_color_white);
+			mat->set_albedo(GDN_TheWorld_Globals::g_color_blue);
 			_mesh->surface_set_material(0, mat);
 			mesh = _mesh;
 		}

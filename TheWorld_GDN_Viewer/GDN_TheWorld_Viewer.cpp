@@ -30,8 +30,10 @@ void GDN_TheWorld_Viewer::_register_methods()
 
 	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
 	register_method("dump_required", &GDN_TheWorld_Viewer::setDumpRequired);
-	register_method("get_camera_chunk_global_transform", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransform);
+	register_method("get_camera_chunk_global_transform_of_aabb", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB);
 	register_method("get_camera_chunk_id", &GDN_TheWorld_Viewer::getCameraChunkId);
+	register_method("get_num_splits", &GDN_TheWorld_Viewer::getNumSplits);
+	register_method("get_num_joins", &GDN_TheWorld_Viewer::getNumJoins);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -180,6 +182,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	GDN_TheWorld_Camera* activeCamera = WorldCamera()->getActiveCamera();
 	if (!activeCamera)
 		return;
+
+	if (m_quadTree == nullptr)
+	{
+		m_quadTree = make_unique<QuadTree>(this);
+		m_quadTree->init();
+	}
 
 	if (m_firstProcess)
 	{
@@ -391,6 +399,8 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 	// Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 
+	m_initialWordlViewerPosSet = false;
+	
 	m_worldViewerLevel = level;
 
 	try
@@ -416,8 +426,8 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 
 		if (m_quadTree)
 			m_quadTree.reset();
-		m_quadTree = make_unique<QuadTree>(this);
-		m_quadTree->init();
+		//m_quadTree = make_unique<QuadTree>(this);
+		//m_quadTree->init();
 
 		m_initialWordlViewerPosSet = true;
 	}
@@ -488,6 +498,9 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 	if (!is_inside_tree())
 		return;
 
+	if (!m_quadTree)
+		return;
+
 	// TODORIC mah
 	Transform gt = internalTransformGlobalCoord();
 	//Transform gt = internalTransformLocalCoord();
@@ -513,10 +526,10 @@ void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
 	onTransformChanged();
 }
 
-Transform GDN_TheWorld_Viewer::getCameraChunkGlobalTransform(void)
+Transform GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB(void)
 {
 	if (m_cameraChunk)
-		return m_cameraChunk->getGlobalTransform();
+		return m_cameraChunk->getGlobalTransformOfAABB();
 	else
 		return Transform();
 }
@@ -529,8 +542,21 @@ String GDN_TheWorld_Viewer::getCameraChunkId(void)
 		return "";
 }
 
+int GDN_TheWorld_Viewer::getNumSplits()
+{
+	return m_quadTree ? m_quadTree->getNumSplits() : 0;
+}
+
+int GDN_TheWorld_Viewer::getNumJoins()
+{
+	return m_quadTree ? m_quadTree->getNumJoins() : 0;
+}
+
 void GDN_TheWorld_Viewer::dump()
 {
+	if (!m_quadTree)
+		return;
+
 	Globals()->debugPrint("*************");
 	Globals()->debugPrint("STARTING DUMP");
 

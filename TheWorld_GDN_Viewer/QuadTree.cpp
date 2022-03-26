@@ -124,7 +124,7 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer)
 {
 	m_viewer = viewer;
 	m_numSplits = 0;
-	m_numJoin = 0;
+	m_numJoins = 0;
 	m_numLeaf = 0;
 }
 
@@ -167,7 +167,6 @@ void QuadTree::update(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGl
 	m_numLeaf = 0;
 	internalUpdate(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord, m_root.get());
 	assert(!m_root->isLeaf() || m_root->getChunk() != nullptr);
-	return;
 }
 
 void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGlobalCoord, Quad* quad)
@@ -215,7 +214,7 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 			quad->clearChildren();
 			quad->createChunk();
 			quad->getChunk()->setJustJoined(true);
-			m_numJoin++;
+			m_numJoins++;
 		}
 	}
 	
@@ -328,7 +327,7 @@ void QuadTree::dump(void)
 				+ String(" - ") + String("Lod max depth: ") + String(to_string(globals->lodMaxDepth()).c_str()));
 
 	globals->debugPrint(String("FROM LAST DUMP - Num quad split: ") + String(to_string(m_numSplits).c_str())
-				+ String(" - ") + String("Num quad join: ") + String(to_string(m_numJoin).c_str())
+				+ String(" - ") + String("Num quad join: ") + String(to_string(m_numJoins).c_str())
 				+ String(" - ") + String("Num leaves: ") + String(to_string(m_numLeaf).c_str()));
 
 	globals->debugPrint(String("GRID POS (global)")
@@ -360,5 +359,5 @@ void QuadTree::dump(void)
 
 
 	m_numSplits = 0;
-	m_numJoin = 0;
+	m_numJoins = 0;
 }

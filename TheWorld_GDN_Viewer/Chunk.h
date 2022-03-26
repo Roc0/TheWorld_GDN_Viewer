@@ -203,7 +203,7 @@ namespace godot
 		AABB getAABB(void) { return m_aabb; };
 		void getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globalCoordCameraLastPos);
 		bool isCameraVerticalOnChunk(void) { return m_isCameraVerticalOnChunk; }
-		Transform getGlobalTransform(void);
+		Transform getGlobalTransformOfAABB(void);
 	
 	private:
 		void setMesh(Ref<Mesh> mesh);
@@ -263,7 +263,6 @@ namespace godot
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
-		Transform computeWorldTranforsmOfAABB(void);
 		Mesh* createWirecubeMesh(Color c = Color(255, 255, 255));
 
 	private:

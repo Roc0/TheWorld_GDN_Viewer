@@ -58,8 +58,10 @@ namespace godot
 		void setDumpRequired(void) { m_dumpRequired = true; }
 		void dump(void);
 		void setCameraChunk(Chunk* chunk) { m_cameraChunk = chunk; }
-		Transform getCameraChunkGlobalTransform(void);
+		Transform getCameraChunkGlobalTransformOfAABB(void);
 		String getCameraChunkId(void);
+		int getNumSplits(void);
+		int getNumJoins(void);
 
 	private:
 		void onTransformChanged(void);

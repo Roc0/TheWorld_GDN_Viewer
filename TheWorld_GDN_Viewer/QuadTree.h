@@ -76,6 +76,8 @@ namespace godot
 		std::vector<Chunk*>& getChunkUpdate(void) { return m_vectChunkUpdate; }
 		void ForAllChunk(Chunk::ChunkAction& chunkAction);
 		void dump(void);
+		int getNumSplits(void) { return m_numSplits; }
+		int getNumJoins(void) { return m_numJoins; }
 
 	private:
 		void internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 viewerPosGlobalCoord, Quad* quadTreeNode);
@@ -88,7 +90,7 @@ namespace godot
 
 		// Statistics
 		int m_numSplits;
-		int m_numJoin;
+		int m_numJoins;
 		int m_numLeaf;
 	};
 }
