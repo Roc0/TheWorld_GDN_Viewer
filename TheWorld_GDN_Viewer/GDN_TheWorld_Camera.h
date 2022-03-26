@@ -41,7 +41,7 @@ namespace godot {
 		bool isWorldCamera() { return m_WorldCamera; }
 		void notifyActiveCameraFlag(bool active);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
-		Mesh* DrawViewFrustum(Color c = Color(255, 255, 255));
+		Mesh* DrawViewFrustum(Color c = Color(1, 1, 1));
 
 	private:
 

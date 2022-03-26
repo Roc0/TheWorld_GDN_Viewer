@@ -95,9 +95,9 @@ void Quad::createChunk(void)
 		// create chunk for current quad because this is the first time that is needed for current lod and pos
 		Ref<Material> mat;
 		if (_DEBUG_AAB)
-			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
+			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat, m_viewer->getDebugMode());
 		else
-			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
+			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat, m_viewer->getDebugMode());
 		// TODORIC mah
 		m_chunk->parentTransformChanged(m_viewer->internalTransformGlobalCoord());
 		//m_chunk->parentTransformChanged(m_viewer->internalTransformLocalCoord());

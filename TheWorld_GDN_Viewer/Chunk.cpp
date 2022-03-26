@@ -14,13 +14,14 @@
 
 using namespace godot;
 
-Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat)
+Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat, enum class GDN_TheWorld_Globals::ChunkDebugMode debugMode)
 {
 	m_slotPosX = slotPosX;
 	m_slotPosZ = slotPosZ;
 	m_lod = lod;
 	m_isCameraVerticalOnChunk = false;
 	m_viewer = viewer;
+	m_debugMode = debugMode;
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	m_numVerticesPerChuckSide = globals->numVerticesPerChuckSide();
 	m_numChunksPerWorldGridSide = globals->numChunksPerBitmapSide(m_lod);
@@ -76,11 +77,9 @@ void Chunk::initVisual(void)
 		vs->instance_set_scenario(m_meshInstance, world->get_scenario());
 	
 	m_visible = true; 
-
-	// TODORIC Is this needed?
-	vs->instance_set_visible(m_meshInstance, m_visible);
-
 	m_active = true;
+
+	vs->instance_set_visible(m_meshInstance, m_visible);
 }
 
 void Chunk::deinit(void)
@@ -241,6 +240,17 @@ Transform Chunk::getGlobalTransformOfAABB(void)
 	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
 }
 
+void Chunk::setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
+{
+	m_debugMode = mode;
+}
+
+void Chunk::applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
+{
+	if (mode != GDN_TheWorld_Globals::ChunkDebugMode::NotSet)
+		setDebugMode(mode);
+}
+
 void Chunk::dump(void)
 {
 	if (!isActive())
@@ -315,65 +325,28 @@ void Chunk::dump(void)
 		+ String(" - ") + String("SZ = ") + String(to_string(m_aabb.size.z).c_str()));*/
 }
 
-ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat) : Chunk(slotPosX, slotPosZ, lod, viewer, mat)
+ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat, enum class GDN_TheWorld_Globals::ChunkDebugMode debugMode)
+	: Chunk(slotPosX, slotPosZ, lod, viewer, mat, debugMode)
 {
-	Variant mesh;
-
-	string metaNameMesh = DEBUG_WIRECUBE_MESH + to_string(m_lod);
-
-	if (!m_viewer->has_meta(metaNameMesh.c_str()))
-	{
-		Color wiredCubeMeshColor;
-		if (m_lod == 0)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
-		else if (m_lod == 1)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_aquamarine_green;
-		else if (m_lod == 2)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_green;
-		else if (m_lod == 3)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_cyan;
-		else if (m_lod == 4)
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_pink;
-		else
-			wiredCubeMeshColor = GDN_TheWorld_Globals::g_color_red;
-
-		Mesh* _mesh = createWirecubeMesh(wiredCubeMeshColor);
-		SpatialMaterial* mat = SpatialMaterial::_new();
-		mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
-		mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-		mat->set_albedo(wiredCubeMeshColor);
-		_mesh->surface_set_material(0, mat);
-		mesh = _mesh;
-		m_viewer->set_meta(metaNameMesh.c_str(), mesh);
-	}
-	else
-		mesh = m_viewer->get_meta(metaNameMesh.c_str());
-	
 	VisualServer* vs = VisualServer::get_singleton();
-	m_debugCubeMeshInstance = vs->instance_create();
+	m_debugMeshInstance = vs->instance_create();
 	
 	//enterWorld();
 	Ref<World> world = m_viewer->get_world();
 	if (world != nullptr && world.is_valid())
-		vs->instance_set_scenario(m_debugCubeMeshInstance, world->get_scenario());
+		vs->instance_set_scenario(m_debugMeshInstance, world->get_scenario());
 
-	// DEBUGRIC
-	//if (m_aabb.position.y == 0)
-	//	vs->instance_set_visible(m_debugCubeMeshInstance, false);
-	//else
-	vs->instance_set_visible(m_debugCubeMeshInstance, true);
+	vs->instance_set_visible(m_debugMeshInstance, isVisible());
 
-	//if (m_lod == 3)
-	setMesh(mesh);
-	setAABB(m_aabb);
+	applyDebugMode();
 }
 
 ChunkDebug::~ChunkDebug()
 {
-	if (m_debugCubeMeshInstance != RID())
+	if (m_debugMeshInstance != RID())
 	{
-		VisualServer::get_singleton()->free_rid(m_debugCubeMeshInstance);
-		m_debugCubeMeshInstance = RID();
+		VisualServer::get_singleton()->free_rid(m_debugMeshInstance);
+		m_debugMeshInstance = RID();
 	}
 }
 
@@ -381,76 +354,64 @@ void ChunkDebug::enterWorld(void)
 {
 	Chunk::enterWorld();
 
-	assert(m_debugCubeMeshInstance != RID());
+	assert(m_debugMeshInstance != RID());
 	Ref<World> world = m_viewer->get_world();
 	if (world != nullptr && world.is_valid())
-		VisualServer::get_singleton()->instance_set_scenario(m_debugCubeMeshInstance, world->get_scenario());
+		VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstance, world->get_scenario());
 }
 
 void ChunkDebug::exitWorld(void)
 {
 	Chunk::exitWorld();
 	
-	assert(m_debugCubeMeshInstance != RID());
-	VisualServer::get_singleton()->instance_set_scenario(m_debugCubeMeshInstance, RID());
+	assert(m_debugMeshInstance != RID());
+	VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstance, RID());
 }
 
 void ChunkDebug::parentTransformChanged(Transform parentT)
 {
 	Chunk::parentTransformChanged(parentT);
 
-	assert(m_debugCubeMeshInstance != RID());
+	assert(m_debugMeshInstance != RID());
 	// TODORIC mah
 	Transform worldTransform = getGlobalTransformOfAABB();
-	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
+	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstance, worldTransform);
 }
 
 void ChunkDebug::setVisible(bool b)
 {
 	Chunk::setVisible(b);
 	
-	assert(m_debugCubeMeshInstance != RID());
+	assert(m_debugMeshInstance != RID());
 
 	if (!isActive())
 		b = false;
 
-	// DEBUGRIC
-	//if (m_aabb.position.y == 0)
-	//	VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, false);
-	//else
-		VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, b);
+	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstance, b);
 }
 
 void ChunkDebug::setAABB(AABB& aabb)
 {
 	Chunk::setAABB(aabb);
 
-	assert(m_debugCubeMeshInstance != RID());
-	VisualServer::get_singleton()->instance_set_custom_aabb(m_debugCubeMeshInstance, aabb);
-
-	// TODORIC mah
-	Transform worldTransform = getGlobalTransformOfAABB();
-	VisualServer::get_singleton()->instance_set_transform(m_debugCubeMeshInstance, worldTransform);
-	
-	// DEBUGRIC
-	//if (m_aabb.position.y == 0)
-	//	VisualServer::get_singleton()->instance_set_visible(m_debugCubeMeshInstance, false);
+	assert(m_debugMeshInstance != RID());
+	VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstance, aabb);
 }
 
 
-void ChunkDebug::setMesh(Ref<Mesh> mesh)
+void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 {
-	assert(m_debugCubeMeshInstance != RID());
+	assert(m_debugMeshInstance != RID());
 
 	RID meshRID = (mesh != nullptr ? mesh->get_rid() : RID());
 
-	if (m_debugCubeMeshRID == meshRID)
+	if (m_debugMeshRID == meshRID)
 		return;
 
-	VisualServer::get_singleton()->instance_set_base(m_debugCubeMeshInstance, meshRID);
+	VisualServer::get_singleton()->instance_set_base(m_debugMeshInstance, meshRID);
 	
-	m_debugCubeMeshRID = meshRID;
-	m_debugCubeMesh = mesh;
+	m_debugMeshRID = meshRID;
+	m_debugMesh = mesh;
 }
 
 void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos)
@@ -462,14 +423,33 @@ void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 gl
 	//return;
 	
 	if (isCameraVerticalOnChunk() != prevCameraVerticalOnChunk)
+		applyDebugMode();
+}
+
+void ChunkDebug::setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
+{
+	Chunk::setDebugMode(mode);
+}
+
+void ChunkDebug::applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
+{
+	Chunk::applyDebugMode(mode);
+	
+	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
 	{
-		Variant mesh;
+		setDebugMesh(nullptr);
+		return;
+	}
+
+	Variant mesh;
+	Transform worldTransform = getGlobalTransformOfAABB();
+
+	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB)
+	{
 		if (isCameraVerticalOnChunk())
 		{
-			string id = getPos().getId();	// DEBUGRIC
 			// set special Wirecube
-			setMesh(nullptr);
-			Ref<Mesh> _mesh = createWirecubeMesh(GDN_TheWorld_Globals::g_color_blue);
+			Ref<Mesh> _mesh = createWireCubeMesh(GDN_TheWorld_Globals::g_color_blue);
 			SpatialMaterial* mat = SpatialMaterial::_new();
 			mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
 			mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
@@ -479,19 +459,110 @@ void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 gl
 		}
 		else
 		{
-			string id = getPos().getId();	// DEBUGRIC
 			// reset normal Wirecube
-			setMesh(nullptr);
 			string metaNameMesh = DEBUG_WIRECUBE_MESH + to_string(m_lod);
-			mesh = m_viewer->get_meta(metaNameMesh.c_str());
+			if (!m_viewer->has_meta(metaNameMesh.c_str()))
+			{
+				Color wiredMeshColor;
+				if (m_lod == 0)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
+				else if (m_lod == 1)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_aquamarine_green;
+				else if (m_lod == 2)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_green;
+				else if (m_lod == 3)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_cyan;
+				else if (m_lod == 4)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_pink;
+				else
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_red;
+
+				Mesh* _mesh = createWireCubeMesh(wiredMeshColor);
+				SpatialMaterial* mat = SpatialMaterial::_new();
+				mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+				mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+				mat->set_albedo(wiredMeshColor);
+				_mesh->surface_set_material(0, mat);
+				mesh = _mesh;
+				m_viewer->set_meta(metaNameMesh.c_str(), mesh);
+			}
+			else
+				mesh = m_viewer->get_meta(metaNameMesh.c_str());
 		}
-		
-		setMesh(mesh);
-		setAABB(m_aabb);
 	}
+	else if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
+	{
+		//Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
+		//worldTransform = m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
+		worldTransform.origin.y = 0;
+
+		if (isCameraVerticalOnChunk())
+		{
+			// set special Wirecube
+			Color wiredMeshColor = GDN_TheWorld_Globals::g_color_blue;
+			Ref<Mesh> _mesh = createWireSquareMesh(wiredMeshColor);
+			SpatialMaterial* mat = SpatialMaterial::_new();
+			mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+			mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+			mat->set_albedo(wiredMeshColor);
+			_mesh->surface_set_material(0, mat);
+			mesh = _mesh;
+		}
+		else
+		{
+			// reset normal Wirecube
+			string metaNameMesh = DEBUG_WIRESQUARE_MESH + to_string(m_lod);
+			if (!m_viewer->has_meta(metaNameMesh.c_str()))
+			{
+				Color wiredMeshColor;
+				if (m_lod == 0)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
+				else if (m_lod == 1)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_aquamarine_green;
+				else if (m_lod == 2)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_green;
+				else if (m_lod == 3)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_cyan;
+				else if (m_lod == 4)
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_pink;
+				else
+					wiredMeshColor = GDN_TheWorld_Globals::g_color_red;
+
+				Mesh* _mesh = createWireSquareMesh(wiredMeshColor);
+				SpatialMaterial* mat = SpatialMaterial::_new();
+				mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+				mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+				mat->set_albedo(wiredMeshColor);
+				_mesh->surface_set_material(0, mat);
+				mesh = _mesh;
+				m_viewer->set_meta(metaNameMesh.c_str(), mesh);
+			}
+			else
+				mesh = m_viewer->get_meta(metaNameMesh.c_str());
+		}
+	}
+
+	setDebugMesh(nullptr);
+	setDebugMesh(mesh);
+	setAABB(m_aabb);
+	AABB aabb = m_aabb;
+	aabb.position.y = 0;
+	aabb.size.y = 0;
+	assert(m_debugMeshInstance != RID());
+	VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstance, aabb);
+
+
+	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstance, worldTransform);
+
+	GDN_TheWorld_Globals* globals = m_viewer->Globals();
+	globals->debugPrint(String("Debug Mesh - ID: ") + getPos().getId().c_str()
+		+ String(" ") + String("X = ") + String(to_string(worldTransform.origin.x).c_str())
+		+ String(", ") + String("Y = ") + String(to_string(worldTransform.origin.y).c_str())
+		+ String(", ") + String("Z = ") + String(to_string(worldTransform.origin.z).c_str())
+		+ (isCameraVerticalOnChunk() ? "CAMERA" : ""));
 }
 
-Mesh* ChunkDebug::createWirecubeMesh(Color c)
+Mesh* ChunkDebug::createWireCubeMesh(Color c)
 {
 	PoolVector3Array positions;
 	PoolColorArray colors;
@@ -521,7 +592,7 @@ Mesh* ChunkDebug::createWirecubeMesh(Color c)
 	indices.append(1); indices.append(5);
 	indices.append(2); indices.append(6);
 	indices.append(3); indices.append(7);
-	// lower face diagonals // DEBUGRIC
+	// lower face diagonals
 	indices.append(0); indices.append(2);
 	indices.append(1); indices.append(3);
 
@@ -553,6 +624,38 @@ Mesh* ChunkDebug::createWirecubeMesh(Color c)
 	ArrayMesh* mesh = ArrayMesh::_new();
 	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
 	
+	return mesh;
+}
+
+Mesh* ChunkDebug::createWireSquareMesh(Color c)
+{
+	PoolVector3Array positions;
+	PoolColorArray colors;
+	PoolIntArray indices;
+
+	positions.append(Vector3(0, 0, 0));		colors.append(c);
+	positions.append(Vector3(1, 0, 0));		colors.append(c);
+	positions.append(Vector3(1, 0, 1));		colors.append(c);
+	positions.append(Vector3(0, 0, 1));		colors.append(c);
+
+	// square
+	indices.append(0); indices.append(1);
+	indices.append(1); indices.append(2);
+	indices.append(2); indices.append(3);
+	indices.append(3); indices.append(0);
+	// diagonals
+	indices.append(0); indices.append(2);
+	indices.append(1); indices.append(3);
+
+	godot::Array arrays;
+	arrays.resize(ArrayMesh::ARRAY_MAX);
+	arrays[ArrayMesh::ARRAY_VERTEX] = positions;
+	arrays[ArrayMesh::ARRAY_COLOR] = colors;
+	arrays[ArrayMesh::ARRAY_INDEX] = indices;
+
+	ArrayMesh* mesh = ArrayMesh::_new();
+	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
+
 	return mesh;
 }
 

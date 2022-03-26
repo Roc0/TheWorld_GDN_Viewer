@@ -57,6 +57,25 @@ namespace godot
 		const static Color g_color_light_cyan;
 		const static Color g_color_black;
 
+		enum class ChunkDebugMode
+		{
+			NotSet = -1,
+			NoDebug = 0,
+			WireframeOnAABB = 1,
+			WireframeSquare = 2
+		};
+		static ChunkDebugMode toggleChunkDebugMode(ChunkDebugMode mode)
+		{
+			if (mode == GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
+				return GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB;
+			if (mode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB)
+				return GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare;
+			if (mode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
+				return GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
+			else
+				return GDN_TheWorld_Globals::ChunkDebugMode::NotSet;
+		}
+
 		GDN_TheWorld_Globals();
 		~GDN_TheWorld_Globals();
 		void init(void);

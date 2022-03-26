@@ -51,7 +51,9 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_mapScaleVector = Vector3(1, 1, 1);
 	m_timeElapsedFromLastDump = 0;
 	m_terrainVibility = true;
-	m_updateTerrainVibilityRequired = false;
+	m_updateTerrainVisibilityRequired = false;
+	m_debugMode = GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB;
+	m_updateDebugModeRequired = false;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -104,7 +106,14 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 	if (event->is_action_pressed("ui_toggle_terrain_visibility"))
 	{
 		m_terrainVibility = !m_terrainVibility;
-		m_updateTerrainVibilityRequired = true;
+		m_updateTerrainVisibilityRequired = true;
+	}
+	
+	if (event->is_action_pressed("ui_toggle_debug_mode"))
+	{
+
+		m_debugMode = GDN_TheWorld_Globals::toggleChunkDebugMode(m_debugMode);
+		m_updateDebugModeRequired = true;
 	}
 }
 
@@ -314,14 +323,28 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		dump();
 	}
 
-	if (m_updateTerrainVibilityRequired)
+	if (m_updateTerrainVisibilityRequired)
 	{
 		if (m_quadTree && m_initialWordlViewerPosSet)
 		{
 			Chunk::VisibilityChangedChunkAction action(m_terrainVibility);
 			m_quadTree->ForAllChunk(action);
 		}
-		m_updateTerrainVibilityRequired = false;
+		m_updateTerrainVisibilityRequired = false;
+	}
+
+	if (m_updateDebugModeRequired)
+	{
+		if (m_quadTree && m_initialWordlViewerPosSet)
+		{
+			Chunk::SwitchDebugModeAction action(m_debugMode);
+			m_quadTree->ForAllChunk(action);
+		}
+		if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare && m_cameraChunk != nullptr)
+		{
+			m_cameraChunk->applyDebugMode(m_debugMode);
+		}
+		m_updateDebugModeRequired = false;
 	}
 }
 

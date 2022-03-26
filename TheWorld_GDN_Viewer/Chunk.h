@@ -10,10 +10,13 @@
 #include <map>
 #include <string>
 
+#include "GDN_TheWorld_Globals.h"
+
 namespace godot
 {
 #define DEBUG_WIRECUBE_MESH			"debug_wirecube_mesh_lod_"
-	
+#define DEBUG_WIRESQUARE_MESH		"debug_wiresquare_mesh_lod_"
+
 	class GDN_TheWorld_Viewer;
 
 	class Chunk
@@ -43,6 +46,19 @@ namespace godot
 			virtual ~ChunkAction() {}
 			virtual void exec(Chunk* chunk) = 0;
 		private:
+		};
+
+		class SwitchDebugModeAction : public ChunkAction
+		{
+		public:
+			SwitchDebugModeAction(enum class GDN_TheWorld_Globals::ChunkDebugMode mode) { m_mode = mode; }
+			virtual ~SwitchDebugModeAction() {}
+			virtual void exec(Chunk* chunk)
+			{
+				chunk->applyDebugMode(m_mode);
+			}
+		private:
+			enum class GDN_TheWorld_Globals::ChunkDebugMode m_mode;
 		};
 
 		class EnterWorldChunkAction : public ChunkAction
@@ -174,7 +190,7 @@ namespace godot
 		typedef std::map<Chunk::ChunkPos, Chunk*> MapChunkPerLod;
 		typedef std::map<int, MapChunkPerLod> MapChunk;
 
-		Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat);
+		Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat, enum class GDN_TheWorld_Globals::ChunkDebugMode debugMode);
 		virtual ~Chunk();
 		
 		void initVisual(void);
@@ -188,6 +204,8 @@ namespace godot
 		virtual void setAABB(AABB& aabb);
 		virtual void dump(void);
 		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
+		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
+		virtual void applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode = GDN_TheWorld_Globals::ChunkDebugMode::NotSet);
 
 		virtual void update(bool isVsisible);
 		bool isActive(void) { return m_active; }
@@ -217,6 +235,7 @@ namespace godot
 		Vector3 m_localToGriddCoordCameraLastPos;
 		Vector3 m_globalCoordCameraLastPos;
 		bool m_isCameraVerticalOnChunk;
+		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
 
 		int m_numVerticesPerChuckSide;		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int m_numChunksPerWorldGridSide;	// The number of chunks required to cover every side of the grid at the current lod value
@@ -250,7 +269,7 @@ namespace godot
 	class ChunkDebug : public Chunk
 	{
 	public:
-		ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat);
+		ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat, enum class GDN_TheWorld_Globals::ChunkDebugMode debugMode);
 		virtual ~ChunkDebug();
 
 		virtual void enterWorld(void);
@@ -260,15 +279,18 @@ namespace godot
 		virtual void setAABB(AABB& aabb);
 		virtual void dump(void);
 		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
+		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
+		virtual void applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode = GDN_TheWorld_Globals::ChunkDebugMode::NotSet);
 
 	private:
-		void setMesh(Ref<Mesh> mesh);
-		Mesh* createWirecubeMesh(Color c = Color(255, 255, 255));
+		void setDebugMesh(Ref<Mesh> mesh);
+		Mesh* createWireCubeMesh(Color c = Color(1, 1, 1));
+		Mesh* createWireSquareMesh(Color c = Color(1, 1, 1));
 
 	private:
-		RID m_debugCubeMeshInstance;
-		RID m_debugCubeMeshRID;
-		Ref<Mesh> m_debugCubeMesh;
+		RID m_debugMeshInstance;
+		RID m_debugMeshRID;
+		Ref<Mesh> m_debugMesh;
 	};
 }
 

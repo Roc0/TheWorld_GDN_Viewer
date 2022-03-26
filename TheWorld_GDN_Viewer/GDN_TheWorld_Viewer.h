@@ -8,6 +8,7 @@
 
 #include <memory>
 
+#include "GDN_TheWorld_Globals.h"
 #include <MapManager.h>
 
 namespace godot
@@ -62,6 +63,7 @@ namespace godot
 		String getCameraChunkId(void);
 		int getNumSplits(void);
 		int getNumJoins(void);
+		GDN_TheWorld_Globals::ChunkDebugMode getDebugMode(void) { return m_debugMode; }
 
 	private:
 		void onTransformChanged(void);
@@ -83,7 +85,9 @@ namespace godot
 		bool m_dumpRequired;
 
 		bool m_terrainVibility;
-		bool m_updateTerrainVibilityRequired;
+		bool m_updateTerrainVisibilityRequired;
+		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
+		bool m_updateDebugModeRequired;
 
 		RID m_viewFrustumMeshInstance;
 		RID m_viewFrustumMeshRID;
