@@ -63,9 +63,10 @@ void Chunk::initVisual(void)
 	
 	if (m_mat == nullptr)
 	{
+		// TODORIC Material stuff
 		Ref<SpatialMaterial> mat = SpatialMaterial::_new();
 		mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-		mat->set_albedo(GDN_TheWorld_Globals::g_color_pink_amaranth);
+		mat->set_albedo(GDN_TheWorld_Globals::g_color_white);
 		m_mat = mat;
 	}
 
@@ -100,7 +101,7 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 	if (meshRID == m_meshRID)
 		return;
 
-	// TODORIC mah
+	// TODORIC Material stuff
 	if (mesh != nullptr)
 		mesh->surface_set_material(0, m_mat);
 
@@ -127,13 +128,10 @@ void Chunk::exitWorld(void)
 void Chunk::parentTransformChanged(Transform parentT)
 {
 	assert(m_meshInstance != RID());
-	// TODORIC mah
 	m_parentTransform = parentT;
 	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));
 	Transform worldT = parentT * localT;
 	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldT);		// World coordinates
-	//Transform chunkTranform = parentT * localT;
-	//VisualServer::get_singleton()->instance_set_transform(m_meshInstance, chunkTranform);
 }
 
 // TODORIC Material stuff
@@ -168,8 +166,10 @@ void Chunk::update(bool isVisible)
 	if (chunk && chunk->isActive())
 		seams |= SEAM_TOP;
 
-	setMesh(m_viewer->getMeshCache()->getMesh(seams, m_lod));
-	setAABB(m_aabb);
+	Ref<Mesh> mesh = m_viewer->getMeshCache()->getMesh(seams, m_lod);
+	setMesh(mesh);
+	applyDebugMesh();
+	applyAABB();
 
 	setVisible(isVisible);
 	setPendingUpdate(false);
@@ -184,12 +184,20 @@ void Chunk::setVisible(bool b)
 	m_visible = b; 
 }
 
-void Chunk::setAABB(AABB& aabb)
+void Chunk::setDebugVisibility(bool b)
+{
+	if (!isActive())
+		b = false;
+	
+	m_debugVisibility = b;
+}
+
+void Chunk::applyAABB(void)
 {
 	assert(m_meshInstance != RID());
 	
 	if (m_meshRID != RID())
-		VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstance, aabb);
+		VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstance, m_aabb);
 }
 
 void Chunk::setActive(bool b)
@@ -245,10 +253,8 @@ void Chunk::setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
 	m_debugMode = mode;
 }
 
-void Chunk::applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
+void Chunk::applyDebugMesh()
 {
-	if (mode != GDN_TheWorld_Globals::ChunkDebugMode::NotSet)
-		setDebugMode(mode);
 }
 
 void Chunk::dump(void)
@@ -258,20 +264,16 @@ void Chunk::dump(void)
 	
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 
-	// TODORIC
 	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));
 	Transform worldT = m_parentTransform * localT;
 	Vector3 v1 = worldT * Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
 	Vector3 v2 = m_parentTransform * Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
 	Vector3 v3 = m_viewer->to_global(Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));
-	// TODORIC
 
 	float globalOriginXInGridInWUs = m_viewer->get_global_transform().origin.x + m_originXInWUsLocalToGrid;
 	float globalOriginZInGridInWUs = m_viewer->get_global_transform().origin.z + m_originZInWUsLocalToGrid;
 
-	globals->debugPrint(String("Slot in GRID (X, Z)")
-		+ " - " + to_string(m_slotPosX).c_str()	+ "," + to_string(m_slotPosZ).c_str()
-		+ " - lod " + to_string(m_lod).c_str()
+	globals->debugPrint(String("Chunk ID: ") + getPos().getId().c_str()
 		+ " - chunk size (WUs) " + to_string(m_chunkSizeInWUs).c_str()
 		+ " - Pos in GRID (local):"
 		+ " X = " + to_string(m_originXInWUsLocalToGrid).c_str()
@@ -281,48 +283,7 @@ void Chunk::dump(void)
 		+ ", Z = " + to_string(globalOriginZInGridInWUs).c_str()
 		+ " - MinH = " + to_string(m_aabb.position.y).c_str()
 		+ " - MaxH = " + to_string((m_aabb.position + m_aabb.size).y).c_str()
-		+ (m_isCameraVerticalOnChunk ? " - Camera IN" : ""));
-
-	/*globals->debugPrint(String("\t") + String("AABB - point 0:")
-		+ String(" ") + String("X = ") + String(to_string(m_aabb.get_endpoint(0).x).c_str())
-		+ String(", ") + String("Y = ") + String(to_string(m_aabb.get_endpoint(0).y).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_aabb.get_endpoint(0).z).c_str()));
-	globals->debugPrint(String("\t") + String("AABB - point 1:")
-		+ String(" ") + String("X = ") + String(to_string(m_aabb.get_endpoint(1).x).c_str())
-		+ String(", ") + String("Y = ") + String(to_string(m_aabb.get_endpoint(1).y).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_aabb.get_endpoint(1).z).c_str()));
-	globals->debugPrint(String("\t") + String("AABB - point 2:")
-		+ String(" ") + String("X = ") + String(to_string(m_aabb.get_endpoint(2).x).c_str())
-		+ String(", ") + String("Y = ") + String(to_string(m_aabb.get_endpoint(2).y).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_aabb.get_endpoint(2).z).c_str()));
-	globals->debugPrint(String("\t") + String("AABB - point 3:")
-		+ String(" ") + String("X = ") + String(to_string(m_aabb.get_endpoint(3).x).c_str())
-		+ String(", ") + String("Y = ") + String(to_string(m_aabb.get_endpoint(3).y).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_aabb.get_endpoint(3).z).c_str()));
-	globals->debugPrint(String("\t") + String("AABB - point 4:")
-		+ String(" ") + String("X = ") + String(to_string(m_aabb.get_endpoint(4).x).c_str())
-		+ String(", ") + String("Y = ") + String(to_string(m_aabb.get_endpoint(4).y).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_aabb.get_endpoint(4).z).c_str()));
-	globals->debugPrint(String("\t") + String("AABB - point 5:")
-		+ String(" ") + String("X = ") + String(to_string(m_aabb.get_endpoint(5).x).c_str())
-		+ String(", ") + String("Y = ") + String(to_string(m_aabb.get_endpoint(5).y).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_aabb.get_endpoint(5).z).c_str()));
-	globals->debugPrint(String("\t") + String("AABB - point 6:")
-		+ String(" ") + String("X = ") + String(to_string(m_aabb.get_endpoint(6).x).c_str())
-		+ String(", ") + String("Y = ") + String(to_string(m_aabb.get_endpoint(6).y).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_aabb.get_endpoint(6).z).c_str()));
-	globals->debugPrint(String("\t") + String("AABB - point 7:")
-		+ String(" ") + String("X = ") + String(to_string(m_aabb.get_endpoint(7).x).c_str())
-		+ String(", ") + String("Y = ") + String(to_string(m_aabb.get_endpoint(7).y).c_str())
-		+ String(", ") + String("Z = ") + String(to_string(m_aabb.get_endpoint(7).z).c_str()));*/
-
-	/*globals->debugPrint(String("\t") + String("AABB")
-		+ String(" - ") + String("X = ") + String(to_string(m_aabb.position.x).c_str())
-		+ String(" - ") + String("Y = ") + String(to_string(m_aabb.position.y).c_str())
-		+ String(" - ") + String("Z = ") + String(to_string(m_aabb.position.z).c_str())
-		+ String(" - ") + String("SX = ") + String(to_string(m_aabb.size.x).c_str())
-		+ String(" - ") + String("SY = ") + String(to_string(m_aabb.size.y).c_str())
-		+ String(" - ") + String("SZ = ") + String(to_string(m_aabb.size.z).c_str()));*/
+		+ (m_isCameraVerticalOnChunk ? " - CAMERA" : ""));
 }
 
 ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat, enum class GDN_TheWorld_Globals::ChunkDebugMode debugMode)
@@ -338,7 +299,9 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 
 	vs->instance_set_visible(m_debugMeshInstance, isVisible());
 
-	applyDebugMode();
+	m_debugMeshAABB = m_aabb;
+
+	applyDebugMesh();
 }
 
 ChunkDebug::~ChunkDebug()
@@ -373,7 +336,7 @@ void ChunkDebug::parentTransformChanged(Transform parentT)
 	Chunk::parentTransformChanged(parentT);
 
 	assert(m_debugMeshInstance != RID());
-	// TODORIC mah
+
 	Transform worldTransform = getGlobalTransformOfAABB();
 	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstance, worldTransform);
 }
@@ -390,12 +353,24 @@ void ChunkDebug::setVisible(bool b)
 	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstance, b);
 }
 
-void ChunkDebug::setAABB(AABB& aabb)
+void ChunkDebug::setDebugVisibility(bool b)
 {
-	Chunk::setAABB(aabb);
+	Chunk::setDebugVisibility(b);
 
 	assert(m_debugMeshInstance != RID());
-	VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstance, aabb);
+
+	if (!isActive())
+		b = false;
+
+	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstance, b);
+}
+
+void ChunkDebug::applyAABB(void)
+{
+	Chunk::applyAABB();
+
+	assert(m_debugMeshInstance != RID());
+	VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstance, m_debugMeshAABB);
 }
 
 
@@ -423,7 +398,10 @@ void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 gl
 	//return;
 	
 	if (isCameraVerticalOnChunk() != prevCameraVerticalOnChunk)
-		applyDebugMode();
+	{
+		applyDebugMesh();
+		applyAABB();
+	}
 }
 
 void ChunkDebug::setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
@@ -431,12 +409,13 @@ void ChunkDebug::setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mo
 	Chunk::setDebugMode(mode);
 }
 
-void ChunkDebug::applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
+void ChunkDebug::applyDebugMesh()
 {
-	Chunk::applyDebugMode(mode);
+	Chunk::applyDebugMesh();
 	
 	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
 	{
+		m_debugMeshAABB = m_aabb;
 		setDebugMesh(nullptr);
 		return;
 	}
@@ -446,6 +425,8 @@ void ChunkDebug::applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode 
 
 	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB)
 	{
+		m_debugMeshAABB = m_aabb;
+
 		if (isCameraVerticalOnChunk())
 		{
 			// set special Wirecube
@@ -495,6 +476,9 @@ void ChunkDebug::applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode 
 		//Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
 		//worldTransform = m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
 		worldTransform.origin.y = 0;
+		m_debugMeshAABB = m_aabb;
+		m_debugMeshAABB.position.y = 0;
+		m_debugMeshAABB.size.y = 0;
 
 		if (isCameraVerticalOnChunk())
 		{
@@ -544,22 +528,15 @@ void ChunkDebug::applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode 
 
 	setDebugMesh(nullptr);
 	setDebugMesh(mesh);
-	setAABB(m_aabb);
-	AABB aabb = m_aabb;
-	aabb.position.y = 0;
-	aabb.size.y = 0;
-	assert(m_debugMeshInstance != RID());
-	VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstance, aabb);
-
 
 	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstance, worldTransform);
 
-	GDN_TheWorld_Globals* globals = m_viewer->Globals();
+	/*GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	globals->debugPrint(String("Debug Mesh - ID: ") + getPos().getId().c_str()
-		+ String(" ") + String("X = ") + String(to_string(worldTransform.origin.x).c_str())
+		+ String(" POS ==> ") + String("X = ") + String(to_string(worldTransform.origin.x).c_str())
 		+ String(", ") + String("Y = ") + String(to_string(worldTransform.origin.y).c_str())
 		+ String(", ") + String("Z = ") + String(to_string(worldTransform.origin.z).c_str())
-		+ (isCameraVerticalOnChunk() ? "CAMERA" : ""));
+		+ (isCameraVerticalOnChunk() ? "CAMERA" : ""));*/
 }
 
 Mesh* ChunkDebug::createWireCubeMesh(Color c)
@@ -595,25 +572,6 @@ Mesh* ChunkDebug::createWireCubeMesh(Color c)
 	// lower face diagonals
 	indices.append(0); indices.append(2);
 	indices.append(1); indices.append(3);
-
-	/*
-	// DEBUGRIC
-	if (m_aabb.position.y != 0)
-	{
-		// Vertical faces diagonals
-		indices.append(0); indices.append(5);
-		indices.append(1); indices.append(4);
-		
-		indices.append(2); indices.append(7);
-		indices.append(3); indices.append(6);
-
-		indices.append(1); indices.append(6);
-		indices.append(2); indices.append(5);
-
-		indices.append(3); indices.append(4);
-		indices.append(0); indices.append(7);
-	}
-	*/
 
 	godot::Array arrays;
 	arrays.resize(ArrayMesh::ARRAY_MAX);
@@ -662,4 +620,14 @@ Mesh* ChunkDebug::createWireSquareMesh(Color c)
 void ChunkDebug::dump(void)
 {
 	Chunk::dump();
+
+	if (!isActive())
+		return;
+
+	GDN_TheWorld_Globals* globals = m_viewer->Globals();
+
+	globals->debugPrint(String("Chunk ID: ") + getPos().getId().c_str()
+		+ " DEBUG MESH - MinH = " + to_string(m_debugMeshAABB.position.y).c_str()
+		+ " - MaxH = " + to_string((m_debugMeshAABB.position + m_debugMeshAABB.size).y).c_str()
+		+ (m_isCameraVerticalOnChunk ? " - CAMERA" : ""));
 }

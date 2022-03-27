@@ -84,7 +84,7 @@ namespace godot
 		bool m_initialWordlViewerPosSet;
 		bool m_dumpRequired;
 
-		bool m_terrainVibility;
+		bool m_debugVisibility;
 		bool m_updateTerrainVisibilityRequired;
 		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
 		bool m_updateDebugModeRequired;

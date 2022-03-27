@@ -4,6 +4,7 @@
 #include "GDN_TheWorld_Globals.h"
 
 #include <PoolArrays.hpp>
+#include <SpatialMaterial.hpp>
 
 //using namespace godot;
 namespace godot
@@ -52,16 +53,19 @@ namespace godot
 	{
 		//	https://gist.github.com/bnolan/01a7d240774f1e02056d6607e5b621da
 
-		// TODORIC mah
-		//int stride = m_viewer->Globals()->strideInWorldGrid(idxLod);
 		float strideInWUs = m_viewer->Globals()->strideInWorldGridWUs(idxLod);
 
 		// Determines the vertices in a flat mesh at the required lod using World Grid vertices: coordinates are expressed in WUs and are realtive to the lower vertex of the chunk
 		PoolVector3Array positions;
+		PoolColorArray colors;
+		Color c = GDN_TheWorld_Globals::g_color_white;
 		positions.resize((int)pow(numVerticesPerChuckSide + 1, 2));
 		for (real_t z = 0; z < numVerticesPerChuckSide + 1; z++)
 			for (real_t x = 0; x < numVerticesPerChuckSide + 1; x++)
+			{
 				positions.append(Vector3(x * strideInWUs, 0, z * strideInWUs));
+				colors.append(c);	// TODORIC Material stuff
+			}
 		
 		PoolIntArray indices;
 		// Preparing array of indices releate to vertex array to form the triangles of the mesh: a tringle every three indices
@@ -71,10 +75,17 @@ namespace godot
 		godot::Array arrays;
 		arrays.resize(ArrayMesh::ARRAY_MAX);
 		arrays[ArrayMesh::ARRAY_VERTEX] = positions;
+		arrays[ArrayMesh::ARRAY_COLOR] = colors;	// TODORIC Material stuff
 		arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
 		ArrayMesh* mesh = ArrayMesh::_new();
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
+
+		// TODORIC Material stuff
+		//Ref<SpatialMaterial> mat = SpatialMaterial::_new();
+		//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+		//mat->set_albedo(GDN_TheWorld_Globals::g_color_white);
+		//mesh->surface_set_material(0, mat);
 
 		return mesh;
 	}

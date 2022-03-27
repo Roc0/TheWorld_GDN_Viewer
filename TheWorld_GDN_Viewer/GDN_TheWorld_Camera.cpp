@@ -280,34 +280,11 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 
 	activateCamera();
 
-	/*AABB aabb = ((GD_SpaceWorld*)m_pSpaceWorldNode)->get_aabbForWorldCameraInitPos();
-	Vector3 aabb_start = aabb.position;
-	Vector3 aabb_end = aabb.position + aabb.size;
-
-	real_t zNear = 1.0;
-	real_t zFar = (aabb_end.z > 900 ? aabb_end.z + 100 : 1000);
-	real_t fov = 45.0;
-	set_perspective(fov, zNear, zFar);
-
-	float offsetFromCenterOfAABB = sqrtf(pow(aabb.size.x, 2) + pow(aabb.size.y, 2) + pow(aabb.size.z, 2)) / 2;
-	Vector3 cameraPos((aabb_end.x + aabb_start.x) / 2 + offsetFromCenterOfAABB, (aabb_end.y + aabb_start.y) / 2 + offsetFromCenterOfAABB, (aabb_end.z + aabb_start.z) / 2 + offsetFromCenterOfAABB);
-	Vector3 lookAt = aabb.position + aabb.size / 2;
-
-	look_at_from_position(cameraPos, lookAt, Vector3(0, 1, 0));*/
-
-	//Transform t = get_transform();
-	//t.origin = cameraPos;
-	//set_transform(t);
-	//Vector3 posGlobal = get_global_transform().origin;	// DEBUGRIC
-	//Vector3 posLocal = get_transform().origin;			// DEBUGRIC
-
 	// cameraPos and lookAt are in WorldNode local coordinates and must be transformed in godot global coordinates
 	Vector3 worldNodePosGlobalCoord = Globals()->Viewer()->getWorldNode()->get_global_transform().origin;
 	Vector3 cameraPosGlobalCoord = cameraPos + worldNodePosGlobalCoord;
 	Vector3 lookAtGlobalCoord = lookAt + worldNodePosGlobalCoord;
 	Camera::look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
-	//Vector3 posGlobal1 = Camera::get_global_transform().origin;	// DEBUGRIC
-	//Vector3 posLocal1 = Camera::get_transform().origin;			// DEBUGRIC
 
 	real_t z_near = Camera::get_znear();
 	real_t z_far = Camera::get_zfar();

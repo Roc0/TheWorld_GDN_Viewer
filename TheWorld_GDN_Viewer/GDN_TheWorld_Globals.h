@@ -59,7 +59,7 @@ namespace godot
 
 		enum class ChunkDebugMode
 		{
-			NotSet = -1,
+			DoNotSet = -1,
 			NoDebug = 0,
 			WireframeOnAABB = 1,
 			WireframeSquare = 2
@@ -73,7 +73,7 @@ namespace godot
 			if (mode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
 				return GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
 			else
-				return GDN_TheWorld_Globals::ChunkDebugMode::NotSet;
+				return GDN_TheWorld_Globals::ChunkDebugMode::DoNotSet;
 		}
 
 		GDN_TheWorld_Globals();

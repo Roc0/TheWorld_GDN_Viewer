@@ -50,7 +50,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_globals = nullptr;
 	m_mapScaleVector = Vector3(1, 1, 1);
 	m_timeElapsedFromLastDump = 0;
-	m_terrainVibility = true;
+	m_debugVisibility = true;
 	m_updateTerrainVisibilityRequired = false;
 	m_debugMode = GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB;
 	m_updateDebugModeRequired = false;
@@ -103,9 +103,9 @@ void GDN_TheWorld_Viewer::_ready(void)
 
 void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 {
-	if (event->is_action_pressed("ui_toggle_terrain_visibility"))
+	if (event->is_action_pressed("ui_toggle_debug_visibility"))
 	{
-		m_terrainVibility = !m_terrainVibility;
+		m_debugVisibility = !m_debugVisibility;
 		m_updateTerrainVisibilityRequired = true;
 	}
 	
@@ -114,6 +114,10 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 
 		m_debugMode = GDN_TheWorld_Globals::toggleChunkDebugMode(m_debugMode);
 		m_updateDebugModeRequired = true;
+	}
+	if (event->is_action_pressed("ui_dump"))
+	{
+		m_dumpRequired = true;
 	}
 }
 
@@ -327,7 +331,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	{
 		if (m_quadTree && m_initialWordlViewerPosSet)
 		{
-			Chunk::VisibilityChangedChunkAction action(m_terrainVibility);
+			Chunk::DebugVisibilityChangedChunkAction action(m_debugVisibility);
 			m_quadTree->ForAllChunk(action);
 		}
 		m_updateTerrainVisibilityRequired = false;
@@ -340,38 +344,23 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			Chunk::SwitchDebugModeAction action(m_debugMode);
 			m_quadTree->ForAllChunk(action);
 		}
-		if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare && m_cameraChunk != nullptr)
-		{
-			m_cameraChunk->applyDebugMode(m_debugMode);
-		}
 		m_updateDebugModeRequired = false;
 	}
 }
 
 void GDN_TheWorld_Viewer::_physics_process(float _delta)
 {
-	//Input* input = Input::get_singleton();
-	//if (input->is_action_pressed("ui_dump"))
-	//	m_dumpRequired = true;
-	//	m_dumpRequired = true;
 }
 
 Transform GDN_TheWorld_Viewer::internalTransformGlobalCoord(void)
 {
-	// TODORIC mah
 	// Return the transformation of the viewer Node in global coordinates appling a scale factor (m_mapScaleVector)
 	return Transform(Basis().scaled(m_mapScaleVector), get_global_transform().origin);
 }
 
 Transform GDN_TheWorld_Viewer::internalTransformLocalCoord(void)
 {
-	// TODORIC mah
 	// Return the transformation of the viewer Node in local coordinates relative to itself appling a scale factor (m_mapScaleVector)
-	
-	//Transform local = get_transform();
-	//Transform global = get_global_transform();
-	
-	//return Transform(Basis().scaled(m_mapScaleVector), get_transform().origin);
 	return Transform(Basis().scaled(m_mapScaleVector), Vector3(0, 0, 0));
 }
 
@@ -524,9 +513,7 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 	if (!m_quadTree)
 		return;
 
-	// TODORIC mah
 	Transform gt = internalTransformGlobalCoord();
-	//Transform gt = internalTransformLocalCoord();
 
 	Chunk::TransformChangedChunkAction action(gt);
 	m_quadTree->ForAllChunk(action);

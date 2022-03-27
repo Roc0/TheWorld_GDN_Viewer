@@ -55,7 +55,13 @@ namespace godot
 			virtual ~SwitchDebugModeAction() {}
 			virtual void exec(Chunk* chunk)
 			{
-				chunk->applyDebugMode(m_mode);
+				if (m_mode != GDN_TheWorld_Globals::ChunkDebugMode::DoNotSet)
+				{
+					chunk->setDebugMode(m_mode);
+					chunk->applyDebugMesh();
+					if (m_mode != GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
+						chunk->applyAABB();
+				}
 			}
 		private:
 			enum class GDN_TheWorld_Globals::ChunkDebugMode m_mode;
@@ -96,6 +102,19 @@ namespace godot
 			}
 		private:
 			bool m_isVisibleInTree;
+		};
+
+		class DebugVisibilityChangedChunkAction : public ChunkAction
+		{
+		public:
+			DebugVisibilityChangedChunkAction(bool isVisible) { m_isVisible = isVisible; }
+			virtual ~DebugVisibilityChangedChunkAction() {}
+			virtual void exec(Chunk* chunk)
+			{
+				chunk->setDebugVisibility(m_isVisible);
+			}
+		private:
+			bool m_isVisible;
 		};
 
 		class TransformChangedChunkAction : public ChunkAction
@@ -201,11 +220,12 @@ namespace godot
 		virtual void exitWorld(void);
 		virtual void parentTransformChanged(Transform t);
 		virtual void setVisible(bool b);
-		virtual void setAABB(AABB& aabb);
+		virtual void setDebugVisibility(bool b);
+		virtual void applyAABB(void);
 		virtual void dump(void);
 		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
-		virtual void applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode = GDN_TheWorld_Globals::ChunkDebugMode::NotSet);
+		virtual void applyDebugMesh(void);
 
 		virtual void update(bool isVsisible);
 		bool isActive(void) { return m_active; }
@@ -236,6 +256,7 @@ namespace godot
 		Vector3 m_globalCoordCameraLastPos;
 		bool m_isCameraVerticalOnChunk;
 		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
+		bool m_debugVisibility;
 
 		int m_numVerticesPerChuckSide;		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int m_numChunksPerWorldGridSide;	// The number of chunks required to cover every side of the grid at the current lod value
@@ -276,11 +297,12 @@ namespace godot
 		virtual void exitWorld(void);
 		virtual void parentTransformChanged(Transform parentT);
 		virtual void setVisible(bool b);
-		virtual void setAABB(AABB& aabb);
+		virtual void setDebugVisibility(bool b);
+		virtual void applyAABB(void);
 		virtual void dump(void);
 		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
-		virtual void applyDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode = GDN_TheWorld_Globals::ChunkDebugMode::NotSet);
+		virtual void applyDebugMesh(void);
 
 	private:
 		void setDebugMesh(Ref<Mesh> mesh);
@@ -291,6 +313,7 @@ namespace godot
 		RID m_debugMeshInstance;
 		RID m_debugMeshRID;
 		Ref<Mesh> m_debugMesh;
+		AABB m_debugMeshAABB;
 	};
 }
 

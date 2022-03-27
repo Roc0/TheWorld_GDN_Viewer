@@ -98,9 +98,8 @@ void Quad::createChunk(void)
 			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat, m_viewer->getDebugMode());
 		else
 			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat, m_viewer->getDebugMode());
-		// TODORIC mah
+
 		m_chunk->parentTransformChanged(m_viewer->internalTransformGlobalCoord());
-		//m_chunk->parentTransformChanged(m_viewer->internalTransformLocalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}
 
