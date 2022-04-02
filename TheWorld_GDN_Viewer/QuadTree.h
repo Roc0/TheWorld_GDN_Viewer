@@ -40,7 +40,7 @@ namespace godot
 		void recycleChunk(void);
 		void split(void);
 		void clearChildren(void);
-		void createChunk(void);
+		void assignChunk(void);
 		Chunk* getChunk(void) { return m_chunk; }
 		AABB getChunkAABB(void) { return m_chunkAABB; }
 		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
@@ -78,6 +78,13 @@ namespace godot
 		void dump(void);
 		int getNumSplits(void) { return m_numSplits; }
 		int getNumJoins(void) { return m_numJoins; }
+		int getNumChunks(void)
+		{
+			int num = 0;
+			for (int i = 0; i < (int)m_mapChunk.size(); i++)
+				num += (int)m_mapChunk[i].size();
+			return num;
+		}
 
 	private:
 		void internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 viewerPosGlobalCoord, Quad* quadTreeNode);

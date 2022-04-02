@@ -394,7 +394,7 @@ GDN_TheWorld_Globals* GDN_TheWorld_Camera::Globals(bool useCache)
 	return m_globals;
 }
 
-Mesh* GDN_TheWorld_Camera::DrawViewFrustum(Color c)
+Ref<ArrayMesh> GDN_TheWorld_Camera::DrawViewFrustum(Color c)
 {
 	float m_FarOffset = Camera::get_zfar();
 	float m_NearOffset = Camera::get_znear();
@@ -467,7 +467,7 @@ Mesh* GDN_TheWorld_Camera::DrawViewFrustum(Color c)
 	arrays[ArrayMesh::ARRAY_COLOR] = colors;
 	arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
-	ArrayMesh* mesh = ArrayMesh::_new();
+	Ref<ArrayMesh> mesh = ArrayMesh::_new();
 	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
 
 	return mesh;

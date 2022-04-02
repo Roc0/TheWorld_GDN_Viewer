@@ -22,7 +22,7 @@ Quad::Quad(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Chu
 	m_quadTree = m_viewer->getQuadTree();
 	
 	if (m_chunk == nullptr)
-		createChunk();
+		assignChunk();
 }
 
 Quad::~Quad()
@@ -82,7 +82,7 @@ void Quad::clearChildren(void)
 		}
 }
 
-void Quad::createChunk(void)
+void Quad::assignChunk(void)
 {
 	assert(m_chunk == nullptr);
 	
@@ -95,9 +95,9 @@ void Quad::createChunk(void)
 		// create chunk for current quad because this is the first time that is needed for current lod and pos
 		Ref<Material> mat;
 		if (_DEBUG_AAB)
-			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat, m_viewer->getDebugMode());
+			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
 		else
-			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat, m_viewer->getDebugMode());
+			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
 
 		m_chunk->parentTransformChanged(m_viewer->internalTransformGlobalCoord());
 		m_quadTree->addChunk(m_chunk);
@@ -211,7 +211,7 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 		{
 			// Join
 			quad->clearChildren();
-			quad->createChunk();
+			quad->assignChunk();
 			quad->getChunk()->setJustJoined(true);
 			m_numJoins++;
 		}

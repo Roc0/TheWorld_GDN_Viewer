@@ -63,7 +63,10 @@ namespace godot
 		String getCameraChunkId(void);
 		int getNumSplits(void);
 		int getNumJoins(void);
+		int getNumChunks(void);
 		GDN_TheWorld_Globals::ChunkDebugMode getDebugMode(void) { return m_debugMode; }
+		bool getDebugVisibility(void) { return m_debugVisibility; }
+		String getDebugDrawMode(void);
 
 	private:
 		void onTransformChanged(void);
@@ -88,6 +91,7 @@ namespace godot
 		bool m_updateTerrainVisibilityRequired;
 		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
 		bool m_updateDebugModeRequired;
+		Viewport::DebugDraw m_debugDraw;
 
 		RID m_viewFrustumMeshInstance;
 		RID m_viewFrustumMeshRID;

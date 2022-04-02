@@ -19,6 +19,9 @@
 #define PLOG_DEFAULT_LEVEL plog::Severity::info
 #define PLOG_DEBUG_LEVEL plog::Severity::verbose
 
+#define VISUAL_SERVER_WIREFRAME_MODE	true
+#define DEFAULT_DEBUG_ENABLED			true
+
 #define THEWORLD_GLOBALS_NODE_NAME	"GDN_TheWorld_Globals"
 #define THEWORLD_VIEWER_NODE_NAME	"GDN_TheWorld_Viewer"
 

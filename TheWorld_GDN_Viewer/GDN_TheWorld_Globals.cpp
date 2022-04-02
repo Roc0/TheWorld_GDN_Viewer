@@ -36,7 +36,7 @@ namespace godot
 	GDN_TheWorld_Globals::GDN_TheWorld_Globals()
 	{
 		m_initialized = false;
-		m_isDebugEnabled = false;
+		m_isDebugEnabled = DEFAULT_DEBUG_ENABLED;
 		m_bAppInError = false;
 		m_lastErrorCode = 0;
 

@@ -21,7 +21,7 @@ namespace godot
 #define SEAM_CONFIG_COUNT	16
 
 		// _lodMesh[lod] ==> Mesh*
-		typedef std::vector<Ref<ArrayMesh>> _lodMesh;
+		typedef std::vector<Ref<Mesh>> _lodMesh;
 		// _meshCache[seams] ==> _lodMesh		_meshCache[seams][lod] ==> Mesh*
 		typedef std::vector<_lodMesh> _meshCache;
 
@@ -32,7 +32,7 @@ namespace godot
 		Mesh* getMesh(int seams, int lod);
 
 	private:
-		ArrayMesh* makeFlatChunk(int numVerticesPerChuckSide, int lod, int seams);
+		Ref<Mesh> makeFlatChunk(int numVerticesPerChuckSide, int lod, int seams);
 		void resetCache(void);
 
 	private:

@@ -34,6 +34,8 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_camera_chunk_id", &GDN_TheWorld_Viewer::getCameraChunkId);
 	register_method("get_num_splits", &GDN_TheWorld_Viewer::getNumSplits);
 	register_method("get_num_joins", &GDN_TheWorld_Viewer::getNumJoins);
+	register_method("get_num_chunks", &GDN_TheWorld_Viewer::getNumChunks);
+	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -82,6 +84,9 @@ void GDN_TheWorld_Viewer::_init(void)
 {
 	//Cannot find Globals pointer as current node is not yet in the scene
 	//Godot::print("GDN_TheWorld_Viewer::_init");
+
+	if (VISUAL_SERVER_WIREFRAME_MODE)
+		VisualServer::get_singleton()->set_debug_generate_wireframes(true);
 }
 
 void GDN_TheWorld_Viewer::_ready(void)
@@ -118,6 +123,13 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 	if (event->is_action_pressed("ui_dump"))
 	{
 		m_dumpRequired = true;
+	}
+	if (event->is_action_pressed("ui_rotate_drawing_mode"))
+	{
+		Viewport* vp = get_viewport();
+		Viewport::DebugDraw dd = vp->get_debug_draw();
+		vp->set_debug_draw((dd + 1) % 4);
+		m_debugDraw = vp->get_debug_draw();
 	}
 }
 
@@ -171,6 +183,20 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 	}
 }
 
+String GDN_TheWorld_Viewer::getDebugDrawMode(void)
+{
+	if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_DISABLED)
+		return "DEBUG_DRAW_DISABLED";
+	else 	if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_UNSHADED)
+		return "DEBUG_DRAW_UNSHADED";
+	else 	if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_OVERDRAW)
+		return "DEBUG_DRAW_OVERDRAW";
+	else 	if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_WIREFRAME)
+		return "DEBUG_DRAW_WIREFRAME";
+	else
+		return "";
+}
+
 bool GDN_TheWorld_Viewer::init(void)
 {
 	PLOGI << "TheWorld Viewer Initializing...";
@@ -204,6 +230,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	if (m_firstProcess)
 	{
+		m_debugDraw = get_viewport()->get_debug_draw();
+
 		// TODORIC
 		//Ref<Mesh> _mesh = activeCamera->DrawViewFrustum(GDN_TheWorld_Globals::g_color_green);
 		//SpatialMaterial* mat = SpatialMaterial::_new();
@@ -225,17 +253,6 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	Vector3 cameraPosGlobalCoord = activeCamera->get_global_transform().get_origin();
 	Transform globalTransform = internalTransformGlobalCoord();
 	Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
-	// DEBUG: verify
-	{
-		//Vector3 cameraPosWorldNodeLocalCoord = activeCamera->get_transform().get_origin();		// WorldNode local coordinates of the camera pos
-		//Vector3 viewerNodePosWordlNodeLocalCoord = get_transform().get_origin();				// WorldNode local coordinates of the Viewer Node pos
-		//Vector3 cameraPosViewerNodeLocalCoord2 = cameraPosWorldNodeLocalCoord - viewerNodePosWordlNodeLocalCoord;	// Viewer Node local coordinates of the camera pos
-		//// cameraPosViewerNodeLocalCoord2 must be equal to cameraPosViewerNodeLocalCoord
-		//Vector3 viewerPosGlobalCoord = get_global_transform().get_origin();		// da mettere in relazione con cameraPosGlobalCoord
-		
-		//Transform globalTransform = internalTransformGlobalCoord();
-	}
-	// DEBUG: verify
 
 	m_quadTree->update(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);
 
@@ -378,6 +395,14 @@ GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
 	}
 
 	return m_globals;
+}
+
+int GDN_TheWorld_Viewer::getNumChunks(void)
+{
+	if (m_quadTree)
+		return (int)m_quadTree->getNumChunks();
+	else
+		return 0;
 }
 
 void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)

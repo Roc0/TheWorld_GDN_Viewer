@@ -2,7 +2,7 @@
 #include <Godot.hpp>
 #include <Node.hpp>
 #include <VisualServer.hpp>
-#include <Mesh.hpp>
+#include <ArrayMesh.hpp>
 #include <AABB.hpp>
 #include <Material.hpp>
 #include <SpatialMaterial.hpp>
@@ -209,7 +209,7 @@ namespace godot
 		typedef std::map<Chunk::ChunkPos, Chunk*> MapChunkPerLod;
 		typedef std::map<int, MapChunkPerLod> MapChunk;
 
-		Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat, enum class GDN_TheWorld_Globals::ChunkDebugMode debugMode);
+		Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat);
 		virtual ~Chunk();
 		
 		void initVisual(void);
@@ -290,7 +290,7 @@ namespace godot
 	class ChunkDebug : public Chunk
 	{
 	public:
-		ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat, enum class GDN_TheWorld_Globals::ChunkDebugMode debugMode);
+		ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat);
 		virtual ~ChunkDebug();
 
 		virtual void enterWorld(void);
@@ -306,8 +306,8 @@ namespace godot
 
 	private:
 		void setDebugMesh(Ref<Mesh> mesh);
-		Mesh* createWireCubeMesh(Color c = Color(1, 1, 1));
-		Mesh* createWireSquareMesh(Color c = Color(1, 1, 1));
+		Ref<ArrayMesh> createWireCubeMesh(Color c = Color(1, 1, 1));
+		Ref<ArrayMesh> createWireSquareMesh(Color c = Color(1, 1, 1));
 
 	private:
 		RID m_debugMeshInstance;

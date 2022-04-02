@@ -3,6 +3,8 @@
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Globals.h"
 
+#include <string>
+
 #include <PoolArrays.hpp>
 #include <SpatialMaterial.hpp>
 #include <MeshDataTool.hpp>
@@ -33,7 +35,7 @@ namespace godot
 
 			for (int idxLod = 0; idxLod < m_viewer->Globals()->numLods(); idxLod++)
 			{
-				m_meshCache[seams][idxLod] = (Ref<ArrayMesh>)makeFlatChunk(numVerticesPerChuckSide, idxLod, seams);
+				m_meshCache[seams][idxLod] = makeFlatChunk(numVerticesPerChuckSide, idxLod, seams);
 			}
 		}
 	}
@@ -51,7 +53,7 @@ namespace godot
 		m_meshCache.clear();
 	}
 
-	ArrayMesh* MeshCache::makeFlatChunk(int numVerticesPerChuckSide, int idxLod, int seams)
+	Ref<Mesh> MeshCache::makeFlatChunk(int numVerticesPerChuckSide, int idxLod, int seams)
 	{
 		//	https://gist.github.com/bnolan/01a7d240774f1e02056d6607e5b621da
 
@@ -60,83 +62,81 @@ namespace godot
 		// Determines the vertices in a flat mesh at the required lod using World Grid vertices: coordinates are expressed in WUs and are realtive to the lower vertex of the chunk
 		PoolVector3Array positions;
 		PoolColorArray colors;
-		Color c = GDN_TheWorld_Globals::g_color_white;
+		//Color initialVertexColor = GDN_TheWorld_Globals::g_color_white;
+		Color initialVertexColor = GDN_TheWorld_Globals::g_color_pink_amaranth;
+		strideInWUs = (numVerticesPerChuckSide * strideInWUs) / 4;	// DEBUGRIC1
+		numVerticesPerChuckSide = 4;								// DEBUGRIC1
 		positions.resize((int)pow(numVerticesPerChuckSide + 1, 2));
+		colors.resize((int)pow(numVerticesPerChuckSide + 1, 2));
+		int pos = 0;
 		for (real_t z = 0; z < numVerticesPerChuckSide + 1; z++)
 			for (real_t x = 0; x < numVerticesPerChuckSide + 1; x++)
 			{
-				positions.append(Vector3(x * strideInWUs, 0, z * strideInWUs));
-				colors.append(c);	// TODORIC Material stuff
+				Vector3 v(x * strideInWUs, 0, z * strideInWUs);
+				positions.set(pos, v);
+				colors.set(pos, initialVertexColor);
+				pos++;
 			}
 		
-		PoolIntArray indices;
 		// Preparing array of indices releate to vertex array to form the triangles of the mesh: a tringle every three indices
+		PoolIntArray indices;
 		void makeFlatChunk_makeIndices(PoolIntArray& indices, int numVerticesPerChuckSide, int seams);
 		makeFlatChunk_makeIndices(indices, numVerticesPerChuckSide, seams);
+
+		// DEBUGRIC1
+		
+		{
+			for (int i = 0; i < positions.size(); i++)
+			{
+				Vector3 val = positions[i];
+				m_viewer->Globals()->debugPrint("Vertex(" + String(to_string(i).c_str()) + ")=" + String(val));
+			}
+			//for (int i = 0; i < colors.size(); i++)
+			//{
+			//	Color val = colors[i];
+			//	m_viewer->Globals()->debugPrint("Color(" + String(to_string(i).c_str()) + ")=" + String(val));
+			//}
+			for (int i = 0; i < indices.size(); i++)
+			{
+				int val = indices[i];
+				m_viewer->Globals()->debugPrint("Index(" + String(to_string(i).c_str()) + ")=" + String(to_string(val).c_str()));
+			}
+		}
+		
+		// DEBUGRIC1
 
 		godot::Array arrays;
 		arrays.resize(ArrayMesh::ARRAY_MAX);
 		arrays[ArrayMesh::ARRAY_VERTEX] = positions;
-		arrays[ArrayMesh::ARRAY_COLOR] = colors;	// TODORIC Material stuff
+		arrays[ArrayMesh::ARRAY_COLOR] = colors;
 		arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
-		ArrayMesh* mesh = ArrayMesh::_new();
+		Ref<ArrayMesh> mesh = ArrayMesh::_new();
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
 
-		// TODORIC Material stuff
-		//Ref<SpatialMaterial> mat = SpatialMaterial::_new();
-		//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-		//mat->set_albedo(GDN_TheWorld_Globals::g_color_white);
-		//mesh->surface_set_material(0, mat);
+		// Initial Material
+		Ref<SpatialMaterial> initialMaterial = SpatialMaterial::_new();
+		initialMaterial->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+		initialMaterial->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+		initialMaterial->set_albedo(initialVertexColor);
+		mesh->surface_set_material(0, initialMaterial);
 
 		// DEBUGRIC1
-		/*
+		
 		{
-			MeshDataTool* mdt = MeshDataTool::_new();
-			Error err = mdt->create_from_surface(mesh, 0);
-			int64_t numEdges = mdt->get_edge_count();
-			int64_t numFaces = mdt->get_face_count();
-			for (int i = 0; i < mdt->get_vertex_count(); i++)
-			{
-				Vector3 vertex = mdt->get_vertex(i);
-				Color c = mdt->get_vertex_color(i);
-			}
-		}*/
-		{	// OK
-			PoolVector3Array positions;
-			PoolColorArray colors;
-			float chunkSizeInWUs = strideInWUs * m_viewer->Globals()->numVerticesPerChuckSide();
-			positions.push_back(Vector3(0, 0, 0));								colors.append(c);
-			positions.push_back(Vector3(chunkSizeInWUs, 0, 0));					colors.append(c);
-			positions.push_back(Vector3(chunkSizeInWUs, 0, chunkSizeInWUs));	colors.append(c);
-			positions.push_back(Vector3(0, 0, chunkSizeInWUs));					colors.append(c);
-			PoolIntArray indices;
-			indices.append(0); indices.append(1);	indices.append(2);
-			indices.append(0); indices.append(2);	indices.append(3);
-			godot::Array arrays;
-			arrays.resize(ArrayMesh::ARRAY_MAX);
-			arrays[ArrayMesh::ARRAY_VERTEX] = positions;
-			arrays[ArrayMesh::ARRAY_COLOR] = colors;
-			arrays[ArrayMesh::ARRAY_INDEX] = indices;
-			ArrayMesh* mesh = ArrayMesh::_new();
-			mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
-			//Ref<SpatialMaterial> mat = SpatialMaterial::_new();
-			//mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
-			//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-			//mat->set_albedo(c);
-			//_mesh->surface_set_material(0, mat);
-			MeshDataTool* mdt = MeshDataTool::_new();
-			Error err = mdt->create_from_surface(mesh, 0);
-			int64_t numEdges = mdt->get_edge_count();
-			int64_t numFaces = mdt->get_face_count();
-			for (int i = 0; i < mdt->get_vertex_count(); i++)
-			{
-				Vector3 vertex = mdt->get_vertex(i);
-				Color c = mdt->get_vertex_color(i);
-			}
-			return mesh;
+			//MeshDataTool* mdt = MeshDataTool::_new();
+			//Error err = mdt->create_from_surface(mesh, 0);
+			//assert(err == Error::OK);
+			//int64_t numEdges = mdt->get_edge_count();
+			//int64_t numFaces = mdt->get_face_count();
+			//for (int i = 0; i < mdt->get_vertex_count(); i++)
+			//{
+			//	Vector3 vertex = mdt->get_vertex(i);
+			//	Color c = mdt->get_vertex_color(i);
+			//}
 		}
 		{	// OK
+			/*
 			PoolVector3Array positions;
 			PoolColorArray colors;
 			float chunkSizeInWUs = strideInWUs * m_viewer->Globals()->numVerticesPerChuckSide();
@@ -145,20 +145,40 @@ namespace godot
 			positions.push_back(Vector3(0, 0, chunkSizeInWUs));					colors.append(c);
 			positions.push_back(Vector3(chunkSizeInWUs, 0, chunkSizeInWUs));	colors.append(c);
 			PoolIntArray indices;
-			indices.append(0);	indices.append(1);	indices.append(2);
-			indices.append(1);	indices.append(3);	indices.append(2);
+			//indices.append(0); indices.append(1);	indices.append(2);
+			//indices.append(0); indices.append(2);	indices.append(3);
+			indices.append(0); indices.append(1);	indices.append(3);
+			indices.append(0); indices.append(3);	indices.append(2);
+			{
+				for (int i = 0; i < positions.size(); i++)
+				{
+					Vector3 val = positions[i];
+					m_viewer->Globals()->debugPrint("Vertex(" + String(to_string(i).c_str()) + ")=" + String(val));
+				}
+				for (int i = 0; i < colors.size(); i++)
+				{
+					Color val = colors[i];
+					m_viewer->Globals()->debugPrint("Color(" + String(to_string(i).c_str()) + ")=" + String(val));
+				}
+				for (int i = 0; i < indices.size(); i++)
+				{
+					int val = indices[i];
+					m_viewer->Globals()->debugPrint("Index(" + String(to_string(i).c_str()) + ")=" + String(to_string(val).c_str()));
+				}
+			}
 			godot::Array arrays;
 			arrays.resize(ArrayMesh::ARRAY_MAX);
 			arrays[ArrayMesh::ARRAY_VERTEX] = positions;
 			arrays[ArrayMesh::ARRAY_COLOR] = colors;
 			arrays[ArrayMesh::ARRAY_INDEX] = indices;
-			ArrayMesh* mesh = ArrayMesh::_new();
+			Ref<ArrayMesh> mesh = ArrayMesh::_new();
 			mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
 			//Ref<SpatialMaterial> mat = SpatialMaterial::_new();
 			//mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
 			//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 			//mat->set_albedo(c);
-			//_mesh->surface_set_material(0, mat);
+			//mesh->surface_set_material(0, mat);
+			
 			MeshDataTool* mdt = MeshDataTool::_new();
 			Error err = mdt->create_from_surface(mesh, 0);
 			int64_t numEdges = mdt->get_edge_count();
@@ -168,7 +188,9 @@ namespace godot
 				Vector3 vertex = mdt->get_vertex(i);
 				Color c = mdt->get_vertex_color(i);
 			}
+			*/
 			//return mesh;
+			
 		}
 		// DEBUGRIC1
 
@@ -241,15 +263,15 @@ void makeFlatChunk_makeIndices(godot::PoolIntArray& indices, int numVerticesPerC
 			int ixz01 = vertexIndex + numberOfColumnsOfRegularTriangles + 1;	// same vertex on next row
 			int ixz11 = ixz01 + 1;												// next vertex
 
-			// first triangle
-			indices.append(ixz00);
-			indices.append(ixz11);
-			indices.append(ixz01);
-
 			// second triangle
 			indices.append(ixz00);
 			indices.append(ixz10);
 			indices.append(ixz11);
+
+			// first triangle
+			indices.append(ixz00);
+			indices.append(ixz11);
+			indices.append(ixz01);
 
 			// ponting next vertex on the row
 			vertexIndex += 1;

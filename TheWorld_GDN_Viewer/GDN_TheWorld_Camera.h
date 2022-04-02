@@ -4,7 +4,7 @@
 #include <Camera.hpp>
 #include <Reference.hpp>
 #include <InputEvent.hpp>
-#include <Mesh.hpp>
+#include <ArrayMesh.hpp>
 
 #define GD_ACTIVE_CAMERA_GROUP	"ActiveCamera"
 
@@ -41,7 +41,7 @@ namespace godot {
 		bool isWorldCamera() { return m_WorldCamera; }
 		void notifyActiveCameraFlag(bool active);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
-		Mesh* DrawViewFrustum(Color c = Color(1, 1, 1));
+		Ref<ArrayMesh> DrawViewFrustum(Color c = Color(1, 1, 1));
 
 	private:
 

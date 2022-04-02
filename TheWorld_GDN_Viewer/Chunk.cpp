@@ -15,14 +15,15 @@
 
 using namespace godot;
 
-Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat, enum class GDN_TheWorld_Globals::ChunkDebugMode debugMode)
+Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat)
 {
 	m_slotPosX = slotPosX;
 	m_slotPosZ = slotPosZ;
 	m_lod = lod;
 	m_isCameraVerticalOnChunk = false;
 	m_viewer = viewer;
-	m_debugMode = debugMode;
+	m_debugMode = m_viewer->getDebugMode();
+	m_debugVisibility = m_viewer->getDebugVisibility();
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	m_numVerticesPerChuckSide = globals->numVerticesPerChuckSide();
 	m_numChunksPerWorldGridSide = globals->numChunksPerBitmapSide(m_lod);
@@ -50,6 +51,8 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	m_aabb.position.z = 0;
 
 	initVisual();
+
+	//globals->debugPrint("Chunk::Chunk - ID: " + String(getPos().getId().c_str()));
 }
 
 Chunk::~Chunk()
@@ -62,16 +65,8 @@ void Chunk::initVisual(void)
 	VisualServer* vs = VisualServer::get_singleton();
 	m_meshInstance = vs->instance_create();
 	
-	if (m_mat == nullptr)
-	{
-		// TODORIC Material stuff
-		Ref<SpatialMaterial> mat = SpatialMaterial::_new();
-		mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-		mat->set_albedo(GDN_TheWorld_Globals::g_color_white);
-		//m_mat = mat;	// DEBUGRIC1
-	}
-
-	//vs->instance_geometry_set_material_override(m_meshInstance, m_mat->get_rid());	// DEBUGRIC1
+	if (m_mat != nullptr)
+		vs->instance_geometry_set_material_override(m_meshInstance, m_mat->get_rid());	// DEBUGRIC1
 
 	//enterWorld();
 	Ref<World> world = m_viewer->get_world();
@@ -102,26 +97,7 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 	if (meshRID == m_meshRID)
 		return;
 
-	// TODORIC Material stuff
-	// DEBUGRIC1
-	//if (mesh != nullptr)
-	//	mesh->surface_set_material(0, m_mat);
-
 	VisualServer::get_singleton()->instance_set_base(m_meshInstance, meshRID);
-
-	// DEBUGRIC1
-	{
-		MeshDataTool* mdt = MeshDataTool::_new();
-		Error err = mdt->create_from_surface(mesh, 0);
-		int64_t numEdges = mdt->get_edge_count();
-		int64_t numFaces = mdt->get_face_count();
-		for (int i = 0; i < mdt->get_vertex_count(); i++)
-		{
-			Vector3 vertex = mdt->get_vertex(i);
-			Color c = mdt->get_vertex_color(i);
-		}
-	}
-	// DEBUGRIC1
 
 	m_meshRID = meshRID;
 	m_mesh = mesh;
@@ -148,8 +124,8 @@ void Chunk::parentTransformChanged(Transform parentT)
 	m_parentTransform = parentT;
 
 	//Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
-	//Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
-	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y+20, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
+	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
+	//Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y+20, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
 	//Transform localT(Basis().scaled(m_aabb.size), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
 	Transform worldT = m_parentTransform * localT;
 
@@ -188,8 +164,7 @@ void Chunk::update(bool isVisible)
 	if (chunk && chunk->isActive())
 		seams |= SEAM_TOP;
 
-	Ref<Mesh> mesh = m_viewer->getMeshCache()->getMesh(seams, m_lod);
-	setMesh(mesh);
+	setMesh(m_viewer->getMeshCache()->getMesh(seams, m_lod));
 	applyDebugMesh();
 	applyAABB();
 
@@ -308,8 +283,8 @@ void Chunk::dump(void)
 		+ (m_isCameraVerticalOnChunk ? " - CAMERA" : ""));
 }
 
-ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat, enum class GDN_TheWorld_Globals::ChunkDebugMode debugMode)
-	: Chunk(slotPosX, slotPosZ, lod, viewer, mat, debugMode)
+ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat)
+	: Chunk(slotPosX, slotPosZ, lod, viewer, mat)
 {
 	VisualServer* vs = VisualServer::get_singleton();
 	m_debugMeshInstance = vs->instance_create();
@@ -319,7 +294,7 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 	if (world != nullptr && world.is_valid())
 		vs->instance_set_scenario(m_debugMeshInstance, world->get_scenario());
 
-	vs->instance_set_visible(m_debugMeshInstance, isVisible());
+	vs->instance_set_visible(m_debugMeshInstance, m_debugVisibility);
 
 	m_debugMeshAABB = m_aabb;
 
@@ -372,7 +347,7 @@ void ChunkDebug::setVisible(bool b)
 	if (!isActive())
 		b = false;
 
-	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstance, b);
+	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstance, m_debugVisibility);
 }
 
 void ChunkDebug::setDebugVisibility(bool b)
@@ -392,7 +367,8 @@ void ChunkDebug::applyAABB(void)
 	Chunk::applyAABB();
 
 	assert(m_debugMeshInstance != RID());
-	VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstance, m_debugMeshAABB);
+	if (m_debugVisibility)
+		VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstance, m_debugMeshAABB);
 }
 
 
@@ -480,7 +456,7 @@ void ChunkDebug::applyDebugMesh()
 				else
 					wiredMeshColor = GDN_TheWorld_Globals::g_color_red;
 
-				Mesh* _mesh = createWireCubeMesh(wiredMeshColor);
+				Ref<ArrayMesh> _mesh = createWireCubeMesh(wiredMeshColor);
 				SpatialMaterial* mat = SpatialMaterial::_new();
 				mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
 				mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
@@ -534,7 +510,7 @@ void ChunkDebug::applyDebugMesh()
 				else
 					wiredMeshColor = GDN_TheWorld_Globals::g_color_red;
 
-				Mesh* _mesh = createWireSquareMesh(wiredMeshColor);
+				Ref<ArrayMesh> _mesh = createWireSquareMesh(wiredMeshColor);
 				SpatialMaterial* mat = SpatialMaterial::_new();
 				mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
 				mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
@@ -561,7 +537,7 @@ void ChunkDebug::applyDebugMesh()
 		+ (isCameraVerticalOnChunk() ? "CAMERA" : ""));*/
 }
 
-Mesh* ChunkDebug::createWireCubeMesh(Color c)
+Ref<ArrayMesh> ChunkDebug::createWireCubeMesh(Color c)
 {
 	PoolVector3Array positions;
 	PoolColorArray colors;
@@ -601,13 +577,13 @@ Mesh* ChunkDebug::createWireCubeMesh(Color c)
 	arrays[ArrayMesh::ARRAY_COLOR] = colors;
 	arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
-	ArrayMesh* mesh = ArrayMesh::_new();
+	Ref<ArrayMesh> mesh = ArrayMesh::_new();
 	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
 	
 	return mesh;
 }
 
-Mesh* ChunkDebug::createWireSquareMesh(Color c)
+Ref<ArrayMesh> ChunkDebug::createWireSquareMesh(Color c)
 {
 	PoolVector3Array positions;
 	PoolColorArray colors;
@@ -633,7 +609,7 @@ Mesh* ChunkDebug::createWireSquareMesh(Color c)
 	arrays[ArrayMesh::ARRAY_COLOR] = colors;
 	arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
-	ArrayMesh* mesh = ArrayMesh::_new();
+	Ref<ArrayMesh> mesh = ArrayMesh::_new();
 	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
 
 	return mesh;
