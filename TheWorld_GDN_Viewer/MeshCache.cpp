@@ -5,6 +5,8 @@
 
 #include <PoolArrays.hpp>
 #include <SpatialMaterial.hpp>
+#include <MeshDataTool.hpp>
+#include <CubeMesh.hpp>
 
 //using namespace godot;
 namespace godot
@@ -86,6 +88,89 @@ namespace godot
 		//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 		//mat->set_albedo(GDN_TheWorld_Globals::g_color_white);
 		//mesh->surface_set_material(0, mat);
+
+		// DEBUGRIC1
+		/*
+		{
+			MeshDataTool* mdt = MeshDataTool::_new();
+			Error err = mdt->create_from_surface(mesh, 0);
+			int64_t numEdges = mdt->get_edge_count();
+			int64_t numFaces = mdt->get_face_count();
+			for (int i = 0; i < mdt->get_vertex_count(); i++)
+			{
+				Vector3 vertex = mdt->get_vertex(i);
+				Color c = mdt->get_vertex_color(i);
+			}
+		}*/
+		{	// OK
+			PoolVector3Array positions;
+			PoolColorArray colors;
+			float chunkSizeInWUs = strideInWUs * m_viewer->Globals()->numVerticesPerChuckSide();
+			positions.push_back(Vector3(0, 0, 0));								colors.append(c);
+			positions.push_back(Vector3(chunkSizeInWUs, 0, 0));					colors.append(c);
+			positions.push_back(Vector3(chunkSizeInWUs, 0, chunkSizeInWUs));	colors.append(c);
+			positions.push_back(Vector3(0, 0, chunkSizeInWUs));					colors.append(c);
+			PoolIntArray indices;
+			indices.append(0); indices.append(1);	indices.append(2);
+			indices.append(0); indices.append(2);	indices.append(3);
+			godot::Array arrays;
+			arrays.resize(ArrayMesh::ARRAY_MAX);
+			arrays[ArrayMesh::ARRAY_VERTEX] = positions;
+			arrays[ArrayMesh::ARRAY_COLOR] = colors;
+			arrays[ArrayMesh::ARRAY_INDEX] = indices;
+			ArrayMesh* mesh = ArrayMesh::_new();
+			mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
+			//Ref<SpatialMaterial> mat = SpatialMaterial::_new();
+			//mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+			//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+			//mat->set_albedo(c);
+			//_mesh->surface_set_material(0, mat);
+			MeshDataTool* mdt = MeshDataTool::_new();
+			Error err = mdt->create_from_surface(mesh, 0);
+			int64_t numEdges = mdt->get_edge_count();
+			int64_t numFaces = mdt->get_face_count();
+			for (int i = 0; i < mdt->get_vertex_count(); i++)
+			{
+				Vector3 vertex = mdt->get_vertex(i);
+				Color c = mdt->get_vertex_color(i);
+			}
+			return mesh;
+		}
+		{	// OK
+			PoolVector3Array positions;
+			PoolColorArray colors;
+			float chunkSizeInWUs = strideInWUs * m_viewer->Globals()->numVerticesPerChuckSide();
+			positions.push_back(Vector3(0, 0, 0));								colors.append(c);
+			positions.push_back(Vector3(chunkSizeInWUs, 0, 0));					colors.append(c);
+			positions.push_back(Vector3(0, 0, chunkSizeInWUs));					colors.append(c);
+			positions.push_back(Vector3(chunkSizeInWUs, 0, chunkSizeInWUs));	colors.append(c);
+			PoolIntArray indices;
+			indices.append(0);	indices.append(1);	indices.append(2);
+			indices.append(1);	indices.append(3);	indices.append(2);
+			godot::Array arrays;
+			arrays.resize(ArrayMesh::ARRAY_MAX);
+			arrays[ArrayMesh::ARRAY_VERTEX] = positions;
+			arrays[ArrayMesh::ARRAY_COLOR] = colors;
+			arrays[ArrayMesh::ARRAY_INDEX] = indices;
+			ArrayMesh* mesh = ArrayMesh::_new();
+			mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
+			//Ref<SpatialMaterial> mat = SpatialMaterial::_new();
+			//mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
+			//mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+			//mat->set_albedo(c);
+			//_mesh->surface_set_material(0, mat);
+			MeshDataTool* mdt = MeshDataTool::_new();
+			Error err = mdt->create_from_surface(mesh, 0);
+			int64_t numEdges = mdt->get_edge_count();
+			int64_t numFaces = mdt->get_face_count();
+			for (int i = 0; i < mdt->get_vertex_count(); i++)
+			{
+				Vector3 vertex = mdt->get_vertex(i);
+				Color c = mdt->get_vertex_color(i);
+			}
+			//return mesh;
+		}
+		// DEBUGRIC1
 
 		return mesh;
 	}

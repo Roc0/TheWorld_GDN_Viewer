@@ -11,6 +11,7 @@
 #include <SpatialMaterial.hpp>
 #include <Material.hpp>
 #include <Ref.hpp>
+#include <MeshDataTool.hpp>
 
 using namespace godot;
 
@@ -67,10 +68,10 @@ void Chunk::initVisual(void)
 		Ref<SpatialMaterial> mat = SpatialMaterial::_new();
 		mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 		mat->set_albedo(GDN_TheWorld_Globals::g_color_white);
-		m_mat = mat;
+		//m_mat = mat;	// DEBUGRIC1
 	}
 
-	vs->instance_geometry_set_material_override(m_meshInstance, m_mat->get_rid());
+	//vs->instance_geometry_set_material_override(m_meshInstance, m_mat->get_rid());	// DEBUGRIC1
 
 	//enterWorld();
 	Ref<World> world = m_viewer->get_world();
@@ -102,10 +103,25 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 		return;
 
 	// TODORIC Material stuff
-	if (mesh != nullptr)
-		mesh->surface_set_material(0, m_mat);
+	// DEBUGRIC1
+	//if (mesh != nullptr)
+	//	mesh->surface_set_material(0, m_mat);
 
 	VisualServer::get_singleton()->instance_set_base(m_meshInstance, meshRID);
+
+	// DEBUGRIC1
+	{
+		MeshDataTool* mdt = MeshDataTool::_new();
+		Error err = mdt->create_from_surface(mesh, 0);
+		int64_t numEdges = mdt->get_edge_count();
+		int64_t numFaces = mdt->get_face_count();
+		for (int i = 0; i < mdt->get_vertex_count(); i++)
+		{
+			Vector3 vertex = mdt->get_vertex(i);
+			Color c = mdt->get_vertex_color(i);
+		}
+	}
+	// DEBUGRIC1
 
 	m_meshRID = meshRID;
 	m_mesh = mesh;
@@ -128,9 +144,15 @@ void Chunk::exitWorld(void)
 void Chunk::parentTransformChanged(Transform parentT)
 {
 	assert(m_meshInstance != RID());
+
 	m_parentTransform = parentT;
-	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));
-	Transform worldT = parentT * localT;
+
+	//Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
+	//Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
+	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y+20, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
+	//Transform localT(Basis().scaled(m_aabb.size), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
+	Transform worldT = m_parentTransform * localT;
+
 	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldT);		// World coordinates
 }
 

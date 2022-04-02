@@ -227,13 +227,13 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 	// DEBUG: verify
 	{
-		Vector3 cameraPosWorldNodeLocalCoord = activeCamera->get_transform().get_origin();		// WorldNode local coordinates of the camera pos
-		Vector3 viewerNodePosWordlNodeLocalCoord = get_transform().get_origin();				// WorldNode local coordinates of the Viewer Node pos
-		Vector3 cameraPosViewerNodeLocalCoord2 = cameraPosWorldNodeLocalCoord - viewerNodePosWordlNodeLocalCoord;	// Viewer Node local coordinates of the camera pos
-		// cameraPosViewerNodeLocalCoord2 must be equal to cameraPosViewerNodeLocalCoord
-		Vector3 viewerPosGlobalCoord = get_global_transform().get_origin();		// da mettere in relazione con cameraPosGlobalCoord
+		//Vector3 cameraPosWorldNodeLocalCoord = activeCamera->get_transform().get_origin();		// WorldNode local coordinates of the camera pos
+		//Vector3 viewerNodePosWordlNodeLocalCoord = get_transform().get_origin();				// WorldNode local coordinates of the Viewer Node pos
+		//Vector3 cameraPosViewerNodeLocalCoord2 = cameraPosWorldNodeLocalCoord - viewerNodePosWordlNodeLocalCoord;	// Viewer Node local coordinates of the camera pos
+		//// cameraPosViewerNodeLocalCoord2 must be equal to cameraPosViewerNodeLocalCoord
+		//Vector3 viewerPosGlobalCoord = get_global_transform().get_origin();		// da mettere in relazione con cameraPosGlobalCoord
 		
-		Transform globalTransform = internalTransformGlobalCoord();
+		//Transform globalTransform = internalTransformGlobalCoord();
 	}
 	// DEBUG: verify
 
