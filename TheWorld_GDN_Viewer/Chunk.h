@@ -276,7 +276,7 @@ namespace godot
 	private:
 		int m_slotPosX;	// express the orizzontal (X) and vertical (Z) position of the chunk in the grid of chunks
 		int m_slotPosZ;	// at the specific lod : 0 the first chunk, 1 the following to the max number of chunks on a size for the specific lod
-		Ref<Material> m_mat;
+		Ref<Material> m_matOverride;
 
 		bool m_active;
 		bool m_visible;

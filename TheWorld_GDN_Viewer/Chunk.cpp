@@ -43,7 +43,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	m_visible = false;
 	m_pendingUpdate = false;
 	m_justJoined = false;
-	m_mat = mat;
+	m_matOverride = mat;
 
 	m_viewer->getPartialAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGVs);
 	m_gridRelativeAABB = m_aabb;
@@ -65,8 +65,8 @@ void Chunk::initVisual(void)
 	VisualServer* vs = VisualServer::get_singleton();
 	m_meshInstance = vs->instance_create();
 	
-	if (m_mat != nullptr)
-		vs->instance_geometry_set_material_override(m_meshInstance, m_mat->get_rid());	// DEBUGRIC1
+	if (m_matOverride != nullptr)
+		vs->instance_geometry_set_material_override(m_meshInstance, m_matOverride->get_rid());
 
 	//enterWorld();
 	Ref<World> world = m_viewer->get_world();
@@ -125,8 +125,6 @@ void Chunk::parentTransformChanged(Transform parentT)
 
 	//Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
 	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
-	//Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y+20, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
-	//Transform localT(Basis().scaled(m_aabb.size), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
 	Transform worldT = m_parentTransform * localT;
 
 	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldT);		// World coordinates

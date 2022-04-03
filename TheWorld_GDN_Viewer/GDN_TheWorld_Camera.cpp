@@ -35,15 +35,22 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	m_updateCameraRequired = false;
 
 	// Camera Movement
-	m_numMoveStep = 0;
-	m_wheelVelocity = 5.0;	// 10.0;
-	m_wheelVelocityWithShift = 1.0;	// 10.0;
+	m_numMoveStepForward = 0;
+	m_numMoveStepLeft = 0;
+	m_wheelFastVelocity = 20.0;	// 10.0;
+	m_wheelNormalVelocity = 5.0;	// 10.0;
+	m_wheelSlowVelocity = 1.0;	// 10.0;
+	m_forwardMovementOn = false;
+	m_backwardMovementOn = false;
+	m_leftMovementOn = false;
+	m_rightMovementOn = false;
 	// Camera Movement
 
 	// Camera Rotation
 	m_shiftOriCameraOn = false;
 	m_shiftVertCameraOn = false;
 	m_shiftPressed = false;
+	m_ctrlPressed = false;
 	m_rotateCameraOn = false;
 	m_mouseRelativePosToShiftOriz = Vector2(0, 0);
 	m_mouseRelativePosToShiftVert = Vector2(0, 0);
@@ -140,6 +147,47 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 		m_shiftPressed = true;
 	else
 		m_shiftPressed = false;
+	
+	if (input->is_action_pressed("ui_ctrl"))
+		m_ctrlPressed = true;
+	else
+		m_ctrlPressed = false;
+
+	if (input->is_action_pressed("ui_forward"))
+	{
+		m_numMoveStepForward--;
+		m_updateCameraRequired = true;
+		m_forwardMovementOn = true;
+	}
+	else
+		m_forwardMovementOn = false;
+
+	if (input->is_action_pressed("ui_backward"))
+	{
+		m_numMoveStepForward++;
+		m_updateCameraRequired = true;
+		m_backwardMovementOn = true;
+	}
+	else
+		m_backwardMovementOn = false;
+
+	if (input->is_action_pressed("ui_left"))
+	{
+		m_numMoveStepLeft++;
+		m_updateCameraRequired = true;
+		m_leftMovementOn = true;
+	}
+	else
+		m_leftMovementOn = false;
+
+	if (input->is_action_pressed("ui_right"))
+	{
+		m_numMoveStepLeft--;
+		m_updateCameraRequired = true;
+		m_rightMovementOn = true;
+	}
+	else
+		m_rightMovementOn = false;
 }
 
 void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
@@ -174,13 +222,13 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 
 	if (event->is_action_pressed("ui_mouse_wheel_up"))
 	{
-		m_numMoveStep++;
+		m_numMoveStepForward--;
 		m_updateCameraRequired = true;
 	}
 
 	if (event->is_action_pressed("ui_mouse_wheel_down"))
 	{
-		m_numMoveStep--;
+		m_numMoveStepForward++;
 		m_updateCameraRequired = true;
 	}
 }
@@ -361,17 +409,41 @@ bool GDN_TheWorld_Camera::updateCamera()
 		m_mouseRelativePosToShiftVert = Vector2(0, 0);
 	}
 
-	if (m_numMoveStep)
+	if (m_numMoveStepForward)
 	{
 		if (m_shiftPressed)
 		{
-			translate_object_local(Vector3(0, 0, m_numMoveStep * m_wheelVelocityWithShift));
-			m_numMoveStep = 0;
+			translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelSlowVelocity));
+			m_numMoveStepForward = 0;
+		}
+		else if (m_ctrlPressed)
+		{
+			translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelFastVelocity));
+			m_numMoveStepForward = 0;
 		}
 		else
 		{
-			translate_object_local(Vector3(0, 0, m_numMoveStep * m_wheelVelocity));
-			m_numMoveStep = 0;
+			translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelNormalVelocity));
+			m_numMoveStepForward = 0;
+		}
+	}
+
+	if (m_numMoveStepLeft)
+	{
+		if (m_shiftPressed)
+		{
+			translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelSlowVelocity, 0, 0));
+			m_numMoveStepLeft = 0;
+		}
+		else if (m_ctrlPressed)
+		{
+			translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelFastVelocity, 0, 0));
+			m_numMoveStepLeft = 0;
+		}
+		else
+		{
+			translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelNormalVelocity, 0, 0));
+			m_numMoveStepLeft = 0;
 		}
 	}
 

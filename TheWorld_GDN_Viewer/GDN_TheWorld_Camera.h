@@ -55,9 +55,11 @@ namespace godot {
 		int64_t m_instanceId;
 
 		// Camera Movement
-		int m_numMoveStep;
-		float m_wheelVelocity;
-		float m_wheelVelocityWithShift;
+		int m_numMoveStepForward;
+		int m_numMoveStepLeft;
+		float m_wheelFastVelocity;
+		float m_wheelNormalVelocity;
+		float m_wheelSlowVelocity;
 		// Camera Movement
 
 		// Camera Rotation
@@ -65,6 +67,11 @@ namespace godot {
 		bool m_shiftVertCameraOn;
 		bool m_rotateCameraOn;
 		bool m_shiftPressed;
+		bool m_ctrlPressed;
+		bool m_forwardMovementOn;
+		bool m_backwardMovementOn;
+		bool m_leftMovementOn;
+		bool m_rightMovementOn;
 		Vector2 m_mouseRelativePosToRotate;
 		Vector2 m_mouseRelativePosToShiftOriz;
 		Vector2 m_mouseRelativePosToShiftVert;
