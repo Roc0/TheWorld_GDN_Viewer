@@ -59,12 +59,17 @@ namespace godot
 		void setDumpRequired(void) { m_dumpRequired = true; }
 		void dump(void);
 		void setCameraChunk(Chunk* chunk) { m_cameraChunk = chunk; }
-		Transform getCameraChunkGlobalTransformOfAABB(void);
+		//Transform getCameraChunkGlobalTransformOfAABB(void);
+		AABB getCameraChunkLocalAABB(void);
+		AABB getCameraChunkLocalDebugAABB(void);
+		Transform getCameraChunkMeshGlobalTransformApplied(void);
+		Transform getCameraChunkDebugMeshGlobalTransformApplied(void);
 		String getCameraChunkId(void);
 		int getNumSplits(void);
 		int getNumJoins(void);
 		int getNumChunks(void);
-		GDN_TheWorld_Globals::ChunkDebugMode getDebugMode(void) { return m_debugMode; }
+		GDN_TheWorld_Globals::ChunkDebugMode getChunkDebugMode(void) { return m_chunkDebugMode; }
+		int getChunkDebugModeInt(void) { return (int)m_chunkDebugMode; }
 		bool getDebugVisibility(void) { return m_debugVisibility; }
 		String getDebugDrawMode(void);
 
@@ -89,7 +94,7 @@ namespace godot
 
 		bool m_debugVisibility;
 		bool m_updateTerrainVisibilityRequired;
-		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
+		enum class GDN_TheWorld_Globals::ChunkDebugMode m_chunkDebugMode;
 		bool m_updateDebugModeRequired;
 		Viewport::DebugDraw m_debugDraw;
 

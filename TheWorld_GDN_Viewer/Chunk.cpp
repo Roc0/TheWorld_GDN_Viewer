@@ -22,7 +22,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	m_lod = lod;
 	m_isCameraVerticalOnChunk = false;
 	m_viewer = viewer;
-	m_debugMode = m_viewer->getDebugMode();
+	m_debugMode = m_viewer->getChunkDebugMode();
 	m_debugVisibility = m_viewer->getDebugVisibility();
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	m_numVerticesPerChuckSide = globals->numVerticesPerChuckSide();
@@ -123,11 +123,15 @@ void Chunk::parentTransformChanged(Transform parentT)
 
 	m_parentTransform = parentT;
 
-	//Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
-	Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
-	Transform worldT = m_parentTransform * localT;
+	//Transform localTransform(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
+	//Transform worldTransformOld = m_parentTransform * localTransform;	// DEBUGRIC1
 
-	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldT);		// World coordinates
+	Transform worldTransform = getGlobalTransform();
+
+	//assert(worldTransform.origin == worldTransformOld.origin);	// DEBUGRIC1
+
+	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldTransform);		// World coordinates
+	m_meshGlobaTransformApplied = worldTransform;
 }
 
 // TODORIC Material stuff
@@ -237,10 +241,31 @@ void Chunk::getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globa
 	globalCoordCameraLastPos = m_globalCoordCameraLastPos;
 }
 
-Transform Chunk::getGlobalTransformOfAABB(void)
+//Transform Chunk::getGlobalTransformOfAABB(void)
+//{
+//	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
+//	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
+//}
+
+Transform Chunk::getGlobalTransform(void)
 {
 	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
-	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
+	return m_parentTransform * Transform(Basis(), pos + m_aabb.position);
+}
+
+Transform Chunk::getMeshGlobalTransformApplied(void)
+{
+	return m_meshGlobaTransformApplied;
+}
+
+Transform Chunk::getDebugMeshGlobalTransform(void)
+{
+	return Transform();
+}
+
+Transform Chunk::getDebugMeshGlobalTransformApplied(void)
+{
+	return Transform();
 }
 
 void Chunk::setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
@@ -326,14 +351,40 @@ void ChunkDebug::exitWorld(void)
 	VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstance, RID());
 }
 
+//Transform ChunkDebug::getGlobalTransformOfAABB(void)
+//{
+//	Transform worldTransform = Chunk::getGlobalTransformOfAABB();
+//	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
+//		worldTransform.origin.y = 0;
+//	return worldTransform;
+//}
+
+Transform ChunkDebug::getDebugMeshGlobalTransform(void)
+{
+	Transform worldTransform = Chunk::getGlobalTransform() * Transform(Basis().scaled(m_aabb.size));
+
+	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
+		worldTransform.origin.y = 0;
+
+	return worldTransform;
+}
+
 void ChunkDebug::parentTransformChanged(Transform parentT)
 {
 	Chunk::parentTransformChanged(parentT);
 
 	assert(m_debugMeshInstance != RID());
 
-	Transform worldTransform = getGlobalTransformOfAABB();
+	Transform worldTransform = getDebugMeshGlobalTransform();
 	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstance, worldTransform);
+	m_debugMeshGlobaTransformApplied = worldTransform;
+
+	//assert(m_debugMeshGlobaTransformApplied.origin == m_meshGlobaTransformApplied.origin);	// DEBUGRIC1
+}
+
+Transform ChunkDebug::getDebugMeshGlobalTransformApplied(void)
+{
+	return m_debugMeshGlobaTransformApplied;
 }
 
 void ChunkDebug::setVisible(bool b)
@@ -417,7 +468,7 @@ void ChunkDebug::applyDebugMesh()
 	}
 
 	Variant mesh;
-	Transform worldTransform = getGlobalTransformOfAABB();
+	Transform worldTransform = getDebugMeshGlobalTransform();
 
 	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB)
 	{
@@ -469,9 +520,7 @@ void ChunkDebug::applyDebugMesh()
 	}
 	else if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
 	{
-		//Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
-		//worldTransform = m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
-		worldTransform.origin.y = 0;
+		//worldTransform.origin.y = 0;	inutile
 		m_debugMeshAABB = m_aabb;
 		m_debugMeshAABB.position.y = 0;
 		m_debugMeshAABB.size.y = 0;
@@ -526,6 +575,8 @@ void ChunkDebug::applyDebugMesh()
 	setDebugMesh(mesh);
 
 	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstance, worldTransform);
+	m_debugMeshGlobaTransformApplied = worldTransform;
+
 
 	/*GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	globals->debugPrint(String("Debug Mesh - ID: ") + getPos().getId().c_str()

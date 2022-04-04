@@ -30,12 +30,17 @@ void GDN_TheWorld_Viewer::_register_methods()
 
 	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
 	register_method("dump_required", &GDN_TheWorld_Viewer::setDumpRequired);
-	register_method("get_camera_chunk_global_transform_of_aabb", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB);
+	//register_method("get_camera_chunk_global_transform_of_aabb", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB);
+	register_method("get_camera_chunk_local_aabb", &GDN_TheWorld_Viewer::getCameraChunkLocalAABB);
+	register_method("get_camera_chunk_local_debug_aabb", &GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB);
+	register_method("get_camera_chunk_mesh_global_transform_applied", &GDN_TheWorld_Viewer::getCameraChunkMeshGlobalTransformApplied);
+	register_method("get_camera_chunk_debug_mesh_global_transform_applied", &GDN_TheWorld_Viewer::getCameraChunkDebugMeshGlobalTransformApplied);
 	register_method("get_camera_chunk_id", &GDN_TheWorld_Viewer::getCameraChunkId);
 	register_method("get_num_splits", &GDN_TheWorld_Viewer::getNumSplits);
 	register_method("get_num_joins", &GDN_TheWorld_Viewer::getNumJoins);
 	register_method("get_num_chunks", &GDN_TheWorld_Viewer::getNumChunks);
 	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
+	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeInt);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -54,7 +59,8 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_timeElapsedFromLastDump = 0;
 	m_debugVisibility = true;
 	m_updateTerrainVisibilityRequired = false;
-	m_debugMode = GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB;
+	m_chunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB;
+	m_debugDraw = Viewport::DebugDraw::DEBUG_DRAW_DISABLED;
 	m_updateDebugModeRequired = false;
 }
 
@@ -117,7 +123,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 	if (event->is_action_pressed("ui_toggle_debug_mode"))
 	{
 
-		m_debugMode = GDN_TheWorld_Globals::toggleChunkDebugMode(m_debugMode);
+		m_chunkDebugMode = GDN_TheWorld_Globals::toggleChunkDebugMode(m_chunkDebugMode);
 		m_updateDebugModeRequired = true;
 	}
 	if (event->is_action_pressed("ui_dump"))
@@ -358,7 +364,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	{
 		if (m_quadTree && m_initialWordlViewerPosSet)
 		{
-			Chunk::SwitchDebugModeAction action(m_debugMode);
+			Chunk::SwitchDebugModeAction action(m_chunkDebugMode);
 			m_quadTree->ForAllChunk(action);
 		}
 		m_updateDebugModeRequired = false;
@@ -561,13 +567,46 @@ void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
 	onTransformChanged();
 }
 
-Transform GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB(void)
+//Transform GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB(void)
+//{
+//	if (m_cameraChunk)
+//		return m_cameraChunk->getGlobalTransformOfAABB();
+//	else
+//		return Transform();
+//}
+
+AABB GDN_TheWorld_Viewer::getCameraChunkLocalAABB(void)
 {
 	if (m_cameraChunk)
-		return m_cameraChunk->getGlobalTransformOfAABB();
+		return m_cameraChunk->getAABB();
+	else
+		return AABB();
+}
+
+AABB GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB(void)
+{
+	if (m_cameraChunk)
+		return m_cameraChunk->getDebugMeshAABB();
+	else
+		return AABB();
+}
+
+Transform GDN_TheWorld_Viewer::getCameraChunkMeshGlobalTransformApplied(void)
+{
+	if (m_cameraChunk)
+		return m_cameraChunk->getMeshGlobalTransformApplied();
 	else
 		return Transform();
 }
+
+Transform GDN_TheWorld_Viewer::getCameraChunkDebugMeshGlobalTransformApplied(void)
+{
+	if (m_cameraChunk)
+		return m_cameraChunk->getDebugMeshGlobalTransformApplied();
+	else
+		return Transform();
+}
+
 
 String GDN_TheWorld_Viewer::getCameraChunkId(void)
 {

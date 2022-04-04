@@ -226,6 +226,10 @@ namespace godot
 		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
 		virtual void applyDebugMesh(void);
+		//virtual Transform getGlobalTransformOfAABB(void);
+		virtual Transform getDebugMeshGlobalTransform(void);
+		virtual Transform getDebugMeshGlobalTransformApplied(void);
+		virtual AABB getDebugMeshAABB(void) { return AABB(); };
 
 		virtual void update(bool isVsisible);
 		bool isActive(void) { return m_active; }
@@ -241,8 +245,9 @@ namespace godot
 		AABB getAABB(void) { return m_aabb; };
 		void getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globalCoordCameraLastPos);
 		bool isCameraVerticalOnChunk(void) { return m_isCameraVerticalOnChunk; }
-		Transform getGlobalTransformOfAABB(void);
-	
+		Transform getGlobalTransform(void);
+		Transform getMeshGlobalTransformApplied(void);
+
 	private:
 		void setMesh(Ref<Mesh> mesh);
 
@@ -257,6 +262,7 @@ namespace godot
 		bool m_isCameraVerticalOnChunk;
 		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
 		bool m_debugVisibility;
+		Transform m_meshGlobaTransformApplied;
 
 		int m_numVerticesPerChuckSide;		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int m_numChunksPerWorldGridSide;	// The number of chunks required to cover every side of the grid at the current lod value
@@ -303,6 +309,10 @@ namespace godot
 		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
 		virtual void applyDebugMesh(void);
+		//virtual Transform getGlobalTransformOfAABB(void);
+		virtual Transform getDebugMeshGlobalTransform(void);
+		virtual Transform getDebugMeshGlobalTransformApplied(void);
+		virtual AABB getDebugMeshAABB(void) { return m_debugMeshAABB; };
 
 	private:
 		void setDebugMesh(Ref<Mesh> mesh);
@@ -314,6 +324,7 @@ namespace godot
 		RID m_debugMeshRID;
 		Ref<Mesh> m_debugMesh;
 		AABB m_debugMeshAABB;
+		Transform m_debugMeshGlobaTransformApplied;
 	};
 }
 
