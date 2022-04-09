@@ -427,7 +427,8 @@ void ChunkDebug::applyAABB(void)
 
 	assert(m_debugMeshInstance != RID());
 	if (m_debugVisibility)
-		VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstance, m_debugMeshAABB);
+		if (m_debugMeshRID != RID())
+			VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstance, m_debugMeshAABB);
 }
 
 
