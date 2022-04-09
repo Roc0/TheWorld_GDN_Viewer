@@ -194,6 +194,24 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	}
 	else
 		m_rightMovementOn = false;
+
+	if (input->is_action_pressed("ui_up"))
+	{
+		m_numMoveStepUp++;
+		m_updateCameraRequired = true;
+		m_upwardMovementOn = true;
+	}
+	else
+		m_upwardMovementOn = false;
+
+	if (input->is_action_pressed("ui_down"))
+	{
+		m_numMoveStepUp--;
+		m_updateCameraRequired = true;
+		m_downwardMovementOn = true;
+	}
+	else
+		m_downwardMovementOn = false;
 }
 
 void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
@@ -417,40 +435,98 @@ bool GDN_TheWorld_Camera::updateCamera()
 
 	if (m_numMoveStepForward)
 	{
-		if (m_shiftPressed)
+		if (m_altPressed)
 		{
-			translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelSlowVelocity));
-			m_numMoveStepForward = 0;
-		}
-		else if (m_ctrlPressed)
-		{
-			translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelFastVelocity));
-			m_numMoveStepForward = 0;
+			Transform t = get_global_transform();
+			if (m_shiftPressed)
+			{
+				t.origin += Vector3(0, 0, m_numMoveStepForward * m_wheelSlowVelocity);
+			}
+			else if (m_ctrlPressed)
+			{
+				t.origin += Vector3(0, 0, m_numMoveStepForward * m_wheelFastVelocity);
+			}
+			else
+			{
+				t.origin += Vector3(0, 0, m_numMoveStepForward * m_wheelNormalVelocity);
+			}
+			set_global_transform(t);
 		}
 		else
 		{
-			translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelNormalVelocity));
-			m_numMoveStepForward = 0;
+			if (m_shiftPressed)
+			{
+				translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelSlowVelocity));
+			}
+			else if (m_ctrlPressed)
+			{
+				translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelFastVelocity));
+			}
+			else
+			{
+				translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelNormalVelocity));
+			}
 		}
+		m_numMoveStepForward = 0;
 	}
 
 	if (m_numMoveStepLeft)
 	{
-		if (m_shiftPressed)
+		if (m_altPressed)
 		{
-			translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelSlowVelocity, 0, 0));
-			m_numMoveStepLeft = 0;
-		}
-		else if (m_ctrlPressed)
-		{
-			translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelFastVelocity, 0, 0));
-			m_numMoveStepLeft = 0;
+			Transform t = get_global_transform();
+			if (m_shiftPressed)
+			{
+				t.origin += Vector3(-m_numMoveStepLeft * m_wheelSlowVelocity, 0, 0);
+			}
+			else if (m_ctrlPressed)
+			{
+				t.origin += Vector3(-m_numMoveStepLeft * m_wheelFastVelocity, 0, 0);
+			}
+			else
+			{
+				t.origin += Vector3(-m_numMoveStepLeft * m_wheelNormalVelocity, 0, 0);
+			}
+			set_global_transform(t);
 		}
 		else
 		{
-			translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelNormalVelocity, 0, 0));
-			m_numMoveStepLeft = 0;
+			if (m_shiftPressed)
+			{
+				translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelSlowVelocity, 0, 0));
+			}
+			else if (m_ctrlPressed)
+			{
+				translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelFastVelocity, 0, 0));
+			}
+			else
+			{
+				translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelNormalVelocity, 0, 0));
+			}
 		}
+		m_numMoveStepLeft = 0;
+	}
+
+	if (m_numMoveStepUp)
+	{
+		Transform t = get_global_transform();
+		if (m_shiftPressed)
+		{
+			t.origin += Vector3(0, m_numMoveStepUp * m_wheelSlowVelocity, 0);
+			//translate_object_local(Vector3(0, m_numMoveStepUp * m_wheelSlowVelocity, 0));
+		}
+		else if (m_ctrlPressed)
+		{
+			t.origin += Vector3(0, m_numMoveStepUp * m_wheelFastVelocity, 0);
+			//translate_object_local(Vector3(0, m_numMoveStepUp * m_wheelFastVelocity, 0));
+		}
+		else
+		{
+			t.origin += Vector3(0, m_numMoveStepUp * m_wheelNormalVelocity, 0);
+			//translate_object_local(Vector3(0, m_numMoveStepUp * m_wheelNormalVelocity, 0));
+		}
+		set_global_transform(t);
+		m_numMoveStepUp = 0;
 	}
 
 	return true;
