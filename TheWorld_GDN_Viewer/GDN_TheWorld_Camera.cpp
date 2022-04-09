@@ -51,6 +51,7 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	m_shiftVertCameraOn = false;
 	m_shiftPressed = false;
 	m_ctrlPressed = false;
+	m_altPressed = false;
 	m_rotateCameraOn = false;
 	m_mouseRelativePosToShiftOriz = Vector2(0, 0);
 	m_mouseRelativePosToShiftVert = Vector2(0, 0);
@@ -152,6 +153,11 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 		m_ctrlPressed = true;
 	else
 		m_ctrlPressed = false;
+
+	if (input->is_action_pressed("ui_alt"))
+		m_altPressed = true;
+	else
+		m_altPressed = false;
 
 	if (input->is_action_pressed("ui_forward"))
 	{

@@ -68,6 +68,7 @@ namespace godot {
 		bool m_rotateCameraOn;
 		bool m_shiftPressed;
 		bool m_ctrlPressed;
+		bool m_altPressed;
 		bool m_forwardMovementOn;
 		bool m_backwardMovementOn;
 		bool m_leftMovementOn;

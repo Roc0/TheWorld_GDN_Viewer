@@ -67,7 +67,7 @@ namespace godot
 			WireframeOnAABB = 1,
 			WireframeSquare = 2
 		};
-		static ChunkDebugMode toggleChunkDebugMode(ChunkDebugMode mode)
+		static ChunkDebugMode rotateChunkDebugMode(ChunkDebugMode mode)
 		{
 			if (mode == GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
 				return GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB;

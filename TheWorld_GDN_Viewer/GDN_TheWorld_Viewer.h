@@ -68,8 +68,11 @@ namespace godot
 		int getNumSplits(void);
 		int getNumJoins(void);
 		int getNumChunks(void);
-		GDN_TheWorld_Globals::ChunkDebugMode getChunkDebugMode(void) { return m_chunkDebugMode; }
-		int getChunkDebugModeInt(void) { return (int)m_chunkDebugMode; }
+		GDN_TheWorld_Globals::ChunkDebugMode getRequiredChunkDebugMode(void)
+		{
+			return m_requiredChunkDebugMode;
+		}
+		String getChunkDebugModeStr(void);
 		bool getDebugVisibility(void) { return m_debugVisibility; }
 		String getDebugDrawMode(void);
 
@@ -94,7 +97,8 @@ namespace godot
 
 		bool m_debugVisibility;
 		bool m_updateTerrainVisibilityRequired;
-		enum class GDN_TheWorld_Globals::ChunkDebugMode m_chunkDebugMode;
+		enum class GDN_TheWorld_Globals::ChunkDebugMode m_currentChunkDebugMode;
+		enum class GDN_TheWorld_Globals::ChunkDebugMode m_requiredChunkDebugMode;
 		bool m_updateDebugModeRequired;
 		Viewport::DebugDraw m_debugDraw;
 

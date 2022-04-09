@@ -22,7 +22,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	m_lod = lod;
 	m_isCameraVerticalOnChunk = false;
 	m_viewer = viewer;
-	m_debugMode = m_viewer->getChunkDebugMode();
+	m_debugMode = m_viewer->getRequiredChunkDebugMode();
 	m_debugVisibility = m_viewer->getDebugVisibility();
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	m_numVerticesPerChuckSide = globals->numVerticesPerChuckSide();
@@ -103,6 +103,16 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 	m_mesh = mesh;
 }
 
+bool Chunk::isMeshNull(void)
+{
+	return (m_meshRID == RID() ? true : false);
+}
+
+bool Chunk::isDebugMeshNull(void)
+{
+	return true;
+}
+
 void Chunk::enterWorld(void)
 {
 	assert(m_meshInstance != RID());
@@ -117,7 +127,7 @@ void Chunk::exitWorld(void)
 	VisualServer::get_singleton()->instance_set_scenario(m_meshInstance, RID());
 }
 
-void Chunk::parentTransformChanged(Transform parentT)
+void Chunk::setTransform(Transform parentT)
 {
 	assert(m_meshInstance != RID());
 
@@ -369,9 +379,9 @@ Transform ChunkDebug::getDebugMeshGlobalTransform(void)
 	return worldTransform;
 }
 
-void ChunkDebug::parentTransformChanged(Transform parentT)
+void ChunkDebug::setTransform(Transform parentT)
 {
-	Chunk::parentTransformChanged(parentT);
+	Chunk::setTransform(parentT);
 
 	assert(m_debugMeshInstance != RID());
 
@@ -434,6 +444,11 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 	
 	m_debugMeshRID = meshRID;
 	m_debugMesh = mesh;
+}
+
+bool ChunkDebug::isDebugMeshNull(void)
+{
+	return (m_debugMeshRID == RID() ? true : false);
 }
 
 void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos)

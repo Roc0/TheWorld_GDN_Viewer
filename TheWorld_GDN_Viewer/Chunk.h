@@ -124,7 +124,7 @@ namespace godot
 			virtual ~TransformChangedChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
-				chunk->parentTransformChanged(m_globalT);
+				chunk->setTransform(m_globalT);
 			}
 		private:
 			Transform m_globalT;
@@ -218,7 +218,7 @@ namespace godot
 		// Actions
 		virtual void enterWorld(void);
 		virtual void exitWorld(void);
-		virtual void parentTransformChanged(Transform t);
+		virtual void setTransform(Transform t);
 		virtual void setVisible(bool b);
 		virtual void setDebugVisibility(bool b);
 		virtual void applyAABB(void);
@@ -230,6 +230,8 @@ namespace godot
 		virtual Transform getDebugMeshGlobalTransform(void);
 		virtual Transform getDebugMeshGlobalTransformApplied(void);
 		virtual AABB getDebugMeshAABB(void) { return AABB(); };
+		virtual bool isMeshNull(void);
+		virtual bool isDebugMeshNull(void);
 
 		virtual void update(bool isVsisible);
 		bool isActive(void) { return m_active; }
@@ -301,7 +303,7 @@ namespace godot
 
 		virtual void enterWorld(void);
 		virtual void exitWorld(void);
-		virtual void parentTransformChanged(Transform parentT);
+		virtual void setTransform(Transform parentT);
 		virtual void setVisible(bool b);
 		virtual void setDebugVisibility(bool b);
 		virtual void applyAABB(void);
@@ -313,6 +315,7 @@ namespace godot
 		virtual Transform getDebugMeshGlobalTransform(void);
 		virtual Transform getDebugMeshGlobalTransformApplied(void);
 		virtual AABB getDebugMeshAABB(void) { return m_debugMeshAABB; };
+		virtual bool isDebugMeshNull(void);
 
 	private:
 		void setDebugMesh(Ref<Mesh> mesh);

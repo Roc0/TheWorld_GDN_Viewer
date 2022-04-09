@@ -40,7 +40,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_num_joins", &GDN_TheWorld_Viewer::getNumJoins);
 	register_method("get_num_chunks", &GDN_TheWorld_Viewer::getNumChunks);
 	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
-	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeInt);
+	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -59,9 +59,10 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_timeElapsedFromLastDump = 0;
 	m_debugVisibility = true;
 	m_updateTerrainVisibilityRequired = false;
-	m_chunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB;
-	m_debugDraw = Viewport::DebugDraw::DEBUG_DRAW_DISABLED;
+	m_currentChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
+	m_requiredChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
 	m_updateDebugModeRequired = false;
+	m_debugDraw = Viewport::DebugDraw::DEBUG_DRAW_DISABLED;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -120,10 +121,10 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 		m_updateTerrainVisibilityRequired = true;
 	}
 	
-	if (event->is_action_pressed("ui_toggle_debug_mode"))
+	if (event->is_action_pressed("ui_rotate_chunk_debug_mode"))
 	{
 
-		m_chunkDebugMode = GDN_TheWorld_Globals::toggleChunkDebugMode(m_chunkDebugMode);
+		m_requiredChunkDebugMode = GDN_TheWorld_Globals::rotateChunkDebugMode(m_currentChunkDebugMode);
 		m_updateDebugModeRequired = true;
 	}
 	if (event->is_action_pressed("ui_dump"))
@@ -199,6 +200,20 @@ String GDN_TheWorld_Viewer::getDebugDrawMode(void)
 		return "DEBUG_DRAW_OVERDRAW";
 	else 	if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_WIREFRAME)
 		return "DEBUG_DRAW_WIREFRAME";
+	else
+		return "";
+}
+
+String GDN_TheWorld_Viewer::getChunkDebugModeStr(void)
+{
+	if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::DoNotSet)
+		return "CHUNK_DEBUG_MODE_DO_NOT_SET";
+	else 	if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
+		return "CHUNK_DEBUG_MODE_NO_DEBUG";
+	else 	if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB)
+		return "CHUNK_DEBUG_MODE_WIREFRAME_AABB";
+	else 	if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
+		return "CHUNK_DEBUG_MODE_WIREFRAME_SQUARE";
 	else
 		return "";
 }
@@ -364,8 +379,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	{
 		if (m_quadTree && m_initialWordlViewerPosSet)
 		{
-			Chunk::SwitchDebugModeAction action(m_chunkDebugMode);
+			Chunk::SwitchDebugModeAction action(m_requiredChunkDebugMode);
 			m_quadTree->ForAllChunk(action);
+			m_currentChunkDebugMode = m_requiredChunkDebugMode;
 		}
 		m_updateDebugModeRequired = false;
 	}
@@ -577,7 +593,7 @@ void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
 
 AABB GDN_TheWorld_Viewer::getCameraChunkLocalAABB(void)
 {
-	if (m_cameraChunk)
+	if (m_cameraChunk && !m_cameraChunk->isMeshNull())
 		return m_cameraChunk->getAABB();
 	else
 		return AABB();
@@ -585,7 +601,7 @@ AABB GDN_TheWorld_Viewer::getCameraChunkLocalAABB(void)
 
 AABB GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB(void)
 {
-	if (m_cameraChunk)
+	if (m_cameraChunk && !m_cameraChunk->isDebugMeshNull())
 		return m_cameraChunk->getDebugMeshAABB();
 	else
 		return AABB();
@@ -593,7 +609,7 @@ AABB GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB(void)
 
 Transform GDN_TheWorld_Viewer::getCameraChunkMeshGlobalTransformApplied(void)
 {
-	if (m_cameraChunk)
+	if (m_cameraChunk && !m_cameraChunk->isMeshNull())
 		return m_cameraChunk->getMeshGlobalTransformApplied();
 	else
 		return Transform();
@@ -601,7 +617,7 @@ Transform GDN_TheWorld_Viewer::getCameraChunkMeshGlobalTransformApplied(void)
 
 Transform GDN_TheWorld_Viewer::getCameraChunkDebugMeshGlobalTransformApplied(void)
 {
-	if (m_cameraChunk)
+	if (m_cameraChunk && !m_cameraChunk->isDebugMeshNull())
 		return m_cameraChunk->getDebugMeshGlobalTransformApplied();
 	else
 		return Transform();
