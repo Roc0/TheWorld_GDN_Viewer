@@ -49,6 +49,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_firstProcess = true;
 	m_initialWordlViewerPosSet = false;
 	m_dumpRequired = false;
+	m_refreshRequired = false;
 	m_worldViewerLevel = 0;
 	m_worldCamera = nullptr;
 	m_cameraChunk = nullptr;
@@ -127,16 +128,23 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 		m_requiredChunkDebugMode = GDN_TheWorld_Globals::rotateChunkDebugMode(m_currentChunkDebugMode);
 		m_updateDebugModeRequired = true;
 	}
-	if (event->is_action_pressed("ui_dump"))
-	{
-		m_dumpRequired = true;
-	}
+	
 	if (event->is_action_pressed("ui_rotate_drawing_mode"))
 	{
 		Viewport* vp = get_viewport();
 		Viewport::DebugDraw dd = vp->get_debug_draw();
 		vp->set_debug_draw((dd + 1) % 4);
 		m_debugDraw = vp->get_debug_draw();
+	}
+
+	if (event->is_action_pressed("ui_dump"))
+	{
+		m_dumpRequired = true;
+	}
+
+	if (event->is_action_pressed("ui_refresh"))
+	{
+		m_refreshRequired = true;
 	}
 }
 
@@ -277,6 +285,14 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	m_quadTree->update(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);
 
+	if (m_refreshRequired)
+	{
+		Chunk::RefreshChunkAction action(is_visible_in_tree());
+		m_quadTree->ForAllChunk(action);
+		m_refreshRequired = false;
+	}
+
+	
 	// All chunk that need an update (they are chunk that got split or joined)
 	std::vector<Chunk*> vectChunkUpdate = m_quadTree->getChunkUpdate();
 

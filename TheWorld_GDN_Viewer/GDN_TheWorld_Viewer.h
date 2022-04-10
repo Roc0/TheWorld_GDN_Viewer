@@ -97,10 +97,14 @@ namespace godot
 
 		bool m_debugVisibility;
 		bool m_updateTerrainVisibilityRequired;
+		
 		enum class GDN_TheWorld_Globals::ChunkDebugMode m_currentChunkDebugMode;
 		enum class GDN_TheWorld_Globals::ChunkDebugMode m_requiredChunkDebugMode;
 		bool m_updateDebugModeRequired;
+		
 		Viewport::DebugDraw m_debugDraw;
+
+		bool m_refreshRequired;
 
 		RID m_viewFrustumMeshInstance;
 		RID m_viewFrustumMeshRID;

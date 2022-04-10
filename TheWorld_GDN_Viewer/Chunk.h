@@ -142,6 +142,19 @@ namespace godot
 		private:
 		};
 
+		class RefreshChunkAction : public ChunkAction
+		{
+		public:
+			RefreshChunkAction(bool isVisible) { m_isVisible = isVisible; }
+			virtual ~RefreshChunkAction() {}
+			virtual void exec(Chunk* chunk)
+			{
+				chunk->refresh(m_isVisible);
+			}
+		private:
+			bool m_isVisible;
+		};
+
 		class ChunkPos
 		{
 		public:
@@ -232,8 +245,9 @@ namespace godot
 		virtual AABB getDebugMeshAABB(void) { return AABB(); };
 		virtual bool isMeshNull(void);
 		virtual bool isDebugMeshNull(void);
+		virtual void refresh(bool isVisible);
+		virtual void update(bool isVisible);
 
-		virtual void update(bool isVsisible);
 		bool isActive(void) { return m_active; }
 		void setActive(bool b);
 		bool isVisible(void) { return m_visible; }
@@ -316,6 +330,8 @@ namespace godot
 		virtual Transform getDebugMeshGlobalTransformApplied(void);
 		virtual AABB getDebugMeshAABB(void) { return m_debugMeshAABB; };
 		virtual bool isDebugMeshNull(void);
+		virtual void refresh(bool isVisible);
+		virtual void update(bool isVisible);
 
 	private:
 		void setDebugMesh(Ref<Mesh> mesh);

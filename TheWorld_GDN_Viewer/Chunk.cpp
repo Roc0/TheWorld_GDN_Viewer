@@ -184,6 +184,21 @@ void Chunk::update(bool isVisible)
 	setPendingUpdate(false);
 }
 
+void Chunk::refresh(bool isVisible)
+{
+	if (!isActive())
+		return;
+	
+	// if neeed the AABB can be re-computed
+	//m_viewer->getPartialAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGVs);
+	//m_gridRelativeAABB = m_aabb;
+	//m_aabb.position.x = 0;	// AABB is relative to the chunk
+	//m_aabb.position.z = 0;
+
+	setMesh(nullptr);
+	m_viewer->getQuadTree()->addChunkUpdate(this);
+}
+
 void Chunk::setVisible(bool b)
 {
 	assert(m_meshInstance != RID());
@@ -359,6 +374,18 @@ void ChunkDebug::exitWorld(void)
 	
 	assert(m_debugMeshInstance != RID());
 	VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstance, RID());
+}
+
+void ChunkDebug::refresh(bool isVisible)
+{
+	Chunk::refresh(isVisible);
+	setDebugMesh(nullptr);
+	m_debugMeshAABB = m_aabb;
+}
+
+void ChunkDebug::update(bool isVisible)
+{
+	Chunk::update(isVisible);
 }
 
 //Transform ChunkDebug::getGlobalTransformOfAABB(void)
