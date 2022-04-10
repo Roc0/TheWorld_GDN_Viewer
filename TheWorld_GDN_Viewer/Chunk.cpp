@@ -433,7 +433,10 @@ void ChunkDebug::setVisible(bool b)
 	if (!isActive())
 		b = false;
 
-	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstance, m_debugVisibility);
+	if (!m_debugVisibility)
+		b = false;
+
+	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstance, b);
 }
 
 void ChunkDebug::setDebugVisibility(bool b)
