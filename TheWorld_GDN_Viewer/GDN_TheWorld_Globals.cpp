@@ -40,14 +40,28 @@ namespace godot
 		m_bAppInError = false;
 		m_lastErrorCode = 0;
 
+		assert(resize(THEWORLD_VIEWER_CHUNK_SIZE_SHIFT, THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT, true));
+
 		m_mapManager = NULL;
 
-		m_numVerticesPerChuckSide = 1 << THEWORLD_VIEWER_CHUNK_SIZE_SHIFT;
-		m_bitmapResolution = 1 << THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT;
-		m_lodMaxDepth = THEWORLD_VIEWER_BITMAP_RESOLUTION_SHIFT - THEWORLD_VIEWER_CHUNK_SIZE_SHIFT;
-		m_numLods = m_lodMaxDepth + 1;
-
 		m_viewer = NULL;
+	}
+
+	bool GDN_TheWorld_Globals::resize(int chunkSizeShift, int heightmapResolutionShift, bool force)
+	{
+		if (chunkSizeShift == -1 || heightmapResolutionShift == -1)
+			return false;
+
+		if (!force && m_chunkSizeShift == chunkSizeShift && m_heightmapResolutionShift == heightmapResolutionShift)
+			return false;
+
+		m_chunkSizeShift = chunkSizeShift;
+		m_heightmapResolutionShift = heightmapResolutionShift;
+		m_numVerticesPerChuckSide = 1 << m_chunkSizeShift;
+		m_heightmapResolution = 1 << m_heightmapResolutionShift;
+		m_lodMaxDepth = m_heightmapResolutionShift - m_chunkSizeShift;
+		m_numLods = m_lodMaxDepth + 1;
+		return true;
 	}
 
 	void GDN_TheWorld_Globals::init(void)

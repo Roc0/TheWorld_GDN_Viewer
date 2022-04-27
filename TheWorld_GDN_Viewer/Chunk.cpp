@@ -26,9 +26,9 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	m_debugVisibility = m_viewer->getDebugVisibility();
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	m_numVerticesPerChuckSide = globals->numVerticesPerChuckSide();
-	m_numChunksPerWorldGridSide = globals->numChunksPerBitmapSide(m_lod);
-	m_gridStepInGridInWGVs = globals->gridStepInBitmap(m_lod);
-	m_gridStepInWUs = globals->gridStepInBitmapWUs(m_lod);
+	m_numChunksPerWorldGridSide = globals->numChunksPerHeightmapSide(m_lod);
+	m_gridStepInGridInWGVs = globals->gridStepInHeightmap(m_lod);
+	m_gridStepInWUs = globals->gridStepInHeightmapWUs(m_lod);
 	m_chunkSizeInWGVs = m_numVerticesPerChuckSide * m_gridStepInGridInWGVs;
 	m_chunkSizeInWUs = m_numVerticesPerChuckSide * m_gridStepInWUs;
 	m_originXInGridInWGVs = m_slotPosX * m_numVerticesPerChuckSide * m_gridStepInGridInWGVs;

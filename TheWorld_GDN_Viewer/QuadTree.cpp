@@ -93,7 +93,7 @@ void Quad::assignChunk(void)
 		// TODORIC Material stuff
 
 		// create chunk for current quad because this is the first time that is needed for current lod and pos
-		Ref<Material> mat;
+		Ref<Material> mat = m_viewer->getShaderTerrainData().getMaterial();
 		if (_DEBUG_AAB)
 			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
 		else
@@ -321,8 +321,8 @@ void QuadTree::dump(void)
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 
 	globals->debugPrint(String("Num vertices per chunk side: ") + String(to_string(globals->numVerticesPerChuckSide()).c_str())
-				+ String(" - ") + String("Num vertices pert grid size: ") + String(to_string(globals->bitmapResolution()).c_str())
-				+ String(" - ") + String("Grid size [WUs]: ") + String(to_string(globals->bitmapSizeInWUs()).c_str())
+				+ String(" - ") + String("Num vertices pert grid size: ") + String(to_string(globals->heightmapResolution()).c_str())
+				+ String(" - ") + String("Grid size [WUs]: ") + String(to_string(globals->heightmapSizeInWUs()).c_str())
 				+ String(" - ") + String("Lod max depth: ") + String(to_string(globals->lodMaxDepth()).c_str()));
 
 	globals->debugPrint(String("FROM LAST DUMP - Num quad split: ") + String(to_string(m_numSplits).c_str())

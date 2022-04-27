@@ -1,0 +1,119 @@
+IMPORTANTE ==> Sezione Procedural generation https://hterrain-plugin.readthedocs.io/en/latest/
+
+Shader ==> Simple4.shader
+
+const CHANNEL_HEIGHT = 0
+const CHANNEL_NORMAL = 1
+const CHANNEL_SPLAT = 2
+const CHANNEL_COLOR = 3
+const CHANNEL_DETAIL = 4
+const CHANNEL_GLOBAL_ALBEDO = 5
+const CHANNEL_SPLAT_INDEX = 6
+const CHANNEL_SPLAT_WEIGHT = 7
+const CHANNEL_COUNT = 8
+
+const _map_types = {
+	CHANNEL_HEIGHT: {
+		name = "height",
+		shader_param_name = "u_terrain_heightmap",
+		texture_flags = Texture.FLAG_FILTER,
+		texture_format = Image.FORMAT_RH,
+		default_fill = null,
+		default_count = 1,
+		can_be_saved_as_png = false,
+		authored = true,
+		srgb = false
+	},
+	CHANNEL_NORMAL: {
+		name = "normal",
+		shader_param_name = "u_terrain_normalmap",
+		texture_flags = Texture.FLAG_FILTER,
+		texture_format = Image.FORMAT_RGB8,
+		default_fill = Color(0.5, 0.5, 1.0),
+		default_count = 1,
+		can_be_saved_as_png = true,
+		authored = false,
+		srgb = false
+	},
+	CHANNEL_SPLAT: {
+		name = "splat",
+		shader_param_name = [
+			"u_terrain_splatmap", # not _0 for compatibility
+			"u_terrain_splatmap_1",
+			"u_terrain_splatmap_2",
+			"u_terrain_splatmap_3"
+		],
+		texture_flags = Texture.FLAG_FILTER,
+		texture_format = Image.FORMAT_RGBA8,
+		default_fill = [Color(1, 0, 0, 0), Color(0, 0, 0, 0)],
+		default_count = 1,
+		can_be_saved_as_png = true,
+		authored = true,
+		srgb = false
+	},
+	CHANNEL_COLOR: {
+		name = "color",
+		shader_param_name = "u_terrain_colormap",
+		texture_flags = Texture.FLAG_FILTER,
+		texture_format = Image.FORMAT_RGBA8,
+		default_fill = Color(1, 1, 1, 1),
+		default_count = 1,
+		can_be_saved_as_png = true,
+		authored = true,
+		srgb = true
+	},
+	CHANNEL_DETAIL: {
+		name = "detail",
+		shader_param_name = "u_terrain_detailmap",
+		texture_flags = Texture.FLAG_FILTER,
+		texture_format = Image.FORMAT_R8,
+		default_fill = Color(0, 0, 0),
+		default_count = 0,
+		can_be_saved_as_png = true,
+		authored = true,
+		srgb = false
+	},
+	CHANNEL_GLOBAL_ALBEDO: {
+		name = "global_albedo",
+		shader_param_name = "u_terrain_globalmap",
+		texture_flags = Texture.FLAG_FILTER | Texture.FLAG_MIPMAPS,
+		texture_format = Image.FORMAT_RGB8,
+		default_fill = null,
+		default_count = 0,
+		can_be_saved_as_png = true,
+		authored = false,
+		srgb = true
+	},
+	CHANNEL_SPLAT_INDEX: {
+		name = "splat_index",
+		shader_param_name = "u_terrain_splat_index_map",
+		texture_flags = 0,
+		texture_format = Image.FORMAT_RGB8,
+		default_fill = Color(0, 0, 0),
+		default_count = 0,
+		can_be_saved_as_png = true,
+		authored = true,
+		srgb = false
+	},
+	CHANNEL_SPLAT_WEIGHT: {
+		name = "splat_weight",
+		shader_param_name = "u_terrain_splat_weight_map",
+		texture_flags = Texture.FLAG_FILTER,
+		texture_format = Image.FORMAT_RG8,
+		default_fill = Color(1, 0, 0),
+		default_count = 0,
+		can_be_saved_as_png = true,
+		authored = true,
+		srgb = false
+	}
+}
+
+hterrain_data.gd
+	_import_heightmap
+	_import_map
+
+	_upload_region
+		dal tipo Image crea la Texture con "texture.create_from_image(image, flags)"
+	_update_material_params
+		invoca in _process se _material_params_need_update = true
+		aggiorna le uniform

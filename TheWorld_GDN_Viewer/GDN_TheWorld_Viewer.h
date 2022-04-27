@@ -5,6 +5,9 @@
 #include <Reference.hpp>
 #include <InputEvent.hpp>
 #include <Mesh.hpp>
+#include <ShaderMaterial.hpp>
+#include <Image.hpp>
+#include <Texture.hpp>
 
 #include <memory>
 
@@ -29,6 +32,44 @@ namespace godot
 	{
 		GODOT_CLASS(GDN_TheWorld_Viewer, Spatial)
 
+		class ShaderTerrainData
+		{
+// Shader Params
+#define SHADER_PARAM_TERRAIN_HEIGHTMAP "u_terrain_heightmap"
+#define SHADER_PARAM_INVERSE_TRANSFORM "u_terrain_inverse_transform"
+#define SHADER_PARAM_NORMAL_BASIS "u_terrain_normal_basis"
+		public:
+			ShaderTerrainData();
+			~ShaderTerrainData();
+			void init(GDN_TheWorld_Viewer *viewer);
+			bool materialParamsNeedUpdate(void) { return m_materialParamsNeedUpdate; }
+			void materialParamsNeedUpdate(bool b) { m_materialParamsNeedUpdate = b; }
+			void updateMaterialParams(void);
+			void resetMaterialParams(void);
+			Ref<Material> getMaterial(void) { return m_material; };
+
+		private:
+			GDN_TheWorld_Viewer* m_viewer;
+			Ref<ShaderMaterial> m_material;
+			bool m_materialParamsNeedUpdate;
+			
+			Ref<Image> m_heightMapImage;
+			Ref<Texture> m_heightMapTexture;
+			bool m_heightMapImageModified;
+			
+			Ref<Image> m_normalMapImage;
+			Ref<Texture> m_normalMapTexture;
+			bool m_normalMapImageModified;
+			
+			Ref<Image> m_splat1MapImage;
+			Ref<Texture> m_splat1MapTexture;
+			bool m_splat1MapImageModified;
+
+			Ref<Image> m_colorMapImage;
+			Ref<Texture> m_colorMapTexture;
+			bool m_colorMapImageModified;
+		};
+	
 	public:
 		GDN_TheWorld_Viewer();
 		~GDN_TheWorld_Viewer();
@@ -48,7 +89,7 @@ namespace godot
 		void _notification(int p_what);
 
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
-		void resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level);
+		void resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift);
 		Spatial* getWorldNode(void);
 		QuadTree* getQuadTree(void) { return m_quadTree.get(); }
 		MeshCache* getMeshCache(void) { return m_meshCache.get(); }
@@ -75,6 +116,7 @@ namespace godot
 		String getChunkDebugModeStr(void);
 		bool getDebugVisibility(void) { return m_debugVisibility; }
 		String getDebugDrawMode(void);
+		ShaderTerrainData& getShaderTerrainData(void) { return m_shaderTerrainData; }
 
 	private:
 		void onTransformChanged(void);
@@ -94,6 +136,7 @@ namespace godot
 		int64_t m_timeElapsedFromLastDump;
 		bool m_initialWordlViewerPosSet;
 		bool m_dumpRequired;
+		Vector3 m_mapScaleVector;
 
 		bool m_debugVisibility;
 		bool m_updateTerrainVisibilityRequired;
@@ -106,14 +149,13 @@ namespace godot
 
 		bool m_refreshRequired;
 
-		RID m_viewFrustumMeshInstance;
-		RID m_viewFrustumMeshRID;
-		Ref<Mesh> m_viewFrustumMesh;
+		//RID m_viewFrustumMeshInstance;
+		//RID m_viewFrustumMeshRID;
+		//Ref<Mesh> m_viewFrustumMesh;
 
+		// QuadTree / Chunks
 		std::unique_ptr<MeshCache> m_meshCache;
 		std::unique_ptr<QuadTree> m_quadTree;
-
-		Vector3 m_mapScaleVector;
 
 		// Viewer (Camera)
 		int m_worldViewerLevel;		// actually world viewer manage one level at the time, otherwise we should have multiple quadtrees
@@ -124,6 +166,9 @@ namespace godot
 		std::vector<TheWorld_MapManager::SQLInterface::GridVertex> m_worldVertices;
 		int m_numWorldVerticesX;
 		int m_numWorldVerticesZ;
+
+		// Shader Data
+		ShaderTerrainData m_shaderTerrainData;
 
 		// Node cache
 		GDN_TheWorld_Globals* m_globals;

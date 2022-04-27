@@ -8,6 +8,9 @@
 #include <OS.hpp>
 #include <Input.hpp>
 #include <VisualServer.hpp>
+#include <ResourceLoader.hpp>
+#include <Shader.hpp>
+#include <ImageTexture.hpp>
 
 #include "MeshCache.h"
 #include "QuadTree.h"
@@ -77,6 +80,7 @@ void GDN_TheWorld_Viewer::deinit(void)
 	{
 		PLOGI << "TheWorld Viewer Deinitializing...";
 
+		m_worldVertices.clear();
 		m_quadTree.reset();
 		m_meshCache.reset();
 		
@@ -233,6 +237,8 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_meshCache = make_unique<MeshCache>(this);
 	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 
+	m_shaderTerrainData.init(this);
+	
 	m_initialized = true;
 	PLOGI << "TheWorld Viewer Initialized!";
 
@@ -292,93 +298,79 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		m_refreshRequired = false;
 	}
 
-	
-	// All chunk that need an update (they are chunk that got split or joined)
-	std::vector<Chunk*> vectChunkUpdate = m_quadTree->getChunkUpdate();
-
-	// Forcing update to all neighboring chunks to readjust the seams
-	std::vector<Chunk*> vectAdditionalUpdateChunk;
-	for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
+	// Update chunks
 	{
-		if (!(*it)->isActive())
-			continue;
-		
-		Chunk::ChunkPos pos = (*it)->getPos();
+		// All chunk that need an update (they are chunk that got split or joined)
+		std::vector<Chunk*> vectChunkUpdate = m_quadTree->getChunkUpdate();
 
-		// In case the chunk got split forcing update to left, right, bottom, top chunks
-		Chunk* chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Left);
-		if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-			vectAdditionalUpdateChunk.push_back(chunk);
-		chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Right);
-		if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-			vectAdditionalUpdateChunk.push_back(chunk);
-		chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Bottom);
-		if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-			vectAdditionalUpdateChunk.push_back(chunk);
-		chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Top);
-		if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-			vectAdditionalUpdateChunk.push_back(chunk);
-
-		// In case the chunk got joined
-		int lod = pos.getLod();
-		if (lod > 0 && (*it)->gotJustJoined())
+		// Forcing update to all neighboring chunks to readjust the seams
+		std::vector<Chunk*> vectAdditionalUpdateChunk;
+		for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
 		{
-			(*it)->setJustJoined(false);
+			if (!(*it)->isActive())
+				continue;
 
-			Chunk::ChunkPos pos1(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::LeftTop);
+			Chunk::ChunkPos pos = (*it)->getPos();
+
+			// In case the chunk got split forcing update to left, right, bottom, top chunks
+			Chunk* chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Left);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
-			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::LeftBottom);
+			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Right);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
-			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::RightTop);
+			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Bottom);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
-			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::RightBottom);
+			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Top);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				vectAdditionalUpdateChunk.push_back(chunk);
-			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::BottomLeft);
-			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				vectAdditionalUpdateChunk.push_back(chunk);
-			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::BottomRight);
-			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				vectAdditionalUpdateChunk.push_back(chunk);
-			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::TopLeft);
-			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				vectAdditionalUpdateChunk.push_back(chunk);
-			chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::TopRight);
-			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				vectAdditionalUpdateChunk.push_back(chunk);
+
+			// In case the chunk got joined
+			int lod = pos.getLod();
+			if (lod > 0 && (*it)->gotJustJoined())
+			{
+				(*it)->setJustJoined(false);
+
+				Chunk::ChunkPos pos1(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::LeftTop);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					vectAdditionalUpdateChunk.push_back(chunk);
+				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::LeftBottom);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					vectAdditionalUpdateChunk.push_back(chunk);
+				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::RightTop);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					vectAdditionalUpdateChunk.push_back(chunk);
+				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::RightBottom);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					vectAdditionalUpdateChunk.push_back(chunk);
+				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::BottomLeft);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					vectAdditionalUpdateChunk.push_back(chunk);
+				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::BottomRight);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					vectAdditionalUpdateChunk.push_back(chunk);
+				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::TopLeft);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					vectAdditionalUpdateChunk.push_back(chunk);
+				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::TopRight);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					vectAdditionalUpdateChunk.push_back(chunk);
+			}
+			// Anycase clear flag just joined
+			if ((*it)->gotJustJoined())
+				(*it)->setJustJoined(false);
 		}
-		// Anycase clear flag just joined
-		if ((*it)->gotJustJoined())
-			(*it)->setJustJoined(false);
-	}
 
-	for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
-		(*it)->update(is_visible_in_tree());
+		for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
+			(*it)->update(is_visible_in_tree());
 
-	for (std::vector<Chunk*>::iterator it = vectAdditionalUpdateChunk.begin(); it != vectAdditionalUpdateChunk.end(); it++)
-		(*it)->update(is_visible_in_tree());
+		for (std::vector<Chunk*>::iterator it = vectAdditionalUpdateChunk.begin(); it != vectAdditionalUpdateChunk.end(); it++)
+			(*it)->update(is_visible_in_tree());
 
-	m_quadTree->clearChunkUpdate();
-	vectAdditionalUpdateChunk.clear();
-
-	// Check for Dump
-	if (TIME_INTERVAL_BETWEEN_DUMP != 0 && Globals()->isDebugEnabled())
-	{
-		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
-		if (timeElapsed - m_timeElapsedFromLastDump > TIME_INTERVAL_BETWEEN_DUMP * 1000)
-		{
-			m_dumpRequired = true;
-			m_timeElapsedFromLastDump = timeElapsed;
-		}
-	}
-	if (m_dumpRequired)
-	{
-		m_dumpRequired = false;
-		dump();
+		m_quadTree->clearChunkUpdate();
+		vectAdditionalUpdateChunk.clear();
 	}
 
 	if (m_updateTerrainVisibilityRequired)
@@ -400,6 +392,28 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			m_currentChunkDebugMode = m_requiredChunkDebugMode;
 		}
 		m_updateDebugModeRequired = false;
+	}
+
+	if (m_shaderTerrainData.materialParamsNeedUpdate())
+	{
+		m_shaderTerrainData.updateMaterialParams();
+		m_shaderTerrainData.materialParamsNeedUpdate(false);
+	}
+	
+	// Check for Dump
+	if (TIME_INTERVAL_BETWEEN_DUMP != 0 && Globals()->isDebugEnabled())
+	{
+		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
+		if (timeElapsed - m_timeElapsedFromLastDump > TIME_INTERVAL_BETWEEN_DUMP * 1000)
+		{
+			m_dumpRequired = true;
+			m_timeElapsedFromLastDump = timeElapsed;
+		}
+	}
+	if (m_dumpRequired)
+	{
+		m_dumpRequired = false;
+		dump();
 	}
 }
 
@@ -448,7 +462,8 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 	try
 	{
 		float gridStepInWU;
-		m_numWorldVerticesX = m_numWorldVerticesZ = Globals()->bitmapResolution() + 1;
+		m_numWorldVerticesX = m_numWorldVerticesZ = Globals()->heightmapResolution() + 1;
+		m_worldVertices.clear();
 		Globals()->mapManager()->getVertices(x, z, TheWorld_MapManager::MapManager::anchorType::center, m_numWorldVerticesX, m_numWorldVerticesZ, m_worldVertices, gridStepInWU, level);
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
@@ -468,7 +483,7 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 	}
 }
 
-void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level)
+void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift)
 {
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -480,6 +495,20 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 
 	try
 	{
+		bool changed = Globals()->resize(chunkSizeShift, heightmapResolutionShift);
+		if (changed)
+		{
+			if (m_meshCache)
+				m_meshCache.reset();
+			m_meshCache = make_unique<MeshCache>(this);
+			m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
+		}
+
+		if (m_quadTree)
+			m_quadTree.reset();
+		//m_quadTree = make_unique<QuadTree>(this);
+		//m_quadTree->init();
+
 		loadWorldData(x, z, level);
 
 		TheWorld_MapManager::SQLInterface::GridVertex viewerPos(x, z, level);
@@ -499,10 +528,7 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 		
 		WorldCamera()->initCameraInWorld(cameraPos, lookAt);
 
-		if (m_quadTree)
-			m_quadTree.reset();
-		//m_quadTree = make_unique<QuadTree>(this);
-		//m_quadTree->init();
+		m_shaderTerrainData.resetMaterialParams();
 
 		m_initialWordlViewerPosSet = true;
 	}
@@ -581,8 +607,11 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 	Chunk::TransformChangedChunkAction action(gt);
 	m_quadTree->ForAllChunk(action);
 
-	// TODORIC Material stuff
-	//_material_params_need_update = true
+	m_shaderTerrainData.materialParamsNeedUpdate(true);
+
+	// TODORIC Collider stuff
+	//_if _collider != null:
+	//	_collider.set_transform(gt)
 }
 
 void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
@@ -673,3 +702,149 @@ void GDN_TheWorld_Viewer::dump()
 	Globals()->debugPrint("DUMP COMPLETE");
 	Globals()->debugPrint("*************");
 }
+
+GDN_TheWorld_Viewer::ShaderTerrainData::ShaderTerrainData()
+{
+	m_viewer = nullptr;
+	m_materialParamsNeedUpdate = false;
+	m_heightMapImageModified = false;
+	m_normalMapImageModified = false;
+	m_splat1MapImageModified = false;
+	m_colorMapImageModified = false;
+}
+
+GDN_TheWorld_Viewer::ShaderTerrainData::~ShaderTerrainData()
+{
+}
+
+void GDN_TheWorld_Viewer::ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer)
+{
+	m_viewer = viewer;
+	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
+	ResourceLoader* resLoader = ResourceLoader::get_singleton();
+	Ref<Shader> shader = resLoader->load("res://shaders/lookdev.shader");
+	mat->set_shader(shader);
+
+	m_material = mat;
+}
+
+// it is expected that globals and World Datas are loaded
+// TODORIC: maybe usefull for performance reasons specify which texture need update and which rect of the texture 
+void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
+{
+	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
+
+	// Creating Heightmap Map Texture
+	{
+		Ref<Image> image = Image::_new();
+		image->create(_resolution, _resolution, false, Image::FORMAT_RH);
+		m_heightMapImage = image;
+		image.unref();
+	}
+
+	// Creating Normal Map Texture
+	{
+		Ref<Image> image = Image::_new();
+		image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+		image->fill(Color(0.5, 0.5, 1.0));
+		m_normalMapImage = image;
+		image.unref();
+	}
+
+	// Creating Splat Map Texture
+	{
+		Ref<Image> image = Image::_new();
+		image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+		image->fill(Color(1, 0, 0, 0));
+		m_splat1MapImage = image;
+		image.unref();
+	}
+
+	// Creating Color Map Texture
+	{
+		Ref<Image> image = Image::_new();
+		image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+		image->fill(Color(1, 1, 1, 1));
+		m_colorMapImage = image;
+		image.unref();
+	}
+
+	// _update_all_vertical_bounds ???	// TODORIC
+	//	# RGF image where R is min heightand G is max height
+	//	var _chunked_vertical_bounds : = Image.new()	// _chunked_vertical_bounds.create(csize_x, csize_y, false, Image.FORMAT_RGF)
+	//	_update_vertical_bounds(0, 0, _resolution - 1, _resolution - 1)
+
+	// Filling Heightmap Map Texture
+	{
+		assert(_resolution == m_heightMapImage->get_height());
+		assert(_resolution == m_heightMapImage->get_width());
+		assert(_resolution == m_viewer->m_numWorldVerticesX);
+		assert(_resolution == m_viewer->m_numWorldVerticesZ);
+		m_heightMapImage->lock();
+		for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
+			for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
+			{
+				float h = m_viewer->m_worldVertices[z * _resolution + x].altitude();
+				//if (h != 0) m_viewer->Globals()->debugPrint("Altitude not null.X=" 
+				//	+ String(std::to_string(x).c_str()) + " Z=" + String(std::to_string(z).c_str()) + " H=" + String(std::to_string(h).c_str()));
+				m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
+			}
+		m_heightMapImage->unlock();
+		Ref<ImageTexture> tex = ImageTexture::_new();
+		tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
+		m_heightMapTexture = tex;
+		m_heightMapImageModified = true;
+	}
+
+	// Filling Normal Map Texture
+	{
+		//Ref<ImageTexture> tex = ImageTexture::_new();
+		//tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
+		//m_normalMapTexture = tex;
+		//m_normalMapImageModified = true;
+	}
+
+	// Filling Splat Map Texture
+	{
+		//Ref<ImageTexture> tex = ImageTexture::_new();
+		//tex->create_from_image(m_splat1MapImage, Texture::FLAG_FILTER);
+		//m_splat1MapTexture = tex;
+		//m_splat1MapImageModified = true;
+	}
+
+	// Filling Color Map Texture
+	{
+		//Ref<ImageTexture> tex = ImageTexture::_new();
+		//tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
+		//m_colorMapTexture = tex;
+		//m_colorMapImageModified = true;
+	}
+
+	materialParamsNeedUpdate(true);
+}
+
+void GDN_TheWorld_Viewer::ShaderTerrainData::updateMaterialParams(void)
+{
+	// Comletare da _update_material_params
+	m_viewer->Globals()->debugPrint("Updating terrain material params");
+
+	if (m_viewer->is_inside_tree())
+	{
+		Transform globalTransform = m_viewer->internalTransformGlobalCoord();
+		
+		Transform t = globalTransform.affine_inverse();
+		m_material->set_shader_param(SHADER_PARAM_INVERSE_TRANSFORM, t);
+
+		Basis b = globalTransform.basis.inverse().transposed();
+		m_material->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
+
+		if (m_heightMapImageModified)
+		{
+			m_material->set_shader_param(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
+			m_heightMapImageModified = false;
+		}
+
+		//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
+	}
+}
+
