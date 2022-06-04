@@ -20,6 +20,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	m_slotPosX = slotPosX;
 	m_slotPosZ = slotPosZ;
 	m_lod = lod;
+	m_posInQuad = PosInQuad::NotSet;
 	m_isCameraVerticalOnChunk = false;
 	m_viewer = viewer;
 	m_debugMode = m_viewer->getRequiredChunkDebugMode();
@@ -167,19 +168,50 @@ void Chunk::update(bool isVisible)
 
 	// Seams are against grater chunks (greater lod)
 	ChunkPos posGreaterLodIfGotJoined(m_slotPosX / 2, m_slotPosZ / 2, m_lod + 1);
-	
-	Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::Left);
-	if (chunk != nullptr && chunk->isActive())
-		seams |= SEAM_LEFT;
-	chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::Right);
-	if (chunk != nullptr && chunk->isActive())
-		seams |= SEAM_RIGHT;
-	chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::Bottom);
-	if (chunk != nullptr && chunk->isActive())
-		seams |= SEAM_BOTTOM;
-	chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::Top);
-	if (chunk != nullptr && chunk->isActive())
-		seams |= SEAM_TOP;
+
+	switch (m_posInQuad)
+	{
+	case PosInQuad::First:
+	{
+		Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::XMinusChunk);
+		if (chunk != nullptr && chunk->isActive())
+			seams |= SEAM_LEFT;
+		chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::ZMinusChunk);
+		if (chunk != nullptr && chunk->isActive())
+			seams |= SEAM_BOTTOM;
+	}
+	break;
+	case PosInQuad::Second:
+	{
+		Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::XPlusChunk);
+		if (chunk != nullptr && chunk->isActive())
+			seams |= SEAM_RIGHT;
+		chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::ZMinusChunk);
+		if (chunk != nullptr && chunk->isActive())
+			seams |= SEAM_BOTTOM;
+	}
+	break;
+	case PosInQuad::Third:
+	{
+		Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::XMinusChunk);
+		if (chunk != nullptr && chunk->isActive())
+			seams |= SEAM_LEFT;
+		chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::ZPlusChunk);
+		if (chunk != nullptr && chunk->isActive())
+			seams |= SEAM_TOP;
+	}
+	break;
+	case PosInQuad::Forth:
+	{
+		Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::XPlusChunk);
+		if (chunk != nullptr && chunk->isActive())
+			seams |= SEAM_RIGHT;
+		chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::ZPlusChunk);
+		if (chunk != nullptr && chunk->isActive())
+			seams |= SEAM_TOP;
+	}
+	break;
+	}
 
 	setMesh(m_viewer->getMeshCache()->getMesh(seams, m_lod));
 	applyDebugMesh();

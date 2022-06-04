@@ -19,7 +19,8 @@ namespace godot
 	class Quad
 	{
 	public:
-		Quad(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Chunk* chunk = nullptr);
+
+		Quad(int slotPosX, int slotPosZ, int lod, enum PosInQuad posInQuad, GDN_TheWorld_Viewer* viewer);
 		~Quad();
 
 		int slotPosX()
@@ -47,6 +48,7 @@ namespace godot
 		void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
 
 	private:
+		enum PosInQuad m_posInQuad;
 		std::array<std::unique_ptr<Quad>, 4> m_children;
 		Chunk* m_chunk;
 		int m_slotPosX;	// express the orizzontal (X) and vertical (Z) position of the quad (and of the corrispondig chunk) in the grid of chunks

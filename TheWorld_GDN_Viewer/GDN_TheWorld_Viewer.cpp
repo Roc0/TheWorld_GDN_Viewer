@@ -315,38 +315,38 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			Chunk::ChunkPos pos = (*it)->getPos();
 
 			// In case the chunk got split forcing update to left, right, bottom, top chunks
-			Chunk* chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Left);
+			Chunk* chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);		// x lessening
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 			{
 				//
-				// - x
+				// - o
 				//
 				chunk->setPendingUpdate(true);
 				vectAdditionalUpdateChunk.push_back(chunk);
 			}
-			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Right);
+			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);			// x growing
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 			{
 				//
-				//   x -
+				//   o -
 				//
 				chunk->setPendingUpdate(true);
 				vectAdditionalUpdateChunk.push_back(chunk);
 			}
-			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Bottom);
+			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 			{
 				//   -
-				//   x
+				//   o
 				//
 				chunk->setPendingUpdate(true);
 				vectAdditionalUpdateChunk.push_back(chunk);
 			}
-			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Top);
+			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 			{
 				//
-				//   x
+				//   o
 				//   -
 				chunk->setPendingUpdate(true);
 				vectAdditionalUpdateChunk.push_back(chunk);
@@ -359,84 +359,84 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				(*it)->setJustJoined(false);
 
 				Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-				//	x o
-				//	o o
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::LeftTop);
+				//	o =
+				//	= =
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XMinusQuadSecondChunk);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				{
 					//  
-					//	- x o
-					//	  o o
+					//	- o =
+					//	  = =
 					//  
 					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
 				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::LeftBottom);
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XMinusQuadForthChunk);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				{
 					//  
-					//	  x o
-					//	- o o
+					//	  o =
+					//	- = =
 					//  
 					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
 				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::RightTop);
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XPlusQuadFirstChunk);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				{
 					//  
-					//	  x o -
-					//	  o o
+					//	  o = -
+					//	  = =
 					//  
 					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
 				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::RightBottom);
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XPlusQuadThirdChunk);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				{
 					//  
-					//	  x o 
-					//	  o o -
+					//	  o = 
+					//	  = = -
 					//  
 					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
 				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::BottomLeft);
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZMinusQuadThirdChunk);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				{
 					//    -
-					//	  x o
-					//	  o o
+					//	  o =
+					//	  = =
 					//    
 					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
 				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::BottomRight);
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZMinusQuadForthChunk);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				{
 					//      -
-					//	  x o
-					//	  o o
+					//	  o =
+					//	  = =
 					//    
 					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
 				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::TopLeft);
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZPlusQuadFirstChunk);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				{
 					//    
-					//	  x o
-					//	  o o
+					//	  o =
+					//	  = =
 					//    -
 					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
 				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::TopRight);
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZPlusQuadSecondChunk);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 				{
 					//      
-					//	  x o
-					//	  o o
+					//	  o =
+					//	  = =
 					//      -
 					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);

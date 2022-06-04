@@ -2,4 +2,4 @@
 set curpath=%~dp0
 cd /D %curpath%
 
-git add . && git commit -m "initial commit"
+git add . && git commit -m wip

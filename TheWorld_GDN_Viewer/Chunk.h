@@ -19,24 +19,109 @@ namespace godot
 
 	class GDN_TheWorld_Viewer;
 
+	enum class PosInQuad
+	{
+		NotSet,
+
+		//  
+		//	o =
+		//	= =
+		//  
+		First,
+
+		//  
+		//	= o
+		//	= =
+		//  
+		Second,
+
+		//  
+		//	= =
+		//	o =
+		//  
+		Third,
+
+		//  
+		//	= =
+		//	= o
+		//  
+		Forth
+	};
+
 	class Chunk
 	{
 	public:
 		enum class DirectionSlot
 		{
 			Center = -1,
-			Left = 0,
-			Right = 1,
-			Bottom = 2,
-			Top = 3,
-			LeftTop = 4,
-			LeftBottom = 5,
-			RightTop = 6,
-			RightBottom = 7,
-			BottomLeft = 8,
-			BottomRight = 9,
-			TopLeft = 10,
-			TopRight = 11
+
+			//
+			// - o
+			//
+			XMinusChunk = 0,
+
+			//
+			//   o -
+			//
+			XPlusChunk = 1,
+
+			//   -
+			//   o
+			//
+			ZMinusChunk = 2,
+
+			//
+			//   o
+			//   -
+			ZPlusChunk = 3,
+
+			//  
+			//	- o =
+			//	  = =
+			//  
+			XMinusQuadSecondChunk = 4,
+
+			//  
+			//	  o =
+			//	- = =
+			//  
+			XMinusQuadForthChunk = 5,
+
+			//  
+			//	  o = -
+			//	  = =
+			//  
+			XPlusQuadFirstChunk = 6,
+
+			//  
+			//	  o = 
+			//	  = = -
+			//  
+			XPlusQuadThirdChunk = 7,
+
+			//    -
+			//	  o =
+			//	  = =
+			//    
+			ZMinusQuadThirdChunk = 8,
+
+			//      -
+			//	  o =
+			//	  = =
+			//    
+			ZMinusQuadForthChunk = 9,
+
+			//    
+			//	  o =
+			//	  = =
+			//    -
+			ZPlusQuadFirstChunk = 10,
+
+			//      
+			//	  o =
+			//	  = =
+			//      -
+			ZPlusQuadSecondChunk = 11
 		};
 
 		class ChunkAction
@@ -263,11 +348,13 @@ namespace godot
 		bool isCameraVerticalOnChunk(void) { return m_isCameraVerticalOnChunk; }
 		Transform getGlobalTransform(void);
 		Transform getMeshGlobalTransformApplied(void);
+		void setPosInQuad(enum PosInQuad posInQuad) { m_posInQuad = posInQuad; };
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
 
 	protected:
+		enum PosInQuad m_posInQuad;
 		GDN_TheWorld_Viewer* m_viewer;
 		Transform m_parentTransform;
 		AABB m_aabb;						// AABB of the chunk in WUs relative to the chunk so X and Z are 0

@@ -10,19 +10,19 @@ using namespace godot;
 
 // QuadTree coordinates are local to Viewer Node which contains the grid of quads: the first chunk (posX = posZ = 0) has its lower vertex in the origin of the Viwer Node
 
-Quad::Quad(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Chunk* chunk)
+Quad::Quad(int slotPosX, int slotPosZ, int lod, enum PosInQuad posInQuad, GDN_TheWorld_Viewer* viewer)
 {
 	m_slotPosX = slotPosX;
 	m_slotPosZ = slotPosZ;
-	m_chunk = chunk;
 	m_lod = lod;
+	m_posInQuad = posInQuad;
 	m_viewer = viewer;
+	m_chunk = nullptr;
 	m_chunkSizeInWUs = 0;
 
 	m_quadTree = m_viewer->getQuadTree();
 	
-	if (m_chunk == nullptr)
-		assignChunk();
+	assignChunk();
 }
 
 Quad::~Quad()
@@ -50,9 +50,9 @@ void Quad::split(void)
 	
 	for (int i = 0; i < 4; i++)
 	{
-		int x = (m_slotPosX * 2) + (i & 1);
-		int y = (m_slotPosZ * 2) + ((i & 2) >> 1);
-		m_children[i] = make_unique<Quad>((m_slotPosX * 2) + (i & 1), (m_slotPosZ * 2) + ((i & 2) >> 1), m_lod - 1, m_viewer);
+		//int x = (m_slotPosX * 2) + (i & 1);
+		//int z = (m_slotPosZ * 2) + ((i & 2) >> 1);
+		m_children[i] = make_unique<Quad>((m_slotPosX * 2) + (i & 1), (m_slotPosZ * 2) + ((i & 2) >> 1), m_lod - 1, enum PosInQuad(i + 1), m_viewer);
 	}
 	
 	recycleChunk();
@@ -62,6 +62,7 @@ void Quad::recycleChunk(void)
 {
 	if (m_chunk)
 	{
+		m_chunk->setPosInQuad(PosInQuad::NotSet);
 		m_chunk->setVisible(false);
 		m_chunk->setActive(false);
 		m_chunk = nullptr;
@@ -102,7 +103,7 @@ void Quad::assignChunk(void)
 		m_chunk->setParentGlobalTransform(m_viewer->internalTransformGlobalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}
-
+	m_chunk->setPosInQuad(m_posInQuad);
 	m_quadTree->addChunkUpdate(m_chunk);
 	m_chunk->setActive(true);
 	m_chunkAABB = m_chunk->getAABB();
@@ -129,7 +130,7 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer)
 
 void QuadTree::init(void)
 {
-	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), m_viewer);
+	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::NotSet, m_viewer);
 }
 
 QuadTree::~QuadTree()
@@ -230,40 +231,92 @@ Chunk* QuadTree::getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot
 	case Chunk::DirectionSlot::Center:
 		chunk = getChunkAt(pos);
 		break;
-	case Chunk::DirectionSlot::Left:
+	case Chunk::DirectionSlot::XMinusChunk:
+		//
+		// - o
+		//
 		chunk = getChunkAt(pos + Chunk::ChunkPos(-1, 0, -1));
 		break;
-	case Chunk::DirectionSlot::Right:
+	case Chunk::DirectionSlot::XPlusChunk:
+		//
+		//   o -
+		//
 		chunk = getChunkAt(pos + Chunk::ChunkPos(1, 0, -1));
 		break;
-	case Chunk::DirectionSlot::Bottom:
+	case Chunk::DirectionSlot::ZMinusChunk:
+		//   -
+		//   o
+		//
 		chunk = getChunkAt(pos + Chunk::ChunkPos(0, -1, -1));
 		break;
-	case Chunk::DirectionSlot::Top:
+	case Chunk::DirectionSlot::ZPlusChunk:
+		//
+		//   o
+		//   -
 		chunk = getChunkAt(pos + Chunk::ChunkPos(0, 1, -1));
 		break;
-	case Chunk::DirectionSlot::LeftTop:
+	case Chunk::DirectionSlot::XMinusQuadSecondChunk:
+		//  
+		//	- o =
+		//	  = =
+		//  
+		// assuming pos is the first chunk of the quad
 		chunk = getChunkAt(pos + Chunk::ChunkPos(-1, 0, -1));
 		break;
-	case Chunk::DirectionSlot::LeftBottom:
+	case Chunk::DirectionSlot::XMinusQuadForthChunk:
+		//  
+		//	  o =
+		//	- = =
+		//  
+		// assuming pos is the first chunk of the quad
 		chunk = getChunkAt(pos + Chunk::ChunkPos(-1, 1, -1));
 		break;
-	case Chunk::DirectionSlot::RightTop:
+	case Chunk::DirectionSlot::XPlusQuadFirstChunk:
+		//  
+		//	  o = -
+		//	  = =
+		//  
+		// assuming pos is the first chunk of the quad
 		chunk = getChunkAt(pos + Chunk::ChunkPos(2, 0, -1));
 		break;
-	case Chunk::DirectionSlot::RightBottom:
+	case Chunk::DirectionSlot::XPlusQuadThirdChunk:
+		//  
+		//	  o = 
+		//	  = = -
+		//  
+		// assuming pos is the first chunk of the quad
 		chunk = getChunkAt(pos + Chunk::ChunkPos(2, 1, -1));
 		break;
-	case Chunk::DirectionSlot::BottomLeft:
+	case Chunk::DirectionSlot::ZMinusQuadThirdChunk:
+		//    -
+		//	  o =
+		//	  = =
+		//    
+		// assuming pos is the first chunk of the quad
 		chunk = getChunkAt(pos + Chunk::ChunkPos(0, -1, -1));
 		break;
-	case Chunk::DirectionSlot::BottomRight:
+	case Chunk::DirectionSlot::ZMinusQuadForthChunk:
+		//      -
+		//	  o =
+		//	  = =
+		//    
+		// assuming pos is the first chunk of the quad
 		chunk = getChunkAt(pos + Chunk::ChunkPos(1, -1, -1));
 		break;
-	case Chunk::DirectionSlot::TopLeft:
+	case Chunk::DirectionSlot::ZPlusQuadFirstChunk:
+		//    
+		//	  o =
+		//	  = =
+		//    -
+		// assuming pos is the first chunk of the quad
 		chunk = getChunkAt(pos + Chunk::ChunkPos(0, 2, -1));
 		break;
-	case Chunk::DirectionSlot::TopRight:
+	case Chunk::DirectionSlot::ZPlusQuadSecondChunk:
+		//      
+		//	  o =
+		//	  = =
+		//      -
+		// assuming pos is the first chunk of the quad
 		chunk = getChunkAt(pos + Chunk::ChunkPos(1, 2, -1));
 		break;
 	//default:
