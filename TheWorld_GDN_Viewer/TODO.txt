@@ -1,5 +1,7 @@
 IMPORTANTE ==> Sezione Procedural generation https://hterrain-plugin.readthedocs.io/en/latest/
 
+https://stackoverflow.com/questions/49640250/calculate-normals-from-heightmap?msclkid=c51d7c0ececc11ec92fddcf92fd6c6a6
+
 Shader ==> Simple4.shader
 
 const CHANNEL_HEIGHT = 0

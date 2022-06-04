@@ -28,6 +28,11 @@
 namespace godot
 {
 
+	static bool equal(Vector3 v1, Vector3 v2, const float epsilon = 0.00001)
+	{
+		return ::equal((float)v1.x, (float)v2.x, epsilon) && ::equal((float)v1.y, (float)v2.y, epsilon) && ::equal((float)v1.z, (float)v2.z, epsilon);
+	}
+
 	class GDN_TheWorld_Viewer;
 	class TheWorld_MapManager::MapManager;
 
@@ -201,6 +206,11 @@ namespace godot
 			return m_numVerticesPerChuckSide; /* m_numVerticesPerChuckSide = 32 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 */
 		}	// Chunk num vertices -1
 		
+		float gridStepInWU(void)
+		{
+			return m_mapManager->gridStepInWU();
+		}
+			
 		// Number of vertices of the side of the heightmap (-1) with the elevations which is fixed and is a multiple of the number of vertices of the side of a chunk (numVerticesPerChuckSide) and is for this a multiple of 2 too
 		int heightmapResolution(void) { return m_heightmapResolution; /* m_heightmapResolution = 1024 con THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10 */ }	// Resolution of the heightmap = num point of the heightmap -1;
 		// Size of the heightmap in WUs

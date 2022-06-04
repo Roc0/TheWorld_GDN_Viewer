@@ -45,6 +45,9 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	m_justJoined = false;
 	m_matOverride = mat;
 
+	//float m_originXInWUsGlobal = m_viewer->get_global_transform().origin.x + m_originXInWUsLocalToGrid;
+	//float m_originZInWUsGlobal = m_viewer->get_global_transform().origin.z + m_originZInWUsLocalToGrid;
+
 	m_viewer->getPartialAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGVs);
 	m_gridRelativeAABB = m_aabb;
 	m_aabb.position.x = 0;	// AABB is relative to the chunk
@@ -127,7 +130,7 @@ void Chunk::exitWorld(void)
 	VisualServer::get_singleton()->instance_set_scenario(m_meshInstance, RID());
 }
 
-void Chunk::setTransform(Transform parentT)
+void Chunk::setParentGlobalTransform(Transform parentT)
 {
 	assert(m_meshInstance != RID());
 
@@ -161,19 +164,21 @@ void Chunk::update(bool isVisible)
 	
 	int seams = 0;
 	QuadTree* tree = m_viewer->getQuadTree();
-	ChunkPos posGreaterLod(m_slotPosX / 2, m_slotPosZ / 2, m_lod + 1);
+
+	// Seams are against grater chunks (greater lod)
+	ChunkPos posGreaterLodIfGotJoined(m_slotPosX / 2, m_slotPosZ / 2, m_lod + 1);
 	
-	Chunk* chunk = tree->getChunkAt(posGreaterLod, Chunk::DirectionSlot::Left);
-	if (chunk && chunk->isActive())
+	Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::Left);
+	if (chunk != nullptr && chunk->isActive())
 		seams |= SEAM_LEFT;
-	chunk = tree->getChunkAt(posGreaterLod, Chunk::DirectionSlot::Right);
-	if (chunk && chunk->isActive())
+	chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::Right);
+	if (chunk != nullptr && chunk->isActive())
 		seams |= SEAM_RIGHT;
-	chunk = tree->getChunkAt(posGreaterLod, Chunk::DirectionSlot::Bottom);
-	if (chunk && chunk->isActive())
+	chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::Bottom);
+	if (chunk != nullptr && chunk->isActive())
 		seams |= SEAM_BOTTOM;
-	chunk = tree->getChunkAt(posGreaterLod, Chunk::DirectionSlot::Top);
-	if (chunk && chunk->isActive())
+	chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::Top);
+	if (chunk != nullptr && chunk->isActive())
 		seams |= SEAM_TOP;
 
 	setMesh(m_viewer->getMeshCache()->getMesh(seams, m_lod));
@@ -275,7 +280,8 @@ void Chunk::getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globa
 Transform Chunk::getGlobalTransform(void)
 {
 	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
-	return m_parentTransform * Transform(Basis(), pos + m_aabb.position);
+	return m_parentTransform * Transform(Basis(), pos);
+	//return m_parentTransform * Transform(Basis(), pos + m_aabb.position);
 }
 
 Transform Chunk::getMeshGlobalTransformApplied(void)
@@ -406,9 +412,9 @@ Transform ChunkDebug::getDebugMeshGlobalTransform(void)
 	return worldTransform;
 }
 
-void ChunkDebug::setTransform(Transform parentT)
+void ChunkDebug::setParentGlobalTransform(Transform parentT)
 {
-	Chunk::setTransform(parentT);
+	Chunk::setParentGlobalTransform(parentT);
 
 	assert(m_debugMeshInstance != RID());
 
@@ -492,6 +498,17 @@ void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 gl
 	
 	if (isCameraVerticalOnChunk() != prevCameraVerticalOnChunk)
 	{
+		float globalOriginXInGridInWUs = m_viewer->get_global_transform().origin.x + m_originXInWUsLocalToGrid;
+		float globalOriginZInGridInWUs = m_viewer->get_global_transform().origin.z + m_originZInWUsLocalToGrid;
+
+		m_viewer->Globals()->debugPrint("Camera vertical on chunk ("
+			+ String(to_string(getPos().getSlotPosX()).c_str()) + ":" + to_string(getPos().getSlotPosZ()).c_str()
+			+ ") - Chunk pos (Global) = "
+			+ to_string(globalOriginXInGridInWUs).c_str() + ":" + to_string(globalOriginZInGridInWUs).c_str()
+			+ " - MinH = " + to_string(m_aabb.position.y).c_str()
+			+ " - MaxH = " + to_string((m_aabb.position + m_aabb.size).y).c_str()
+			+ " - Chunk Size in WUs = " + to_string(getChunkSizeInWUs()).c_str()
+		);
 		applyDebugMesh();
 		applyAABB();
 	}

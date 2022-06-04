@@ -195,7 +195,8 @@ void makeFlatChunk_makeIndices(godot::PoolIntArray& indices, int numVerticesPerC
 
 			int ixz00 = vertexIndex;											// current vertex
 			int ixz10 = vertexIndex + 1;										// next vertex
-			int ixz01 = vertexIndex + numberOfColumnsOfRegularTriangles + 1;	// same vertex on next row
+			//int ixz01 = vertexIndex + numberOfColumnsOfRegularTriangles + 1;	// same vertex on next row
+			int ixz01 = vertexIndex + numVerticesPerChuckSide + 1;	// same vertex on next row
 			int ixz11 = ixz01 + 1;												// next vertex
 
 			// second triangle

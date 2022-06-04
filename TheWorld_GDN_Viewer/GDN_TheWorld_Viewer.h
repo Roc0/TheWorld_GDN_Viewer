@@ -36,6 +36,8 @@ namespace godot
 		{
 // Shader Params
 #define SHADER_PARAM_TERRAIN_HEIGHTMAP "u_terrain_heightmap"
+#define SHADER_PARAM_TERRAIN_NORMALMAP "u_terrain_normalmap"
+#define SHADER_PARAM_TERRAIN_COLORMAP "u_terrain_colormap"
 #define SHADER_PARAM_INVERSE_TRANSFORM "u_terrain_inverse_transform"
 #define SHADER_PARAM_NORMAL_BASIS "u_terrain_normal_basis"
 		public:
@@ -47,6 +49,10 @@ namespace godot
 			void updateMaterialParams(void);
 			void resetMaterialParams(void);
 			Ref<Material> getMaterial(void) { return m_material; };
+
+		private:
+			void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
+			Color encodeNormal(Vector3 normal);
 
 		private:
 			GDN_TheWorld_Viewer* m_viewer;

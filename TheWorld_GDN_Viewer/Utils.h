@@ -75,7 +75,7 @@ static bool isNan(float f) {
 
 // Robust floating point comparisons:
 // http://realtimecollisiondetection.net/blog/?p=89
-static bool equal(const float f0, const float f1, const float epsilon) {
+static bool equal(const float f0, const float f1, const float epsilon = 0.00001) {
 	//return fabs(f0-f1) <= epsilon;
 	return fabs(f0 - f1) <= epsilon * max3(1.0f, fabsf(f0), fabsf(f1));
 }

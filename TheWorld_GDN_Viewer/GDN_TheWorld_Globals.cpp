@@ -78,6 +78,8 @@ namespace godot
 		m_mapManager->instrument(true);
 		m_mapManager->consoleDebugMode(false);
 
+		setDebugEnabled(m_isDebugEnabled);
+
 		m_initialized = true;
 		PLOGI << "TheWorld Globals Initialized!";
 	}

@@ -11,6 +11,7 @@
 #include <ResourceLoader.hpp>
 #include <Shader.hpp>
 #include <ImageTexture.hpp>
+#include <File.hpp>
 
 #include "MeshCache.h"
 #include "QuadTree.h"
@@ -18,6 +19,7 @@
 #include <algorithm>
 
 using namespace godot;
+using namespace std;
 
 // World Node Local Coordinate System is the same as MapManager coordinate system
 // Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -315,16 +317,40 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			// In case the chunk got split forcing update to left, right, bottom, top chunks
 			Chunk* chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Left);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+			{
+				//
+				// - x
+				//
+				chunk->setPendingUpdate(true);
 				vectAdditionalUpdateChunk.push_back(chunk);
+			}
 			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Right);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+			{
+				//
+				//   x -
+				//
+				chunk->setPendingUpdate(true);
 				vectAdditionalUpdateChunk.push_back(chunk);
+			}
 			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Bottom);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+			{
+				//   -
+				//   x
+				//
+				chunk->setPendingUpdate(true);
 				vectAdditionalUpdateChunk.push_back(chunk);
+			}
 			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::Top);
 			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+			{
+				//
+				//   x
+				//   -
+				chunk->setPendingUpdate(true);
 				vectAdditionalUpdateChunk.push_back(chunk);
+			}
 
 			// In case the chunk got joined
 			int lod = pos.getLod();
@@ -332,31 +358,89 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			{
 				(*it)->setJustJoined(false);
 
-				Chunk::ChunkPos pos1(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::LeftTop);
+				Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+				//	x o
+				//	o o
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::LeftTop);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//  
+					//	- x o
+					//	  o o
+					//  
+					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
-				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::LeftBottom);
+				}
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::LeftBottom);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//  
+					//	  x o
+					//	- o o
+					//  
+					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
-				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::RightTop);
+				}
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::RightTop);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//  
+					//	  x o -
+					//	  o o
+					//  
+					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
-				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::RightBottom);
+				}
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::RightBottom);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//  
+					//	  x o 
+					//	  o o -
+					//  
+					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
-				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::BottomLeft);
+				}
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::BottomLeft);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//    -
+					//	  x o
+					//	  o o
+					//    
+					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
-				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::BottomRight);
+				}
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::BottomRight);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//      -
+					//	  x o
+					//	  o o
+					//    
+					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
-				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::TopLeft);
+				}
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::TopLeft);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//    
+					//	  x o
+					//	  o o
+					//    -
+					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
-				chunk = m_quadTree->getChunkAt(pos1, Chunk::DirectionSlot::TopRight);
+				}
+				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::TopRight);
 				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//      
+					//	  x o
+					//	  o o
+					//      -
+					chunk->setPendingUpdate(true);
 					vectAdditionalUpdateChunk.push_back(chunk);
+				}
 			}
 			// Anycase clear flag just joined
 			if ((*it)->gotJustJoined())
@@ -465,6 +549,22 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 		m_numWorldVerticesX = m_numWorldVerticesZ = Globals()->heightmapResolution() + 1;
 		m_worldVertices.clear();
 		Globals()->mapManager()->getVertices(x, z, TheWorld_MapManager::MapManager::anchorType::center, m_numWorldVerticesX, m_numWorldVerticesZ, m_worldVertices, gridStepInWU, level);
+		/*{
+			ResourceLoader* resLoader = ResourceLoader::get_singleton();
+			Ref<Image> image = resLoader->load("res://height.res");
+			int res = (int)image->get_width();
+			assert(res == Globals()->heightmapResolution() + 1);
+			float gridStepInWUs = Globals()->gridStepInWU();
+			for (int pz = 0; pz < res; pz++)
+				for (int px = 0; px < res; px++)
+				{
+					Color c = image->get_pixel(px, pz);
+					if (c != Color(0, 0, 0))
+						Globals()->debugPrint("Color " + String(c));
+					m_worldVertices[px + pz * res].setAltitude(c.r);
+				}
+			Globals()->debugPrint("Fine!");
+		}*/
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
@@ -723,7 +823,7 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer)
 	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
 	Ref<Shader> shader = resLoader->load("res://shaders/lookdev.shader");
-	mat->set_shader(shader);
+	//mat->set_shader(shader);	// SUPER DEBUGRIC
 
 	m_material = mat;
 }
@@ -739,16 +839,118 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 		Ref<Image> image = Image::_new();
 		image->create(_resolution, _resolution, false, Image::FORMAT_RH);
 		m_heightMapImage = image;
-		image.unref();
 	}
 
 	// Creating Normal Map Texture
 	{
 		Ref<Image> image = Image::_new();
 		image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
-		image->fill(Color(0.5, 0.5, 1.0));
 		m_normalMapImage = image;
-		image.unref();
+	}
+
+	{
+		// Filling Heightmap Map Texture , Normal Map Texture
+		assert(_resolution == m_heightMapImage->get_height());
+		assert(_resolution == m_heightMapImage->get_width());
+		assert(_resolution == m_viewer->m_numWorldVerticesX);
+		assert(_resolution == m_viewer->m_numWorldVerticesZ);
+		float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
+		m_heightMapImage->lock();
+		m_normalMapImage->lock();
+		for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
+			for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
+			{
+				float h = m_viewer->m_worldVertices[z * _resolution + x].altitude();
+				m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
+				//if (h != 0)	// DEBUGRIC
+				//	m_viewer->Globals()->debugPrint("Altitude not null.X=" + String(std::to_string(x).c_str()) + " Z=" + std::to_string(z).c_str() + " H=" + std::to_string(h).c_str());
+
+				// h = height of the point for which we are computing the normal
+				// hr = height of the point on the rigth
+				// hl = height of the point on the left
+				// hf = height of the forward point (z growing)
+				// hb = height of the backward point (z lessening)
+				// step = step in WUs between points
+				// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
+				// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
+				Vector3 normal;
+				Vector3 P((float)x, h, (float)z);
+				if (x < _resolution - 1 && z < _resolution - 1)
+				{
+					float hr = m_viewer->m_worldVertices[z * _resolution + x + 1].altitude();
+					float hf = m_viewer->m_worldVertices[(z + 1) * _resolution + x].altitude();
+					normal = Vector3(h - hr, gridStepInWUs, h - hf).normalized();
+					/*{
+						Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
+						Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
+						Vector3 normal1 = (PF - P).cross(PR - P).normalized();
+						if (!equal(normal1, normal))	// DEBUGRIC
+							m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+					}*/
+				}
+				else
+				{
+					if (x == _resolution - 1 && z == 0)
+					{
+						float hf = m_viewer->m_worldVertices[(z + 1) * _resolution + x].altitude();
+						float hl = m_viewer->m_worldVertices[z * _resolution + x - 1].altitude();
+						normal = Vector3(hl - h, gridStepInWUs, h - hf).normalized();
+						/*{
+							Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
+							Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
+							Vector3 normal1 = (PL - P).cross(PF - P).normalized();
+							if (!equal(normal1, normal))	// DEBUGRIC
+								m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+						}*/
+					}
+					else if (x == 0 && z == _resolution - 1)
+					{
+						float hr = m_viewer->m_worldVertices[z * _resolution + x + 1].altitude();
+						float hb = m_viewer->m_worldVertices[(z - 1) * _resolution + x].altitude();
+						normal = Vector3(h - hr, gridStepInWUs, hb - h).normalized();
+						/*{
+							Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
+							Vector3 PB((float)(x), hb, (float)(z - gridStepInWUs));
+							Vector3 normal1 = (PR - P).cross(PB - P).normalized();
+							if (!equal(normal1, normal))	// DEBUGRIC
+								m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+						}*/
+					}
+					else
+					{
+						float hl = m_viewer->m_worldVertices[z * _resolution + x - 1].altitude();
+						float hb = m_viewer->m_worldVertices[(z - 1) * _resolution + x].altitude();
+						normal = Vector3(hl - h, gridStepInWUs, hb - h).normalized();
+						/*{
+							Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));
+							Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
+							Vector3 normal1 = (PB - P).cross(PL - P).normalized();
+							if (!equal(normal1, normal))	// DEBUGRIC
+								m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+						}*/
+					}
+				}
+				m_normalMapImage->set_pixel(x, z, encodeNormal(normal));
+			}
+		m_normalMapImage->unlock();
+		m_heightMapImage->unlock();
+
+		{
+			Ref<ImageTexture> tex = ImageTexture::_new();
+			tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
+			m_heightMapTexture = tex;
+			m_heightMapImageModified = true;
+			//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
+		}
+
+		{
+			Ref<ImageTexture> tex = ImageTexture::_new();
+			tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
+			m_normalMapTexture = tex;
+			m_normalMapImageModified = true;
+			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
+		}
+
 	}
 
 	// Creating Splat Map Texture
@@ -757,51 +959,6 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 		image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
 		image->fill(Color(1, 0, 0, 0));
 		m_splat1MapImage = image;
-		image.unref();
-	}
-
-	// Creating Color Map Texture
-	{
-		Ref<Image> image = Image::_new();
-		image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-		image->fill(Color(1, 1, 1, 1));
-		m_colorMapImage = image;
-		image.unref();
-	}
-
-	// _update_all_vertical_bounds ???	// TODORIC
-	//	# RGF image where R is min heightand G is max height
-	//	var _chunked_vertical_bounds : = Image.new()	// _chunked_vertical_bounds.create(csize_x, csize_y, false, Image.FORMAT_RGF)
-	//	_update_vertical_bounds(0, 0, _resolution - 1, _resolution - 1)
-
-	// Filling Heightmap Map Texture
-	{
-		assert(_resolution == m_heightMapImage->get_height());
-		assert(_resolution == m_heightMapImage->get_width());
-		assert(_resolution == m_viewer->m_numWorldVerticesX);
-		assert(_resolution == m_viewer->m_numWorldVerticesZ);
-		m_heightMapImage->lock();
-		for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
-			for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
-			{
-				float h = m_viewer->m_worldVertices[z * _resolution + x].altitude();
-				//if (h != 0) m_viewer->Globals()->debugPrint("Altitude not null.X=" 
-				//	+ String(std::to_string(x).c_str()) + " Z=" + String(std::to_string(z).c_str()) + " H=" + String(std::to_string(h).c_str()));
-				m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
-			}
-		m_heightMapImage->unlock();
-		Ref<ImageTexture> tex = ImageTexture::_new();
-		tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
-		m_heightMapTexture = tex;
-		m_heightMapImageModified = true;
-	}
-
-	// Filling Normal Map Texture
-	{
-		//Ref<ImageTexture> tex = ImageTexture::_new();
-		//tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
-		//m_normalMapTexture = tex;
-		//m_normalMapImageModified = true;
 	}
 
 	// Filling Splat Map Texture
@@ -812,6 +969,14 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 		//m_splat1MapImageModified = true;
 	}
 
+	// Creating Color Map Texture
+	{
+		Ref<Image> image = Image::_new();
+		image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+		image->fill(Color(1, 1, 1, 1));
+		m_colorMapImage = image;
+	}
+
 	// Filling Color Map Texture
 	{
 		//Ref<ImageTexture> tex = ImageTexture::_new();
@@ -820,31 +985,100 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 		//m_colorMapImageModified = true;
 	}
 
+	// _update_all_vertical_bounds ???	// TODORIC
+	//	# RGF image where R is min heightand G is max height
+	//	var _chunked_vertical_bounds : = Image.new()	// _chunked_vertical_bounds.create(csize_x, csize_y, false, Image.FORMAT_RGF)
+	//	_update_vertical_bounds(0, 0, _resolution - 1, _resolution - 1)
+
 	materialParamsNeedUpdate(true);
+}
+
+Color GDN_TheWorld_Viewer::ShaderTerrainData::encodeNormal(Vector3 normal)
+{
+	normal = 0.5 * (normal + Vector3::ONE);
+	return Color(normal.x, normal.z, normal.y);
 }
 
 void GDN_TheWorld_Viewer::ShaderTerrainData::updateMaterialParams(void)
 {
-	// Comletare da _update_material_params
+	// Completare da _update_material_params
 	m_viewer->Globals()->debugPrint("Updating terrain material params");
 
 	if (m_viewer->is_inside_tree())
 	{
 		Transform globalTransform = m_viewer->internalTransformGlobalCoord();
-		
+		//globalTransform.origin = Vector3(0, 0, 0);		// DEBUGRIC
+		m_viewer->Globals()->debugPrint("internalTransformGlobalCoord" + String(" t=") + String(globalTransform));	// DEBUGRIC
+
 		Transform t = globalTransform.affine_inverse();
+		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));	// DEBUGRIC
 		m_material->set_shader_param(SHADER_PARAM_INVERSE_TRANSFORM, t);
 
 		Basis b = globalTransform.basis.inverse().transposed();
+		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));	// DEBUGRIC
 		m_material->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
 
 		if (m_heightMapImageModified)
 		{
+			m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));	// DEBUGRIC
 			m_material->set_shader_param(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
 			m_heightMapImageModified = false;
+		}
+		
+		if (m_normalMapImageModified)
+		{
+			m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));	// DEBUGRIC
+			m_material->set_shader_param(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
+			m_normalMapImageModified = false;
 		}
 
 		//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 	}
+
 }
 
+void GDN_TheWorld_Viewer::ShaderTerrainData::debugPrintTexture(std::string tex_name, Ref<Texture> tex)
+{
+	File* _file = File::_new();
+	_file->open("res://" + String(tex_name.c_str()) + ".txt", File::WRITE);
+	Ref<Image> _image = tex->get_data();
+	int64_t width = _image->get_width();
+	int64_t height = _image->get_height();
+	Image::Format format = _image->get_format();
+	std::string formatStr = std::to_string(format);
+	if (format == Image::Format::FORMAT_RH)
+		formatStr = "FORMAT_RH";
+	else if (format == Image::Format::FORMAT_RGB8)
+		formatStr = "FORMAT_RGB8";
+	else if (format == Image::Format::FORMAT_RGBA8)
+		formatStr = "FORMAT_RGBA8";
+	std::string text = "Name=" + tex_name + " Format=" + formatStr + " W=" + std::to_string(width) + " H=" + std::to_string(height);
+	_file->store_string(String(text.c_str()) + "\n");
+	_image->lock();
+	for (int h = 0; h < height; h++)
+	{
+		std::string row = "";
+		for (int w = 0; w < width; w++)
+		{
+			row += std::to_string(w) + ":";
+			if (format == Image::Format::FORMAT_RH)
+				row += std::to_string(_image->get_pixel(w, h).r) + " ";
+			else if (format == Image::Format::FORMAT_RGB8)
+				row += std::to_string(_image->get_pixel(w, h).r) + "-" + std::to_string(_image->get_pixel(w, h).g) + "-" + std::to_string(_image->get_pixel(w, h).b) + " ";
+			else if (format == Image::Format::FORMAT_RGBA8)
+				row += std::to_string(_image->get_pixel(w, h).r) + "-" + std::to_string(_image->get_pixel(w, h).g) + "-" + std::to_string(_image->get_pixel(w, h).b) + "-" + std::to_string(_image->get_pixel(w, h).a) + " ";
+			else
+			{
+				String s = String(_image->get_pixel(w, h));
+				char* str = s.alloc_c_string();
+				row += str;
+				row += " ";
+				godot::api->godot_free(str);
+			}
+		}
+		text = "H=" + std::to_string(h) + " " + row;
+		_file->store_string(String(text.c_str()) + "\n");
+	}
+	_image->unlock();
+	_file->close();
+}

@@ -124,7 +124,7 @@ namespace godot
 			virtual ~TransformChangedChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
-				chunk->setTransform(m_globalT);
+				chunk->setParentGlobalTransform(m_globalT);
 			}
 		private:
 			Transform m_globalT;
@@ -231,7 +231,7 @@ namespace godot
 		// Actions
 		virtual void enterWorld(void);
 		virtual void exitWorld(void);
-		virtual void setTransform(Transform t);
+		virtual void setParentGlobalTransform(Transform t);
 		virtual void setVisible(bool b);
 		virtual void setDebugVisibility(bool b);
 		virtual void applyAABB(void);
@@ -290,6 +290,8 @@ namespace godot
 		int m_originZInGridInWGVs;			// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is expressed in number of grid vertices
 		float m_originXInWUsLocalToGrid;	// X coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is local to the Grid Map and is expressed in Viewer Node local coordinate System
 		float m_originZInWUsLocalToGrid;	// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is local to the Grid Map and is expressed in Viewer Node local coordinate System
+		//float m_originXInWUsGlobal;			// X coord. of the origin of the chunk (lower left corner) inside the Grid Map: expressed in global coordinate System
+		//float m_originZInWUsGlobal;			// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: expressed in global coordinate System
 		int m_firstWorldVertCol;			// 0-based starting column in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
 		int m_lastWorldVertCol;				// 0-based ending column in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
 		int m_firstWorldVertRow;			// 0-based starting row in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
@@ -317,7 +319,7 @@ namespace godot
 
 		virtual void enterWorld(void);
 		virtual void exitWorld(void);
-		virtual void setTransform(Transform parentT);
+		virtual void setParentGlobalTransform(Transform parentT);
 		virtual void setVisible(bool b);
 		virtual void setDebugVisibility(bool b);
 		virtual void applyAABB(void);

@@ -99,7 +99,7 @@ void Quad::assignChunk(void)
 		else
 			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
 
-		m_chunk->setTransform(m_viewer->internalTransformGlobalCoord());
+		m_chunk->setParentGlobalTransform(m_viewer->internalTransformGlobalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}
 

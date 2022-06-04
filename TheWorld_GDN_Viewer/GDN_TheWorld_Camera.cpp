@@ -37,6 +37,7 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	// Camera Movement
 	m_numMoveStepForward = 0;
 	m_numMoveStepLeft = 0;
+	m_numMoveStepUp = 0;
 	m_wheelFastVelocity = 20.0;	// 10.0;
 	m_wheelNormalVelocity = 5.0;	// 10.0;
 	m_wheelSlowVelocity = 1.0;	// 10.0;
@@ -44,6 +45,8 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	m_backwardMovementOn = false;
 	m_leftMovementOn = false;
 	m_rightMovementOn = false;
+	m_upwardMovementOn = false;
+	m_downwardMovementOn = false;
 	// Camera Movement
 
 	// Camera Rotation
@@ -437,23 +440,6 @@ bool GDN_TheWorld_Camera::updateCamera()
 	{
 		if (m_altPressed)
 		{
-			Transform t = get_global_transform();
-			if (m_shiftPressed)
-			{
-				t.origin += Vector3(0, 0, m_numMoveStepForward * m_wheelSlowVelocity);
-			}
-			else if (m_ctrlPressed)
-			{
-				t.origin += Vector3(0, 0, m_numMoveStepForward * m_wheelFastVelocity);
-			}
-			else
-			{
-				t.origin += Vector3(0, 0, m_numMoveStepForward * m_wheelNormalVelocity);
-			}
-			set_global_transform(t);
-		}
-		else
-		{
 			if (m_shiftPressed)
 			{
 				translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelSlowVelocity));
@@ -467,30 +453,45 @@ bool GDN_TheWorld_Camera::updateCamera()
 				translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelNormalVelocity));
 			}
 		}
+		else
+		{
+			if (m_shiftPressed)
+			{
+				translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelSlowVelocity, 0));
+			}
+			else if (m_ctrlPressed)
+			{
+				translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelFastVelocity, 0));
+			}
+			else
+			{
+				translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelNormalVelocity, 0));
+			}
+		}
 		m_numMoveStepForward = 0;
 	}
 
 	if (m_numMoveStepLeft)
 	{
-		if (m_altPressed)
-		{
-			Transform t = get_global_transform();
-			if (m_shiftPressed)
-			{
-				t.origin += Vector3(-m_numMoveStepLeft * m_wheelSlowVelocity, 0, 0);
-			}
-			else if (m_ctrlPressed)
-			{
-				t.origin += Vector3(-m_numMoveStepLeft * m_wheelFastVelocity, 0, 0);
-			}
-			else
-			{
-				t.origin += Vector3(-m_numMoveStepLeft * m_wheelNormalVelocity, 0, 0);
-			}
-			set_global_transform(t);
-		}
-		else
-		{
+		//if (m_altPressed)
+		//{
+		//	Transform t = get_global_transform();
+		//	if (m_shiftPressed)
+		//	{
+		//		t.origin += Vector3(-m_numMoveStepLeft * m_wheelSlowVelocity, 0, 0);
+		//	}
+		//	else if (m_ctrlPressed)
+		//	{
+		//		t.origin += Vector3(-m_numMoveStepLeft * m_wheelFastVelocity, 0, 0);
+		//	}
+		//	else
+		//	{
+		//		t.origin += Vector3(-m_numMoveStepLeft * m_wheelNormalVelocity, 0, 0);
+		//	}
+		//	set_global_transform(t);
+		//}
+		//else
+		//{
 			if (m_shiftPressed)
 			{
 				translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelSlowVelocity, 0, 0));
@@ -503,7 +504,7 @@ bool GDN_TheWorld_Camera::updateCamera()
 			{
 				translate_object_local(Vector3(-m_numMoveStepLeft * m_wheelNormalVelocity, 0, 0));
 			}
-		}
+		//}
 		m_numMoveStepLeft = 0;
 	}
 
@@ -513,17 +514,14 @@ bool GDN_TheWorld_Camera::updateCamera()
 		if (m_shiftPressed)
 		{
 			t.origin += Vector3(0, m_numMoveStepUp * m_wheelSlowVelocity, 0);
-			//translate_object_local(Vector3(0, m_numMoveStepUp * m_wheelSlowVelocity, 0));
 		}
 		else if (m_ctrlPressed)
 		{
 			t.origin += Vector3(0, m_numMoveStepUp * m_wheelFastVelocity, 0);
-			//translate_object_local(Vector3(0, m_numMoveStepUp * m_wheelFastVelocity, 0));
 		}
 		else
 		{
 			t.origin += Vector3(0, m_numMoveStepUp * m_wheelNormalVelocity, 0);
-			//translate_object_local(Vector3(0, m_numMoveStepUp * m_wheelNormalVelocity, 0));
 		}
 		set_global_transform(t);
 		m_numMoveStepUp = 0;
