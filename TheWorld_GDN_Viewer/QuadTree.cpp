@@ -178,7 +178,7 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 	float chunkSizeInWUs = quad->getChunkSizeInWUs();
 	Vector3 chunkCenter = real_t(chunkSizeInWUs) * (Vector3(real_t(quad->slotPosX()), 0, real_t(quad->slotPosZ())) + Vector3(0.5, 0, 0.5));	// chunk center in local coord. respect Viewer Node (or the grid of chunks)
 	AABB chunkAABB = quad->getChunkAABB();
-	chunkCenter.y = (chunkAABB.position + chunkAABB.size / 2).y;
+	chunkCenter.y = (chunkAABB.position + chunkAABB.size / 2).y;		// medium altitude of the chunk
 	real_t splitDistance = chunkSizeInWUs * globals->splitScale();
 	if (quad->isLeaf())
 	{

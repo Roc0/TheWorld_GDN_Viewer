@@ -822,8 +822,9 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer)
 	m_viewer = viewer;
 	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-	Ref<Shader> shader = resLoader->load("res://shaders/lookdev.shader");
-	//mat->set_shader(shader);	// SUPER DEBUGRIC
+	String shaderPath = "res://shaders/lookdev.shader";
+	Ref<Shader> shader = resLoader->load(shaderPath);
+	mat->set_shader(shader);	// SUPER DEBUGRIC
 
 	m_material = mat;
 }

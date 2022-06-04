@@ -40,6 +40,10 @@ namespace godot
 	{
 		GODOT_CLASS(GDN_TheWorld_Globals, Node)
 
+		//const float c_splitScale = 1.0F;
+		//const float c_splitScale = 2.0F;
+		const float c_splitScale = 1.5F;
+
 	public:
 		const static Color g_color_white;
 		const static Color g_color_red;
@@ -256,7 +260,7 @@ namespace godot
 			return (gridStepInHeightmap(lod) * m_mapManager->gridStepInWU());
 		}
 
-		float splitScale(void) { return 1.0F; }
+		float splitScale(void) { return c_splitScale; }
 
 		bool isDebugEnabled(void) { return m_isDebugEnabled; }
 		void setDebugEnabled(bool b = true);

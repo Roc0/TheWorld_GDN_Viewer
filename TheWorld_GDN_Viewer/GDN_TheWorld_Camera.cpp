@@ -388,7 +388,12 @@ bool GDN_TheWorld_Camera::updateCamera()
 
 	if (m_mouseRelativePosToRotate != Vector2(0, 0))
 	{
-		m_mouseRelativePosToRotate *= m_sensitivity;
+		float sensitivity = m_sensitivity;
+		if (m_shiftPressed)
+			sensitivity /= 4;
+		if (m_ctrlPressed)
+			sensitivity *= 2;
+		m_mouseRelativePosToRotate *= sensitivity;
 		m_yaw = m_yaw * m_smoothness + m_mouseRelativePosToRotate.x * (1.0F - m_smoothness);
 		m_pitch = m_pitch * m_smoothness + m_mouseRelativePosToRotate.y * (1.0F - m_smoothness);
 		m_mouseRelativePosToRotate = Vector2(0, 0);

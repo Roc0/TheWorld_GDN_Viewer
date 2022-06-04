@@ -137,12 +137,7 @@ void Chunk::setParentGlobalTransform(Transform parentT)
 
 	m_parentTransform = parentT;
 
-	//Transform localTransform(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, m_aabb.position.y, (real_t)m_originZInWUsLocalToGrid));	// DEBUGRIC1
-	//Transform worldTransformOld = m_parentTransform * localTransform;	// DEBUGRIC1
-
 	Transform worldTransform = getGlobalTransform();
-
-	//assert(worldTransform.origin == worldTransformOld.origin);	// DEBUGRIC1
 
 	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldTransform);		// World coordinates
 	m_meshGlobaTransformApplied = worldTransform;
@@ -226,7 +221,7 @@ void Chunk::refresh(bool isVisible)
 	if (!isActive())
 		return;
 	
-	// if neeed the AABB can be re-computed
+	// if needed the AABB can be re-computed
 	//m_viewer->getPartialAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGVs);
 	//m_gridRelativeAABB = m_aabb;
 	//m_aabb.position.x = 0;	// AABB is relative to the chunk
@@ -313,7 +308,7 @@ Transform Chunk::getGlobalTransform(void)
 {
 	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
 	return m_parentTransform * Transform(Basis(), pos);
-	//return m_parentTransform * Transform(Basis(), pos + m_aabb.position);
+	//return m_parentTransform * Transform(Basis(), pos + m_aabb.position);		// DEBUGRIC: assign AABB pos to the mesh altitude
 }
 
 Transform Chunk::getMeshGlobalTransformApplied(void)
