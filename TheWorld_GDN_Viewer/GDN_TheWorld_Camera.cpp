@@ -41,12 +41,12 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	m_wheelFastVelocity = 20.0;	// 10.0;
 	m_wheelNormalVelocity = 5.0;	// 10.0;
 	m_wheelSlowVelocity = 1.0;	// 10.0;
-	m_forwardMovementOn = false;
-	m_backwardMovementOn = false;
-	m_leftMovementOn = false;
-	m_rightMovementOn = false;
-	m_upwardMovementOn = false;
-	m_downwardMovementOn = false;
+	//m_forwardMovementOn = false;
+	//m_backwardMovementOn = false;
+	//m_leftMovementOn = false;
+	//m_rightMovementOn = false;
+	//m_upwardMovementOn = false;
+	//m_downwardMovementOn = false;
 	// Camera Movement
 
 	// Camera Rotation
@@ -130,6 +130,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	}
 
 	Input* input = Input::get_singleton();
+
 	if (input->is_action_pressed("ui_mouse_button_right"))
 		m_rotateCameraOn = true;
 	else
@@ -162,59 +163,59 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	else
 		m_altPressed = false;
 
-	if (input->is_action_pressed("ui_forward"))
+	if (input->is_action_pressed("ui_forward") && !m_altPressed)
 	{
 		m_numMoveStepForward--;
 		m_updateCameraRequired = true;
-		m_forwardMovementOn = true;
+		//m_forwardMovementOn = true;
 	}
-	else
-		m_forwardMovementOn = false;
+	//else
+	//	m_forwardMovementOn = false;
 
-	if (input->is_action_pressed("ui_backward"))
+	if (input->is_action_pressed("ui_backward") && !m_altPressed)
 	{
 		m_numMoveStepForward++;
 		m_updateCameraRequired = true;
-		m_backwardMovementOn = true;
+		//m_backwardMovementOn = true;
 	}
-	else
-		m_backwardMovementOn = false;
+	//else
+	//	m_backwardMovementOn = false;
 
-	if (input->is_action_pressed("ui_left"))
+	if (input->is_action_pressed("ui_left") && !m_altPressed)
 	{
 		m_numMoveStepLeft++;
 		m_updateCameraRequired = true;
-		m_leftMovementOn = true;
+		//m_leftMovementOn = true;
 	}
-	else
-		m_leftMovementOn = false;
+	//else
+	//	m_leftMovementOn = false;
 
-	if (input->is_action_pressed("ui_right"))
+	if (input->is_action_pressed("ui_right") && !m_altPressed)
 	{
 		m_numMoveStepLeft--;
 		m_updateCameraRequired = true;
-		m_rightMovementOn = true;
+		//m_rightMovementOn = true;
 	}
-	else
-		m_rightMovementOn = false;
+	//else
+	//	m_rightMovementOn = false;
 
-	if (input->is_action_pressed("ui_up"))
+	if (input->is_action_pressed("ui_up") && !m_altPressed)
 	{
 		m_numMoveStepUp++;
 		m_updateCameraRequired = true;
-		m_upwardMovementOn = true;
+		//m_upwardMovementOn = true;
 	}
-	else
-		m_upwardMovementOn = false;
+	//else
+	//	m_upwardMovementOn = false;
 
-	if (input->is_action_pressed("ui_down"))
+	if (input->is_action_pressed("ui_down") && !m_altPressed)
 	{
 		m_numMoveStepUp--;
 		m_updateCameraRequired = true;
-		m_downwardMovementOn = true;
+		//m_downwardMovementOn = true;
 	}
-	else
-		m_downwardMovementOn = false;
+	//else
+	//	m_downwardMovementOn = false;
 }
 
 void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
@@ -444,8 +445,8 @@ bool GDN_TheWorld_Camera::updateCamera()
 
 	if (m_numMoveStepForward)
 	{
-		if (m_altPressed)
-		{
+		//if (m_altPressed)
+		//{
 			if (m_shiftPressed)
 			{
 				translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelSlowVelocity));
@@ -458,22 +459,22 @@ bool GDN_TheWorld_Camera::updateCamera()
 			{
 				translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelNormalVelocity));
 			}
-		}
-		else
-		{
-			if (m_shiftPressed)
-			{
-				translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelSlowVelocity, 0));
-			}
-			else if (m_ctrlPressed)
-			{
-				translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelFastVelocity, 0));
-			}
-			else
-			{
-				translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelNormalVelocity, 0));
-			}
-		}
+		//}
+		//else
+		//{
+		//	if (m_shiftPressed)
+		//	{
+		//		translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelSlowVelocity, 0));
+		//	}
+		//	else if (m_ctrlPressed)
+		//	{
+		//		translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelFastVelocity, 0));
+		//	}
+		//	else
+		//	{
+		//		translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelNormalVelocity, 0));
+		//	}
+		//}
 		m_numMoveStepForward = 0;
 	}
 

@@ -69,6 +69,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_requiredChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
 	m_updateDebugModeRequired = false;
 	m_debugDraw = Viewport::DebugDraw::DEBUG_DRAW_DISABLED;
+	m_ctrlPressed = false;	
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -143,7 +144,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 		m_debugDraw = vp->get_debug_draw();
 	}
 
-	if (event->is_action_pressed("ui_dump"))
+	if (event->is_action_pressed("ui_dump") && !m_ctrlPressed)
 	{
 		m_dumpRequired = true;
 	}
@@ -152,6 +153,41 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 	{
 		m_refreshRequired = true;
 	}
+}
+
+void GDN_TheWorld_Viewer::printKeyboardMapping(void)
+{
+	Globals()->print("");
+	Globals()->print("===========================================================================");
+	Globals()->print("");
+	Globals()->print("KEYBOARD MAPPING");
+	Globals()->print("");
+	Globals()->print("LEFT					==> A	MOUSE BUTTON LEFT");
+	Globals()->print("RIGHT					==> D	MOUSE BUTTON LEFT");
+	Globals()->print("FORWARD					==>	W	MOUSE BUTTON MID	MOUSE WHEEL UP");
+	Globals()->print("BACKWARD				==>	S	MOUSE BUTTON MID	MOUSE WHEEL DOWN");
+	Globals()->print("UP						==>	Q");
+	Globals()->print("DOWN					==>	E");
+	Globals()->print("");
+	Globals()->print("SHIFT					==>	LOW MOVEMENT");
+	Globals()->print("CTRL-ALT-D				==> FAST MOVEMENT");
+	Globals()->print("");
+	Globals()->print("ROTATE CAMERA			==>	MOUSE BUTTON RIGHT");
+	Globals()->print("SHIFT ORI CAMERA		==>	MOUSE BUTTON LEFT");
+	Globals()->print("SHIFT VERT CAMERA		==>	MOUSE BUTTON MID");
+	Globals()->print("");
+	Globals()->print("TOGGLE DEBUG STATS		==>	CTRL-ALT-D");
+	Globals()->print("DUMP					==>	ALT-D");
+	Globals()->print("");
+	Globals()->print("TOGGLE DEBUG VISIBILITY	==>	F1");
+	Globals()->print("ROTATE CHUNK DEBUG MODE	==>	F2");
+	Globals()->print("ROTATE DRAWING MODE		==>	F3");
+	Globals()->print("REFRESH VIEW			==>	F4");
+	Globals()->print("");
+	Globals()->print("EXIT					==>	ESC");
+	Globals()->print("");
+	Globals()->print("===========================================================================");
+	Globals()->print("");
 }
 
 void GDN_TheWorld_Viewer::_notification(int p_what)
@@ -166,6 +202,7 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		break;
 		case NOTIFICATION_ENTER_WORLD:
 		{
+			printKeyboardMapping();
 			Globals()->debugPrint("Enter world");
 			if (m_quadTree && m_initialWordlViewerPosSet)
 			{
@@ -503,6 +540,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 void GDN_TheWorld_Viewer::_physics_process(float _delta)
 {
+	Input* input = Input::get_singleton();
+
+	if (input->is_action_pressed("ui_ctrl"))
+		m_ctrlPressed = true;
+	else
+		m_ctrlPressed = false;
 }
 
 Transform GDN_TheWorld_Viewer::internalTransformGlobalCoord(void)
@@ -825,7 +868,7 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer)
 	//String shaderPath = "res://shaders/lookdev.shader";
 	String shaderPath = "res://shaders/test.shader";		// SUPER DEBUGRIC
 	Ref<Shader> shader = resLoader->load(shaderPath);
-	mat->set_shader(shader);	// SUPER DEBUGRIC
+	mat->set_shader(shader);
 
 	m_material = mat;
 }

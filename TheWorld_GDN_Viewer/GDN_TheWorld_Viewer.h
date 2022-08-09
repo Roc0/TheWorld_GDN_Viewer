@@ -135,9 +135,11 @@ namespace godot
 			m_worldCamera = camera;
 		};
 		void loadWorldData(float& x, float& z, int level);
+		void printKeyboardMapping(void);
 
 	private:
 		bool m_initialized;
+		bool m_ctrlPressed;
 		bool m_firstProcess;
 		int64_t m_timeElapsedFromLastDump;
 		bool m_initialWordlViewerPosSet;

@@ -70,12 +70,12 @@ namespace godot {
 		bool m_shiftPressed;
 		bool m_ctrlPressed;
 		bool m_altPressed;
-		bool m_forwardMovementOn;
-		bool m_backwardMovementOn;
-		bool m_leftMovementOn;
-		bool m_rightMovementOn;
-		bool m_upwardMovementOn;
-		bool m_downwardMovementOn;
+		//bool m_forwardMovementOn;
+		//bool m_backwardMovementOn;
+		//bool m_leftMovementOn;
+		//bool m_rightMovementOn;
+		//bool m_upwardMovementOn;
+		//bool m_downwardMovementOn;
 		Vector2 m_mouseRelativePosToRotate;
 		Vector2 m_mouseRelativePosToShiftOriz;
 		Vector2 m_mouseRelativePosToShiftVert;
