@@ -551,6 +551,8 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 Transform GDN_TheWorld_Viewer::internalTransformGlobalCoord(void)
 {
 	// Return the transformation of the viewer Node in global coordinates appling a scale factor (m_mapScaleVector)
+	// Viewer Node origin is set to match the lower point of the grid in global coords (as expressed by Map manager) in resetInitialWordlViewerPos which load points from DB
+	// ==> t.origin = Vector3(m_worldVertices[0].posX(), 0, m_worldVertices[0].posZ());
 	return Transform(Basis().scaled(m_mapScaleVector), get_global_transform().origin);
 }
 
@@ -606,7 +608,8 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 					Color c = image->get_pixel(px, pz);
 					//if (c != Color(0, 0, 0))
 					//	Globals()->debugPrint("Color " + String(c));
-					m_worldVertices[px + pz * res].setAltitude(c.r);
+					//m_worldVertices[px + pz * res].setAltitude(c.r);
+					m_worldVertices[px + pz * res].setAltitude(0.0);	// SUPER DEBUGRIC
 				}
 			image->unlock();
 			Globals()->debugPrint("Fine SUPER DEBUGRIC!");		// SUPER DEBUGRIC
@@ -855,8 +858,8 @@ GDN_TheWorld_Viewer::ShaderTerrainData::ShaderTerrainData()
 	m_materialParamsNeedUpdate = false;
 	m_heightMapTexModified = false;
 	m_normalMapTexModified = false;
-	m_splat1MapTexModified = false;
-	m_colorMapTexModified = false;
+	//m_splat1MapTexModified = false;
+	//m_colorMapTexModified = false;
 }
 
 GDN_TheWorld_Viewer::ShaderTerrainData::~ShaderTerrainData()
@@ -928,13 +931,13 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 					float hr = m_viewer->m_worldVertices[z * _resolution + x + 1].altitude();
 					float hf = m_viewer->m_worldVertices[(z + 1) * _resolution + x].altitude();
 					normal = Vector3(h - hr, gridStepInWUs, h - hf).normalized();
-					/*{
-						Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-						Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-						Vector3 normal1 = (PF - P).cross(PR - P).normalized();
-						if (!equal(normal1, normal))	// DEBUGRIC
-							m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-					}*/
+					//{		// Verify
+					//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
+					//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
+					//	Vector3 normal1 = (PF - P).cross(PR - P).normalized();
+					//	if (!equal(normal1, normal))	// DEBUGRIC
+					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+					//}
 				}
 				else
 				{
@@ -943,39 +946,39 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 						float hf = m_viewer->m_worldVertices[(z + 1) * _resolution + x].altitude();
 						float hl = m_viewer->m_worldVertices[z * _resolution + x - 1].altitude();
 						normal = Vector3(hl - h, gridStepInWUs, h - hf).normalized();
-						/*{
-							Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-							Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-							Vector3 normal1 = (PL - P).cross(PF - P).normalized();
-							if (!equal(normal1, normal))	// DEBUGRIC
-								m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						}*/
+						//{		// Verify
+						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
+						//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
+						//	Vector3 normal1 = (PL - P).cross(PF - P).normalized();
+						//	if (!equal(normal1, normal))	// DEBUGRIC
+						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+						//}
 					}
 					else if (x == 0 && z == _resolution - 1)
 					{
 						float hr = m_viewer->m_worldVertices[z * _resolution + x + 1].altitude();
 						float hb = m_viewer->m_worldVertices[(z - 1) * _resolution + x].altitude();
 						normal = Vector3(h - hr, gridStepInWUs, hb - h).normalized();
-						/*{
-							Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-							Vector3 PB((float)(x), hb, (float)(z - gridStepInWUs));
-							Vector3 normal1 = (PR - P).cross(PB - P).normalized();
-							if (!equal(normal1, normal))	// DEBUGRIC
-								m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						}*/
+						//{		// Verify
+						//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
+						//	Vector3 PB((float)(x), hb, (float)(z - gridStepInWUs));
+						//	Vector3 normal1 = (PR - P).cross(PB - P).normalized();
+						//	if (!equal(normal1, normal))	// DEBUGRIC
+						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+						//}
 					}
 					else
 					{
 						float hl = m_viewer->m_worldVertices[z * _resolution + x - 1].altitude();
 						float hb = m_viewer->m_worldVertices[(z - 1) * _resolution + x].altitude();
 						normal = Vector3(hl - h, gridStepInWUs, hb - h).normalized();
-						/*{
-							Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));
-							Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-							Vector3 normal1 = (PB - P).cross(PL - P).normalized();
-							if (!equal(normal1, normal))	// DEBUGRIC
-								m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						}*/
+						//{		// Verify
+						//	Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));
+						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
+						//	Vector3 normal1 = (PB - P).cross(PL - P).normalized();
+						//	if (!equal(normal1, normal))	// DEBUGRIC
+						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+						//}
 					}
 				}
 				m_normalMapImage->set_pixel(x, z, encodeNormal(normal));
@@ -1002,36 +1005,36 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 	}
 
 	// Creating Splat Map Texture
-	{
-		Ref<Image> image = Image::_new();
-		image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-		image->fill(Color(1, 0, 0, 0));
-		m_splat1MapImage = image;
-	}
+	//{
+	//	Ref<Image> image = Image::_new();
+	//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+	//	image->fill(Color(1, 0, 0, 0));
+	//	m_splat1MapImage = image;
+	//}
 
 	// Filling Splat Map Texture
-	{
-		//Ref<ImageTexture> tex = ImageTexture::_new();
-		//tex->create_from_image(m_splat1MapImage, Texture::FLAG_FILTER);
-		//m_splat1MapTexture = tex;
-		//m_splat1MapImageModified = true;
-	}
+	//{
+	//	Ref<ImageTexture> tex = ImageTexture::_new();
+	//	tex->create_from_image(m_splat1MapImage, Texture::FLAG_FILTER);
+	//	m_splat1MapTexture = tex;
+	//	m_splat1MapImageModified = true;
+	//}
 
 	// Creating Color Map Texture
-	{
-		Ref<Image> image = Image::_new();
-		image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-		image->fill(Color(1, 1, 1, 1));
-		m_colorMapImage = image;
-	}
+	//{
+	//	Ref<Image> image = Image::_new();
+	//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+	//	image->fill(Color(1, 1, 1, 1));
+	//	m_colorMapImage = image;
+	//}
 
 	// Filling Color Map Texture
-	{
-		//Ref<ImageTexture> tex = ImageTexture::_new();
-		//tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
-		//m_colorMapTexture = tex;
-		//m_colorMapImageModified = true;
-	}
+	//{
+	//	Ref<ImageTexture> tex = ImageTexture::_new();
+	//	tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
+	//	m_colorMapTexture = tex;
+	//	m_colorMapImageModified = true;
+	//}
 
 	// _update_all_vertical_bounds ???	// TODORIC
 	//	# RGF image where R is min heightand G is max height
@@ -1066,6 +1069,10 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::updateMaterialParams(void)
 		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));	// DEBUGRIC
 		m_material->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
 
+		float f = m_viewer->Globals()->gridStepInWU();
+		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));	// DEBUGRIC
+		m_material->set_shader_param(SHADER_PARAM_GRID_STEP, f);
+		
 		if (m_heightMapTexModified)
 		{
 			m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));	// DEBUGRIC

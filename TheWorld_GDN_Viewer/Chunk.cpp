@@ -137,8 +137,12 @@ void Chunk::setParentGlobalTransform(Transform parentT)
 
 	m_parentTransform = parentT;
 
+	// Pos of the lower point of the mesh of current chunk in global coord
 	Transform worldTransform = getGlobalTransform();
+	worldTransform.origin.x -= 3;	// SUPER DEBUGRIC
+	worldTransform.origin.z -= 3;	// SUPER DEBUGRIC
 
+	// Set the mesh pos in global coord
 	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldTransform);		// World coordinates
 	m_meshGlobaTransformApplied = worldTransform;
 }
@@ -306,6 +310,7 @@ void Chunk::getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globa
 
 Transform Chunk::getGlobalTransform(void)
 {
+	// Return pos of the lower point of the mesh of current chunk in global coord
 	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
 	return m_parentTransform * Transform(Basis(), pos);
 	//return m_parentTransform * Transform(Basis(), pos + m_aabb.position);		// DEBUGRIC: assign AABB pos to the mesh altitude

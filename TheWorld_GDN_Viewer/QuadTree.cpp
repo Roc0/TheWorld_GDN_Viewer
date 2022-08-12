@@ -100,6 +100,7 @@ void Quad::assignChunk(void)
 		else
 			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, mat);
 
+		// Set Viwer Pos in Global Coord
 		m_chunk->setParentGlobalTransform(m_viewer->internalTransformGlobalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}
@@ -388,6 +389,7 @@ void QuadTree::dump(void)
 
 	int numChunks = 0;
 	int numActiveChunks = 0;
+	Chunk* cameraChunk = nullptr;
 	for (int i = globals->lodMaxDepth(); i >= 0; i--)
 	{
 		int numChunksAtLod = 0;
@@ -396,8 +398,12 @@ void QuadTree::dump(void)
 			numChunksAtLod = int(m_mapChunk[i].size());
 		int numChunksActiveAtLod = 0;
 		for (Chunk::MapChunkPerLod::iterator it1 = m_mapChunk[i].begin(); it1 != m_mapChunk[i].end(); it1++)
+		{
 			if (it1->second->isActive())
 				numChunksActiveAtLod++;
+			if (it1->second->isCameraVerticalOnChunk())
+				cameraChunk = it1->second;
+		}
 		globals->debugPrint("Num chunks at lod " + String(to_string(i).c_str()) + ": " + String(to_string(numChunksAtLod).c_str())
 			+ String("\t") + " Active " + String(to_string(numChunksActiveAtLod).c_str()));
 		numChunks += numChunksAtLod;
@@ -406,9 +412,81 @@ void QuadTree::dump(void)
 
 	globals->debugPrint("Num chunks: " + String(to_string(numChunks).c_str()));
 	globals->debugPrint("Num active chunks: " + String(to_string(numActiveChunks).c_str()));
+
+	// DEBUGRIC
+	if (cameraChunk != nullptr)
+	{
+		Ref<Mesh> cameraMesh = cameraChunk->getMesh();
+		Array cameraArrays = cameraMesh->surface_get_arrays(0);
+		PoolVector3Array cameraVerts = cameraArrays[Mesh::ARRAY_VERTEX];
+		globals->debugPrint("camerMesh Verts: " + String(to_string(cameraVerts.size()).c_str()));
+		Transform cameraT = cameraChunk->getMeshGlobalTransformApplied();
+		globals->debugPrint("camerMesh t= " + String(cameraT));
+		int numPointsPerSize = (int)sqrt(cameraVerts.size());
+		String s;	int i = 0;
+		for (int z = 0; z < numPointsPerSize; z++)
+		{
+			for (int x = 0; x < numPointsPerSize; x++)
+			{
+				s += cameraVerts[i];
+				s += " ";
+				i++;
+			}
+			globals->debugPrint("camerMesh r=" + String(to_string(z + 1).c_str()) + " " + s);
+			s = "";
+		}
+
+		Chunk* cameraChunkXMinus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XMinusChunk);
+		if (cameraChunkXMinus != nullptr)
+		{
+			Ref<Mesh> camerMeshXMinus = cameraChunkXMinus->getMesh();
+			Array cameraArraysXMinus = camerMeshXMinus->surface_get_arrays(0);
+			PoolVector3Array cameraVertsXMinus = cameraArraysXMinus[Mesh::ARRAY_VERTEX];
+			globals->debugPrint("camerMeshXMinus Verts: " + String(to_string(cameraVertsXMinus.size()).c_str()));
+			Transform cameraT = cameraChunkXMinus->getMeshGlobalTransformApplied();
+			globals->debugPrint("camerMeshXMinus t= " + String(cameraT));
+			int numPointsPerSize = (int)sqrt(cameraVertsXMinus.size());
+			String s;	int i = 0;
+			for (int z = 0; z < numPointsPerSize; z++)
+			{
+				for (int x = 0; x < numPointsPerSize; x++)
+				{
+					s += cameraVertsXMinus[i];
+					s += " ";
+					i++;
+				}
+				globals->debugPrint("camerMeshXMinus r=" + String(to_string(z + 1).c_str()) + " " + s);
+				s = "";
+			}
+		}
+		Chunk* cameraChunkXPlus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XPlusChunk);
+		if (cameraChunkXPlus != nullptr)
+		{
+			Ref<Mesh> camerMeshXPlus = cameraChunkXPlus->getMesh();
+			Array cameraArraysXPlus = camerMeshXPlus->surface_get_arrays(0);
+			PoolVector3Array cameraVertsXPlus = cameraArraysXPlus[Mesh::ARRAY_VERTEX];
+			globals->debugPrint("camerMeshXPlus Verts: " + String(to_string(cameraVertsXPlus.size()).c_str()));
+			Transform cameraT = cameraChunkXPlus->getMeshGlobalTransformApplied();
+			globals->debugPrint("camerMeshXPlus t= " + String(cameraT));
+			int numPointsPerSize = (int)sqrt(cameraVertsXPlus.size());
+			String s;	int i = 0;
+			for (int z = 0; z < numPointsPerSize; z++)
+			{
+				for (int x = 0; x < numPointsPerSize; x++)
+				{
+					s += cameraVertsXPlus[i];
+					s += " ";
+					i++;
+				}
+				globals->debugPrint("camerMeshXPlus r=" + String(to_string(z + 1).c_str()) + " " + s);
+				s = "";
+			}
+		}
+	}
+	// DEBUGRIC
+
 	Chunk::DumpChunkAction action;
 	ForAllChunk(action);
-
 
 	m_numSplits = 0;
 	m_numJoins = 0;

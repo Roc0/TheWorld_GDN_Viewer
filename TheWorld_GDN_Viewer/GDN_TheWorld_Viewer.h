@@ -34,12 +34,15 @@ namespace godot
 
 		class ShaderTerrainData
 		{
+
 // Shader Params
 #define SHADER_PARAM_TERRAIN_HEIGHTMAP "u_terrain_heightmap"
 #define SHADER_PARAM_TERRAIN_NORMALMAP "u_terrain_normalmap"
 #define SHADER_PARAM_TERRAIN_COLORMAP "u_terrain_colormap"
 #define SHADER_PARAM_INVERSE_TRANSFORM "u_terrain_inverse_transform"
 #define SHADER_PARAM_NORMAL_BASIS "u_terrain_normal_basis"
+#define SHADER_PARAM_GRID_STEP "u_grid_step_in_wu"
+
 		public:
 			ShaderTerrainData();
 			~ShaderTerrainData();
@@ -67,13 +70,13 @@ namespace godot
 			Ref<Texture> m_normalMapTexture;
 			bool m_normalMapTexModified;
 			
-			Ref<Image> m_splat1MapImage;
-			Ref<Texture> m_splat1MapTexture;
-			bool m_splat1MapTexModified;
+			//Ref<Image> m_splat1MapImage;
+			//Ref<Texture> m_splat1MapTexture;
+			//bool m_splat1MapTexModified;
 
-			Ref<Image> m_colorMapImage;
-			Ref<Texture> m_colorMapTexture;
-			bool m_colorMapTexModified;
+			//Ref<Image> m_colorMapImage;
+			//Ref<Texture> m_colorMapTexture;
+			//bool m_colorMapTexModified;
 		};
 	
 	public:

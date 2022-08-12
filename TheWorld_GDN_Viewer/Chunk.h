@@ -349,6 +349,7 @@ namespace godot
 		Transform getGlobalTransform(void);
 		Transform getMeshGlobalTransformApplied(void);
 		void setPosInQuad(enum PosInQuad posInQuad) { m_posInQuad = posInQuad; };
+		Ref<Mesh> getMesh() { return m_mesh; };
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
