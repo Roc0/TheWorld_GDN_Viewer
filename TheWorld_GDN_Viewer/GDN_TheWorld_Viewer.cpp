@@ -592,22 +592,25 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 		m_numWorldVerticesX = m_numWorldVerticesZ = Globals()->heightmapResolution() + 1;
 		m_worldVertices.clear();
 		Globals()->mapManager()->getVertices(x, z, TheWorld_MapManager::MapManager::anchorType::center, m_numWorldVerticesX, m_numWorldVerticesZ, m_worldVertices, gridStepInWU, level);
-		/*{
+		{
+			Globals()->debugPrint("Inizio SUPER DEBUGRIC!");	// SUPER DEBUGRIC
 			ResourceLoader* resLoader = ResourceLoader::get_singleton();
 			Ref<Image> image = resLoader->load("res://height.res");
 			int res = (int)image->get_width();
 			assert(res == Globals()->heightmapResolution() + 1);
 			float gridStepInWUs = Globals()->gridStepInWU();
+			image->lock();
 			for (int pz = 0; pz < res; pz++)
 				for (int px = 0; px < res; px++)
 				{
 					Color c = image->get_pixel(px, pz);
-					if (c != Color(0, 0, 0))
-						Globals()->debugPrint("Color " + String(c));
+					//if (c != Color(0, 0, 0))
+					//	Globals()->debugPrint("Color " + String(c));
 					m_worldVertices[px + pz * res].setAltitude(c.r);
 				}
-			Globals()->debugPrint("Fine!");
-		}*/
+			image->unlock();
+			Globals()->debugPrint("Fine SUPER DEBUGRIC!");		// SUPER DEBUGRIC
+		}
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
@@ -850,10 +853,10 @@ GDN_TheWorld_Viewer::ShaderTerrainData::ShaderTerrainData()
 {
 	m_viewer = nullptr;
 	m_materialParamsNeedUpdate = false;
-	m_heightMapImageModified = false;
-	m_normalMapImageModified = false;
-	m_splat1MapImageModified = false;
-	m_colorMapImageModified = false;
+	m_heightMapTexModified = false;
+	m_normalMapTexModified = false;
+	m_splat1MapTexModified = false;
+	m_colorMapTexModified = false;
 }
 
 GDN_TheWorld_Viewer::ShaderTerrainData::~ShaderTerrainData()
@@ -865,8 +868,8 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer)
 	m_viewer = viewer;
 	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-	//String shaderPath = "res://shaders/lookdev.shader";
-	String shaderPath = "res://shaders/test.shader";		// SUPER DEBUGRIC
+	String shaderPath = "res://shaders/lookdev.shader";
+	//String shaderPath = "res://shaders/test.shader";		// SUPER DEBUGRIC
 	Ref<Shader> shader = resLoader->load(shaderPath);
 	mat->set_shader(shader);
 
@@ -984,7 +987,7 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 			Ref<ImageTexture> tex = ImageTexture::_new();
 			tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
 			m_heightMapTexture = tex;
-			m_heightMapImageModified = true;
+			m_heightMapTexModified = true;
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
 		}
 
@@ -992,7 +995,7 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 			Ref<ImageTexture> tex = ImageTexture::_new();
 			tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
 			m_normalMapTexture = tex;
-			m_normalMapImageModified = true;
+			m_normalMapTexModified = true;
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
 		}
 
@@ -1063,18 +1066,18 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::updateMaterialParams(void)
 		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));	// DEBUGRIC
 		m_material->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
 
-		if (m_heightMapImageModified)
+		if (m_heightMapTexModified)
 		{
 			m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));	// DEBUGRIC
 			m_material->set_shader_param(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
-			m_heightMapImageModified = false;
+			m_heightMapTexModified = false;
 		}
 		
-		if (m_normalMapImageModified)
+		if (m_normalMapTexModified)
 		{
 			m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));	// DEBUGRIC
 			m_material->set_shader_param(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
-			m_normalMapImageModified = false;
+			m_normalMapTexModified = false;
 		}
 
 		//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos

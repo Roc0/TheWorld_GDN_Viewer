@@ -61,19 +61,19 @@ namespace godot
 			
 			Ref<Image> m_heightMapImage;
 			Ref<Texture> m_heightMapTexture;
-			bool m_heightMapImageModified;
+			bool m_heightMapTexModified;
 			
 			Ref<Image> m_normalMapImage;
 			Ref<Texture> m_normalMapTexture;
-			bool m_normalMapImageModified;
+			bool m_normalMapTexModified;
 			
 			Ref<Image> m_splat1MapImage;
 			Ref<Texture> m_splat1MapTexture;
-			bool m_splat1MapImageModified;
+			bool m_splat1MapTexModified;
 
 			Ref<Image> m_colorMapImage;
 			Ref<Texture> m_colorMapTexture;
-			bool m_colorMapImageModified;
+			bool m_colorMapTexModified;
 		};
 	
 	public:
