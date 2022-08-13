@@ -414,75 +414,75 @@ void QuadTree::dump(void)
 	globals->debugPrint("Num active chunks: " + String(to_string(numActiveChunks).c_str()));
 
 	// DEBUGRIC
-	if (cameraChunk != nullptr)
-	{
-		Ref<Mesh> cameraMesh = cameraChunk->getMesh();
-		Array cameraArrays = cameraMesh->surface_get_arrays(0);
-		PoolVector3Array cameraVerts = cameraArrays[Mesh::ARRAY_VERTEX];
-		globals->debugPrint("camerMesh Verts: " + String(to_string(cameraVerts.size()).c_str()));
-		Transform cameraT = cameraChunk->getMeshGlobalTransformApplied();
-		globals->debugPrint("camerMesh t= " + String(cameraT));
-		int numPointsPerSize = (int)sqrt(cameraVerts.size());
-		String s;	int i = 0;
-		for (int z = 0; z < numPointsPerSize; z++)
-		{
-			for (int x = 0; x < numPointsPerSize; x++)
-			{
-				s += cameraVerts[i];
-				s += " ";
-				i++;
-			}
-			globals->debugPrint("camerMesh r=" + String(to_string(z + 1).c_str()) + " " + s);
-			s = "";
-		}
+	//if (cameraChunk != nullptr)
+	//{
+	//	Ref<Mesh> cameraMesh = cameraChunk->getMesh();
+	//	Array cameraArrays = cameraMesh->surface_get_arrays(0);
+	//	PoolVector3Array cameraVerts = cameraArrays[Mesh::ARRAY_VERTEX];
+	//	globals->debugPrint("camerMesh Verts: " + String(to_string(cameraVerts.size()).c_str()));
+	//	Transform cameraT = cameraChunk->getMeshGlobalTransformApplied();
+	//	globals->debugPrint("camerMesh t= " + String(cameraT));
+	//	int numPointsPerSize = (int)sqrt(cameraVerts.size());
+	//	String s;	int i = 0;
+	//	for (int z = 0; z < numPointsPerSize; z++)
+	//	{
+	//		for (int x = 0; x < numPointsPerSize; x++)
+	//		{
+	//			s += cameraVerts[i];
+	//			s += " ";
+	//			i++;
+	//		}
+	//		globals->debugPrint("camerMesh r=" + String(to_string(z + 1).c_str()) + " " + s);
+	//		s = "";
+	//	}
 
-		Chunk* cameraChunkXMinus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XMinusChunk);
-		if (cameraChunkXMinus != nullptr)
-		{
-			Ref<Mesh> camerMeshXMinus = cameraChunkXMinus->getMesh();
-			Array cameraArraysXMinus = camerMeshXMinus->surface_get_arrays(0);
-			PoolVector3Array cameraVertsXMinus = cameraArraysXMinus[Mesh::ARRAY_VERTEX];
-			globals->debugPrint("camerMeshXMinus Verts: " + String(to_string(cameraVertsXMinus.size()).c_str()));
-			Transform cameraT = cameraChunkXMinus->getMeshGlobalTransformApplied();
-			globals->debugPrint("camerMeshXMinus t= " + String(cameraT));
-			int numPointsPerSize = (int)sqrt(cameraVertsXMinus.size());
-			String s;	int i = 0;
-			for (int z = 0; z < numPointsPerSize; z++)
-			{
-				for (int x = 0; x < numPointsPerSize; x++)
-				{
-					s += cameraVertsXMinus[i];
-					s += " ";
-					i++;
-				}
-				globals->debugPrint("camerMeshXMinus r=" + String(to_string(z + 1).c_str()) + " " + s);
-				s = "";
-			}
-		}
-		Chunk* cameraChunkXPlus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XPlusChunk);
-		if (cameraChunkXPlus != nullptr)
-		{
-			Ref<Mesh> camerMeshXPlus = cameraChunkXPlus->getMesh();
-			Array cameraArraysXPlus = camerMeshXPlus->surface_get_arrays(0);
-			PoolVector3Array cameraVertsXPlus = cameraArraysXPlus[Mesh::ARRAY_VERTEX];
-			globals->debugPrint("camerMeshXPlus Verts: " + String(to_string(cameraVertsXPlus.size()).c_str()));
-			Transform cameraT = cameraChunkXPlus->getMeshGlobalTransformApplied();
-			globals->debugPrint("camerMeshXPlus t= " + String(cameraT));
-			int numPointsPerSize = (int)sqrt(cameraVertsXPlus.size());
-			String s;	int i = 0;
-			for (int z = 0; z < numPointsPerSize; z++)
-			{
-				for (int x = 0; x < numPointsPerSize; x++)
-				{
-					s += cameraVertsXPlus[i];
-					s += " ";
-					i++;
-				}
-				globals->debugPrint("camerMeshXPlus r=" + String(to_string(z + 1).c_str()) + " " + s);
-				s = "";
-			}
-		}
-	}
+	//	Chunk* cameraChunkXMinus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XMinusChunk);
+	//	if (cameraChunkXMinus != nullptr)
+	//	{
+	//		Ref<Mesh> camerMeshXMinus = cameraChunkXMinus->getMesh();
+	//		Array cameraArraysXMinus = camerMeshXMinus->surface_get_arrays(0);
+	//		PoolVector3Array cameraVertsXMinus = cameraArraysXMinus[Mesh::ARRAY_VERTEX];
+	//		globals->debugPrint("camerMeshXMinus Verts: " + String(to_string(cameraVertsXMinus.size()).c_str()));
+	//		Transform cameraT = cameraChunkXMinus->getMeshGlobalTransformApplied();
+	//		globals->debugPrint("camerMeshXMinus t= " + String(cameraT));
+	//		int numPointsPerSize = (int)sqrt(cameraVertsXMinus.size());
+	//		String s;	int i = 0;
+	//		for (int z = 0; z < numPointsPerSize; z++)
+	//		{
+	//			for (int x = 0; x < numPointsPerSize; x++)
+	//			{
+	//				s += cameraVertsXMinus[i];
+	//				s += " ";
+	//				i++;
+	//			}
+	//			globals->debugPrint("camerMeshXMinus r=" + String(to_string(z + 1).c_str()) + " " + s);
+	//			s = "";
+	//		}
+	//	}
+	//	Chunk* cameraChunkXPlus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XPlusChunk);
+	//	if (cameraChunkXPlus != nullptr)
+	//	{
+	//		Ref<Mesh> camerMeshXPlus = cameraChunkXPlus->getMesh();
+	//		Array cameraArraysXPlus = camerMeshXPlus->surface_get_arrays(0);
+	//		PoolVector3Array cameraVertsXPlus = cameraArraysXPlus[Mesh::ARRAY_VERTEX];
+	//		globals->debugPrint("camerMeshXPlus Verts: " + String(to_string(cameraVertsXPlus.size()).c_str()));
+	//		Transform cameraT = cameraChunkXPlus->getMeshGlobalTransformApplied();
+	//		globals->debugPrint("camerMeshXPlus t= " + String(cameraT));
+	//		int numPointsPerSize = (int)sqrt(cameraVertsXPlus.size());
+	//		String s;	int i = 0;
+	//		for (int z = 0; z < numPointsPerSize; z++)
+	//		{
+	//			for (int x = 0; x < numPointsPerSize; x++)
+	//			{
+	//				s += cameraVertsXPlus[i];
+	//				s += " ";
+	//				i++;
+	//			}
+	//			globals->debugPrint("camerMeshXPlus r=" + String(to_string(z + 1).c_str()) + " " + s);
+	//			s = "";
+	//		}
+	//	}
+	//}
 	// DEBUGRIC
 
 	Chunk::DumpChunkAction action;

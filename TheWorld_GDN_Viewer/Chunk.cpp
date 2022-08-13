@@ -139,8 +139,8 @@ void Chunk::setParentGlobalTransform(Transform parentT)
 
 	// Pos of the lower point of the mesh of current chunk in global coord
 	Transform worldTransform = getGlobalTransform();
-	worldTransform.origin.x -= 3;	// SUPER DEBUGRIC
-	worldTransform.origin.z -= 3;	// SUPER DEBUGRIC
+	//worldTransform.origin.x -= 3;	// SUPER DEBUGRIC
+	//worldTransform.origin.z -= 3;	// SUPER DEBUGRIC
 
 	// Set the mesh pos in global coord
 	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldTransform);		// World coordinates
@@ -165,47 +165,68 @@ void Chunk::update(bool isVisible)
 	int seams = 0;
 	QuadTree* tree = m_viewer->getQuadTree();
 
-	// Seams are against grater chunks (greater lod)
-	ChunkPos posGreaterLodIfGotJoined(m_slotPosX / 2, m_slotPosZ / 2, m_lod + 1);
+	//if (m_isCameraVerticalOnChunk)	// SUPER DEBUGRIC
+	//	setVisible(true);			// SUPER DEBUGRIC
+	//else							// SUPER DEBUGRIC
+	//	setVisible(false);			// SUPER DEBUGRIC
+
+	// Seams are against grater chunks (greater lod = less resolution)
+	ChunkPos posGreaterChunkContainingThisOne(m_slotPosX / 2, m_slotPosZ / 2, m_lod + 1);
 
 	switch (m_posInQuad)
 	{
 	case PosInQuad::First:
 	{
-		Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::XMinusChunk);
+		//  
+		//	o =
+		//	= =
+		//  
+		Chunk* chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XMinusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_LEFT;
-		chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::ZMinusChunk);
+		chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZMinusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_BOTTOM;
 	}
 	break;
 	case PosInQuad::Second:
 	{
-		Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::XPlusChunk);
+		//  
+		//	= o
+		//	= =
+		//  
+		Chunk* chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XPlusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_RIGHT;
-		chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::ZMinusChunk);
+		chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZMinusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_BOTTOM;
 	}
 	break;
 	case PosInQuad::Third:
 	{
-		Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::XMinusChunk);
+		//  
+		//	= =
+		//	o =
+		//  
+		Chunk* chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XMinusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_LEFT;
-		chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::ZPlusChunk);
+		chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZPlusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_TOP;
 	}
 	break;
 	case PosInQuad::Forth:
 	{
-		Chunk* chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::XPlusChunk);
+		//  
+		//	= =
+		//	= o
+		//  
+		Chunk* chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XPlusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_RIGHT;
-		chunk = tree->getChunkAt(posGreaterLodIfGotJoined, Chunk::DirectionSlot::ZPlusChunk);
+		chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZPlusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_TOP;
 	}
@@ -217,6 +238,12 @@ void Chunk::update(bool isVisible)
 	applyAABB();
 
 	setVisible(isVisible);
+
+	//if (m_isCameraVerticalOnChunk)	// SUPER DEBUGRIC
+	//	setVisible(true);			// SUPER DEBUGRIC
+	//else							// SUPER DEBUGRIC
+	//	setVisible(false);			// SUPER DEBUGRIC
+
 	setPendingUpdate(false);
 }
 
