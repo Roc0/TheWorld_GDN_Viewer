@@ -163,7 +163,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	else
 		m_altPressed = false;
 
-	if (input->is_action_pressed("ui_forward") && !m_altPressed)
+	if (input->is_action_pressed("ui_forward") /* && !m_altPressed*/)
 	{
 		m_numMoveStepForward--;
 		m_updateCameraRequired = true;
@@ -172,7 +172,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	//else
 	//	m_forwardMovementOn = false;
 
-	if (input->is_action_pressed("ui_backward") && !m_altPressed)
+	if (input->is_action_pressed("ui_backward") /* && !m_altPressed*/)
 	{
 		m_numMoveStepForward++;
 		m_updateCameraRequired = true;
@@ -445,8 +445,23 @@ bool GDN_TheWorld_Camera::updateCamera()
 
 	if (m_numMoveStepForward)
 	{
-		//if (m_altPressed)
-		//{
+		if (m_altPressed)
+		{
+			if (m_shiftPressed)
+			{
+				translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelSlowVelocity, 0));
+			}
+			else if (m_ctrlPressed)
+			{
+				translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelFastVelocity, 0));
+			}
+			else
+			{
+				translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelNormalVelocity, 0));
+			}
+		}
+		else
+		{
 			if (m_shiftPressed)
 			{
 				translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelSlowVelocity));
@@ -459,22 +474,7 @@ bool GDN_TheWorld_Camera::updateCamera()
 			{
 				translate_object_local(Vector3(0, 0, m_numMoveStepForward * m_wheelNormalVelocity));
 			}
-		//}
-		//else
-		//{
-		//	if (m_shiftPressed)
-		//	{
-		//		translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelSlowVelocity, 0));
-		//	}
-		//	else if (m_ctrlPressed)
-		//	{
-		//		translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelFastVelocity, 0));
-		//	}
-		//	else
-		//	{
-		//		translate_object_local(Vector3(0, -m_numMoveStepForward * m_wheelNormalVelocity, 0));
-		//	}
-		//}
+		}
 		m_numMoveStepForward = 0;
 	}
 

@@ -164,8 +164,8 @@ void GDN_TheWorld_Viewer::printKeyboardMapping(void)
 	Globals()->print("");
 	Globals()->print("LEFT					==> A	MOUSE BUTTON LEFT");
 	Globals()->print("RIGHT					==> D	MOUSE BUTTON LEFT");
-	Globals()->print("FORWARD					==>	W	MOUSE BUTTON MID	MOUSE WHEEL UP");
-	Globals()->print("BACKWARD				==>	S	MOUSE BUTTON MID	MOUSE WHEEL DOWN");
+	Globals()->print("FORWARD					==>	W	MOUSE BUTTON MID	MOUSE WHEEL UP (WITH ALT MOVE ON MAP, WITHOUT MOVE FORWARD IN THE DIRECTION OF CAMERA)");
+	Globals()->print("BACKWARD				==>	S	MOUSE BUTTON MID	MOUSE WHEEL DOWN (WITH ALT MOVE ON MAP, WITHOUT MOVE BACKWARD IN THE DIRECTION OF CAMERA)");
 	Globals()->print("UP						==>	Q");
 	Globals()->print("DOWN					==>	E");
 	Globals()->print("");
