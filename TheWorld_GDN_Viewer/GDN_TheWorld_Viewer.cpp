@@ -1137,3 +1137,14 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::debugPrintTexture(std::string tex_n
 	_image->unlock();
 	_file->close();
 }
+
+void GDN_TheWorld_Viewer::setCameraChunk(Chunk* chunk)
+{
+	if (m_cameraChunk != nullptr && m_cameraChunk != chunk)
+	{
+		m_cameraChunk->resetCameraVerticalOnChunk();
+		m_quadTree->addChunkUpdate(m_cameraChunk);
+	}
+
+	m_cameraChunk = chunk;
+}

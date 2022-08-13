@@ -165,11 +165,6 @@ void Chunk::update(bool isVisible)
 	int seams = 0;
 	QuadTree* tree = m_viewer->getQuadTree();
 
-	//if (m_isCameraVerticalOnChunk)	// SUPER DEBUGRIC
-	//	setVisible(true);			// SUPER DEBUGRIC
-	//else							// SUPER DEBUGRIC
-	//	setVisible(false);			// SUPER DEBUGRIC
-
 	// Seams are against grater chunks (greater lod = less resolution)
 	ChunkPos posGreaterChunkContainingThisOne(m_slotPosX / 2, m_slotPosZ / 2, m_lod + 1);
 
@@ -238,11 +233,6 @@ void Chunk::update(bool isVisible)
 	applyAABB();
 
 	setVisible(isVisible);
-
-	//if (m_isCameraVerticalOnChunk)	// SUPER DEBUGRIC
-	//	setVisible(true);			// SUPER DEBUGRIC
-	//else							// SUPER DEBUGRIC
-	//	setVisible(false);			// SUPER DEBUGRIC
 
 	setPendingUpdate(false);
 }
@@ -493,6 +483,11 @@ void ChunkDebug::setVisible(bool b)
 {
 	Chunk::setVisible(b);
 	
+	if (m_isCameraVerticalOnChunk)	// SUPER DEBUGRIC
+		Chunk::setVisible(true);	// SUPER DEBUGRIC
+	else							// SUPER DEBUGRIC
+		Chunk::setVisible(false);	// SUPER DEBUGRIC
+
 	assert(m_debugMeshInstance != RID());
 
 	if (!isActive())

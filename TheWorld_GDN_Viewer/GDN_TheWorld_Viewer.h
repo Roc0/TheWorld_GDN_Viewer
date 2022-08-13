@@ -108,7 +108,7 @@ namespace godot
 		void setMapScale(Vector3 mapScaleVector);
 		void setDumpRequired(void) { m_dumpRequired = true; }
 		void dump(void);
-		void setCameraChunk(Chunk* chunk) { m_cameraChunk = chunk; }
+		void setCameraChunk(Chunk* chunk);
 		//Transform getCameraChunkGlobalTransformOfAABB(void);
 		AABB getCameraChunkLocalAABB(void);
 		AABB getCameraChunkLocalDebugAABB(void);

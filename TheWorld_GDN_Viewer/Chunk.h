@@ -346,6 +346,7 @@ namespace godot
 		AABB getAABB(void) { return m_aabb; };
 		void getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globalCoordCameraLastPos);
 		bool isCameraVerticalOnChunk(void) { return m_isCameraVerticalOnChunk; }
+		void resetCameraVerticalOnChunk(void) { m_isCameraVerticalOnChunk = false; }
 		Transform getGlobalTransform(void);
 		Transform getMeshGlobalTransformApplied(void);
 		void setPosInQuad(enum PosInQuad posInQuad) { m_posInQuad = posInQuad; };
