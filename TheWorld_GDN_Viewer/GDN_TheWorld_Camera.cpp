@@ -40,7 +40,7 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	m_numMoveStepUp = 0;
 	m_wheelFastVelocity = 20.0;	// 10.0;
 	m_wheelNormalVelocity = 5.0;	// 10.0;
-	m_wheelSlowVelocity = 1.0;	// 10.0;
+	m_wheelSlowVelocity = 0.3;	// 10.0;
 	//m_forwardMovementOn = false;
 	//m_backwardMovementOn = false;
 	//m_leftMovementOn = false;

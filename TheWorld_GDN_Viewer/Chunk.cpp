@@ -139,8 +139,6 @@ void Chunk::setParentGlobalTransform(Transform parentT)
 
 	// Pos of the lower point of the mesh of current chunk in global coord
 	Transform worldTransform = getGlobalTransform();
-	//worldTransform.origin.x -= 3;	// SUPER DEBUGRIC
-	//worldTransform.origin.z -= 3;	// SUPER DEBUGRIC
 
 	// Set the mesh pos in global coord
 	VisualServer::get_singleton()->instance_set_transform(m_meshInstance, worldTransform);		// World coordinates
@@ -302,8 +300,8 @@ void Chunk::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalC
 		m_localToGriddCoordCameraLastPos = localToGriddCoordCameraLastPos;
 		m_globalCoordCameraLastPos = globalCoordCameraLastPos;
 
-		if (localToGriddCoordCameraLastPos.x >= m_originXInWUsLocalToGrid && localToGriddCoordCameraLastPos.x <= m_originXInWUsLocalToGrid + m_chunkSizeInWUs
-			&& localToGriddCoordCameraLastPos.z >= m_originZInWUsLocalToGrid && localToGriddCoordCameraLastPos.z <= m_originZInWUsLocalToGrid + m_chunkSizeInWUs)
+		if (localToGriddCoordCameraLastPos.x >= m_originXInWUsLocalToGrid && localToGriddCoordCameraLastPos.x < m_originXInWUsLocalToGrid + m_chunkSizeInWUs
+			&& localToGriddCoordCameraLastPos.z >= m_originZInWUsLocalToGrid && localToGriddCoordCameraLastPos.z < m_originZInWUsLocalToGrid + m_chunkSizeInWUs)
 			m_isCameraVerticalOnChunk = true;
 		else
 			m_isCameraVerticalOnChunk = false;
@@ -378,12 +376,17 @@ void Chunk::dump(void)
 		+ " - Pos in GRID (local):"
 		+ " X = " + to_string(m_originXInWUsLocalToGrid).c_str()
 		+ ", Z = " + to_string(m_originZInWUsLocalToGrid).c_str()
+		+ ", X1 = " + to_string(m_originXInWUsLocalToGrid + m_chunkSizeInWUs).c_str()
+		+ ", Z1 = " + to_string(m_originZInWUsLocalToGrid + m_chunkSizeInWUs).c_str()
 		+ " - Pos in GRID (global):"
 		+ " X = " + to_string(globalOriginXInGridInWUs).c_str()
 		+ ", Z = " + to_string(globalOriginZInGridInWUs).c_str()
+		+ ", X1 = " + to_string(globalOriginXInGridInWUs + m_chunkSizeInWUs).c_str()
+		+ ", Z1 = " + to_string(globalOriginZInGridInWUs + m_chunkSizeInWUs).c_str()
 		+ " - MinH = " + to_string(m_aabb.position.y).c_str()
 		+ " - MaxH = " + to_string((m_aabb.position + m_aabb.size).y).c_str()
 		+ (m_isCameraVerticalOnChunk ? " - CAMERA" : ""));
+	globals->debugPrint(String("t: ") + getMeshGlobalTransformApplied() + String(" - t (debug): ") + getDebugMeshGlobalTransformApplied());
 }
 
 ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat)
@@ -483,10 +486,11 @@ void ChunkDebug::setVisible(bool b)
 {
 	Chunk::setVisible(b);
 	
-	if (m_isCameraVerticalOnChunk)	// SUPER DEBUGRIC
-		Chunk::setVisible(true);	// SUPER DEBUGRIC
-	else							// SUPER DEBUGRIC
-		Chunk::setVisible(false);	// SUPER DEBUGRIC
+	Chunk::setVisible(false);	// SUPER DEBUGRIC
+	//if (m_isCameraVerticalOnChunk)	// SUPER DEBUGRIC
+	//	Chunk::setVisible(true);	// SUPER DEBUGRIC
+	//else							// SUPER DEBUGRIC
+	//	Chunk::setVisible(false);	// SUPER DEBUGRIC
 
 	assert(m_debugMeshInstance != RID());
 
@@ -550,7 +554,7 @@ void ChunkDebug::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 gl
 
 	//return;
 	
-	if (isCameraVerticalOnChunk() != prevCameraVerticalOnChunk)
+	if (isCameraVerticalOnChunk() && !prevCameraVerticalOnChunk)
 	{
 		float globalOriginXInGridInWUs = m_viewer->get_global_transform().origin.x + m_originXInWUsLocalToGrid;
 		float globalOriginZInGridInWUs = m_viewer->get_global_transform().origin.z + m_originZInWUsLocalToGrid;
@@ -585,7 +589,6 @@ void ChunkDebug::applyDebugMesh()
 	}
 
 	Variant mesh;
-	Transform worldTransform = getDebugMeshGlobalTransform();
 
 	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB)
 	{
@@ -691,6 +694,7 @@ void ChunkDebug::applyDebugMesh()
 	setDebugMesh(nullptr);
 	setDebugMesh(mesh);
 
+	Transform worldTransform = getDebugMeshGlobalTransform();
 	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstance, worldTransform);
 	m_debugMeshGlobaTransformApplied = worldTransform;
 
