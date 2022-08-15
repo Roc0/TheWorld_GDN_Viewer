@@ -391,7 +391,7 @@ void Chunk::dump(void)
 ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat)
 	: Chunk(slotPosX, slotPosZ, lod, viewer, mat)
 {
-	useVisualServer = true;
+	useVisualServer = false;
 
 	m_debugMeshInstanceRID = RID();
 	m_debugMeshRID = RID();
@@ -585,13 +585,16 @@ void ChunkDebug::applyAABB(void)
 
 void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 {
+	if (m_isCameraVerticalOnChunk)
+		RID();
+	
 	RID meshRID = (mesh != nullptr ? mesh->get_rid() : RID());
 
 	if (m_debugMeshRID == meshRID)
 		return;
 
-	if (mesh == nullptr)
-		RID();
+	//if (mesh == nullptr)
+	//	RID();
 
 	if (useVisualServer)
 	{
@@ -616,7 +619,7 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 			String name = String("ChunkDebug_") + String(getPos().getId().c_str());
 			m_debugMeshInstance->set_name(name);
 			m_viewer->add_child(m_debugMeshInstance);
-			if (m_debugVisibility || isVisible())
+			if (m_debugVisibility && isVisible())
 				m_debugMeshInstance->set_visible(true);
 			else
 				m_debugMeshInstance->set_visible(false);
@@ -783,7 +786,10 @@ void ChunkDebug::applyDebugMesh()
 	setDebugMesh(mesh);
 
 	Transform worldTransform = getDebugMeshGlobalTransform();
-	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
+	if (useVisualServer)
+		VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
+	else
+		m_debugMeshInstance->set_global_transform(worldTransform);
 	m_debugMeshGlobaTransformApplied = worldTransform;
 
 
