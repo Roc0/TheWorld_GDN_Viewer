@@ -848,8 +848,30 @@ void GDN_TheWorld_Viewer::dump()
 	Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
 	m_quadTree->dump();
 
+	Node* node = get_node(NodePath("/root"));
+	if (node != nullptr)
+	{
+		Globals()->debugPrint("============================================");
+		Globals()->debugPrint(node->get_name());
+		Array nodes = node->get_children();
+		dumpRecurseIntoChildrenNodes(nodes, 1);
+		Globals()->debugPrint("============================================");
+	}
+	
 	Globals()->debugPrint("DUMP COMPLETE");
 	Globals()->debugPrint("*************");
+}
+
+void GDN_TheWorld_Viewer::dumpRecurseIntoChildrenNodes(Array nodes, int level)
+{
+	for (int i = 0; i < nodes.size(); i++)
+	{
+		std::string header(level, '\t');
+		Node* node = nodes[i];
+		Globals()->debugPrint(String(header.c_str()) + node->get_name());
+		Array nodes = node->get_children();
+		dumpRecurseIntoChildrenNodes(nodes, level + 1);
+	}
 }
 
 GDN_TheWorld_Viewer::ShaderTerrainData::ShaderTerrainData()

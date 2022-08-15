@@ -6,6 +6,7 @@
 #include <AABB.hpp>
 #include <Material.hpp>
 #include <SpatialMaterial.hpp>
+#include <MeshInstance.hpp>
 
 #include <map>
 #include <string>
@@ -350,7 +351,7 @@ namespace godot
 		Transform getGlobalTransform(void);
 		Transform getMeshGlobalTransformApplied(void);
 		void setPosInQuad(enum PosInQuad posInQuad) { m_posInQuad = posInQuad; };
-		Ref<Mesh> getMesh() { return m_mesh; };
+		//Ref<Mesh> getMesh() { return m_mesh; };
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
@@ -395,7 +396,7 @@ namespace godot
 		bool m_visible;
 		bool m_pendingUpdate;
 		bool m_justJoined;
-		RID m_meshInstance;
+		RID m_meshInstanceRID;
 		RID m_meshRID;
 		Ref<Mesh> m_mesh;
 	};
@@ -430,11 +431,13 @@ namespace godot
 		Ref<ArrayMesh> createWireSquareMesh(Color c = Color(1, 1, 1));
 
 	private:
-		RID m_debugMeshInstance;
+		MeshInstance*m_debugMeshInstance;
+		RID m_debugMeshInstanceRID;
 		RID m_debugMeshRID;
 		Ref<Mesh> m_debugMesh;
 		AABB m_debugMeshAABB;
 		Transform m_debugMeshGlobaTransformApplied;
+		bool useVisualServer;
 	};
 }
 
