@@ -852,6 +852,9 @@ void GDN_TheWorld_Viewer::dump()
 	if (node != nullptr)
 	{
 		Globals()->debugPrint("============================================");
+		Globals()->debugPrint("");
+		Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
+		Globals()->debugPrint("");
 		Globals()->debugPrint(node->get_name());
 		Array nodes = node->get_children();
 		dumpRecurseIntoChildrenNodes(nodes, 1);
