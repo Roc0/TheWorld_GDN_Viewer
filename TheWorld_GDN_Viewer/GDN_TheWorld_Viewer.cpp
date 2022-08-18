@@ -725,8 +725,8 @@ void GDN_TheWorld_Viewer::getPartialAABB(AABB& aabb, int firstWorldVertCol, int 
 			}
 			else
 			{
-				minHeigth = min2(minHeigth, m_worldVertices[idxVert].altitude());
-				maxHeigth = max2(maxHeigth, m_worldVertices[idxVert].altitude());
+				minHeigth = Utils::min2(minHeigth, m_worldVertices[idxVert].altitude());
+				maxHeigth = Utils::max2(maxHeigth, m_worldVertices[idxVert].altitude());
 			}
 		}
 	}
@@ -768,9 +768,9 @@ void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
 	if (m_mapScaleVector == mapScaleVector)
 		return;
 
-	mapScaleVector.x = max2(mapScaleVector.x, MIN_MAP_SCALE);
-	mapScaleVector.y = max2(mapScaleVector.y, MIN_MAP_SCALE);
-	mapScaleVector.z = max2(mapScaleVector.z, MIN_MAP_SCALE);
+	mapScaleVector.x = Utils::max2(mapScaleVector.x, MIN_MAP_SCALE);
+	mapScaleVector.y = Utils::max2(mapScaleVector.y, MIN_MAP_SCALE);
+	mapScaleVector.z = Utils::max2(mapScaleVector.z, MIN_MAP_SCALE);
 
 	m_mapScaleVector = mapScaleVector;
 

@@ -5,6 +5,7 @@
 
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
+#include "Utils.h"
 
 #include <VisualServer.hpp>
 #include <World.hpp>
@@ -616,7 +617,8 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 		{
 			m_debugMeshInstance = MeshInstance::_new();
 			m_debugMeshInstance->set_mesh(mesh);
-			String name = String("ChunkDebug_") + String(getPos().getId().c_str());
+			string id = Utils::ReplaceString(getPos().getId(), ":", "");
+			String name = String("ChunkDebug_") + String(id.c_str());
 			m_debugMeshInstance->set_name(name);
 			m_viewer->add_child(m_debugMeshInstance);
 			if (m_debugVisibility && isVisible())

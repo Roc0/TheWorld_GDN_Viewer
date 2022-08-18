@@ -401,9 +401,9 @@ bool GDN_TheWorld_Camera::updateCamera()
 		m_mouseRelativePosToRotate = Vector2(0, 0);
 
 		if (m_yawLimit < 360)
-			m_yaw = clamp(m_yaw, -m_yawLimit - m_totalYaw, m_yawLimit - m_totalYaw);
+			m_yaw = Utils::clamp(m_yaw, -m_yawLimit - m_totalYaw, m_yawLimit - m_totalYaw);
 		if (m_pitchLimit < 360)
-			m_pitch = clamp(m_pitch, -m_pitchLimit - m_totalPitch, m_pitchLimit - m_totalPitch);
+			m_pitch = Utils::clamp(m_pitch, -m_pitchLimit - m_totalPitch, m_pitchLimit - m_totalPitch);
 		m_totalYaw *= m_yaw;
 		m_totalPitch *= m_pitch;
 
