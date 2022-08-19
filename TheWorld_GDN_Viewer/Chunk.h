@@ -357,6 +357,8 @@ namespace godot
 		void setMesh(Ref<Mesh> mesh);
 
 	protected:
+		bool useVisualServer;
+		MeshInstance* m_meshInstance;
 		enum PosInQuad m_posInQuad;
 		GDN_TheWorld_Viewer* m_viewer;
 		Transform m_parentTransform;
@@ -437,7 +439,6 @@ namespace godot
 		Ref<Mesh> m_debugMesh;
 		AABB m_debugMeshAABB;
 		Transform m_debugMeshGlobaTransformApplied;
-		bool useVisualServer;
 	};
 }
 

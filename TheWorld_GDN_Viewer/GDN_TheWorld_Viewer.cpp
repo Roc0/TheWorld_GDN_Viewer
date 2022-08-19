@@ -594,8 +594,9 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 		m_numWorldVerticesX = m_numWorldVerticesZ = Globals()->heightmapResolution() + 1;
 		m_worldVertices.clear();
 		Globals()->mapManager()->getVertices(x, z, TheWorld_MapManager::MapManager::anchorType::center, m_numWorldVerticesX, m_numWorldVerticesZ, m_worldVertices, gridStepInWU, level);
+		// SUPER DEBUGRIC
 		{
-			Globals()->debugPrint("Inizio SUPER DEBUGRIC!");	// SUPER DEBUGRIC
+			Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
 			ResourceLoader* resLoader = ResourceLoader::get_singleton();
 			Ref<Image> image = resLoader->load("res://height.res");
 			int res = (int)image->get_width();
@@ -612,8 +613,9 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 					m_worldVertices[px + pz * res].setAltitude(0.0);	// SUPER DEBUGRIC
 				}
 			image->unlock();
-			Globals()->debugPrint("Fine SUPER DEBUGRIC!");		// SUPER DEBUGRIC
+			Globals()->debugPrint("Fine SUPER DEBUGRIC!");
 		}
+		// SUPER DEBUGRIC
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
@@ -896,8 +898,8 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer)
 	m_viewer = viewer;
 	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-	//String shaderPath = "res://shaders/lookdev.shader";
-	String shaderPath = "res://shaders/test.shader";		// SUPER DEBUGRIC
+	String shaderPath = "res://shaders/lookdev.shader";
+	//String shaderPath = "res://shaders/test.shader";		// SUPER DEBUGRIC
 	Ref<Shader> shader = resLoader->load(shaderPath);
 	mat->set_shader(shader);
 
