@@ -594,7 +594,6 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 		m_numWorldVerticesX = m_numWorldVerticesZ = Globals()->heightmapResolution() + 1;
 		m_worldVertices.clear();
 		Globals()->mapManager()->getVertices(x, z, TheWorld_MapManager::MapManager::anchorType::center, m_numWorldVerticesX, m_numWorldVerticesZ, m_worldVertices, gridStepInWU, level);
-<<<<<<< HEAD
 		//{	// SUPER DEBUGRIC
 		//	Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
 		//	ResourceLoader* resLoader = ResourceLoader::get_singleton();
@@ -615,30 +614,6 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 		//	image->unlock();
 		//	Globals()->debugPrint("Fine SUPER DEBUGRIC!");
 		//}	// SUPER DEBUGRIC
-=======
-		// SUPER DEBUGRIC
-		{
-			Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
-			ResourceLoader* resLoader = ResourceLoader::get_singleton();
-			Ref<Image> image = resLoader->load("res://height.res");
-			int res = (int)image->get_width();
-			assert(res == Globals()->heightmapResolution() + 1);
-			float gridStepInWUs = Globals()->gridStepInWU();
-			image->lock();
-			for (int pz = 0; pz < res; pz++)
-				for (int px = 0; px < res; px++)
-				{
-					Color c = image->get_pixel(px, pz);
-					//if (c != Color(0, 0, 0))
-					//	Globals()->debugPrint("Color " + String(c));
-					//m_worldVertices[px + pz * res].setAltitude(c.r);
-					m_worldVertices[px + pz * res].setAltitude(0.0);	// SUPER DEBUGRIC
-				}
-			image->unlock();
-			Globals()->debugPrint("Fine SUPER DEBUGRIC!");
-		}
-		// SUPER DEBUGRIC
->>>>>>> c2da6dfe848e239269b6a6502d17dcc68d598c00
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
