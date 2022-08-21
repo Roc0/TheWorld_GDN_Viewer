@@ -13,6 +13,9 @@
 
 #include "GDN_TheWorld_Globals.h"
 
+#define GD_CHUNK_MESHINSTANCE_GROUP			"ChunkMeshInstanceGroup"
+#define GD_DEBUGCHUNK_MESHINSTANCE_GROUP	"DebugChunkMeshInstanceGroup"
+
 namespace godot
 {
 #define DEBUG_WIRECUBE_MESH			"debug_wirecube_mesh_lod_"
@@ -357,7 +360,7 @@ namespace godot
 		void setMesh(Ref<Mesh> mesh);
 
 	protected:
-		bool useVisualServer;
+		bool m_useVisualServer;
 		MeshInstance* m_meshInstance;
 		enum PosInQuad m_posInQuad;
 		GDN_TheWorld_Viewer* m_viewer;

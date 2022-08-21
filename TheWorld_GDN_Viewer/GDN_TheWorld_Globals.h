@@ -106,6 +106,7 @@ namespace godot
 			register_method("debug_print", &GDN_TheWorld_Globals::debugPrint);
 			register_method("error_print", &GDN_TheWorld_Globals::errorPrint);
 			register_method("warning_print", &GDN_TheWorld_Globals::warningPrint);
+			register_method("info_print", &GDN_TheWorld_Globals::infoPrint);
 			register_method("print", &GDN_TheWorld_Globals::print);
 
 			register_method("set_app_in_error", &GDN_TheWorld_Globals::setAppInError);
@@ -162,6 +163,12 @@ namespace godot
 			godot::api->godot_free(m);
 		}
 
+		void infoPrint(String message)
+		{
+			String msg = "INFO - " + message;
+			GDN_TheWorld_Globals::print(msg);
+		}
+		
 		void print(String message)
 		{
 			Godot::print(message);

@@ -121,13 +121,14 @@ namespace godot
 		arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
 		Ref<ArrayMesh> mesh = ArrayMesh::_new();
+		int64_t surf_idx = mesh->get_surface_count();	// next surface added will have this surf_idx
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
 
 		// Initial Material
 		Ref<SpatialMaterial> initialMaterial = SpatialMaterial::_new();
 		initialMaterial->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 		initialMaterial->set_albedo(initialVertexColor);
-		mesh->surface_set_material(0, initialMaterial);
+		mesh->surface_set_material(surf_idx, initialMaterial);
 
 		return mesh;
 	}

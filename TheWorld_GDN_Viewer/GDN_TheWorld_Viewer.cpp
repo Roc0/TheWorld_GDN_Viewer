@@ -51,6 +51,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_initialized = false;
+	m_useVisualServer = false;
 	m_firstProcess = true;
 	m_initialWordlViewerPosSet = false;
 	m_dumpRequired = false;
@@ -203,6 +204,8 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		case NOTIFICATION_ENTER_WORLD:
 		{
 			printKeyboardMapping();
+			string s = "Use Visual Server: "; s += (m_useVisualServer ? "True" : "False");
+			Globals()->infoPrint(s.c_str());
 			Globals()->debugPrint("Enter world");
 			if (m_quadTree && m_initialWordlViewerPosSet)
 			{
@@ -594,26 +597,24 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 		m_numWorldVerticesX = m_numWorldVerticesZ = Globals()->heightmapResolution() + 1;
 		m_worldVertices.clear();
 		Globals()->mapManager()->getVertices(x, z, TheWorld_MapManager::MapManager::anchorType::center, m_numWorldVerticesX, m_numWorldVerticesZ, m_worldVertices, gridStepInWU, level);
-		//{	// SUPER DEBUGRIC
-		//	Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
-		//	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-		//	Ref<Image> image = resLoader->load("res://height.res");
-		//	int res = (int)image->get_width();
-		//	assert(res == Globals()->heightmapResolution() + 1);
-		//	float gridStepInWUs = Globals()->gridStepInWU();
-		//	image->lock();
-		//	for (int pz = 0; pz < res; pz++)
-		//		for (int px = 0; px < res; px++)
-		//		{
-		//			Color c = image->get_pixel(px, pz);
-		//			//if (c != Color(0, 0, 0))
-		//			//	Globals()->debugPrint("Color " + String(c));
-		//			m_worldVertices[px + pz * res].setAltitude(c.r);
-		//			//m_worldVertices[px + pz * res].setAltitude(0.0);	// SUPER DEBUGRIC
-		//		}
-		//	image->unlock();
-		//	Globals()->debugPrint("Fine SUPER DEBUGRIC!");
-		//}	// SUPER DEBUGRIC
+		{	// SUPER DEBUGRIC
+			Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
+			ResourceLoader* resLoader = ResourceLoader::get_singleton();
+			Ref<Image> image = resLoader->load("res://height.res");
+			int res = (int)image->get_width();
+			assert(res == Globals()->heightmapResolution() + 1);
+			float gridStepInWUs = Globals()->gridStepInWU();
+			image->lock();
+			for (int pz = 0; pz < res; pz++)
+				for (int px = 0; px < res; px++)
+				{
+					Color c = image->get_pixel(px, pz);
+					//m_worldVertices[px + pz * res].setAltitude(c.r);
+					m_worldVertices[px + pz * res].setAltitude(c.r * 3);
+				}
+			image->unlock();
+			Globals()->debugPrint("Fine SUPER DEBUGRIC!");
+		}	// SUPER DEBUGRIC
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{

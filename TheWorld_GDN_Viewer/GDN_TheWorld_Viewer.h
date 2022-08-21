@@ -127,6 +127,7 @@ namespace godot
 		bool getDebugVisibility(void) { return m_debugVisibility; }
 		String getDebugDrawMode(void);
 		ShaderTerrainData& getShaderTerrainData(void) { return m_shaderTerrainData; }
+		bool useVisualServer(void) { return m_useVisualServer; }
 
 	private:
 		void onTransformChanged(void);
@@ -143,6 +144,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_useVisualServer;
 		bool m_ctrlPressed;
 		bool m_firstProcess;
 		int64_t m_timeElapsedFromLastDump;
