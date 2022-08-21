@@ -336,9 +336,9 @@ namespace godot
 		virtual bool isDebugMeshNull(void);
 		virtual void refresh(bool isVisible);
 		virtual void update(bool isVisible);
+		virtual void setActive(bool b);
 
 		bool isActive(void) { return m_active; }
-		void setActive(bool b);
 		bool isVisible(void) { return m_visible; }
 		bool isPendingUpdate(void) { return m_pendingUpdate; }
 		void setPendingUpdate(bool b) { m_pendingUpdate = b; }
@@ -354,6 +354,8 @@ namespace godot
 		Transform getGlobalTransform(void);
 		Transform getMeshGlobalTransformApplied(void);
 		void setPosInQuad(enum PosInQuad posInQuad) { m_posInQuad = posInQuad; };
+		virtual void releaseDebugMesh(void);
+		virtual void releaseMesh(void);
 		//Ref<Mesh> getMesh() { return m_mesh; };
 
 	private:
@@ -429,6 +431,8 @@ namespace godot
 		virtual bool isDebugMeshNull(void);
 		virtual void refresh(bool isVisible);
 		virtual void update(bool isVisible);
+		virtual void releaseDebugMesh(void);
+		virtual void setActive(bool b);
 
 	private:
 		void setDebugMesh(Ref<Mesh> mesh);

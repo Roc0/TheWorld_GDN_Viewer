@@ -197,6 +197,24 @@ void Chunk::applyAABB(void)
 	}
 }
 
+void Chunk::releaseMesh(void)
+{
+	if (m_meshInstance != nullptr)
+	{
+		String name = m_meshInstance->get_name();
+		name = "DELETED_" + name;
+		m_meshInstance->set_name(name);
+		m_meshInstance->remove_from_group(GD_CHUNK_MESHINSTANCE_GROUP);
+		m_meshInstance->queue_free();
+		m_meshInstance = nullptr;
+		m_meshRID = RID();
+	}
+}
+
+void Chunk::releaseDebugMesh(void)
+{
+}
+
 void Chunk::setMesh(Ref<Mesh> mesh)
 {
 	RID meshRID = (mesh != nullptr ? mesh->get_rid() : RID());
@@ -211,15 +229,7 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 	}
 	else
 	{
-		if (m_meshInstance != nullptr)
-		{
-			String name = m_meshInstance->get_name();
-			name = "DELETED_" + name;
-			m_meshInstance->set_name(name);
-			m_meshInstance->remove_from_group(GD_CHUNK_MESHINSTANCE_GROUP);
-			m_meshInstance->queue_free();
-			m_meshInstance = nullptr;
-		}
+		releaseMesh();
 
 		if (mesh != nullptr)
 		{
@@ -369,6 +379,9 @@ void Chunk::setActive(bool b)
 		m_isCameraVerticalOnChunk = false;
 		m_localToGriddCoordCameraLastPos = Vector3(0, 0, 0);
 		m_globalCoordCameraLastPos = Vector3(0, 0, 0);
+
+		if (!m_useVisualServer)
+			releaseMesh();
 	}
 }
 
@@ -600,6 +613,17 @@ Transform ChunkDebug::getDebugMeshGlobalTransformApplied(void)
 	return m_debugMeshGlobaTransformApplied;
 }
 
+void ChunkDebug::setActive(bool b)
+{
+	Chunk::setActive(b);
+
+	if (!b)
+	{
+		if (!m_useVisualServer)
+			releaseDebugMesh();
+	}
+}
+
 void ChunkDebug::setVisible(bool b)
 {
 	Chunk::setVisible(b);
@@ -667,6 +691,21 @@ void ChunkDebug::applyAABB(void)
 	}
 }
 
+void ChunkDebug::releaseDebugMesh(void)
+{
+	Chunk::releaseDebugMesh();
+
+	if (m_debugMeshInstance != nullptr)
+	{
+		String name = m_debugMeshInstance->get_name();
+		name = "DELETED_" + name;
+		m_debugMeshInstance->set_name(name);
+		m_debugMeshInstance->remove_from_group(GD_DEBUGCHUNK_MESHINSTANCE_GROUP);
+		m_debugMeshInstance->queue_free();
+		m_debugMeshInstance = nullptr;
+		m_debugMeshRID = RID();
+	}
+}
 
 void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 {
@@ -688,15 +727,7 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 	}
 	else
 	{
-		if (m_debugMeshInstance != nullptr)
-		{
-			String name = m_debugMeshInstance->get_name();
-			name = "DELETED_" + name;
-			m_debugMeshInstance->set_name(name);
-			m_debugMeshInstance->remove_from_group(GD_DEBUGCHUNK_MESHINSTANCE_GROUP);
-			m_debugMeshInstance->queue_free();
-			m_debugMeshInstance = nullptr;
-		}
+		releaseDebugMesh();
 		
 		if (mesh != nullptr)
 		{
