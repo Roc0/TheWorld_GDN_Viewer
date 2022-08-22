@@ -51,7 +51,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_initialized = false;
-	m_useVisualServer = false;
+	m_useVisualServer = true;
 	m_firstProcess = true;
 	m_initialWordlViewerPosSet = false;
 	m_dumpRequired = false;

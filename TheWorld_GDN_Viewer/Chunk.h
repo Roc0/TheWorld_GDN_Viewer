@@ -22,6 +22,37 @@ namespace godot
 #define DEBUG_WIRESQUARE_MESH		"debug_wiresquare_mesh_lod_"
 
 	class GDN_TheWorld_Viewer;
+	class Chunk;
+
+	class GDN_Chunk_MeshInstance : public MeshInstance
+	{
+		GODOT_CLASS(GDN_Chunk_MeshInstance, MeshInstance)
+
+	public:
+		GDN_Chunk_MeshInstance();
+		~GDN_Chunk_MeshInstance();
+		void init(Chunk* chunk);
+		void deinit(void);
+
+		static void _register_methods();
+
+		//
+		// Godot Standard Functions
+		//
+		void _init(void); // our initializer called by Godot
+		void _ready(void);
+		void _process(float _delta);
+		void _input(const Ref<InputEvent> event);
+
+		int getLod(void);
+		int getSlotPosX(void);
+		int getSlotPosZ(void);
+		String getId(void);
+
+	private:
+		bool m_initialized;
+		Chunk* m_chunk;
+	};
 
 	enum class PosInQuad
 	{
@@ -345,6 +376,9 @@ namespace godot
 		bool gotJustJoined(void) { return m_justJoined; }
 		void setJustJoined(bool b) { m_justJoined = b; }
 		int getLod(void) { return m_lod; }
+		int getSlotPosX(void) { return m_slotPosX; }
+		int getSlotPosZ(void) { return m_slotPosZ; }
+		std::string getId(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod).getId(); };
 		ChunkPos getPos(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod); }
 		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
 		AABB getAABB(void) { return m_aabb; };
@@ -363,7 +397,7 @@ namespace godot
 
 	protected:
 		bool m_useVisualServer;
-		MeshInstance* m_meshInstance;
+		GDN_Chunk_MeshInstance* m_meshInstance;
 		enum PosInQuad m_posInQuad;
 		GDN_TheWorld_Viewer* m_viewer;
 		Transform m_parentTransform;
@@ -440,7 +474,7 @@ namespace godot
 		Ref<ArrayMesh> createWireSquareMesh(Color c = Color(1, 1, 1));
 
 	private:
-		MeshInstance*m_debugMeshInstance;
+		MeshInstance* m_debugMeshInstance;
 		RID m_debugMeshInstanceRID;
 		RID m_debugMeshRID;
 		Ref<Mesh> m_debugMesh;
@@ -448,4 +482,3 @@ namespace godot
 		Transform m_debugMeshGlobaTransformApplied;
 	};
 }
-
