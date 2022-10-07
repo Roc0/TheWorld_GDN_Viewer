@@ -40,9 +40,9 @@ namespace godot
 	{
 		GODOT_CLASS(GDN_TheWorld_Globals, Node)
 
-		//const float c_splitScale = 1.0F;
+		const float c_splitScale = 1.0F;
 		//const float c_splitScale = 2.0F;
-		const float c_splitScale = 1.5F;
+		//const float c_splitScale = 1.5F;
 
 	public:
 		const static Color g_color_white;

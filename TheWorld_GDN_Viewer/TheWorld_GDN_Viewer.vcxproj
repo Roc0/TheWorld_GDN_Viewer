@@ -128,6 +128,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,6 +149,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

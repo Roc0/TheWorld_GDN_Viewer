@@ -177,9 +177,8 @@ namespace godot
 		Chunk* m_cameraChunk;
 		
 		// World Data
-		std::vector<TheWorld_MapManager::SQLInterface::GridVertex> m_worldVertices;
-		int m_numWorldVerticesX;
-		int m_numWorldVerticesZ;
+		std::unique_ptr<TheWorld_MapManager::MapManager::Quadrant> m_worldQuadrant;
+		int m_numWorldVerticesPerSize;
 
 		// Shader Data
 		ShaderTerrainData m_shaderTerrainData;

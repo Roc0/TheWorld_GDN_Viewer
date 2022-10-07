@@ -59,8 +59,9 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_worldViewerLevel = 0;
 	m_worldCamera = nullptr;
 	m_cameraChunk = nullptr;
-	m_numWorldVerticesX = 0;
-	m_numWorldVerticesZ = 0;
+	//m_numWorldVerticesX = 0;
+	//m_numWorldVerticesZ = 0;
+	m_worldQuadrant = nullptr;
 	m_globals = nullptr;
 	m_mapScaleVector = Vector3(1, 1, 1);
 	m_timeElapsedFromLastDump = 0;
@@ -84,7 +85,6 @@ void GDN_TheWorld_Viewer::deinit(void)
 	{
 		PLOGI << "TheWorld Viewer Deinitializing...";
 
-		m_worldVertices.clear();
 		m_quadTree.reset();
 		m_meshCache.reset();
 		
@@ -593,10 +593,9 @@ void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
 {
 	try
 	{
-		float gridStepInWU;
-		m_numWorldVerticesX = m_numWorldVerticesZ = Globals()->heightmapResolution() + 1;
-		m_worldVertices.clear();
-		Globals()->mapManager()->getVertices(x, z, TheWorld_MapManager::MapManager::anchorType::center, m_numWorldVerticesX, m_numWorldVerticesZ, m_worldVertices, gridStepInWU, level);
+		m_numWorldVerticesPerSize = Globals()->heightmapResolution() + 1;
+		m_worldQuadrant = Globals()->mapManager()->getQuadrant(x, z, level, m_numWorldVerticesPerSize);
+
 		//{	// SUPER DEBUGRIC
 		//	Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
 		//	ResourceLoader* resLoader = ResourceLoader::get_singleton();
@@ -661,9 +660,9 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 
 		loadWorldData(x, z, level);
 
-		TheWorld_MapManager::SQLInterface::GridVertex viewerPos(x, z, level);
-		vector<TheWorld_MapManager::SQLInterface::GridVertex>::iterator it = std::find(m_worldVertices.begin(), m_worldVertices.end(), viewerPos);
-		if (it == m_worldVertices.end())
+		TheWorld_MapManager::MapManager::GridVertex viewerPos(x, 0, z, level);
+		std::vector<TheWorld_MapManager::MapManager::GridVertex>::iterator it = std::find(m_worldQuadrant->getGridVertices().begin(), m_worldQuadrant->getGridVertices().end(), viewerPos);
+		if (it == m_worldQuadrant->getGridVertices().end())
 		{
 			Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Not found WorldViewer Pos");
 			return;
@@ -673,7 +672,7 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 
 		// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
 		Transform t = get_transform();
-		t.origin = Vector3(m_worldVertices[0].posX(), 0, m_worldVertices[0].posZ());
+		t.origin = Vector3(m_worldQuadrant->getGridVertices()[0].posX(), 0, m_worldQuadrant->getGridVertices()[0].posZ());
 		set_transform(t);
 		
 		WorldCamera()->initCameraInWorld(cameraPos, lookAt);
@@ -707,34 +706,34 @@ Spatial* GDN_TheWorld_Viewer::getWorldNode(void)
 
 void GDN_TheWorld_Viewer::getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step)
 {
-	int idxFirstColFirstRowWorldVert = m_numWorldVerticesX * firstWorldVertRow + firstWorldVertCol;
-	int idxLastColFirstRowWorldVert = m_numWorldVerticesX * firstWorldVertRow + lastWorldVertCol;
-	int idxFirstColLastRowWorldVert = m_numWorldVerticesX * lastWorldVertRow + firstWorldVertCol;
-	int idxLastColLastRowWorldVert = m_numWorldVerticesX * lastWorldVertRow + lastWorldVertCol;
+	int idxFirstColFirstRowWorldVert = m_numWorldVerticesPerSize * firstWorldVertRow + firstWorldVertCol;
+	int idxLastColFirstRowWorldVert = m_numWorldVerticesPerSize * firstWorldVertRow + lastWorldVertCol;
+	int idxFirstColLastRowWorldVert = m_numWorldVerticesPerSize * lastWorldVertRow + firstWorldVertCol;
+	int idxLastColLastRowWorldVert = m_numWorldVerticesPerSize * lastWorldVertRow + lastWorldVertCol;
 
 	// altitudes
 	float minHeigth = 0, maxHeigth = 0;
 	bool firstTime = true;
 	for (int idxRow = 0; idxRow < lastWorldVertRow - firstWorldVertRow + 1; idxRow += step)
 	{
-		for (int idxVert = idxFirstColFirstRowWorldVert + idxRow * m_numWorldVerticesX; idxVert < idxLastColFirstRowWorldVert + idxRow * m_numWorldVerticesX + 1; idxVert += step)
+		for (int idxVert = idxFirstColFirstRowWorldVert + idxRow * m_numWorldVerticesPerSize; idxVert < idxLastColFirstRowWorldVert + idxRow * m_numWorldVerticesPerSize + 1; idxVert += step)
 		{
 			if (firstTime)
 			{
-				minHeigth = maxHeigth = m_worldVertices[idxVert].altitude();
+				minHeigth = maxHeigth = m_worldQuadrant->getGridVertices()[idxVert].altitude();
 				firstTime = false;
 			}
 			else
 			{
-				minHeigth = Utils::min2(minHeigth, m_worldVertices[idxVert].altitude());
-				maxHeigth = Utils::max2(maxHeigth, m_worldVertices[idxVert].altitude());
+				minHeigth = Utils::min2(minHeigth, m_worldQuadrant->getGridVertices()[idxVert].altitude());
+				maxHeigth = Utils::max2(maxHeigth, m_worldQuadrant->getGridVertices()[idxVert].altitude());
 			}
 		}
 	}
 	
-	Vector3 startPosition(m_worldVertices[idxFirstColFirstRowWorldVert].posX(), minHeigth, m_worldVertices[idxFirstColFirstRowWorldVert].posZ());
+	Vector3 startPosition(m_worldQuadrant->getGridVertices()[idxFirstColFirstRowWorldVert].posX(), minHeigth, m_worldQuadrant->getGridVertices()[idxFirstColFirstRowWorldVert].posZ());
 	//Vector3 endPosition(m_worldVertices[idxLastColLastRowWorldVert].posX() - m_worldVertices[idxFirstColFirstRowWorldVert].posX(), maxHeigth, m_worldVertices[idxLastColLastRowWorldVert].posZ() - m_worldVertices[idxFirstColFirstRowWorldVert].posZ());
-	Vector3 endPosition(m_worldVertices[idxLastColLastRowWorldVert].posX(), maxHeigth, m_worldVertices[idxLastColLastRowWorldVert].posZ());
+	Vector3 endPosition(m_worldQuadrant->getGridVertices()[idxLastColLastRowWorldVert].posX(), maxHeigth, m_worldQuadrant->getGridVertices()[idxLastColLastRowWorldVert].posZ());
 	Vector3 size = endPosition - startPosition;
 
 	aabb.set_position(startPosition);
@@ -929,15 +928,14 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 		// Filling Heightmap Map Texture , Normal Map Texture
 		assert(_resolution == m_heightMapImage->get_height());
 		assert(_resolution == m_heightMapImage->get_width());
-		assert(_resolution == m_viewer->m_numWorldVerticesX);
-		assert(_resolution == m_viewer->m_numWorldVerticesZ);
+		assert(_resolution == m_viewer->m_numWorldVerticesPerSize);
 		float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
 		m_heightMapImage->lock();
 		m_normalMapImage->lock();
 		for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
 			for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
 			{
-				float h = m_viewer->m_worldVertices[z * _resolution + x].altitude();
+				float h = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x].altitude();
 				m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
 				//if (h != 0)	// DEBUGRIC
 				//	m_viewer->Globals()->debugPrint("Altitude not null.X=" + String(std::to_string(x).c_str()) + " Z=" + std::to_string(z).c_str() + " H=" + std::to_string(h).c_str());
@@ -954,8 +952,8 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 				Vector3 P((float)x, h, (float)z);
 				if (x < _resolution - 1 && z < _resolution - 1)
 				{
-					float hr = m_viewer->m_worldVertices[z * _resolution + x + 1].altitude();
-					float hf = m_viewer->m_worldVertices[(z + 1) * _resolution + x].altitude();
+					float hr = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x + 1].altitude();
+					float hf = m_viewer->m_worldQuadrant->getGridVertices()[(z + 1) * _resolution + x].altitude();
 					normal = Vector3(h - hr, gridStepInWUs, h - hf).normalized();
 					//{		// Verify
 					//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
@@ -969,8 +967,8 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 				{
 					if (x == _resolution - 1 && z == 0)
 					{
-						float hf = m_viewer->m_worldVertices[(z + 1) * _resolution + x].altitude();
-						float hl = m_viewer->m_worldVertices[z * _resolution + x - 1].altitude();
+						float hf = m_viewer->m_worldQuadrant->getGridVertices()[(z + 1) * _resolution + x].altitude();
+						float hl = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x - 1].altitude();
 						normal = Vector3(hl - h, gridStepInWUs, h - hf).normalized();
 						//{		// Verify
 						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
@@ -982,8 +980,8 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 					}
 					else if (x == 0 && z == _resolution - 1)
 					{
-						float hr = m_viewer->m_worldVertices[z * _resolution + x + 1].altitude();
-						float hb = m_viewer->m_worldVertices[(z - 1) * _resolution + x].altitude();
+						float hr = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x + 1].altitude();
+						float hb = m_viewer->m_worldQuadrant->getGridVertices()[(z - 1) * _resolution + x].altitude();
 						normal = Vector3(h - hr, gridStepInWUs, hb - h).normalized();
 						//{		// Verify
 						//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
@@ -995,8 +993,8 @@ void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
 					}
 					else
 					{
-						float hl = m_viewer->m_worldVertices[z * _resolution + x - 1].altitude();
-						float hb = m_viewer->m_worldVertices[(z - 1) * _resolution + x].altitude();
+						float hl = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x - 1].altitude();
+						float hb = m_viewer->m_worldQuadrant->getGridVertices()[(z - 1) * _resolution + x].altitude();
 						normal = Vector3(hl - h, gridStepInWUs, hb - h).normalized();
 						//{		// Verify
 						//	Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));

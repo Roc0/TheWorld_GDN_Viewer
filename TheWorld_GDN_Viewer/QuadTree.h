@@ -60,7 +60,6 @@ namespace godot
 		float m_chunkSizeInWUs;
 	};
 
-
 	class QuadTree
 	{
 	public:
