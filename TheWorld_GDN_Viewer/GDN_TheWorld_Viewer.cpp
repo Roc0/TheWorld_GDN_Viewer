@@ -61,7 +61,6 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_cameraChunk = nullptr;
 	//m_numWorldVerticesX = 0;
 	//m_numWorldVerticesZ = 0;
-	m_worldQuadrant = nullptr;
 	m_globals = nullptr;
 	m_mapScaleVector = Vector3(1, 1, 1);
 	m_timeElapsedFromLastDump = 0;
@@ -85,7 +84,7 @@ void GDN_TheWorld_Viewer::deinit(void)
 	{
 		PLOGI << "TheWorld Viewer Deinitializing...";
 
-		m_quadTree.reset();
+		m_mapQuadTree.clear();
 		m_meshCache.reset();
 		
 		m_initialized = false;
@@ -207,39 +206,50 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 			string s = "Use Visual Server: "; s += (m_useVisualServer ? "True" : "False");
 			Globals()->infoPrint(s.c_str());
 			Globals()->debugPrint("Enter world");
-			if (m_quadTree && m_initialWordlViewerPosSet)
-			{
-				Chunk::EnterWorldChunkAction action;
-				m_quadTree->ForAllChunk(action);
-			}
+			if (m_initialWordlViewerPosSet)
+				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+				{
+					if (!itQuadTree->second->isValid())
+						continue;
+					Chunk::EnterWorldChunkAction action;
+					itQuadTree->second->ForAllChunk(action);
+				}
 		}
 		break;
 		case NOTIFICATION_EXIT_WORLD:
 		{
 			Globals()->debugPrint("Exit world");
-			if (m_quadTree && m_initialWordlViewerPosSet)
-			{
-				Chunk::ExitWorldChunkAction action;
-				m_quadTree->ForAllChunk(action);
-			}
+			if (m_initialWordlViewerPosSet)
+				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+				{
+					if (!itQuadTree->second->isValid())
+						continue;
+					Chunk::ExitWorldChunkAction action;
+					itQuadTree->second->ForAllChunk(action);
+				}
 		}
 		break;
 		case NOTIFICATION_VISIBILITY_CHANGED:
 		{
 			Globals()->debugPrint("Visibility changed");
-			if (m_quadTree && m_initialWordlViewerPosSet)
-			{
-				Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
-				m_quadTree->ForAllChunk(action);
-			}
+			if (m_initialWordlViewerPosSet)
+				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+				{
+					if (!itQuadTree->second->isValid())
+						continue;
+					Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
+					itQuadTree->second->ForAllChunk(action);
+				}
 		}
 		break;
 		case NOTIFICATION_TRANSFORM_CHANGED:
-			if (m_quadTree && m_initialWordlViewerPosSet)
+		{
+			if (m_initialWordlViewerPosSet)
 			{
 				onTransformChanged();
 			}
-			break;
+		}
+		break;
 	// TODORIC
 	}
 }
@@ -279,8 +289,6 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_meshCache = make_unique<MeshCache>(this);
 	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 
-	m_shaderTerrainData.init(this);
-	
 	m_initialized = true;
 	PLOGI << "TheWorld Viewer Initialized!";
 
@@ -299,11 +307,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (!activeCamera)
 		return;
 
-	if (m_quadTree == nullptr)
-	{
-		m_quadTree = make_unique<QuadTree>(this);
-		m_quadTree->init();
-	}
+	//if (m_quadTree == nullptr)
+	//{
+	//	return;
+	//	m_quadTree = make_unique<QuadTree>(this);
+	//	m_quadTree->init();
+	//}
 
 	if (m_firstProcess)
 	{
@@ -331,197 +340,220 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	Transform globalTransform = internalTransformGlobalCoord();
 	Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 
-	m_quadTree->update(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (!itQuadTree->second->isValid())
+			continue;
+		itQuadTree->second->update(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);
+	}
 
 	if (m_refreshRequired)
 	{
 		Chunk::RefreshChunkAction action(is_visible_in_tree());
-		m_quadTree->ForAllChunk(action);
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		{
+			if (!itQuadTree->second->isValid())
+				continue;
+			itQuadTree->second->ForAllChunk(action);
+		}
 		m_refreshRequired = false;
 	}
 
 	// Update chunks
 	{
-		// All chunk that need an update (they are chunk that got split or joined)
-		std::vector<Chunk*> vectChunkUpdate = m_quadTree->getChunkUpdate();
-
-		// Forcing update to all neighboring chunks to readjust the seams
-		std::vector<Chunk*> vectAdditionalUpdateChunk;
-		for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
-			if (!(*it)->isActive())
+			if (!itQuadTree->second->isValid())
 				continue;
+			
+			// All chunk that need an update (they are chunk that got split or joined)
+			std::vector<Chunk*> vectChunkUpdate = itQuadTree->second->getChunkUpdate();
 
-			Chunk::ChunkPos pos = (*it)->getPos();
+			// Forcing update to all neighboring chunks to readjust the seams
+			std::vector<Chunk*> vectAdditionalUpdateChunk;
+			for (std::vector<Chunk*>::iterator itChunk = vectChunkUpdate.begin(); itChunk != vectChunkUpdate.end(); itChunk++)
+			{
+				if (!(*itChunk)->isActive())
+					continue;
 
-			// In case the chunk got split forcing update to left, right, bottom, top chunks
-			Chunk* chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);		// x lessening
-			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-			{
-				//
-				// - o
-				//
-				chunk->setPendingUpdate(true);
-				vectAdditionalUpdateChunk.push_back(chunk);
-			}
-			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);			// x growing
-			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-			{
-				//
-				//   o -
-				//
-				chunk->setPendingUpdate(true);
-				vectAdditionalUpdateChunk.push_back(chunk);
-			}
-			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);
-			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-			{
-				//   -
-				//   o
-				//
-				chunk->setPendingUpdate(true);
-				vectAdditionalUpdateChunk.push_back(chunk);
-			}
-			chunk = m_quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);
-			if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-			{
-				//
-				//   o
-				//   -
-				chunk->setPendingUpdate(true);
-				vectAdditionalUpdateChunk.push_back(chunk);
+				Chunk::ChunkPos pos = (*itChunk)->getPos();
+
+				// In case the chunk got split forcing update to left, right, bottom, top chunks
+				Chunk* chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);		// x lessening
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//
+					// - o
+					//
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);			// x growing
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//
+					//   o -
+					//
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//   -
+					//   o
+					//
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//
+					//   o
+					//   -
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+
+				// In case the chunk got joined
+				int lod = pos.getLod();
+				if (lod > 0 && (*itChunk)->gotJustJoined())
+				{
+					(*itChunk)->setJustJoined(false);
+
+					Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+					//	o =
+					//	= =
+					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XMinusQuadSecondChunk);
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//  
+						//	- o =
+						//	  = =
+						//  
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XMinusQuadForthChunk);
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//  
+						//	  o =
+						//	- = =
+						//  
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XPlusQuadFirstChunk);
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//  
+						//	  o = -
+						//	  = =
+						//  
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XPlusQuadThirdChunk);
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//  
+						//	  o = 
+						//	  = = -
+						//  
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZMinusQuadThirdChunk);
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//    -
+						//	  o =
+						//	  = =
+						//    
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZMinusQuadForthChunk);
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//      -
+						//	  o =
+						//	  = =
+						//    
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZPlusQuadFirstChunk);
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//    
+						//	  o =
+						//	  = =
+						//    -
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZPlusQuadSecondChunk);
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//      
+						//	  o =
+						//	  = =
+						//      -
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+				}
+				// Anycase clear flag just joined
+				if ((*itChunk)->gotJustJoined())
+					(*itChunk)->setJustJoined(false);
 			}
 
-			// In case the chunk got joined
-			int lod = pos.getLod();
-			if (lod > 0 && (*it)->gotJustJoined())
-			{
-				(*it)->setJustJoined(false);
+			for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
+				(*it)->update(is_visible_in_tree());
 
-				Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-				//	o =
-				//	= =
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XMinusQuadSecondChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//  
-					//	- o =
-					//	  = =
-					//  
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XMinusQuadForthChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//  
-					//	  o =
-					//	- = =
-					//  
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XPlusQuadFirstChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//  
-					//	  o = -
-					//	  = =
-					//  
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XPlusQuadThirdChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//  
-					//	  o = 
-					//	  = = -
-					//  
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZMinusQuadThirdChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//    -
-					//	  o =
-					//	  = =
-					//    
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZMinusQuadForthChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//      -
-					//	  o =
-					//	  = =
-					//    
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZPlusQuadFirstChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//    
-					//	  o =
-					//	  = =
-					//    -
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = m_quadTree->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZPlusQuadSecondChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//      
-					//	  o =
-					//	  = =
-					//      -
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-			}
-			// Anycase clear flag just joined
-			if ((*it)->gotJustJoined())
-				(*it)->setJustJoined(false);
+			for (std::vector<Chunk*>::iterator it = vectAdditionalUpdateChunk.begin(); it != vectAdditionalUpdateChunk.end(); it++)
+				(*it)->update(is_visible_in_tree());
+
+			itQuadTree->second->clearChunkUpdate();
+			vectAdditionalUpdateChunk.clear();
 		}
-
-		for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
-			(*it)->update(is_visible_in_tree());
-
-		for (std::vector<Chunk*>::iterator it = vectAdditionalUpdateChunk.begin(); it != vectAdditionalUpdateChunk.end(); it++)
-			(*it)->update(is_visible_in_tree());
-
-		m_quadTree->clearChunkUpdate();
-		vectAdditionalUpdateChunk.clear();
 	}
 
 	if (m_updateTerrainVisibilityRequired)
 	{
-		if (m_quadTree && m_initialWordlViewerPosSet)
-		{
-			Chunk::DebugVisibilityChangedChunkAction action(m_debugVisibility);
-			m_quadTree->ForAllChunk(action);
-		}
+		if (m_initialWordlViewerPosSet)
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				if (!itQuadTree->second->isValid())
+					continue;
+				Chunk::DebugVisibilityChangedChunkAction action(m_debugVisibility);
+				itQuadTree->second->ForAllChunk(action);
+			}
 		m_updateTerrainVisibilityRequired = false;
 	}
 
 	if (m_updateDebugModeRequired)
 	{
-		if (m_quadTree && m_initialWordlViewerPosSet)
-		{
-			Chunk::SwitchDebugModeAction action(m_requiredChunkDebugMode);
-			m_quadTree->ForAllChunk(action);
-			m_currentChunkDebugMode = m_requiredChunkDebugMode;
-		}
+		if (m_initialWordlViewerPosSet)
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				if (!itQuadTree->second->isValid())
+					continue;
+				Chunk::SwitchDebugModeAction action(m_requiredChunkDebugMode);
+				itQuadTree->second->ForAllChunk(action);
+				m_currentChunkDebugMode = m_requiredChunkDebugMode;
+			}
 		m_updateDebugModeRequired = false;
 	}
 
-	if (m_shaderTerrainData.materialParamsNeedUpdate())
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		m_shaderTerrainData.updateMaterialParams();
-		m_shaderTerrainData.materialParamsNeedUpdate(false);
+		if (!itQuadTree->second->isValid())
+			continue;
+		itQuadTree->second->updateMaterialParams();
 	}
 	
 	// Check for Dump
@@ -583,18 +615,21 @@ GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
 
 int GDN_TheWorld_Viewer::getNumChunks(void)
 {
-	if (m_quadTree)
-		return (int)m_quadTree->getNumChunks();
-	else
-		return 0;
+	int numChunks = 0;
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (!itQuadTree->second->isValid())
+			continue;
+		numChunks += itQuadTree->second->getNumChunks();
+	}
+	return numChunks; 
 }
 
-void GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level)
+TheWorld_MapManager::MapManager::Quadrant* GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level, int numWorldVerticesPerSize)
 {
 	try
 	{
-		m_numWorldVerticesPerSize = Globals()->heightmapResolution() + 1;
-		m_worldQuadrant = Globals()->mapManager()->getQuadrant(x, z, level, m_numWorldVerticesPerSize);
+		return Globals()->mapManager()->getQuadrant(x, z, level, numWorldVerticesPerSize);
 
 		//{	// SUPER DEBUGRIC
 		//	Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
@@ -653,16 +688,18 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 			m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 		}
 
-		if (m_quadTree)
-			m_quadTree.reset();
-		//m_quadTree = make_unique<QuadTree>(this);
-		//m_quadTree->init();
+		m_numWorldVerticesPerSize = Globals()->heightmapResolution() + 1;
+		
+		TheWorld_MapManager::MapManager::Quadrant* quadrant = loadWorldData(x, z, level, m_numWorldVerticesPerSize);
+		TheWorld_MapManager::MapManager::QuadrantId quadrantId = quadrant->getId();
 
-		loadWorldData(x, z, level);
+		m_mapQuadTree.clear();
+		m_mapQuadTree[quadrantId] = make_unique<QuadTree>(this);
+		m_mapQuadTree[quadrantId]->init(quadrant);
 
 		TheWorld_MapManager::MapManager::GridVertex viewerPos(x, 0, z, level);
-		std::vector<TheWorld_MapManager::MapManager::GridVertex>::iterator it = std::find(m_worldQuadrant->getGridVertices().begin(), m_worldQuadrant->getGridVertices().end(), viewerPos);
-		if (it == m_worldQuadrant->getGridVertices().end())
+		std::vector<TheWorld_MapManager::MapManager::GridVertex>::iterator it = std::find(m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices().begin(), m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices().end(), viewerPos);
+		if (it == m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices().end())
 		{
 			Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Not found WorldViewer Pos");
 			return;
@@ -672,12 +709,12 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 
 		// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
 		Transform t = get_transform();
-		t.origin = Vector3(m_worldQuadrant->getGridVertices()[0].posX(), 0, m_worldQuadrant->getGridVertices()[0].posZ());
+		t.origin = Vector3(m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices()[0].posX(), 0, m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices()[0].posZ());
 		set_transform(t);
 		
 		WorldCamera()->initCameraInWorld(cameraPos, lookAt);
 
-		m_shaderTerrainData.resetMaterialParams();
+		//m_mapQuadTree[quadrantId]->resetMaterialParams();
 
 		m_initialWordlViewerPosSet = true;
 	}
@@ -704,41 +741,41 @@ Spatial* GDN_TheWorld_Viewer::getWorldNode(void)
 	return (Spatial*)get_parent();
 }
 
-void GDN_TheWorld_Viewer::getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step)
-{
-	int idxFirstColFirstRowWorldVert = m_numWorldVerticesPerSize * firstWorldVertRow + firstWorldVertCol;
-	int idxLastColFirstRowWorldVert = m_numWorldVerticesPerSize * firstWorldVertRow + lastWorldVertCol;
-	int idxFirstColLastRowWorldVert = m_numWorldVerticesPerSize * lastWorldVertRow + firstWorldVertCol;
-	int idxLastColLastRowWorldVert = m_numWorldVerticesPerSize * lastWorldVertRow + lastWorldVertCol;
-
-	// altitudes
-	float minHeigth = 0, maxHeigth = 0;
-	bool firstTime = true;
-	for (int idxRow = 0; idxRow < lastWorldVertRow - firstWorldVertRow + 1; idxRow += step)
-	{
-		for (int idxVert = idxFirstColFirstRowWorldVert + idxRow * m_numWorldVerticesPerSize; idxVert < idxLastColFirstRowWorldVert + idxRow * m_numWorldVerticesPerSize + 1; idxVert += step)
-		{
-			if (firstTime)
-			{
-				minHeigth = maxHeigth = m_worldQuadrant->getGridVertices()[idxVert].altitude();
-				firstTime = false;
-			}
-			else
-			{
-				minHeigth = Utils::min2(minHeigth, m_worldQuadrant->getGridVertices()[idxVert].altitude());
-				maxHeigth = Utils::max2(maxHeigth, m_worldQuadrant->getGridVertices()[idxVert].altitude());
-			}
-		}
-	}
-	
-	Vector3 startPosition(m_worldQuadrant->getGridVertices()[idxFirstColFirstRowWorldVert].posX(), minHeigth, m_worldQuadrant->getGridVertices()[idxFirstColFirstRowWorldVert].posZ());
-	//Vector3 endPosition(m_worldVertices[idxLastColLastRowWorldVert].posX() - m_worldVertices[idxFirstColFirstRowWorldVert].posX(), maxHeigth, m_worldVertices[idxLastColLastRowWorldVert].posZ() - m_worldVertices[idxFirstColFirstRowWorldVert].posZ());
-	Vector3 endPosition(m_worldQuadrant->getGridVertices()[idxLastColLastRowWorldVert].posX(), maxHeigth, m_worldQuadrant->getGridVertices()[idxLastColLastRowWorldVert].posZ());
-	Vector3 size = endPosition - startPosition;
-
-	aabb.set_position(startPosition);
-	aabb.set_size(size);
-}
+//void GDN_TheWorld_Viewer::getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step)
+//{
+//	int idxFirstColFirstRowWorldVert = m_numWorldVerticesPerSize * firstWorldVertRow + firstWorldVertCol;
+//	int idxLastColFirstRowWorldVert = m_numWorldVerticesPerSize * firstWorldVertRow + lastWorldVertCol;
+//	int idxFirstColLastRowWorldVert = m_numWorldVerticesPerSize * lastWorldVertRow + firstWorldVertCol;
+//	int idxLastColLastRowWorldVert = m_numWorldVerticesPerSize * lastWorldVertRow + lastWorldVertCol;
+//
+//	// altitudes
+//	float minHeigth = 0, maxHeigth = 0;
+//	bool firstTime = true;
+//	for (int idxRow = 0; idxRow < lastWorldVertRow - firstWorldVertRow + 1; idxRow += step)
+//	{
+//		for (int idxVert = idxFirstColFirstRowWorldVert + idxRow * m_numWorldVerticesPerSize; idxVert < idxLastColFirstRowWorldVert + idxRow * m_numWorldVerticesPerSize + 1; idxVert += step)
+//		{
+//			if (firstTime)
+//			{
+//				minHeigth = maxHeigth = m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude();
+//				firstTime = false;
+//			}
+//			else
+//			{
+//				minHeigth = Utils::min2(minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
+//				maxHeigth = Utils::max2(maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
+//			}
+//		}
+//	}
+//	
+//	Vector3 startPosition(m_quadTree->getQuadrant()->getGridVertices()[idxFirstColFirstRowWorldVert].posX(), minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxFirstColFirstRowWorldVert].posZ());
+//	//Vector3 endPosition(m_worldVertices[idxLastColLastRowWorldVert].posX() - m_worldVertices[idxFirstColFirstRowWorldVert].posX(), maxHeigth, m_worldVertices[idxLastColLastRowWorldVert].posZ() - m_worldVertices[idxFirstColFirstRowWorldVert].posZ());
+//	Vector3 endPosition(m_quadTree->getQuadrant()->getGridVertices()[idxLastColLastRowWorldVert].posX(), maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxLastColLastRowWorldVert].posZ());
+//	Vector3 size = endPosition - startPosition;
+//
+//	aabb.set_position(startPosition);
+//	aabb.set_size(size);
+//}
 
 void GDN_TheWorld_Viewer::onTransformChanged(void)
 {
@@ -748,19 +785,21 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 	if (!is_inside_tree())
 		return;
 
-	if (!m_quadTree)
-		return;
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (!itQuadTree->second->isValid())
+			continue;
+		Transform gt = internalTransformGlobalCoord();
 
-	Transform gt = internalTransformGlobalCoord();
+		Chunk::TransformChangedChunkAction action(gt);
+		itQuadTree->second->ForAllChunk(action);
 
-	Chunk::TransformChangedChunkAction action(gt);
-	m_quadTree->ForAllChunk(action);
+		itQuadTree->second->materialParamsNeedUpdate(true);
 
-	m_shaderTerrainData.materialParamsNeedUpdate(true);
-
-	// TODORIC Collider stuff
-	//_if _collider != null:
-	//	_collider.set_transform(gt)
+		// TODORIC Collider stuff
+		//_if _collider != null:
+		//	_collider.set_transform(gt)
+	}
 }
 
 void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
@@ -776,14 +815,6 @@ void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
 
 	onTransformChanged();
 }
-
-//Transform GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB(void)
-//{
-//	if (m_cameraChunk)
-//		return m_cameraChunk->getGlobalTransformOfAABB();
-//	else
-//		return Transform();
-//}
 
 AABB GDN_TheWorld_Viewer::getCameraChunkLocalAABB(void)
 {
@@ -828,39 +859,60 @@ String GDN_TheWorld_Viewer::getCameraChunkId(void)
 
 int GDN_TheWorld_Viewer::getNumSplits()
 {
-	return m_quadTree ? m_quadTree->getNumSplits() : 0;
+	int numSplits = 0;
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (!itQuadTree->second->isValid())
+			continue;
+		numSplits += itQuadTree->second->getNumSplits();
+	}
+	return numSplits;
 }
 
 int GDN_TheWorld_Viewer::getNumJoins()
 {
-	return m_quadTree ? m_quadTree->getNumJoins() : 0;
+	int numJoins = 0;
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (!itQuadTree->second->isValid())
+			continue;
+		numJoins += itQuadTree->second->getNumJoins();
+	}
+	return numJoins;
 }
 
 void GDN_TheWorld_Viewer::dump()
 {
-	if (!m_quadTree)
-		return;
-
 	Globals()->debugPrint("*************");
 	Globals()->debugPrint("STARTING DUMP");
 
-	float f = Engine::get_singleton()->get_frames_per_second();
-	Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
-	m_quadTree->dump();
-
-	Node* node = get_node(NodePath("/root"));
-	if (node != nullptr)
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		Globals()->debugPrint("============================================");
-		Globals()->debugPrint("");
-		Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
-		Globals()->debugPrint("");
-		Globals()->debugPrint(node->get_name());
-		Array nodes = node->get_children();
-		dumpRecurseIntoChildrenNodes(nodes, 1);
-		Globals()->debugPrint("============================================");
+		if (!itQuadTree->second->isValid())
+			continue;
+
+		Globals()->debugPrint("DUMP QUADRANT " + String(itQuadTree->second->getQuadrant()->getId().getId().c_str()));
+
+		float f = Engine::get_singleton()->get_frames_per_second();
+		Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
+		itQuadTree->second->dump();
+
+		Node* node = get_node(NodePath("/root"));
+		if (node != nullptr)
+		{
+			Globals()->debugPrint("============================================");
+			Globals()->debugPrint("");
+			Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
+			Globals()->debugPrint("");
+			Globals()->debugPrint(node->get_name());
+			Array nodes = node->get_children();
+			dumpRecurseIntoChildrenNodes(nodes, 1);
+			Globals()->debugPrint("============================================");
+		}
+
+		Globals()->debugPrint("DUMP COMPLETE QUADRANT " + String(itQuadTree->second->getQuadrant()->getId().getId().c_str()));
 	}
-	
+
 	Globals()->debugPrint("DUMP COMPLETE");
 	Globals()->debugPrint("*************");
 }
@@ -877,297 +929,12 @@ void GDN_TheWorld_Viewer::dumpRecurseIntoChildrenNodes(Array nodes, int level)
 	}
 }
 
-GDN_TheWorld_Viewer::ShaderTerrainData::ShaderTerrainData()
-{
-	m_viewer = nullptr;
-	m_materialParamsNeedUpdate = false;
-	m_heightMapTexModified = false;
-	m_normalMapTexModified = false;
-	//m_splat1MapTexModified = false;
-	//m_colorMapTexModified = false;
-}
-
-GDN_TheWorld_Viewer::ShaderTerrainData::~ShaderTerrainData()
-{
-}
-
-void GDN_TheWorld_Viewer::ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer)
-{
-	m_viewer = viewer;
-	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
-	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-	String shaderPath = "res://shaders/lookdev.shader";
-	//String shaderPath = "res://shaders/test.shader";		// SUPER DEBUGRIC
-	Ref<Shader> shader = resLoader->load(shaderPath);
-	mat->set_shader(shader);
-
-	m_material = mat;
-}
-
-// it is expected that globals and World Datas are loaded
-// TODORIC: maybe usefull for performance reasons specify which texture need update and which rect of the texture 
-void GDN_TheWorld_Viewer::ShaderTerrainData::resetMaterialParams(void)
-{
-	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
-
-	// Creating Heightmap Map Texture
-	{
-		Ref<Image> image = Image::_new();
-		image->create(_resolution, _resolution, false, Image::FORMAT_RH);
-		m_heightMapImage = image;
-	}
-
-	// Creating Normal Map Texture
-	{
-		Ref<Image> image = Image::_new();
-		image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
-		m_normalMapImage = image;
-	}
-
-	{
-		// Filling Heightmap Map Texture , Normal Map Texture
-		assert(_resolution == m_heightMapImage->get_height());
-		assert(_resolution == m_heightMapImage->get_width());
-		assert(_resolution == m_viewer->m_numWorldVerticesPerSize);
-		float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
-		m_heightMapImage->lock();
-		m_normalMapImage->lock();
-		for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
-			for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
-			{
-				float h = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x].altitude();
-				m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
-				//if (h != 0)	// DEBUGRIC
-				//	m_viewer->Globals()->debugPrint("Altitude not null.X=" + String(std::to_string(x).c_str()) + " Z=" + std::to_string(z).c_str() + " H=" + std::to_string(h).c_str());
-
-				// h = height of the point for which we are computing the normal
-				// hr = height of the point on the rigth
-				// hl = height of the point on the left
-				// hf = height of the forward point (z growing)
-				// hb = height of the backward point (z lessening)
-				// step = step in WUs between points
-				// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
-				// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
-				Vector3 normal;
-				Vector3 P((float)x, h, (float)z);
-				if (x < _resolution - 1 && z < _resolution - 1)
-				{
-					float hr = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x + 1].altitude();
-					float hf = m_viewer->m_worldQuadrant->getGridVertices()[(z + 1) * _resolution + x].altitude();
-					normal = Vector3(h - hr, gridStepInWUs, h - hf).normalized();
-					//{		// Verify
-					//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-					//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-					//	Vector3 normal1 = (PF - P).cross(PR - P).normalized();
-					//	if (!equal(normal1, normal))	// DEBUGRIC
-					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-					//}
-				}
-				else
-				{
-					if (x == _resolution - 1 && z == 0)
-					{
-						float hf = m_viewer->m_worldQuadrant->getGridVertices()[(z + 1) * _resolution + x].altitude();
-						float hl = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x - 1].altitude();
-						normal = Vector3(hl - h, gridStepInWUs, h - hf).normalized();
-						//{		// Verify
-						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-						//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-						//	Vector3 normal1 = (PL - P).cross(PF - P).normalized();
-						//	if (!equal(normal1, normal))	// DEBUGRIC
-						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						//}
-					}
-					else if (x == 0 && z == _resolution - 1)
-					{
-						float hr = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x + 1].altitude();
-						float hb = m_viewer->m_worldQuadrant->getGridVertices()[(z - 1) * _resolution + x].altitude();
-						normal = Vector3(h - hr, gridStepInWUs, hb - h).normalized();
-						//{		// Verify
-						//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-						//	Vector3 PB((float)(x), hb, (float)(z - gridStepInWUs));
-						//	Vector3 normal1 = (PR - P).cross(PB - P).normalized();
-						//	if (!equal(normal1, normal))	// DEBUGRIC
-						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						//}
-					}
-					else
-					{
-						float hl = m_viewer->m_worldQuadrant->getGridVertices()[z * _resolution + x - 1].altitude();
-						float hb = m_viewer->m_worldQuadrant->getGridVertices()[(z - 1) * _resolution + x].altitude();
-						normal = Vector3(hl - h, gridStepInWUs, hb - h).normalized();
-						//{		// Verify
-						//	Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));
-						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-						//	Vector3 normal1 = (PB - P).cross(PL - P).normalized();
-						//	if (!equal(normal1, normal))	// DEBUGRIC
-						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						//}
-					}
-				}
-				m_normalMapImage->set_pixel(x, z, encodeNormal(normal));
-			}
-		m_normalMapImage->unlock();
-		m_heightMapImage->unlock();
-
-		{
-			Ref<ImageTexture> tex = ImageTexture::_new();
-			tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
-			m_heightMapTexture = tex;
-			m_heightMapTexModified = true;
-			//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
-		}
-
-		{
-			Ref<ImageTexture> tex = ImageTexture::_new();
-			tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
-			m_normalMapTexture = tex;
-			m_normalMapTexModified = true;
-			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
-		}
-
-	}
-
-	// Creating Splat Map Texture
-	//{
-	//	Ref<Image> image = Image::_new();
-	//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-	//	image->fill(Color(1, 0, 0, 0));
-	//	m_splat1MapImage = image;
-	//}
-
-	// Filling Splat Map Texture
-	//{
-	//	Ref<ImageTexture> tex = ImageTexture::_new();
-	//	tex->create_from_image(m_splat1MapImage, Texture::FLAG_FILTER);
-	//	m_splat1MapTexture = tex;
-	//	m_splat1MapImageModified = true;
-	//}
-
-	// Creating Color Map Texture
-	//{
-	//	Ref<Image> image = Image::_new();
-	//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-	//	image->fill(Color(1, 1, 1, 1));
-	//	m_colorMapImage = image;
-	//}
-
-	// Filling Color Map Texture
-	//{
-	//	Ref<ImageTexture> tex = ImageTexture::_new();
-	//	tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
-	//	m_colorMapTexture = tex;
-	//	m_colorMapImageModified = true;
-	//}
-
-	// _update_all_vertical_bounds ???	// TODORIC
-	//	# RGF image where R is min heightand G is max height
-	//	var _chunked_vertical_bounds : = Image.new()	// _chunked_vertical_bounds.create(csize_x, csize_y, false, Image.FORMAT_RGF)
-	//	_update_vertical_bounds(0, 0, _resolution - 1, _resolution - 1)
-
-	materialParamsNeedUpdate(true);
-}
-
-Color GDN_TheWorld_Viewer::ShaderTerrainData::encodeNormal(Vector3 normal)
-{
-	normal = 0.5 * (normal + Vector3::ONE);
-	return Color(normal.x, normal.z, normal.y);
-}
-
-void GDN_TheWorld_Viewer::ShaderTerrainData::updateMaterialParams(void)
-{
-	// Completare da _update_material_params
-	m_viewer->Globals()->debugPrint("Updating terrain material params");
-
-	if (m_viewer->is_inside_tree())
-	{
-		Transform globalTransform = m_viewer->internalTransformGlobalCoord();
-		//globalTransform.origin = Vector3(0, 0, 0);		// DEBUGRIC
-		m_viewer->Globals()->debugPrint("internalTransformGlobalCoord" + String(" t=") + String(globalTransform));	// DEBUGRIC
-
-		Transform t = globalTransform.affine_inverse();
-		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));	// DEBUGRIC
-		m_material->set_shader_param(SHADER_PARAM_INVERSE_TRANSFORM, t);
-
-		Basis b = globalTransform.basis.inverse().transposed();
-		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));	// DEBUGRIC
-		m_material->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
-
-		float f = m_viewer->Globals()->gridStepInWU();
-		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));	// DEBUGRIC
-		m_material->set_shader_param(SHADER_PARAM_GRID_STEP, f);
-		
-		if (m_heightMapTexModified)
-		{
-			m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));	// DEBUGRIC
-			m_material->set_shader_param(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
-			m_heightMapTexModified = false;
-		}
-		
-		if (m_normalMapTexModified)
-		{
-			m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));	// DEBUGRIC
-			m_material->set_shader_param(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
-			m_normalMapTexModified = false;
-		}
-
-		//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
-	}
-
-}
-
-void GDN_TheWorld_Viewer::ShaderTerrainData::debugPrintTexture(std::string tex_name, Ref<Texture> tex)
-{
-	File* _file = File::_new();
-	_file->open("res://" + String(tex_name.c_str()) + ".txt", File::WRITE);
-	Ref<Image> _image = tex->get_data();
-	int64_t width = _image->get_width();
-	int64_t height = _image->get_height();
-	Image::Format format = _image->get_format();
-	std::string formatStr = std::to_string(format);
-	if (format == Image::Format::FORMAT_RH)
-		formatStr = "FORMAT_RH";
-	else if (format == Image::Format::FORMAT_RGB8)
-		formatStr = "FORMAT_RGB8";
-	else if (format == Image::Format::FORMAT_RGBA8)
-		formatStr = "FORMAT_RGBA8";
-	std::string text = "Name=" + tex_name + " Format=" + formatStr + " W=" + std::to_string(width) + " H=" + std::to_string(height);
-	_file->store_string(String(text.c_str()) + "\n");
-	_image->lock();
-	for (int h = 0; h < height; h++)
-	{
-		std::string row = "";
-		for (int w = 0; w < width; w++)
-		{
-			row += std::to_string(w) + ":";
-			if (format == Image::Format::FORMAT_RH)
-				row += std::to_string(_image->get_pixel(w, h).r) + " ";
-			else if (format == Image::Format::FORMAT_RGB8)
-				row += std::to_string(_image->get_pixel(w, h).r) + "-" + std::to_string(_image->get_pixel(w, h).g) + "-" + std::to_string(_image->get_pixel(w, h).b) + " ";
-			else if (format == Image::Format::FORMAT_RGBA8)
-				row += std::to_string(_image->get_pixel(w, h).r) + "-" + std::to_string(_image->get_pixel(w, h).g) + "-" + std::to_string(_image->get_pixel(w, h).b) + "-" + std::to_string(_image->get_pixel(w, h).a) + " ";
-			else
-			{
-				String s = String(_image->get_pixel(w, h));
-				char* str = s.alloc_c_string();
-				row += str;
-				row += " ";
-				godot::api->godot_free(str);
-			}
-		}
-		text = "H=" + std::to_string(h) + " " + row;
-		_file->store_string(String(text.c_str()) + "\n");
-	}
-	_image->unlock();
-	_file->close();
-}
-
-void GDN_TheWorld_Viewer::setCameraChunk(Chunk* chunk)
+void GDN_TheWorld_Viewer::setCameraChunk(Chunk* chunk, QuadTree* quadTree)
 {
 	if (m_cameraChunk != nullptr && m_cameraChunk != chunk)
 	{
 		m_cameraChunk->resetCameraVerticalOnChunk();
-		m_quadTree->addChunkUpdate(m_cameraChunk);
+		quadTree->addChunkUpdate(m_cameraChunk);
 	}
 
 	m_cameraChunk = chunk;

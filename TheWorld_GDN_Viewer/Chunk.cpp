@@ -16,7 +16,7 @@
 
 using namespace godot;
 
-Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat)
+Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, Ref<Material>& mat)
 {
 	m_slotPosX = slotPosX;
 	m_slotPosZ = slotPosZ;
@@ -24,6 +24,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	m_posInQuad = PosInQuad::NotSet;
 	m_isCameraVerticalOnChunk = false;
 	m_viewer = viewer;
+	m_quadTree = quadTree;
 	m_debugMode = m_viewer->getRequiredChunkDebugMode();
 	m_debugVisibility = m_viewer->getDebugVisibility();
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
@@ -50,7 +51,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, R
 	//float m_originXInWUsGlobal = m_viewer->get_global_transform().origin.x + m_originXInWUsLocalToGrid;
 	//float m_originZInWUsGlobal = m_viewer->get_global_transform().origin.z + m_originZInWUsLocalToGrid;
 
-	m_viewer->getPartialAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGVs);
+	getPartialAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGVs);
 	m_gridRelativeAABB = m_aabb;
 	m_aabb.position.x = 0;	// AABB is relative to the chunk
 	m_aabb.position.z = 0;
@@ -282,7 +283,6 @@ void Chunk::update(bool isVisible)
 	}
 	
 	int seams = 0;
-	QuadTree* tree = m_viewer->getQuadTree();
 
 	// Seams are against grater chunks (greater lod = less resolution)
 	ChunkPos posGreaterChunkContainingThisOne(m_slotPosX / 2, m_slotPosZ / 2, m_lod + 1);
@@ -295,10 +295,10 @@ void Chunk::update(bool isVisible)
 		//	o =
 		//	= =
 		//  
-		Chunk* chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XMinusChunk);
+		Chunk* chunk = m_quadTree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XMinusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_LEFT;
-		chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZMinusChunk);
+		chunk = m_quadTree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZMinusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_BOTTOM;
 	}
@@ -309,10 +309,10 @@ void Chunk::update(bool isVisible)
 		//	= o
 		//	= =
 		//  
-		Chunk* chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XPlusChunk);
+		Chunk* chunk = m_quadTree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XPlusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_RIGHT;
-		chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZMinusChunk);
+		chunk = m_quadTree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZMinusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_BOTTOM;
 	}
@@ -323,10 +323,10 @@ void Chunk::update(bool isVisible)
 		//	= =
 		//	o =
 		//  
-		Chunk* chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XMinusChunk);
+		Chunk* chunk = m_quadTree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XMinusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_LEFT;
-		chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZPlusChunk);
+		chunk = m_quadTree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZPlusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_TOP;
 	}
@@ -337,10 +337,10 @@ void Chunk::update(bool isVisible)
 		//	= =
 		//	= o
 		//  
-		Chunk* chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XPlusChunk);
+		Chunk* chunk = m_quadTree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::XPlusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_RIGHT;
-		chunk = tree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZPlusChunk);
+		chunk = m_quadTree->getChunkAt(posGreaterChunkContainingThisOne, Chunk::DirectionSlot::ZPlusChunk);
 		if (chunk != nullptr && chunk->isActive())
 			seams |= SEAM_TOP;
 	}
@@ -368,7 +368,7 @@ void Chunk::refresh(bool isVisible)
 	//m_aabb.position.z = 0;
 
 	setMesh(nullptr);
-	m_viewer->getQuadTree()->addChunkUpdate(this);
+	m_quadTree->addChunkUpdate(this);
 }
 
 void Chunk::setActive(bool b)
@@ -407,7 +407,7 @@ void Chunk::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalC
 	}
 
 	if (m_isCameraVerticalOnChunk)
-		m_viewer->setCameraChunk(this);
+		m_viewer->setCameraChunk(this, m_quadTree);
 }
 
 void Chunk::getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globalCoordCameraLastPos)
@@ -454,6 +454,43 @@ void Chunk::applyDebugMesh()
 {
 }
 
+void Chunk::getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step)
+{
+	int numWorldVerticesPerSize = m_quadTree->getQuadrant()->getId().getNumVerticesPerSize();
+	int idxFirstColFirstRowWorldVert = numWorldVerticesPerSize * firstWorldVertRow + firstWorldVertCol;
+	int idxLastColFirstRowWorldVert = numWorldVerticesPerSize * firstWorldVertRow + lastWorldVertCol;
+	int idxFirstColLastRowWorldVert = numWorldVerticesPerSize * lastWorldVertRow + firstWorldVertCol;
+	int idxLastColLastRowWorldVert = numWorldVerticesPerSize * lastWorldVertRow + lastWorldVertCol;
+
+	// altitudes
+	float minHeigth = 0, maxHeigth = 0;
+	bool firstTime = true;
+	for (int idxRow = 0; idxRow < lastWorldVertRow - firstWorldVertRow + 1; idxRow += step)
+	{
+		for (int idxVert = idxFirstColFirstRowWorldVert + idxRow * numWorldVerticesPerSize; idxVert < idxLastColFirstRowWorldVert + idxRow * numWorldVerticesPerSize + 1; idxVert += step)
+		{
+			if (firstTime)
+			{
+				minHeigth = maxHeigth = m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude();
+				firstTime = false;
+			}
+			else
+			{
+				minHeigth = Utils::min2(minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
+				maxHeigth = Utils::max2(maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
+			}
+		}
+	}
+
+	Vector3 startPosition(m_quadTree->getQuadrant()->getGridVertices()[idxFirstColFirstRowWorldVert].posX(), minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxFirstColFirstRowWorldVert].posZ());
+	//Vector3 endPosition(m_worldVertices[idxLastColLastRowWorldVert].posX() - m_worldVertices[idxFirstColFirstRowWorldVert].posX(), maxHeigth, m_worldVertices[idxLastColLastRowWorldVert].posZ() - m_worldVertices[idxFirstColFirstRowWorldVert].posZ());
+	Vector3 endPosition(m_quadTree->getQuadrant()->getGridVertices()[idxLastColLastRowWorldVert].posX(), maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxLastColLastRowWorldVert].posZ());
+	Vector3 size = endPosition - startPosition;
+
+	aabb.set_position(startPosition);
+	aabb.set_size(size);
+}
+
 void Chunk::dump(void)
 {
 	if (!isActive())
@@ -488,8 +525,8 @@ void Chunk::dump(void)
 	globals->debugPrint(String("t: ") + getMeshGlobalTransformApplied() + String(" - t (debug): ") + getDebugMeshGlobalTransformApplied());
 }
 
-ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat)
-	: Chunk(slotPosX, slotPosZ, lod, viewer, mat)
+ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, Ref<Material>& mat)
+	: Chunk(slotPosX, slotPosZ, lod, viewer, quadTree, mat)
 {
 	m_debugMeshInstanceRID = RID();
 	m_debugMeshRID = RID();

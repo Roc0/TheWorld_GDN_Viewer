@@ -23,6 +23,7 @@ namespace godot
 
 	class GDN_TheWorld_Viewer;
 	class Chunk;
+	class QuadTree;
 
 	class GDN_Chunk_MeshInstance : public MeshInstance
 	{
@@ -342,7 +343,7 @@ namespace godot
 		typedef std::map<Chunk::ChunkPos, Chunk*> MapChunkPerLod;
 		typedef std::map<int, MapChunkPerLod> MapChunk;
 
-		Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat);
+		Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, Ref<Material>& mat);
 		virtual ~Chunk();
 		
 		void initVisual(void);
@@ -391,6 +392,7 @@ namespace godot
 		virtual void releaseDebugMesh(void);
 		virtual void releaseMesh(void);
 		//Ref<Mesh> getMesh() { return m_mesh; };
+		void getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
@@ -400,6 +402,7 @@ namespace godot
 		GDN_Chunk_MeshInstance* m_meshInstance;
 		enum PosInQuad m_posInQuad;
 		GDN_TheWorld_Viewer* m_viewer;
+		QuadTree* m_quadTree;
 		Transform m_parentTransform;
 		AABB m_aabb;						// AABB of the chunk in WUs relative to the chunk so X and Z are 0
 		AABB m_gridRelativeAABB;			// AABB of the chunk in WUs relative to the grid (the viewer)
@@ -445,7 +448,7 @@ namespace godot
 	class ChunkDebug : public Chunk
 	{
 	public:
-		ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Ref<Material>& mat);
+		ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, Ref<Material>& mat);
 		virtual ~ChunkDebug();
 
 		virtual void enterWorld(void);
