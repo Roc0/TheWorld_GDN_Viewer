@@ -3,6 +3,7 @@
 #include <cfloat>
 #include <assert.h> 
 #include <string> 
+#include <chrono>
 
 //#include <Godot.hpp>
 //#include <Vector3.hpp>
@@ -20,6 +21,47 @@ static constexpr float kPi2 = 6.28318530717958647692f;
 static constexpr float kEpsilon = 0.0001f;
 static constexpr float kAreaEpsilon = FLT_EPSILON;
 static constexpr float kNormalEpsilon = 0.001f;
+
+template <typename F>
+struct FinalAction {
+	FinalAction(F f) : clean_{ f } {}
+	~FinalAction() { if (enabled_) clean_(); }
+	void disable() { enabled_ = false; };
+private:
+	F clean_;
+	bool enabled_{ true };
+};
+
+template <typename F> FinalAction<F> finally(F f) {	return FinalAction<F>(f); }
+
+template <class TimeT = std::chrono::milliseconds, class ClockT = std::chrono::steady_clock> class Timer
+{
+	using timep_t = typename ClockT::time_point;
+	timep_t _start = ClockT::now(), _end = {};
+
+public:
+	Timer()
+	{
+	}
+
+	void tick() {
+		_end = timep_t{};
+		_start = ClockT::now();
+	}
+
+	void tock() { _end = ClockT::now(); }
+
+	template <class TT = TimeT>
+	TT duration() const {
+		Expects(_end != timep_t{} && "toc before reporting");
+		//assert(_end != timep_t{} && "toc before reporting");
+		return std::chrono::duration_cast<TT>(_end - _start);
+	}
+
+};
+
+#define TimerMs Timer<std::chrono::milliseconds, std::chrono::steady_clock>
+#define TimerMcs Timer<std::chrono::microseconds, std::chrono::steady_clock>
 
 class Utils
 {
