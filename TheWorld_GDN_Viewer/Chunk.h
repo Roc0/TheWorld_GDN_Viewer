@@ -176,7 +176,7 @@ namespace godot
 			virtual ~SwitchDebugModeAction() {}
 			virtual void exec(Chunk* chunk)
 			{
-				if (m_mode != GDN_TheWorld_Globals::ChunkDebugMode::DoNotSet)
+				if (m_mode != GDN_TheWorld_Globals::ChunkDebugMode::DoNotSet && chunk->isQuadTreeVisible())
 				{
 					chunk->setDebugMode(m_mode);
 					chunk->applyDebugMesh();
@@ -232,24 +232,24 @@ namespace godot
 			virtual ~DebugVisibilityChangedChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
-				chunk->setDebugVisibility(m_isVisible);
+				chunk->setDebugContentVisible(m_isVisible);
 			}
 		private:
 			bool m_isVisible;
 		};
 
-		class TransformChangedChunkAction : public ChunkAction
-		{
-		public:
-			TransformChangedChunkAction(Transform globalT) { m_globalT = globalT; }
-			virtual ~TransformChangedChunkAction() {}
-			virtual void exec(Chunk* chunk)
-			{
-				chunk->setParentGlobalTransform(m_globalT);
-			}
-		private:
-			Transform m_globalT;
-		};
+		//class TransformChangedChunkAction : public ChunkAction
+		//{
+		//public:
+		//	TransformChangedChunkAction(Transform globalT) { m_globalT = globalT; }
+		//	virtual ~TransformChangedChunkAction() {}
+		//	virtual void exec(Chunk* chunk)
+		//	{
+		//		chunk->setParentGlobalTransform(m_globalT);
+		//	}
+		//private:
+		//	Transform m_globalT;
+		//};
 
 		class DumpChunkAction : public ChunkAction
 		{
@@ -352,12 +352,12 @@ namespace godot
 		// Actions
 		virtual void enterWorld(void);
 		virtual void exitWorld(void);
-		virtual void setParentGlobalTransform(Transform t);
+		//virtual void setParentGlobalTransform(Transform t);
 		virtual void setVisible(bool b);
-		virtual void setDebugVisibility(bool b);
+		virtual void setDebugContentVisible(bool b);
 		virtual void applyAABB(void);
 		virtual void dump(void);
-		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
+		virtual void setCameraPos(Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
 		virtual void applyDebugMesh(void);
 		//virtual Transform getGlobalTransformOfAABB(void);
@@ -372,6 +372,7 @@ namespace godot
 
 		bool isActive(void) { return m_active; }
 		bool isVisible(void) { return m_visible; }
+		bool isDebugContentVisible(void) { return m_debugContentVisible; }
 		bool isPendingUpdate(void) { return m_pendingUpdate; }
 		void setPendingUpdate(bool b) { m_pendingUpdate = b; }
 		bool gotJustJoined(void) { return m_justJoined; }
@@ -383,16 +384,20 @@ namespace godot
 		ChunkPos getPos(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod); }
 		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
 		AABB getAABB(void) { return m_aabb; };
-		void getCameraPos(Vector3& localToGriddCoordCameraLastPos, Vector3& globalCoordCameraLastPos);
+		void getCameraPos(Vector3& globalCoordCameraLastPos);
 		bool isCameraVerticalOnChunk(void) { return m_isCameraVerticalOnChunk; }
 		void resetCameraVerticalOnChunk(void) { m_isCameraVerticalOnChunk = false; }
-		Transform getGlobalTransform(void);
-		Transform getMeshGlobalTransformApplied(void);
+		//Transform getGlobalTransform(void);
+		Transform getMeshGlobalTransform(void) { return m_meshGlobaTransform; }
 		void setPosInQuad(enum PosInQuad posInQuad) { m_posInQuad = posInQuad; };
 		virtual void releaseDebugMesh(void);
 		virtual void releaseMesh(void);
 		//Ref<Mesh> getMesh() { return m_mesh; };
-		void getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
+		void getGlobalCoordAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
+		QuadTree* getQuadTree(void) { return m_quadTree; };
+		bool isQuadTreeVisible(void);
+		float getLowerXInWUsGlobal(void) { return m_originXInWUsGlobal; }
+		float getLowerZInWUsGlobal(void) { return m_originZInWUsGlobal; }
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
@@ -403,16 +408,15 @@ namespace godot
 		enum PosInQuad m_posInQuad;
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
-		Transform m_parentTransform;
+		//Transform m_parentTransform;
 		AABB m_aabb;						// AABB of the chunk in WUs relative to the chunk so X and Z are 0
-		AABB m_gridRelativeAABB;			// AABB of the chunk in WUs relative to the grid (the viewer)
+		AABB m_globalCoordAABB;				// AABB of the chunk in WUs in global coord.
 		int m_lod;
-		Vector3 m_localToGriddCoordCameraLastPos;
 		Vector3 m_globalCoordCameraLastPos;
 		bool m_isCameraVerticalOnChunk;
 		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
-		bool m_debugVisibility;
-		Transform m_meshGlobaTransformApplied;
+		bool m_debugContentVisible;
+		Transform m_meshGlobaTransform;
 
 		int m_numVerticesPerChuckSide;		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int m_numChunksPerWorldGridSide;	// The number of chunks required to cover every side of the grid at the current lod value
@@ -424,8 +428,8 @@ namespace godot
 		int m_originZInGridInWGVs;			// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is expressed in number of grid vertices
 		float m_originXInWUsLocalToGrid;	// X coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is local to the Grid Map and is expressed in Viewer Node local coordinate System
 		float m_originZInWUsLocalToGrid;	// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: it is local to the Grid Map and is expressed in Viewer Node local coordinate System
-		//float m_originXInWUsGlobal;			// X coord. of the origin of the chunk (lower left corner) inside the Grid Map: expressed in global coordinate System
-		//float m_originZInWUsGlobal;			// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: expressed in global coordinate System
+		float m_originXInWUsGlobal;			// X coord. of the origin of the chunk (lower left corner) inside the Grid Map: expressed in global coordinate System
+		float m_originZInWUsGlobal;			// Z coord. of the origin of the chunk (lower left corner) inside the Grid Map: expressed in global coordinate System
 		int m_firstWorldVertCol;			// 0-based starting column in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
 		int m_lastWorldVertCol;				// 0-based ending column in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
 		int m_firstWorldVertRow;			// 0-based starting row in the World Grid vertices array (Map Manager grid map) of the chunk/mesh (viewer m_worldVertices)
@@ -453,12 +457,12 @@ namespace godot
 
 		virtual void enterWorld(void);
 		virtual void exitWorld(void);
-		virtual void setParentGlobalTransform(Transform parentT);
+		//virtual void setParentGlobalTransform(Transform parentT);
 		virtual void setVisible(bool b);
-		virtual void setDebugVisibility(bool b);
+		virtual void setDebugContentVisible(bool b);
 		virtual void applyAABB(void);
 		virtual void dump(void);
-		virtual void setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos);
+		virtual void setCameraPos(Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
 		virtual void applyDebugMesh(void);
 		//virtual Transform getGlobalTransformOfAABB(void);

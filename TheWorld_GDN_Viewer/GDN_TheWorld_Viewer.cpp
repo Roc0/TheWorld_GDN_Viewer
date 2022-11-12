@@ -23,7 +23,7 @@ using namespace std;
 
 // World Node Local Coordinate System is the same as MapManager coordinate system
 // Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
-// Chunk and QuadTree coordinates ar in Viewer Node local coordinate System
+// Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 
 void GDN_TheWorld_Viewer::_register_methods()
 {
@@ -44,6 +44,8 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_num_splits", &GDN_TheWorld_Viewer::getNumSplits);
 	register_method("get_num_joins", &GDN_TheWorld_Viewer::getNumJoins);
 	register_method("get_num_chunks", &GDN_TheWorld_Viewer::getNumChunks);
+	register_method("get_num_active_chunks", &GDN_TheWorld_Viewer::getNumActiveChunks);
+	register_method("get_process_duration", &GDN_TheWorld_Viewer::getProcessDuration);
 	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
 	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
 }
@@ -59,18 +61,32 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_worldViewerLevel = 0;
 	m_worldCamera = nullptr;
 	m_cameraChunk = nullptr;
+	m_cameraQuadTree = nullptr;
+	m_refreshMapQuadTree = false;
 	//m_numWorldVerticesX = 0;
 	//m_numWorldVerticesZ = 0;
 	m_globals = nullptr;
-	m_mapScaleVector = Vector3(1, 1, 1);
+	//m_mapScaleVector = Vector3(1, 1, 1);	// WARNING: AT THE MOMENT CAN BE ONLY 1, 1, 1 OTHERWISE WE SHOLD RESCALE LOCAL CHUNK MISURES (LOOK AT Chunk constructor) AND CAMERA POS
 	m_timeElapsedFromLastDump = 0;
-	m_debugVisibility = true;
+	m_timeElapsedFromLastStatistic = 0;
+	m_duration = 0;
+	m_numProcessExecution = 0;
+	m_averageProcessDuration = 0;
+	m_numSplits = 0;
+	m_numJoins = 0;
+	m_numActiveChunks = 0;
+	m_numChunks = 0;
+	m_debugContentVisibility = true;
 	m_updateTerrainVisibilityRequired = false;
 	m_currentChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
 	m_requiredChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
 	m_updateDebugModeRequired = false;
+	m_numWorldVerticesPerSize = 0;
 	m_debugDraw = Viewport::DebugDraw::DEBUG_DRAW_DISABLED;
-	m_ctrlPressed = false;	
+	m_ctrlPressed = false;
+	m_streamerThreadRequiredExit = false;
+	m_numVisibleQuadrantOnPerimeter = 0;
+	m_numCacheQuadrantOnPerimeter = 0;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -83,6 +99,9 @@ void GDN_TheWorld_Viewer::deinit(void)
 	if (m_initialized)
 	{
 		PLOGI << "TheWorld Viewer Deinitializing...";
+
+		m_streamerThreadRequiredExit = true;
+		m_streamerThread.join();
 
 		m_mapQuadTree.clear();
 		m_meshCache.reset();
@@ -125,7 +144,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 {
 	if (event->is_action_pressed("ui_toggle_debug_visibility"))
 	{
-		m_debugVisibility = !m_debugVisibility;
+		m_debugContentVisibility = !m_debugContentVisibility;
 		m_updateTerrainVisibilityRequired = true;
 	}
 	
@@ -207,49 +226,52 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 			Globals()->infoPrint(s.c_str());
 			Globals()->debugPrint("Enter world");
 			if (m_initialWordlViewerPosSet)
+			{
+				std::lock_guard lock(m_mutexStreamerThread);
 				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 				{
-					if (!itQuadTree->second->isValid())
-						continue;
 					Chunk::EnterWorldChunkAction action;
 					itQuadTree->second->ForAllChunk(action);
 				}
+			}
 		}
 		break;
 		case NOTIFICATION_EXIT_WORLD:
 		{
 			Globals()->debugPrint("Exit world");
 			if (m_initialWordlViewerPosSet)
+			{
+				std::lock_guard lock(m_mutexStreamerThread);
 				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 				{
-					if (!itQuadTree->second->isValid())
-						continue;
 					Chunk::ExitWorldChunkAction action;
 					itQuadTree->second->ForAllChunk(action);
 				}
+			}
 		}
 		break;
 		case NOTIFICATION_VISIBILITY_CHANGED:
 		{
 			Globals()->debugPrint("Visibility changed");
 			if (m_initialWordlViewerPosSet)
+			{
+				std::lock_guard lock(m_mutexStreamerThread);
 				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 				{
-					if (!itQuadTree->second->isValid())
-						continue;
 					Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
 					itQuadTree->second->ForAllChunk(action);
 				}
-		}
-		break;
-		case NOTIFICATION_TRANSFORM_CHANGED:
-		{
-			if (m_initialWordlViewerPosSet)
-			{
-				onTransformChanged();
 			}
 		}
 		break;
+		//case NOTIFICATION_TRANSFORM_CHANGED:
+		//{
+		//	if (m_initialWordlViewerPosSet)
+		//	{
+		//		onTransformChanged();
+		//	}
+		//}
+		//break;
 	// TODORIC
 	}
 }
@@ -289,6 +311,9 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_meshCache = make_unique<MeshCache>(this);
 	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 
+	m_streamerThreadRequiredExit = false;
+	m_streamerThread = std::thread(&GDN_TheWorld_Viewer::streamer, this);
+
 	m_initialized = true;
 	PLOGI << "TheWorld Viewer Initialized!";
 
@@ -307,12 +332,18 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (!activeCamera)
 		return;
 
-	//if (m_quadTree == nullptr)
-	//{
-	//	return;
-	//	m_quadTree = make_unique<QuadTree>(this);
-	//	m_quadTree->init();
-	//}
+	//std::lock_guard lock(m_mutexStreamerThread);
+	std::unique_lock<std::recursive_mutex> lock(m_mutexStreamerThread, std::try_to_lock);
+	if (!lock.owns_lock())
+		return;
+
+	TimerMcs clock; // Timer<milliseconds, steady_clock>
+	clock.tick();
+	auto save_duration = finally([&clock, this] { 
+		clock.tock(); 
+		this->m_numProcessExecution++; 
+		this->m_duration += clock.duration().count(); 
+		});
 
 	if (m_firstProcess)
 	{
@@ -337,14 +368,173 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	}
 	
 	Vector3 cameraPosGlobalCoord = activeCamera->get_global_transform().get_origin();
-	Transform globalTransform = internalTransformGlobalCoord();
-	Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
+	//Transform globalTransform = internalTransformGlobalCoord();
+	//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 
+	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS
+	{
+		float farHorizon = cameraPosGlobalCoord.y * FAR_HORIZON_MULTIPLIER;
+		if (Globals()->heightmapSizeInWUs() > farHorizon)
+			farHorizon = Globals()->heightmapSizeInWUs();
+
+		// Look for Camera QuadTree: put it as first element of quadrantIdNeeded
+		vector<TheWorld_MapManager::MapManager::QuadrantId> quadrantIdNeeded;
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		{
+			float quadrantSizeInWU = itQuadTree->second->getQuadrant()->getId().getSizeInWU();
+			if (cameraPosGlobalCoord.x >= itQuadTree->second->getQuadrant()->getId().getLowerXGridVertex() && cameraPosGlobalCoord.x <= (itQuadTree->second->getQuadrant()->getId().getLowerXGridVertex() + quadrantSizeInWU)
+				&& cameraPosGlobalCoord.z >= itQuadTree->second->getQuadrant()->getId().getLowerZGridVertex() && cameraPosGlobalCoord.z <= (itQuadTree->second->getQuadrant()->getId().getLowerZGridVertex() + quadrantSizeInWU))
+			{
+				quadrantIdNeeded.push_back(itQuadTree->second->getQuadrant()->getId());
+				quadrantIdNeeded[0].setTag("Camera");
+				break;
+			}
+		}
+
+		if (quadrantIdNeeded.size() == 0)	// boh not found camera-quad-tree (it seems impossible) ...
+		{
+			// ... btw we create new quad tree containing camera
+			float x = cameraPosGlobalCoord.x, z = cameraPosGlobalCoord.z;
+			float _gridStepInWU = Globals()->mapManager()->gridStepInWU();
+			TheWorld_MapManager::MapManager::QuadrantId q(x, z, m_worldViewerLevel, m_numWorldVerticesPerSize, _gridStepInWU);
+			quadrantIdNeeded.push_back(q);
+			quadrantIdNeeded[0].setTag("Camera");
+		}
+
+		// if forced or the camera has changed quadrant the cache is repopulated
+		if (m_refreshMapQuadTree || m_computedCameraQuadrantId != quadrantIdNeeded[0])
+		{
+			Transform t = get_global_transform();
+			t.origin = Vector3(quadrantIdNeeded[0].getLowerXGridVertex(), 0, quadrantIdNeeded[0].getLowerZGridVertex());
+			set_global_transform(t);
+
+			m_refreshMapQuadTree = false;
+			m_computedCameraQuadrantId = quadrantIdNeeded[0];
+
+			// calculate minimum distance of camera from quad tree borders
+			float minimunDistanceOfCameraFromBordersOfQuadrant = cameraPosGlobalCoord.x - quadrantIdNeeded[0].getLowerXGridVertex();
+			float f = (quadrantIdNeeded[0].getLowerXGridVertex() + quadrantIdNeeded[0].getSizeInWU()) - cameraPosGlobalCoord.x;
+			if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
+				minimunDistanceOfCameraFromBordersOfQuadrant = f;
+			f = cameraPosGlobalCoord.z - quadrantIdNeeded[0].getLowerZGridVertex();
+			if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
+				minimunDistanceOfCameraFromBordersOfQuadrant = f;
+			f = (quadrantIdNeeded[0].getLowerZGridVertex() + quadrantIdNeeded[0].getSizeInWU()) - cameraPosGlobalCoord.z;
+			if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
+				minimunDistanceOfCameraFromBordersOfQuadrant = f;
+
+			// calculate num of quad needed surrounding camera-quad-tree according to desidered farHorizon
+			m_numVisibleQuadrantOnPerimeter = 0;
+			if (farHorizon > minimunDistanceOfCameraFromBordersOfQuadrant)
+			{
+				m_numVisibleQuadrantOnPerimeter = (size_t)floor((farHorizon - minimunDistanceOfCameraFromBordersOfQuadrant) / quadrantIdNeeded[0].getSizeInWU()) + 1;
+				if (m_numVisibleQuadrantOnPerimeter > 3)
+					m_numVisibleQuadrantOnPerimeter = 3;
+				//m_numVisibleQuadrantOnPerimeter = 0;	// SUPER DEBUGRIC only camera quadrant
+			}
+
+			m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter * 2;
+
+			// add horizontal (X axis) quadrants on the left and on the right
+			for (int i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
+			{
+				TheWorld_MapManager::MapManager::QuadrantId q = quadrantIdNeeded[0].getQuadrantId(TheWorld_MapManager::MapManager::QuadrantId::DirectionSlot::XPlus, 1 + i);
+				q.setTag(quadrantIdNeeded[0].getTag() + " X+" + std::to_string(1 + i));
+				quadrantIdNeeded.push_back(q);
+				//break;	// SUPER DEBUGRIC only X+1 quadrant
+				q = quadrantIdNeeded[0].getQuadrantId(TheWorld_MapManager::MapManager::QuadrantId::DirectionSlot::XMinus, 1 + i);
+				q.setTag(quadrantIdNeeded[0].getTag() + " X-" + std::to_string(1 + i));
+				quadrantIdNeeded.push_back(q);
+			}
+
+			// for each horizontal quadrant ...
+			size_t size = quadrantIdNeeded.size();
+			for (size_t idx = 0; idx < size; idx++)
+			{
+				// ... add vertical (Z axis) quadrants up and down
+				for (size_t i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
+				{
+					//break;	// SUPER DEBUGRIC only X+1 quadrant
+					TheWorld_MapManager::MapManager::QuadrantId q = quadrantIdNeeded[idx].getQuadrantId(TheWorld_MapManager::MapManager::QuadrantId::DirectionSlot::ZPlus, 1 + int(i));
+					q.setTag(quadrantIdNeeded[idx].getTag() + " Z+" + std::to_string(1 + i));
+					quadrantIdNeeded.push_back(q);
+					q = quadrantIdNeeded[idx].getQuadrantId(TheWorld_MapManager::MapManager::QuadrantId::DirectionSlot::ZMinus, 1 + int(i));
+					q.setTag(quadrantIdNeeded[idx].getTag() + " Z-" + std::to_string(1 + i));
+					quadrantIdNeeded.push_back(q);
+				}
+			}
+
+			// insert needed quadrants not present in map and refresh the ones which are already in it
+			//vector<TheWorld_MapManager::MapManager::QuadrantId> quadrantToAdd;
+			std::timespec refreshTime;
+			int ret = timespec_get(&refreshTime, TIME_UTC);
+			size = quadrantIdNeeded.size();
+			for (int idx = 0; idx < size; idx++)
+			{
+				MapQuadTree::iterator it = m_mapQuadTree.find(quadrantIdNeeded[idx]);
+				if (it == m_mapQuadTree.end())
+				{
+					m_mapQuadTree[quadrantIdNeeded[idx]] = make_unique<QuadTree>(this, quadrantIdNeeded[idx]);
+					m_mapQuadTree[quadrantIdNeeded[idx]]->refreshTime(refreshTime);
+				}
+				else
+					it->second->refreshTime(refreshTime);
+			}
+
+			// look for the quadrant to delete (the ones not refreshed)
+			vector<TheWorld_MapManager::MapManager::QuadrantId> quadrantToDelete;
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				if (itQuadTree->second->getRefreshTime().tv_nsec == refreshTime.tv_nsec && itQuadTree->second->getRefreshTime().tv_sec == refreshTime.tv_sec)
+				{
+					// 
+					bool visibilityChanged = false;
+					if (itQuadTree->second->getQuadrant()->getId().distanceInPerimeter(quadrantIdNeeded[0]) > m_numVisibleQuadrantOnPerimeter)
+					{
+						if (itQuadTree->second->isVisible())
+						{
+							visibilityChanged = true;
+							itQuadTree->second->setVisible(false);
+						}
+					}
+					else
+					{
+						if (!itQuadTree->second->isVisible())
+						{
+							visibilityChanged = true;
+							itQuadTree->second->setVisible(true);
+						}
+					}
+
+					if (visibilityChanged)
+					{
+						Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
+						itQuadTree->second->ForAllChunk(action);
+					}
+				}
+				else
+				{
+					// Quadrant too far from camera: need to be deleted
+					quadrantToDelete.push_back(itQuadTree->first);
+					if (m_cameraQuadTree != nullptr /* && m_cameraQuadTree->isValid()*/ && itQuadTree->first == m_cameraQuadTree->getQuadrant()->getId())
+					{
+						// if we delete the ones containing old camera chunk we invalidate it
+						m_cameraChunk = nullptr;
+						m_cameraQuadTree = nullptr;
+					}
+				}
+			}
+			for (int idx = 0; idx < quadrantToDelete.size(); idx++)
+				m_mapQuadTree.erase(quadrantToDelete[idx]);
+			quadrantToDelete.clear();
+		}
+	}
+	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS
+
+	// UPDATE QUADS
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		if (!itQuadTree->second->isValid())
-			continue;
-		itQuadTree->second->update(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);
+		itQuadTree->second->update(cameraPosGlobalCoord);
 	}
 
 	if (m_refreshRequired)
@@ -352,21 +542,22 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		Chunk::RefreshChunkAction action(is_visible_in_tree());
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
-			if (!itQuadTree->second->isValid())
-				continue;
 			itQuadTree->second->ForAllChunk(action);
 		}
 		m_refreshRequired = false;
 	}
 
-	// Update chunks
+	// UPDATE CHUNKS
 	{
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
 			if (!itQuadTree->second->isValid())
 				continue;
 			
-			// All chunk that need an update (they are chunk that got split or joined)
+			if (!itQuadTree->second->isVisible())
+				continue;
+
+			// All chunk that need an update (those are chunk that got split or joined)
 			std::vector<Chunk*> vectChunkUpdate = itQuadTree->second->getChunkUpdate();
 
 			// Forcing update to all neighboring chunks to readjust the seams
@@ -525,37 +716,39 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (m_updateTerrainVisibilityRequired)
 	{
 		if (m_initialWordlViewerPosSet)
+		{
 			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
 				if (!itQuadTree->second->isValid())
 					continue;
-				Chunk::DebugVisibilityChangedChunkAction action(m_debugVisibility);
+				//if (!itQuadTree->second->isVisible())
+				//	continue;
+				Chunk::DebugVisibilityChangedChunkAction action(m_debugContentVisibility);
 				itQuadTree->second->ForAllChunk(action);
 			}
+		}
 		m_updateTerrainVisibilityRequired = false;
 	}
 
 	if (m_updateDebugModeRequired)
 	{
 		if (m_initialWordlViewerPosSet)
+		{
 			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
-				if (!itQuadTree->second->isValid())
-					continue;
 				Chunk::SwitchDebugModeAction action(m_requiredChunkDebugMode);
 				itQuadTree->second->ForAllChunk(action);
-				m_currentChunkDebugMode = m_requiredChunkDebugMode;
 			}
+			m_currentChunkDebugMode = m_requiredChunkDebugMode;
+		}
 		m_updateDebugModeRequired = false;
 	}
 
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		if (!itQuadTree->second->isValid())
-			continue;
 		itQuadTree->second->updateMaterialParams();
 	}
-	
+
 	// Check for Dump
 	if (TIME_INTERVAL_BETWEEN_DUMP != 0 && Globals()->isDebugEnabled())
 	{
@@ -571,6 +764,28 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		m_dumpRequired = false;
 		dump();
 	}
+
+	// Check for Statistics
+	if (TIME_INTERVAL_BETWEEN_STATISTICS != 0)
+	{
+		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
+		if (timeElapsed - m_timeElapsedFromLastStatistic > TIME_INTERVAL_BETWEEN_STATISTICS)
+		{
+			refreshQuadTreeStatistics();
+			
+			if (m_numProcessExecution > 0)
+			{
+				m_averageProcessDuration = int(m_duration / m_numProcessExecution);
+				//Globals()->debugPrint(String("m_numProcessExecution=") + std::to_string(m_numProcessExecution).c_str() + ", m_duration=" + std::to_string(m_duration).c_str() + ", m_averageProcessDuration=" + std::to_string(m_averageProcessDuration).c_str());
+				m_duration = 0;
+				m_numProcessExecution = 0;
+			}
+			else
+				m_averageProcessDuration = 0;
+			
+			m_timeElapsedFromLastStatistic = timeElapsed;
+		}
+	}
 }
 
 void GDN_TheWorld_Viewer::_physics_process(float _delta)
@@ -583,19 +798,19 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 		m_ctrlPressed = false;
 }
 
-Transform GDN_TheWorld_Viewer::internalTransformGlobalCoord(void)
-{
-	// Return the transformation of the viewer Node in global coordinates appling a scale factor (m_mapScaleVector)
-	// Viewer Node origin is set to match the lower point of the grid in global coords (as expressed by Map manager) in resetInitialWordlViewerPos which load points from DB
-	// ==> t.origin = Vector3(m_worldVertices[0].posX(), 0, m_worldVertices[0].posZ());
-	return Transform(Basis().scaled(m_mapScaleVector), get_global_transform().origin);
-}
+//Transform GDN_TheWorld_Viewer::internalTransformGlobalCoord(void)
+//{
+//	// Return the transformation of the viewer Node in global coordinates appling a scale factor (m_mapScaleVector)
+//	// Viewer Node origin is set to match the lower point of the grid in global coords (as expressed by Map manager) in resetInitialWordlViewerPos which load points from DB
+//	// ==> t.origin = Vector3(m_worldVertices[0].posX(), 0, m_worldVertices[0].posZ());
+//	return Transform(Basis().scaled(m_mapScaleVector), get_global_transform().origin);
+//}
 
-Transform GDN_TheWorld_Viewer::internalTransformLocalCoord(void)
-{
-	// Return the transformation of the viewer Node in local coordinates relative to itself appling a scale factor (m_mapScaleVector)
-	return Transform(Basis().scaled(m_mapScaleVector), Vector3(0, 0, 0));
-}
+//Transform GDN_TheWorld_Viewer::internalTransformLocalCoord(void)
+//{
+//	// Return the transformation of the viewer Node in local coordinates relative to itself appling a scale factor (m_mapScaleVector)
+//	return Transform(Basis().scaled(m_mapScaleVector), Vector3(0, 0, 0));
+//}
 
 GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
 {
@@ -611,60 +826,6 @@ GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
 	}
 
 	return m_globals;
-}
-
-int GDN_TheWorld_Viewer::getNumChunks(void)
-{
-	int numChunks = 0;
-	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-	{
-		if (!itQuadTree->second->isValid())
-			continue;
-		numChunks += itQuadTree->second->getNumChunks();
-	}
-	return numChunks; 
-}
-
-TheWorld_MapManager::MapManager::Quadrant* GDN_TheWorld_Viewer::loadWorldData(float& x, float& z, int level, int numWorldVerticesPerSize)
-{
-	try
-	{
-		return Globals()->mapManager()->getQuadrant(x, z, level, numWorldVerticesPerSize);
-
-		//{	// SUPER DEBUGRIC
-		//	Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
-		//	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-		//	Ref<Image> image = resLoader->load("res://height.res");
-		//	int res = (int)image->get_width();
-		//	assert(res == Globals()->heightmapResolution() + 1);
-		//	float gridStepInWUs = Globals()->gridStepInWU();
-		//	image->lock();
-		//	for (int pz = 0; pz < res; pz++)
-		//		for (int px = 0; px < res; px++)
-		//		{
-		//			Color c = image->get_pixel(px, pz);
-		//			//m_worldVertices[px + pz * res].setAltitude(c.r);
-		//			m_worldVertices[px + pz * res].setAltitude(c.r * 3);
-		//		}
-		//	image->unlock();
-		//	Globals()->debugPrint("Fine SUPER DEBUGRIC!");
-		//}	// SUPER DEBUGRIC
-	}
-	catch (TheWorld_MapManager::MapManagerException& e)
-	{
-		Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, e.exceptionName() + string(" caught - ") + e.what());
-		throw(e);
-	}
-	catch (std::exception& e)
-	{
-		Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, string("std::exception caught - ") + e.what());
-		throw(e);
-	}
-	catch (...)
-	{
-		Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "exception caught");
-		throw(new exception("exception caught"));
-	}
 }
 
 void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift)
@@ -690,31 +851,51 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 
 		m_numWorldVerticesPerSize = Globals()->heightmapResolution() + 1;
 		
-		TheWorld_MapManager::MapManager::Quadrant* quadrant = loadWorldData(x, z, level, m_numWorldVerticesPerSize);
-		TheWorld_MapManager::MapManager::QuadrantId quadrantId = quadrant->getId();
+		//TheWorld_MapManager::MapManager::Quadrant* quadrant = loadWorldData(x, z, level, m_numWorldVerticesPerSize);
+		//TheWorld_MapManager::MapManager::QuadrantId quadrantId = quadrant->getId();
+		float _gridStepInWU = Globals()->mapManager()->gridStepInWU();
+		TheWorld_MapManager::MapManager::QuadrantId quadrantId(x, z, level, m_numWorldVerticesPerSize, _gridStepInWU);
+
+		std::lock_guard lock(m_mutexStreamerThread);
 
 		m_mapQuadTree.clear();
-		m_mapQuadTree[quadrantId] = make_unique<QuadTree>(this);
-		m_mapQuadTree[quadrantId]->init(quadrant);
+		m_mapQuadTree[quadrantId] = make_unique<QuadTree>(this, quadrantId);
+		m_mapQuadTree[quadrantId]->setTag("Camera");
+		m_mapQuadTree[quadrantId]->init(x, z);
+		m_mapQuadTree[quadrantId]->setValid();
+		m_mapQuadTree[quadrantId]->setVisible(true);
+
+		forceRefreshMapQuadTree();
 
 		TheWorld_MapManager::MapManager::GridVertex viewerPos(x, 0, z, level);
-		std::vector<TheWorld_MapManager::MapManager::GridVertex>::iterator it = std::find(m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices().begin(), m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices().end(), viewerPos);
-		if (it == m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices().end())
+		std::vector<TheWorld_MapManager::MapManager::GridVertex> gridVertices = m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices();
+		std::vector<TheWorld_MapManager::MapManager::GridVertex>::iterator it = std::find(gridVertices.begin(), gridVertices.end(), viewerPos);
+		if (it == gridVertices.end())
 		{
-			Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Not found WorldViewer Pos");
-			return;
+			bool found = false;
+			for (it = gridVertices.begin(); it != gridVertices.end(); it++)
+			{
+				if (it->equalsApartFromAltitude(viewerPos))
+				{
+					found = true;
+					break;
+				}
+			}
+			if (!found)
+			{
+				Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Not found WorldViewer Pos");
+				return;
+			}
 		}
 		Vector3 cameraPos(x, it->altitude() + cameraDistanceFromTerrain, z);		// MapManager coordinates are local coordinates of WorldNode
 		Vector3 lookAt(x + cameraDistanceFromTerrain, it->altitude(), z + cameraDistanceFromTerrain);
 
 		// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
-		Transform t = get_transform();
-		t.origin = Vector3(m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices()[0].posX(), 0, m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices()[0].posZ());
-		set_transform(t);
+		//Transform t = get_transform();
+		//t.origin = Vector3(m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices()[0].posX(), 0, m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices()[0].posZ());
+		//set_transform(t);
 		
 		WorldCamera()->initCameraInWorld(cameraPos, lookAt);
-
-		//m_mapQuadTree[quadrantId]->resetMaterialParams();
 
 		m_initialWordlViewerPosSet = true;
 	}
@@ -777,44 +958,46 @@ Spatial* GDN_TheWorld_Viewer::getWorldNode(void)
 //	aabb.set_size(size);
 //}
 
-void GDN_TheWorld_Viewer::onTransformChanged(void)
-{
-	Globals()->debugPrint("Transform changed");
-	
-	//The transformand other properties can be set by the scene loader, before we enter the tree
-	if (!is_inside_tree())
-		return;
+//void GDN_TheWorld_Viewer::onTransformChanged(void)
+//{
+//	Globals()->debugPrint("Transform changed");
+//	
+//	//The transformand other properties can be set by the scene loader, before we enter the tree
+//	if (!is_inside_tree())
+//		return;
+//
+//	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+//	{
+//		if (!itQuadTree->second->isValid())
+//			continue;
+//		if (!itQuadTree->second->isVisible())
+//			continue;
+//		Transform gt = internalTransformGlobalCoord();
+//
+//		Chunk::TransformChangedChunkAction action(gt);
+//		itQuadTree->second->ForAllChunk(action);
+//
+//		itQuadTree->second->materialParamsNeedUpdate(true);
+//
+//		// TODORIC Collider stuff
+//		//_if _collider != null:
+//		//	_collider.set_transform(gt)
+//	}
+//}
 
-	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-	{
-		if (!itQuadTree->second->isValid())
-			continue;
-		Transform gt = internalTransformGlobalCoord();
-
-		Chunk::TransformChangedChunkAction action(gt);
-		itQuadTree->second->ForAllChunk(action);
-
-		itQuadTree->second->materialParamsNeedUpdate(true);
-
-		// TODORIC Collider stuff
-		//_if _collider != null:
-		//	_collider.set_transform(gt)
-	}
-}
-
-void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
-{
-	if (m_mapScaleVector == mapScaleVector)
-		return;
-
-	mapScaleVector.x = Utils::max2(mapScaleVector.x, MIN_MAP_SCALE);
-	mapScaleVector.y = Utils::max2(mapScaleVector.y, MIN_MAP_SCALE);
-	mapScaleVector.z = Utils::max2(mapScaleVector.z, MIN_MAP_SCALE);
-
-	m_mapScaleVector = mapScaleVector;
-
-	onTransformChanged();
-}
+//void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
+//{
+//	if (m_mapScaleVector == mapScaleVector)
+//		return;
+//
+//	mapScaleVector.x = Utils::max2(mapScaleVector.x, MIN_MAP_SCALE);
+//	mapScaleVector.y = Utils::max2(mapScaleVector.y, MIN_MAP_SCALE);
+//	mapScaleVector.z = Utils::max2(mapScaleVector.z, MIN_MAP_SCALE);
+//
+//	m_mapScaleVector = mapScaleVector;
+//
+//	onTransformChanged();
+//}
 
 AABB GDN_TheWorld_Viewer::getCameraChunkLocalAABB(void)
 {
@@ -835,7 +1018,7 @@ AABB GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB(void)
 Transform GDN_TheWorld_Viewer::getCameraChunkMeshGlobalTransformApplied(void)
 {
 	if (m_cameraChunk && !m_cameraChunk->isMeshNull())
-		return m_cameraChunk->getMeshGlobalTransformApplied();
+		return m_cameraChunk->getMeshGlobalTransform();
 	else
 		return Transform();
 }
@@ -857,28 +1040,50 @@ String GDN_TheWorld_Viewer::getCameraChunkId(void)
 		return "";
 }
 
-int GDN_TheWorld_Viewer::getNumSplits()
+void GDN_TheWorld_Viewer::refreshQuadTreeStatistics()
 {
 	int numSplits = 0;
+	int numJoins = 0;
+	int numChunks = 0;
+	int numActiveChunks = 0;
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		if (!itQuadTree->second->isValid())
-			continue;
 		numSplits += itQuadTree->second->getNumSplits();
+		numJoins += itQuadTree->second->getNumJoins();
+		numChunks += itQuadTree->second->getNumChunks();
+		numActiveChunks += itQuadTree->second->getNumActiveChunks();
 	}
-	return numSplits;
+
+	m_numSplits = numSplits;
+	m_numJoins = numJoins;
+	m_numChunks = numChunks;
+	m_numActiveChunks = numActiveChunks;
+}
+
+int GDN_TheWorld_Viewer::getNumChunks(void)
+{
+	return m_numChunks;
+}
+
+int GDN_TheWorld_Viewer::getNumActiveChunks(void)
+{
+	return m_numActiveChunks;
+}
+
+
+int GDN_TheWorld_Viewer::getNumSplits()
+{
+	return m_numSplits;
 }
 
 int GDN_TheWorld_Viewer::getNumJoins()
 {
-	int numJoins = 0;
-	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-	{
-		if (!itQuadTree->second->isValid())
-			continue;
-		numJoins += itQuadTree->second->getNumJoins();
-	}
-	return numJoins;
+	return m_numJoins;
+}
+
+int GDN_TheWorld_Viewer::getProcessDuration(void)
+{
+	return m_averageProcessDuration;
 }
 
 void GDN_TheWorld_Viewer::dump()
@@ -886,31 +1091,26 @@ void GDN_TheWorld_Viewer::dump()
 	Globals()->debugPrint("*************");
 	Globals()->debugPrint("STARTING DUMP");
 
+	float f = Engine::get_singleton()->get_frames_per_second();
+	Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
+
+	Node* node = get_node(NodePath("/root"));
+	if (node != nullptr)
+	{
+		Globals()->debugPrint("============================================");
+		Globals()->debugPrint("");
+		Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
+		Globals()->debugPrint("");
+		Globals()->debugPrint(node->get_name());
+		Array nodes = node->get_children();
+		dumpRecurseIntoChildrenNodes(nodes, 1);
+		Globals()->debugPrint("============================================");
+	}
+
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		if (!itQuadTree->second->isValid())
-			continue;
-
-		Globals()->debugPrint("DUMP QUADRANT " + String(itQuadTree->second->getQuadrant()->getId().getId().c_str()));
-
-		float f = Engine::get_singleton()->get_frames_per_second();
-		Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
 		itQuadTree->second->dump();
 
-		Node* node = get_node(NodePath("/root"));
-		if (node != nullptr)
-		{
-			Globals()->debugPrint("============================================");
-			Globals()->debugPrint("");
-			Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
-			Globals()->debugPrint("");
-			Globals()->debugPrint(node->get_name());
-			Array nodes = node->get_children();
-			dumpRecurseIntoChildrenNodes(nodes, 1);
-			Globals()->debugPrint("============================================");
-		}
-
-		Globals()->debugPrint("DUMP COMPLETE QUADRANT " + String(itQuadTree->second->getQuadrant()->getId().getId().c_str()));
 	}
 
 	Globals()->debugPrint("DUMP COMPLETE");
@@ -938,4 +1138,58 @@ void GDN_TheWorld_Viewer::setCameraChunk(Chunk* chunk, QuadTree* quadTree)
 	}
 
 	m_cameraChunk = chunk;
+	m_cameraQuadTree = quadTree;
+}
+
+void GDN_TheWorld_Viewer::streamer(void)
+{
+	while (!m_streamerThreadRequiredExit)
+	{
+		{
+			//std::lock_guard lock(m_mutexStreamerThread);
+			std::unique_lock<std::recursive_mutex> lock(m_mutexStreamerThread, std::try_to_lock);
+			if (lock.owns_lock())
+			{
+				try
+				{
+					if (m_computedCameraQuadrantId.isInitialized())
+					{
+						bool exitForNow = false;
+						for (size_t distance = 0; distance <= m_numCacheQuadrantOnPerimeter; distance++)
+						{
+							for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+							{
+								if (!itQuadTree->second->isValid())
+								{
+									size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getId().distanceInPerimeter(m_computedCameraQuadrantId);
+									if (distanceInPerimeterFromCameraQuadrant == distance)
+									{
+										float x = 0, z = 0;
+										itQuadTree->second->init(x, z);
+										itQuadTree->second->setValid();
+										exitForNow = true;
+										break;
+									}
+								}
+							}
+							if (exitForNow)
+								break;
+						}
+					}
+				}
+				catch (std::exception& e)
+				{
+					Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, string("GDN_TheWorld_Viewer::streamer - std::exception caught - ") + e.what());
+					throw(e);
+				}
+				catch (...)
+				{
+					Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "GDN_TheWorld_Viewer::streamer - Exception caught");
+					throw(new exception("exception caught"));
+				}
+			}
+		}
+
+		Sleep(STREAMER_SLEEP_TIME);
+	}
 }

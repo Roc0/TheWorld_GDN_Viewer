@@ -101,8 +101,8 @@ void Quad::assignChunk(void)
 		else
 			m_chunk = new Chunk(m_slotPosX, m_slotPosZ, m_lod, m_viewer, m_quadTree, mat);
 
-		// Set Viwer Pos in Global Coord
-		m_chunk->setParentGlobalTransform(m_viewer->internalTransformGlobalCoord());
+		// Set Viewer Pos in Global Coord
+		//m_chunk->setParentGlobalTransform(m_viewer->internalTransformGlobalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}
 	m_chunk->setPosInQuad(m_posInQuad);
@@ -112,34 +112,90 @@ void Quad::assignChunk(void)
 	m_chunkSizeInWUs = m_chunk->getChunkSizeInWUs();
 }
 
-void Quad::setCameraPos(Vector3 localToGriddCoordCameraLastPos, Vector3 globalCoordCameraLastPos)
+void Quad::setCameraPos(Vector3 globalCoordCameraLastPos)
 {
 	if (isLeaf())
 	{
 		Chunk* chunk = getChunk();
 		if (chunk != nullptr)
-			chunk->setCameraPos(localToGriddCoordCameraLastPos, globalCoordCameraLastPos);
+			chunk->setCameraPos(globalCoordCameraLastPos);
 	}
 }
 	
-QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer)
+QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, TheWorld_MapManager::MapManager::QuadrantId quadrantId)
 {
 	m_isValid = false;
+	m_isVisible = false;
 	m_viewer = viewer;
 	m_numSplits = 0;
 	m_numJoins = 0;
 	m_numLeaf = 0;
-	m_worldQuadrant = nullptr;
+	m_worldQuadrant = new TheWorld_MapManager::MapManager::Quadrant(quadrantId, m_viewer->Globals()->mapManager());
+	m_tag = quadrantId.getTag();
+	int ret = timespec_get(&m_refreshTime, TIME_UTC);
 }
 
-void QuadTree::init(TheWorld_MapManager::MapManager::Quadrant* worldQuadrant)
+void QuadTree::init(float& viewerPosX, float& viewerPosZ)
 {
+	TimerMs clock; // Timer<milliseconds, steady_clock>
+	clock.tick();
+
 	m_isValid = false;
-	m_worldQuadrant = worldQuadrant;
-	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::NotSet, m_viewer, this);
+
+	TimerMs clock1; // Timer<milliseconds, steady_clock>
+	clock1.tick();
+	m_worldQuadrant->populateGridVertices(viewerPosX, viewerPosZ);
+	clock1.tock();	
+	m_viewer->Globals()->debugPrint("");
+	m_viewer->Globals()->debugPrint(String("DURATION - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - init (populateGridVertices) " + std::to_string(clock1.duration().count()).c_str() + " ms");
+
+	//{	// SUPER DEBUGRIC
+	//	m_viewer->Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
+	//	int res = m_viewer->Globals()->heightmapResolution() + 1;
+	//	std::vector<TheWorld_MapManager::MapManager::GridVertex>& gridVertices = m_worldQuadrant->getGridVertices();
+	//	for (int pz = 0; pz < res; pz++)
+	//		for (int px = 0; px < res; px++)
+	//		{
+	//			TheWorld_MapManager::MapManager::GridVertex& v = gridVertices[px + pz * res];
+	//			float altitude = v.altitude();
+	//			if (altitude > 0)
+	//				m_viewer->Globals()->debugPrint(v.toString().c_str());
+	//		}
+	//	m_viewer->Globals()->debugPrint("Fine SUPER DEBUGRIC!");
+	//}	// SUPER DEBUGRIC
+
+	//{	// SUPER DEBUGRIC
+	//	m_viewer->Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
+	//	std::vector<TheWorld_MapManager::MapManager::GridVertex>& gridVertices = m_worldQuadrant->getGridVertices();
+	//	ResourceLoader* resLoader = ResourceLoader::get_singleton();
+	//	Ref<Image> image = resLoader->load("res://height.res");
+	//	int res = (int)image->get_width();
+	//	assert(res == m_viewer->Globals()->heightmapResolution() + 1);
+	//	float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
+	//	image->lock();
+	//	for (int pz = 0; pz < res; pz++)
+	//		for (int px = 0; px < res; px++)
+	//		{
+	//			Color c = image->get_pixel(px, pz);
+	//			//m_worldVertices[px + pz * res].setAltitude(c.r);
+	//			gridVertices[px + pz * res].setAltitude(c.r * 3);
+	//		}
+	//	image->unlock();
+	//	m_viewer->Globals()->debugPrint("Fine SUPER DEBUGRIC!");
+	//}	// SUPER DEBUGRIC
+
 	m_shaderTerrainData.init(m_viewer, this);
+
+	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::NotSet, m_viewer, this);
+
+	TimerMs clock2; // Timer<milliseconds, steady_clock>
+	clock2.tick();
 	resetMaterialParams();
-	m_isValid = true;
+	clock2.tock();	
+	m_viewer->Globals()->debugPrint(String("DURATION - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - init (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
+
+	clock.tock();	
+	m_viewer->Globals()->debugPrint(String("DURATION - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - init " + std::to_string(clock.duration().count()).c_str() + " ms");
 }
 
 QuadTree::~QuadTree()
@@ -165,6 +221,9 @@ QuadTree::~QuadTree()
 
 void QuadTree::ForAllChunk(Chunk::ChunkAction& chunkAction)
 {
+	if (!isValid())
+		return;
+
 	for (Chunk::MapChunk::iterator it = m_mapChunk.begin(); it != m_mapChunk.end(); it++)
 	{
 		for (Chunk::MapChunkPerLod::iterator it1 = it->second.begin(); it1 != it->second.end(); it1++)
@@ -174,23 +233,35 @@ void QuadTree::ForAllChunk(Chunk::ChunkAction& chunkAction)
 	}
 }
 
-void QuadTree::update(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGlobalCoord)
+void QuadTree::update(Vector3 cameraPosGlobalCoord)
 {
+	if (!isValid())
+		return;
+
+	if (!isVisible())
+		return;
+
 	m_numLeaf = 0;
-	internalUpdate(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord, m_root.get());
+	internalUpdate(cameraPosGlobalCoord, m_root.get());
 	assert(!m_root->isLeaf() || m_root->getChunk() != nullptr);
 }
 
-void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cameraPosGlobalCoord, Quad* quad)
+void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
 {
 	// cameraPosViewerNodeLocalCoord are in grid local coordinates (WUs)
 
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
-	//float chunkSizeInWUs = globals->gridStepInBitmapWUs(quad->Lod()) * globals->numVerticesPerChuckSide();									// chunk size in World Units
-	float chunkSizeInWUs = quad->getChunkSizeInWUs();
-	Vector3 chunkCenter = real_t(chunkSizeInWUs) * (Vector3(real_t(quad->slotPosX()), 0, real_t(quad->slotPosZ())) + Vector3(0.5, 0, 0.5));	// chunk center in local coord. respect Viewer Node (or the grid of chunks)
+	float chunkSizeInWUs = globals->gridStepInHeightmapWUs(quad->Lod()) * globals->numVerticesPerChuckSide();									// chunk size in World Units
+	//float chunkSizeInWUs = quad->getChunkSizeInWUs();
+	//Vector3 chunkCenter = real_t(chunkSizeInWUs) * (Vector3(real_t(quad->slotPosX()), 0, real_t(quad->slotPosZ())) + Vector3(0.5, 0, 0.5));	// chunk center in local coord. respect Viewer Node (or the grid of chunks)
+	//chunkCenter.y = (chunkAABB.position + chunkAABB.size / 2).y;		// medium altitude of the chunk
 	AABB chunkAABB = quad->getChunkAABB();
-	chunkCenter.y = (chunkAABB.position + chunkAABB.size / 2).y;		// medium altitude of the chunk
+	//Vector3 chunkCenterGlobal(real_t(quad->getChunk()->getLowerXInWUsGlobal() + chunkSizeInWUs / 2),
+	//									(chunkAABB.position + chunkAABB.size / 2).y, 
+	//									real_t(quad->getChunk()->getLowerZInWUsGlobal() + chunkSizeInWUs / 2));
+	Vector3 quadCenterGlobal(real_t((quad->slotPosX() * chunkSizeInWUs) + m_worldQuadrant->getId().getLowerXGridVertex() + chunkSizeInWUs / 2),
+									(chunkAABB.position + chunkAABB.size / 2).y,
+									real_t((quad->slotPosZ() * chunkSizeInWUs) + m_worldQuadrant->getId().getLowerZGridVertex() + chunkSizeInWUs / 2));
 	real_t splitDistance = chunkSizeInWUs * globals->splitScale();
 	if (quad->isLeaf())
 	{
@@ -198,13 +269,13 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 		m_numLeaf++;
 		if (quad->Lod() > 0)
 		{
-			real_t distance = chunkCenter.distance_to(cameraPosViewerNodeLocalCoord);
+			real_t distance = quadCenterGlobal.distance_to(cameraPosGlobalCoord);
 			if (distance < splitDistance)
 			{
 				// Split
 				quad->split();
 				for (int i = 0; i < 4; i++)
-					quad->getChild(i)->setCameraPos(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);;
+					quad->getChild(i)->setCameraPos(cameraPosGlobalCoord);;
 				m_numSplits++;
 			}
 		}
@@ -215,12 +286,12 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 		for (int i = 0; i < 4; i++)
 		{
 			Quad* child = quad->getChild(i);
-			internalUpdate(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord, child);
+			internalUpdate(cameraPosGlobalCoord, child);
 			if (!child->isLeaf())
 				allChildrenAreLeaf = false;
 		}
 		
-		if (allChildrenAreLeaf && chunkCenter.distance_to(cameraPosViewerNodeLocalCoord) > splitDistance)
+		if (allChildrenAreLeaf && quadCenterGlobal.distance_to(cameraPosGlobalCoord) > splitDistance)
 		{
 			// Join
 			quad->clearChildren();
@@ -231,7 +302,7 @@ void QuadTree::internalUpdate(Vector3 cameraPosViewerNodeLocalCoord, Vector3 cam
 	}
 	
 	// after all if quad is leaf: just joined or was leaf and it has not been splitted
-	quad->setCameraPos(cameraPosViewerNodeLocalCoord, cameraPosGlobalCoord);
+	quad->setCameraPos(cameraPosGlobalCoord);
 }
 
 Chunk* QuadTree::getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir)
@@ -383,9 +454,18 @@ void QuadTree::clearChunkUpdate(void)
 
 void QuadTree::updateMaterialParams(void)
 {
+	if (!isValid())
+		return;
+	
+	if (!isVisible())
+		return;
+
 	if (m_shaderTerrainData.materialParamsNeedUpdate())
 	{
+		TimerMs clock; // Timer<milliseconds, steady_clock>
+		clock.tick();
 		m_shaderTerrainData.updateMaterialParams();
+		clock.tock();	m_viewer->Globals()->debugPrint(String("DURATION - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
 		m_shaderTerrainData.materialParamsNeedUpdate(false);
 	}
 }
@@ -405,123 +485,147 @@ void QuadTree::materialParamsNeedUpdate(bool b)
 	m_shaderTerrainData.materialParamsNeedUpdate(b);
 }
 
+Transform QuadTree::internalTransformGlobalCoord(void)
+{
+	return Transform(Basis(), Vector3((real_t)getQuadrant()->getId().getLowerXGridVertex(), 0, (real_t)getQuadrant()->getId().getLowerZGridVertex()));
+}
+
 void QuadTree::dump(void)
 {
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 
-	globals->debugPrint(String("Num vertices per chunk side: ") + String(to_string(globals->numVerticesPerChuckSide()).c_str())
-				+ String(" - ") + String("Num vertices pert grid size: ") + String(to_string(globals->heightmapResolution()).c_str())
-				+ String(" - ") + String("Grid size [WUs]: ") + String(to_string(globals->heightmapSizeInWUs()).c_str())
-				+ String(" - ") + String("Lod max depth: ") + String(to_string(globals->lodMaxDepth()).c_str()));
+	globals->debugPrint("====================================================================================================================================");
 
-	globals->debugPrint(String("FROM LAST DUMP - Num quad split: ") + String(to_string(m_numSplits).c_str())
-				+ String(" - ") + String("Num quad join: ") + String(to_string(m_numJoins).c_str())
-				+ String(" - ") + String("Num leaves: ") + String(to_string(m_numLeaf).c_str()));
+	globals->debugPrint(String("DUMP QUADRANT ") + getQuadrant()->getId().getId().c_str() + " TAG=" + m_tag.c_str());
 
-	globals->debugPrint(String("GRID POS (global)")
-		+ String(" - ") + String("X = ") + String(to_string(m_viewer->get_global_transform().origin.x).c_str())
-		+ String(" - ") + String("Z = ") + String(to_string(m_viewer->get_global_transform().origin.z).c_str()));
-
-	int numChunks = 0;
-	int numActiveChunks = 0;
-	Chunk* cameraChunk = nullptr;
-	for (int i = globals->lodMaxDepth(); i >= 0; i--)
+	if (isValid() && isVisible())
 	{
-		int numChunksAtLod = 0;
-		Chunk::MapChunk::iterator it = m_mapChunk.find(i);
-		if (it != m_mapChunk.end())
-			numChunksAtLod = int(m_mapChunk[i].size());
-		int numChunksActiveAtLod = 0;
-		for (Chunk::MapChunkPerLod::iterator it1 = m_mapChunk[i].begin(); it1 != m_mapChunk[i].end(); it1++)
+		globals->debugPrint(String("Num vertices per chunk side: ") + String(to_string(globals->numVerticesPerChuckSide()).c_str())
+			+ String(" - ") + String("Num vertices per grid size: ") + String(to_string(globals->heightmapResolution()).c_str())
+			+ String(" - ") + String("Grid size [WUs]: ") + String(to_string(globals->heightmapSizeInWUs()).c_str())
+			+ String(" - ") + String("Lod max depth: ") + String(to_string(globals->lodMaxDepth()).c_str()));
+
+		globals->debugPrint(String("FROM LAST DUMP - Num quad split: ") + String(to_string(m_numSplits).c_str())
+			+ String(" - ") + String("Num quad join: ") + String(to_string(m_numJoins).c_str())
+			+ String(" - ") + String("Num leaves: ") + String(to_string(m_numLeaf).c_str()));
+
+		globals->debugPrint(String("GRID POS (global)")
+			+ String(" - ") + String("X = ") + String(to_string(internalTransformGlobalCoord().origin.x).c_str())
+			+ String(" - ") + String("Z = ") + String(to_string(internalTransformGlobalCoord().origin.z).c_str()));
+
+		int numChunks = 0;
+		int numActiveChunks = 0;
+		Chunk* cameraChunk = nullptr;
+		for (int i = globals->lodMaxDepth(); i >= 0; i--)
 		{
-			if (it1->second->isActive())
-				numChunksActiveAtLod++;
-			if (it1->second->isCameraVerticalOnChunk())
-				cameraChunk = it1->second;
+			int numChunksAtLod = 0;
+			Chunk::MapChunk::iterator it = m_mapChunk.find(i);
+			if (it != m_mapChunk.end())
+				numChunksAtLod = int(m_mapChunk[i].size());
+			int numChunksActiveAtLod = 0;
+			for (Chunk::MapChunkPerLod::iterator it1 = m_mapChunk[i].begin(); it1 != m_mapChunk[i].end(); it1++)
+			{
+				if (it1->second->isActive())
+					numChunksActiveAtLod++;
+				if (it1->second->isCameraVerticalOnChunk())
+					cameraChunk = it1->second;
+			}
+			globals->debugPrint("Num chunks at lod " + String(to_string(i).c_str()) + ": " + String(to_string(numChunksAtLod).c_str())
+				+ String("\t") + " Active " + String(to_string(numChunksActiveAtLod).c_str()));
+			numChunks += numChunksAtLod;
+			numActiveChunks += numChunksActiveAtLod;
 		}
-		globals->debugPrint("Num chunks at lod " + String(to_string(i).c_str()) + ": " + String(to_string(numChunksAtLod).c_str())
-			+ String("\t") + " Active " + String(to_string(numChunksActiveAtLod).c_str()));
-		numChunks += numChunksAtLod;
-		numActiveChunks += numChunksActiveAtLod;
+
+		globals->debugPrint("Num chunks: " + String(to_string(numChunks).c_str()));
+		globals->debugPrint("Num active chunks: " + String(to_string(numActiveChunks).c_str()));
+
+		// DEBUGRIC
+		//if (cameraChunk != nullptr)
+		//{
+		//	Ref<Mesh> cameraMesh = cameraChunk->getMesh();
+		//	Array cameraArrays = cameraMesh->surface_get_arrays(0);
+		//	PoolVector3Array cameraVerts = cameraArrays[Mesh::ARRAY_VERTEX];
+		//	globals->debugPrint("camerMesh Verts: " + String(to_string(cameraVerts.size()).c_str()));
+		//	Transform cameraT = cameraChunk->getMeshGlobalTransformApplied();
+		//	globals->debugPrint("camerMesh t= " + String(cameraT));
+		//	int numPointsPerSize = (int)sqrt(cameraVerts.size());
+		//	String s;	int i = 0;
+		//	for (int z = 0; z < numPointsPerSize; z++)
+		//	{
+		//		for (int x = 0; x < numPointsPerSize; x++)
+		//		{
+		//			s += cameraVerts[i];
+		//			s += " ";
+		//			i++;
+		//		}
+		//		globals->debugPrint("camerMesh r=" + String(to_string(z + 1).c_str()) + " " + s);
+		//		s = "";
+		//	}
+
+		//	Chunk* cameraChunkXMinus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XMinusChunk);
+		//	if (cameraChunkXMinus != nullptr)
+		//	{
+		//		Ref<Mesh> camerMeshXMinus = cameraChunkXMinus->getMesh();
+		//		Array cameraArraysXMinus = camerMeshXMinus->surface_get_arrays(0);
+		//		PoolVector3Array cameraVertsXMinus = cameraArraysXMinus[Mesh::ARRAY_VERTEX];
+		//		globals->debugPrint("camerMeshXMinus Verts: " + String(to_string(cameraVertsXMinus.size()).c_str()));
+		//		Transform cameraT = cameraChunkXMinus->getMeshGlobalTransformApplied();
+		//		globals->debugPrint("camerMeshXMinus t= " + String(cameraT));
+		//		int numPointsPerSize = (int)sqrt(cameraVertsXMinus.size());
+		//		String s;	int i = 0;
+		//		for (int z = 0; z < numPointsPerSize; z++)
+		//		{
+		//			for (int x = 0; x < numPointsPerSize; x++)
+		//			{
+		//				s += cameraVertsXMinus[i];
+		//				s += " ";
+		//				i++;
+		//			}
+		//			globals->debugPrint("camerMeshXMinus r=" + String(to_string(z + 1).c_str()) + " " + s);
+		//			s = "";
+		//		}
+		//	}
+		//	Chunk* cameraChunkXPlus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XPlusChunk);
+		//	if (cameraChunkXPlus != nullptr)
+		//	{
+		//		Ref<Mesh> camerMeshXPlus = cameraChunkXPlus->getMesh();
+		//		Array cameraArraysXPlus = camerMeshXPlus->surface_get_arrays(0);
+		//		PoolVector3Array cameraVertsXPlus = cameraArraysXPlus[Mesh::ARRAY_VERTEX];
+		//		globals->debugPrint("camerMeshXPlus Verts: " + String(to_string(cameraVertsXPlus.size()).c_str()));
+		//		Transform cameraT = cameraChunkXPlus->getMeshGlobalTransformApplied();
+		//		globals->debugPrint("camerMeshXPlus t= " + String(cameraT));
+		//		int numPointsPerSize = (int)sqrt(cameraVertsXPlus.size());
+		//		String s;	int i = 0;
+		//		for (int z = 0; z < numPointsPerSize; z++)
+		//		{
+		//			for (int x = 0; x < numPointsPerSize; x++)
+		//			{
+		//				s += cameraVertsXPlus[i];
+		//				s += " ";
+		//				i++;
+		//			}
+		//			globals->debugPrint("camerMeshXPlus r=" + String(to_string(z + 1).c_str()) + " " + s);
+		//			s = "";
+		//		}
+		//	}
+		//}
+		// DEBUGRIC
+
+		Chunk::DumpChunkAction action;
+		ForAllChunk(action);
+	}
+	else
+	{
+		if (!isValid())
+			globals->debugPrint("QUADRANT NOT VALID YET");
+		else
+			globals->debugPrint("QUADRANT ACTUALLY NOT VISIBLE");
 	}
 
-	globals->debugPrint("Num chunks: " + String(to_string(numChunks).c_str()));
-	globals->debugPrint("Num active chunks: " + String(to_string(numActiveChunks).c_str()));
 
-	// DEBUGRIC
-	//if (cameraChunk != nullptr)
-	//{
-	//	Ref<Mesh> cameraMesh = cameraChunk->getMesh();
-	//	Array cameraArrays = cameraMesh->surface_get_arrays(0);
-	//	PoolVector3Array cameraVerts = cameraArrays[Mesh::ARRAY_VERTEX];
-	//	globals->debugPrint("camerMesh Verts: " + String(to_string(cameraVerts.size()).c_str()));
-	//	Transform cameraT = cameraChunk->getMeshGlobalTransformApplied();
-	//	globals->debugPrint("camerMesh t= " + String(cameraT));
-	//	int numPointsPerSize = (int)sqrt(cameraVerts.size());
-	//	String s;	int i = 0;
-	//	for (int z = 0; z < numPointsPerSize; z++)
-	//	{
-	//		for (int x = 0; x < numPointsPerSize; x++)
-	//		{
-	//			s += cameraVerts[i];
-	//			s += " ";
-	//			i++;
-	//		}
-	//		globals->debugPrint("camerMesh r=" + String(to_string(z + 1).c_str()) + " " + s);
-	//		s = "";
-	//	}
+	globals->debugPrint(String("COMPLETED DUMP QUADRANT ") + getQuadrant()->getId().getId().c_str() + " TAG=" + m_tag.c_str());
 
-	//	Chunk* cameraChunkXMinus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XMinusChunk);
-	//	if (cameraChunkXMinus != nullptr)
-	//	{
-	//		Ref<Mesh> camerMeshXMinus = cameraChunkXMinus->getMesh();
-	//		Array cameraArraysXMinus = camerMeshXMinus->surface_get_arrays(0);
-	//		PoolVector3Array cameraVertsXMinus = cameraArraysXMinus[Mesh::ARRAY_VERTEX];
-	//		globals->debugPrint("camerMeshXMinus Verts: " + String(to_string(cameraVertsXMinus.size()).c_str()));
-	//		Transform cameraT = cameraChunkXMinus->getMeshGlobalTransformApplied();
-	//		globals->debugPrint("camerMeshXMinus t= " + String(cameraT));
-	//		int numPointsPerSize = (int)sqrt(cameraVertsXMinus.size());
-	//		String s;	int i = 0;
-	//		for (int z = 0; z < numPointsPerSize; z++)
-	//		{
-	//			for (int x = 0; x < numPointsPerSize; x++)
-	//			{
-	//				s += cameraVertsXMinus[i];
-	//				s += " ";
-	//				i++;
-	//			}
-	//			globals->debugPrint("camerMeshXMinus r=" + String(to_string(z + 1).c_str()) + " " + s);
-	//			s = "";
-	//		}
-	//	}
-	//	Chunk* cameraChunkXPlus = getChunkAt(cameraChunk->getPos(), Chunk::DirectionSlot::XPlusChunk);
-	//	if (cameraChunkXPlus != nullptr)
-	//	{
-	//		Ref<Mesh> camerMeshXPlus = cameraChunkXPlus->getMesh();
-	//		Array cameraArraysXPlus = camerMeshXPlus->surface_get_arrays(0);
-	//		PoolVector3Array cameraVertsXPlus = cameraArraysXPlus[Mesh::ARRAY_VERTEX];
-	//		globals->debugPrint("camerMeshXPlus Verts: " + String(to_string(cameraVertsXPlus.size()).c_str()));
-	//		Transform cameraT = cameraChunkXPlus->getMeshGlobalTransformApplied();
-	//		globals->debugPrint("camerMeshXPlus t= " + String(cameraT));
-	//		int numPointsPerSize = (int)sqrt(cameraVertsXPlus.size());
-	//		String s;	int i = 0;
-	//		for (int z = 0; z < numPointsPerSize; z++)
-	//		{
-	//			for (int x = 0; x < numPointsPerSize; x++)
-	//			{
-	//				s += cameraVertsXPlus[i];
-	//				s += " ";
-	//				i++;
-	//			}
-	//			globals->debugPrint("camerMeshXPlus r=" + String(to_string(z + 1).c_str()) + " " + s);
-	//			s = "";
-	//		}
-	//	}
-	//}
-	// DEBUGRIC
-
-	Chunk::DumpChunkAction action;
-	ForAllChunk(action);
+	globals->debugPrint("====================================================================================================================================");
 
 	m_numSplits = 0;
 	m_numJoins = 0;
@@ -733,7 +837,7 @@ void ShaderTerrainData::updateMaterialParams(void)
 
 	if (m_viewer->is_inside_tree())
 	{
-		Transform globalTransform = m_viewer->internalTransformGlobalCoord();
+		Transform globalTransform = m_quadTree->internalTransformGlobalCoord();
 		//globalTransform.origin = Vector3(0, 0, 0);		// DEBUGRIC
 		m_viewer->Globals()->debugPrint("internalTransformGlobalCoord" + String(" t=") + String(globalTransform));	// DEBUGRIC
 

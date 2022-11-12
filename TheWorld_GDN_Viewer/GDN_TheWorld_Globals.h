@@ -226,7 +226,7 @@ namespace godot
 		int heightmapResolution(void) { return m_heightmapResolution; /* m_heightmapResolution = 1024 con THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10 */ }	// Resolution of the heightmap = num point of the heightmap -1;
 		// Size of the heightmap in WUs
 		float heightmapSizeInWUs(void) {
-			return (heightmapResolution() + 1) * m_mapManager->gridStepInWU();
+			return heightmapResolution() * m_mapManager->gridStepInWU();
 		}
 
 		// Max value of the lod index (numLods - 1)
