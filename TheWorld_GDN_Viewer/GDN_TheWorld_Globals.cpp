@@ -2,10 +2,12 @@
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
 
-#include <MapManager.h>
+//#include <MapManager.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 
 std::string getModuleLoadPath(void);
+
+// Gestire le eccezioni della comunicazione verso il server
 
 const godot::Color godot::GDN_TheWorld_Globals::g_color_white = godot::Color(255.0F / 255, 255.0F / 255, 255.0F / 255);
 const godot::Color godot::GDN_TheWorld_Globals::g_color_red = godot::Color(255.0F / 255, 0.0F / 255, 0.0F / 255);
@@ -33,6 +35,130 @@ const godot::Color godot::GDN_TheWorld_Globals::g_color_black = godot::Color(0.0
 
 namespace godot
 {
+	
+	GDN_TheWorld_Globals_Client::GDN_TheWorld_Globals_Client(plog::Severity sev) : TheWorld_ClientServer::ClientInterface(sev)
+	{
+	}
+
+	float GDN_TheWorld_Globals_Client::MapManagerGridStepInWU()
+	{
+		std::vector<ClientServerVariant> replyParams;
+		std::vector<ClientServerVariant> inputParams;
+		int rc = execMethodSync("MapManager::gridStepInWU", inputParams, replyParams);
+		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+		{
+			std::string m = std::string("execMethodSync ==> MapManager::gridStepInWU error ") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
+		}
+		if (replyParams.size() == 0)
+		{
+			std::string m = std::string("execMethodSync ==> MapManager::gridStepInWU error ") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "No param replied", rc));
+		}
+
+		const auto ptr(std::get_if<float>(&replyParams[0]));
+		if (ptr == NULL)
+		{
+			std::string m = std::string("execMethodSync ==> MapManager::gridStepInWU did not return a float");
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+		}
+		
+		return *ptr;
+	}
+
+	void GDN_TheWorld_Globals_Client::MapManagerSetLogMaxSeverity(plog::Severity sev)
+	{
+		std::vector<ClientServerVariant> replyParams;
+		std::vector<ClientServerVariant> inputParams;
+		inputParams.push_back((int)sev);
+		int rc = execMethodSync("MapManager::setLogMaxSeverity", inputParams, replyParams);
+		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+		{
+			std::string m = std::string("m_client->execMethodSync ==> MapManager::MapManagerSetLogMaxSeverity error ") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(),"", rc));
+		}
+	}
+
+	void GDN_TheWorld_Globals_Client::MapManagerCalcNextCoordOnTheGridInWUs(std::vector<float>& inCoords, std::vector<float>& outCoords)
+	{
+		std::vector<ClientServerVariant> replyParams;
+		std::vector<ClientServerVariant> inputParams;
+		for (size_t idx = 0; idx < inCoords.size(); idx++)
+			inputParams.push_back(inCoords[idx]);
+		int rc = execMethodSync("MapManager::calcNextCoordOnTheGridInWUs", inputParams, replyParams);
+		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+		{
+			std::string m = std::string("m_client->execMethodSync ==> MapManager::calcNextCoordOnTheGridInWUs error ") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
+		}
+		if (replyParams.size() != inCoords.size())
+		{
+			std::string m = std::string("execMethodSync ==> MapManager::calcNextCoordOnTheGridInWUs error (not enough params replied)") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+		}
+
+		for (size_t idx = 0; idx < inCoords.size(); idx++)
+		{
+			const auto ptr(std::get_if<float>(&replyParams[idx]));
+			if (ptr == NULL)
+			{
+				std::string m = std::string("execMethodSync ==> MapManager::calcNextCoordOnTheGridInWUs did not return a float");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			outCoords.push_back(*ptr);
+		}
+	}
+
+	void GDN_TheWorld_Globals_Client::MapManagerGetVertices(float& viewerPosX, float& viewerPosZ, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, std::string& buffGridVertices)
+	{
+		std::vector<ClientServerVariant> replyParams;
+		std::vector<ClientServerVariant> inputParams;
+		inputParams.push_back(viewerPosX);
+		inputParams.push_back(viewerPosZ);
+		inputParams.push_back(lowerXGridVertex);
+		inputParams.push_back(lowerZGridVertex);
+		inputParams.push_back(anchorType);
+		inputParams.push_back(numVerticesPerSize);
+		inputParams.push_back(gridStepinWU);
+		inputParams.push_back(level);
+		int rc = execMethodSync("MapManager::getVertices", inputParams, replyParams);
+		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+		{
+			std::string m = std::string("m_client->execMethodSync ==> MapManager::getVertices error ") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
+		}
+		if (replyParams.size() < 3)
+		{
+			std::string m = std::string("execMethodSync ==> MapManager::getVertices error (not enough params replied)") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+		}
+
+		const auto _viewerPosX(std::get_if<float>(&replyParams[0]));
+		if (_viewerPosX == NULL)
+		{
+			std::string m = std::string("execMethodSync ==> MapManager::getVertices did not return a float as first return param");
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+		}
+		viewerPosX = *_viewerPosX;
+		
+		const auto _viewerPosZ(std::get_if<float>(&replyParams[1]));
+		if (_viewerPosZ == NULL)
+		{
+			std::string m = std::string("execMethodSync ==> MapManager::getVertices did not return a float as second return param");
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+		}
+		viewerPosZ = *_viewerPosZ;
+		
+		const auto vertexArraySize(std::get_if<std::string>(&replyParams[2]));
+		if (vertexArraySize == NULL)
+		{
+			std::string m = std::string("execMethodSync ==> MapManager::getVertices did not return a string as third return param");
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+		}
+
+		buffGridVertices = *vertexArraySize;
+	}
+
 	GDN_TheWorld_Globals::GDN_TheWorld_Globals()
 	{
 		m_initialized = false;
@@ -42,7 +168,9 @@ namespace godot
 
 		assert(resize(THEWORLD_VIEWER_CHUNK_SIZE_SHIFT, THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT, true));
 
-		m_mapManager = NULL;
+		//m_mapManager = NULL;
+		m_client = nullptr;
+		m_gridStepInWU = 0;
 
 		m_viewer = NULL;
 	}
@@ -74,9 +202,14 @@ namespace godot
 
 		PLOGI << "TheWorld Globals Initializing...";
 
-		m_mapManager = new TheWorld_MapManager::MapManager(NULL, PLOG_DEFAULT_LEVEL, plog::get());
-		m_mapManager->instrument(true);
-		m_mapManager->consoleDebugMode(false);
+		m_client = new GDN_TheWorld_Globals_Client(PLOG_DEFAULT_LEVEL);
+		int rc = m_client->connect();
+		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, "Connect to server faild with code " + rc));
+
+		//m_mapManager = new TheWorld_MapManager::MapManager(NULL, PLOG_DEFAULT_LEVEL, plog::get());
+		//m_mapManager->instrument(true);
+		//m_mapManager->consoleDebugMode(false);
 
 		setDebugEnabled(m_isDebugEnabled);
 
@@ -95,7 +228,9 @@ namespace godot
 		{
 			PLOGI << "TheWorld Globals Deinitializing...";
 
-			delete m_mapManager;
+			//delete m_mapManager;
+			delete m_client;
+			m_client = nullptr;
 
 			PLOGI << "TheWorld Globals Deinitialized!";
 
@@ -107,6 +242,16 @@ namespace godot
 			
 			debugPrint("GDN_TheWorld_Globals::deinit DONE!");
 		}
+	}
+
+	float GDN_TheWorld_Globals::gridStepInWU(void)
+	{
+		if (m_gridStepInWU != 0)
+			return m_gridStepInWU;
+
+		m_gridStepInWU = m_client->MapManagerGridStepInWU();
+
+		return m_gridStepInWU;
 	}
 
 	void GDN_TheWorld_Globals::_init(void)
@@ -165,12 +310,14 @@ namespace godot
 		if (b)
 		{
 			plog::get()->setMaxSeverity(PLOG_DEBUG_LEVEL);
-			m_mapManager->setLogMaxSeverity(PLOG_DEBUG_LEVEL);
+			//m_mapManager->setLogMaxSeverity(PLOG_DEBUG_LEVEL);
+			m_client->MapManagerSetLogMaxSeverity(PLOG_DEBUG_LEVEL);
 		}
 		else
 		{
 			plog::get()->setMaxSeverity(PLOG_DEFAULT_LEVEL);
-			m_mapManager->setLogMaxSeverity(PLOG_DEFAULT_LEVEL);
+			//m_mapManager->setLogMaxSeverity(PLOG_DEFAULT_LEVEL);
+			m_client->MapManagerSetLogMaxSeverity(PLOG_DEFAULT_LEVEL);
 		}
 	}
 }

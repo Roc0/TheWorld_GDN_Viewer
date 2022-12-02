@@ -378,7 +378,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			farHorizon = Globals()->heightmapSizeInWUs();
 
 		// Look for Camera QuadTree: put it as first element of quadrantIdNeeded
-		vector<TheWorld_MapManager::MapManager::QuadrantId> quadrantIdNeeded;
+		vector<QuadrantId> quadrantIdNeeded;
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
 			float quadrantSizeInWU = itQuadTree->second->getQuadrant()->getId().getSizeInWU();
@@ -395,8 +395,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		{
 			// ... btw we create new quad tree containing camera
 			float x = cameraPosGlobalCoord.x, z = cameraPosGlobalCoord.z;
-			float _gridStepInWU = Globals()->mapManager()->gridStepInWU();
-			TheWorld_MapManager::MapManager::QuadrantId q(x, z, m_worldViewerLevel, m_numWorldVerticesPerSize, _gridStepInWU);
+			float _gridStepInWU = Globals()->gridStepInWU();
+			QuadrantId q(x, z, m_worldViewerLevel, m_numWorldVerticesPerSize, _gridStepInWU);
 			quadrantIdNeeded.push_back(q);
 			quadrantIdNeeded[0].setTag("Camera");
 		}
@@ -438,11 +438,11 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			// add horizontal (X axis) quadrants on the left and on the right
 			for (int i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
 			{
-				TheWorld_MapManager::MapManager::QuadrantId q = quadrantIdNeeded[0].getQuadrantId(TheWorld_MapManager::MapManager::QuadrantId::DirectionSlot::XPlus, 1 + i);
+				QuadrantId q = quadrantIdNeeded[0].getQuadrantId(QuadrantId::DirectionSlot::XPlus, 1 + i);
 				q.setTag(quadrantIdNeeded[0].getTag() + " X+" + std::to_string(1 + i));
 				quadrantIdNeeded.push_back(q);
 				//break;	// SUPER DEBUGRIC only X+1 quadrant
-				q = quadrantIdNeeded[0].getQuadrantId(TheWorld_MapManager::MapManager::QuadrantId::DirectionSlot::XMinus, 1 + i);
+				q = quadrantIdNeeded[0].getQuadrantId(QuadrantId::DirectionSlot::XMinus, 1 + i);
 				q.setTag(quadrantIdNeeded[0].getTag() + " X-" + std::to_string(1 + i));
 				quadrantIdNeeded.push_back(q);
 			}
@@ -455,17 +455,17 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				for (size_t i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
 				{
 					//break;	// SUPER DEBUGRIC only X+1 quadrant
-					TheWorld_MapManager::MapManager::QuadrantId q = quadrantIdNeeded[idx].getQuadrantId(TheWorld_MapManager::MapManager::QuadrantId::DirectionSlot::ZPlus, 1 + int(i));
+					QuadrantId q = quadrantIdNeeded[idx].getQuadrantId(QuadrantId::DirectionSlot::ZPlus, 1 + int(i));
 					q.setTag(quadrantIdNeeded[idx].getTag() + " Z+" + std::to_string(1 + i));
 					quadrantIdNeeded.push_back(q);
-					q = quadrantIdNeeded[idx].getQuadrantId(TheWorld_MapManager::MapManager::QuadrantId::DirectionSlot::ZMinus, 1 + int(i));
+					q = quadrantIdNeeded[idx].getQuadrantId(QuadrantId::DirectionSlot::ZMinus, 1 + int(i));
 					q.setTag(quadrantIdNeeded[idx].getTag() + " Z-" + std::to_string(1 + i));
 					quadrantIdNeeded.push_back(q);
 				}
 			}
 
 			// insert needed quadrants not present in map and refresh the ones which are already in it
-			//vector<TheWorld_MapManager::MapManager::QuadrantId> quadrantToAdd;
+			//vector<QuadrantId> quadrantToAdd;
 			std::timespec refreshTime;
 			int ret = timespec_get(&refreshTime, TIME_UTC);
 			size = quadrantIdNeeded.size();
@@ -482,7 +482,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			}
 
 			// look for the quadrant to delete (the ones not refreshed)
-			vector<TheWorld_MapManager::MapManager::QuadrantId> quadrantToDelete;
+			vector<QuadrantId> quadrantToDelete;
 			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
 				if (itQuadTree->second->getRefreshTime().tv_nsec == refreshTime.tv_nsec && itQuadTree->second->getRefreshTime().tv_sec == refreshTime.tv_sec)
@@ -851,25 +851,26 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 
 		m_numWorldVerticesPerSize = Globals()->heightmapResolution() + 1;
 		
-		//TheWorld_MapManager::MapManager::Quadrant* quadrant = loadWorldData(x, z, level, m_numWorldVerticesPerSize);
-		//TheWorld_MapManager::MapManager::QuadrantId quadrantId = quadrant->getId();
-		float _gridStepInWU = Globals()->mapManager()->gridStepInWU();
-		TheWorld_MapManager::MapManager::QuadrantId quadrantId(x, z, level, m_numWorldVerticesPerSize, _gridStepInWU);
+		//Quadrant* quadrant = loadWorldData(x, z, level, m_numWorldVerticesPerSize);
+		//QuadrantId quadrantId = quadrant->getId();
+		float _gridStepInWU = Globals()->gridStepInWU();
+		QuadrantId quadrantId(x, z, level, m_numWorldVerticesPerSize, _gridStepInWU);
+		quadrantId.setTag("Camera");
 
 		std::lock_guard lock(m_mutexStreamerThread);
 
 		m_mapQuadTree.clear();
 		m_mapQuadTree[quadrantId] = make_unique<QuadTree>(this, quadrantId);
-		m_mapQuadTree[quadrantId]->setTag("Camera");
+		//m_mapQuadTree[quadrantId]->setTag("Camera");
 		m_mapQuadTree[quadrantId]->init(x, z);
 		m_mapQuadTree[quadrantId]->setValid();
 		m_mapQuadTree[quadrantId]->setVisible(true);
 
 		forceRefreshMapQuadTree();
 
-		TheWorld_MapManager::MapManager::GridVertex viewerPos(x, 0, z, level);
-		std::vector<TheWorld_MapManager::MapManager::GridVertex> gridVertices = m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices();
-		std::vector<TheWorld_MapManager::MapManager::GridVertex>::iterator it = std::find(gridVertices.begin(), gridVertices.end(), viewerPos);
+		TheWorld_Utils::GridVertex viewerPos(x, 0, z, level);
+		std::vector<TheWorld_Utils::GridVertex> gridVertices = m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices();
+		std::vector<TheWorld_Utils::GridVertex>::iterator it = std::find(gridVertices.begin(), gridVertices.end(), viewerPos);
 		if (it == gridVertices.end())
 		{
 			bool found = false;

@@ -10,7 +10,10 @@
 #include "vector"
 
 #include <plog/Log.h>
-#include <MapManager.h>
+#include "GDN_TheWorld_exception.h"
+#include "ClientServer.h"
+//#include "QuadTree.h"
+//#include <MapManager.h>
 #include "Utils.h"
 
 #define THEWORLD_VIEWER_CHUNK_SIZE_SHIFT				5
@@ -27,11 +30,25 @@
 
 namespace godot
 {
+	class GridVertex;
 
 	static bool equal(Vector3 v1, Vector3 v2, const float epsilon = 0.00001)
 	{
 		return ::equal((float)v1.x, (float)v2.x, epsilon) && ::equal((float)v1.y, (float)v2.y, epsilon) && ::equal((float)v1.z, (float)v2.z, epsilon);
 	}
+	
+	class GDN_TheWorld_Globals_Client : public TheWorld_ClientServer::ClientInterface
+	{
+	public:
+		GDN_TheWorld_Globals_Client(plog::Severity sev);
+
+		float MapManagerGridStepInWU(void);
+		void MapManagerSetLogMaxSeverity(plog::Severity sev);
+		void MapManagerCalcNextCoordOnTheGridInWUs(std::vector<float>& inCoords, std::vector<float>& outCoords);
+		void MapManagerGetVertices(float& viewerPosX, float& viewerPosZ, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, std::string& buffGridVertices);
+	private:
+	};
+
 
 	class GDN_TheWorld_Viewer;
 	class TheWorld_MapManager::MapManager;
@@ -177,9 +194,10 @@ namespace godot
 			godot::api->godot_free(m);
 		}
 
-		TheWorld_MapManager::MapManager* mapManager(void) {
-			return m_mapManager;
-		};
+		//TheWorld_MapManager::MapManager* mapManager(void) 
+		//{
+		//	return m_mapManager;
+		//};
 
 		// WORLD GRID
 		// The world is rapresented by a grid map (World Grid) streamed from external source which defines also the distance of each vertex of the grid map in WUs. Such a grid is a flat grid of vertices whose elevations
@@ -217,16 +235,14 @@ namespace godot
 			return m_numVerticesPerChuckSide; /* m_numVerticesPerChuckSide = 32 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 */
 		}	// Chunk num vertices -1
 		
-		float gridStepInWU(void)
-		{
-			return m_mapManager->gridStepInWU();
-		}
+		// m_mapManager->gridStepInWU();
+		float gridStepInWU(void);
 			
 		// Number of vertices of the side of the heightmap (-1) with the elevations which is fixed and is a multiple of the number of vertices of the side of a chunk (numVerticesPerChuckSide) and is for this a multiple of 2 too
 		int heightmapResolution(void) { return m_heightmapResolution; /* m_heightmapResolution = 1024 con THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10 */ }	// Resolution of the heightmap = num point of the heightmap -1;
 		// Size of the heightmap in WUs
 		float heightmapSizeInWUs(void) {
-			return heightmapResolution() * m_mapManager->gridStepInWU();
+			return heightmapResolution() * gridStepInWU();
 		}
 
 		// Max value of the lod index (numLods - 1)
@@ -264,7 +280,7 @@ namespace godot
 			assert(!(lod < 0 || lod > lodMaxDepth()));
 			if (lod < 0 || lod > lodMaxDepth())
 				return -1;
-			return (gridStepInHeightmap(lod) * m_mapManager->gridStepInWU());
+			return (gridStepInHeightmap(lod) * gridStepInWU());
 		}
 
 		float splitScale(void) { return c_splitScale; }
@@ -313,6 +329,7 @@ namespace godot
 		}
 
 		GDN_TheWorld_Viewer* Viewer(bool useCache = true);
+		GDN_TheWorld_Globals_Client* Client(void) { return m_client; }
 
 	private:
 		bool m_initialized;
@@ -323,11 +340,13 @@ namespace godot
 		int m_heightmapResolution;
 		int m_lodMaxDepth;
 		int m_numLods;
-		TheWorld_MapManager::MapManager *m_mapManager;
+		//TheWorld_MapManager::MapManager *m_mapManager;
 		bool m_bAppInError;
 		int m_lastErrorCode;
 		std::string m_lastErrorText;
 		std::vector<std::string> m_errorText;
+		float m_gridStepInWU;
+		GDN_TheWorld_Globals_Client* m_client;
 
 		// Node cache
 		GDN_TheWorld_Viewer* m_viewer;

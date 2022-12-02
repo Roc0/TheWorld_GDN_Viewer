@@ -1,13 +1,18 @@
 //#include "pch.h"
 #include "QuadTree.h"
+#include "Utils.h"
+
 #include <File.hpp>
+#include <OS.hpp>
 
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
 
 #include "assert.h"
+#include <filesystem>
 
 using namespace godot;
+namespace fs = std::filesystem;
 
 // QuadTree coordinates are local to Viewer Node which contains the grid of quads: the first chunk (posX = posZ = 0) has its lower vertex in the origin of the Viwer Node
 
@@ -122,7 +127,7 @@ void Quad::setCameraPos(Vector3 globalCoordCameraLastPos)
 	}
 }
 	
-QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, TheWorld_MapManager::MapManager::QuadrantId quadrantId)
+QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantId quadrantId)
 {
 	m_isValid = false;
 	m_isVisible = false;
@@ -130,7 +135,7 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, TheWorld_MapManager::MapManager:
 	m_numSplits = 0;
 	m_numJoins = 0;
 	m_numLeaf = 0;
-	m_worldQuadrant = new TheWorld_MapManager::MapManager::Quadrant(quadrantId, m_viewer->Globals()->mapManager());
+	m_worldQuadrant = new Quadrant(quadrantId, this);
 	m_tag = quadrantId.getTag();
 	int ret = timespec_get(&m_refreshTime, TIME_UTC);
 }
@@ -146,7 +151,6 @@ void QuadTree::init(float& viewerPosX, float& viewerPosZ)
 	clock1.tick();
 	m_worldQuadrant->populateGridVertices(viewerPosX, viewerPosZ);
 	clock1.tock();	
-	m_viewer->Globals()->debugPrint("");
 	m_viewer->Globals()->debugPrint(String("DURATION - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - init (populateGridVertices) " + std::to_string(clock1.duration().count()).c_str() + " ms");
 
 	//{	// SUPER DEBUGRIC
@@ -915,5 +919,268 @@ void ShaderTerrainData::debugPrintTexture(std::string tex_name, Ref<Texture> tex
 	}
 	_image->unlock();
 	_file->close();
+}
+
+QuadrantId QuadrantId::getQuadrantId(enum class DirectionSlot dir, int numSlot)
+{
+	QuadrantId q = *this;
+
+	switch (dir)
+	{
+	case DirectionSlot::XMinus:
+	{
+		q.m_lowerXGridVertex -= (m_sizeInWU * numSlot);
+	}
+	break;
+	case DirectionSlot::XPlus:
+	{
+		q.m_lowerXGridVertex += (m_sizeInWU * numSlot);
+	}
+	break;
+	case DirectionSlot::ZMinus:
+	{
+		q.m_lowerZGridVertex -= (m_sizeInWU * numSlot);
+	}
+	break;
+	case DirectionSlot::ZPlus:
+	{
+		q.m_lowerZGridVertex += (m_sizeInWU * numSlot);
+	}
+	break;
+	}
+
+	return q;
+}
+
+size_t QuadrantId::distanceInPerimeter(QuadrantId& q)
+{
+	size_t distanceOnX = (size_t)ceil(abs(q.getLowerXGridVertex() - getLowerXGridVertex()) / q.m_sizeInWU);
+	size_t distanceOnZ = (size_t)ceil(abs(q.getLowerZGridVertex() - getLowerZGridVertex()) / q.m_sizeInWU);
+	if (distanceOnX > distanceOnZ)
+		return distanceOnX;
+	else
+		return distanceOnZ;
+}
+
+void Quadrant::populateGridVertices(float& viewerPosX, float& viewerPosZ)
+{
+	BYTE shortBuffer[256 + 1];
+	size_t size;
+
+	//{
+	//	GridVertex v(0.12F, 0.1212F, 0.1313F, 1);
+	//	v.serialize(shortBuffer, size);
+	//	GridVertex v1(shortBuffer, size);
+	//	assert(v.posX() == v1.posX());
+	//	assert(v.altitude() == v1.altitude());
+	//	assert(v.posZ() == v1.posZ());
+	//	assert(v.lvl() == v1.lvl());
+	//}
+
+	size_t serializedVertexSize = 0;
+	TheWorld_Utils::GridVertex v;
+	// Serialize an empy GridVertex only to obtain the size of a serialized GridVertex
+	v.serialize(shortBuffer, serializedVertexSize);
+
+	// look for cache in file system
+	char level[4];
+	snprintf(level, 4, "%03d", m_quadrantId.getLevel());
+	String userPath = OS::get_singleton()->get_user_data_dir();
+	char* s = userPath.alloc_c_string();
+	string cachePath = string(s) + "\\" + "Cache" + "\\" + "ST-" + to_string(m_quadrantId.getGridStepInWU()) + "_SZ-" + to_string(m_quadrantId.getNumVerticesPerSize()) + "\\L-" + string(level);
+	godot::api->godot_free(s);
+	if (!fs::exists(cachePath))
+	{
+		fs::create_directories(cachePath);
+	}
+	string cacheFileName = "X-" + to_string(m_quadrantId.getLowerXGridVertex()) + "_Z-" + to_string(m_quadrantId.getLowerZGridVertex());
+	string cacheFileNameFull = cachePath + "\\" + cacheFileName;
+	if (fs::exists(cacheFileNameFull))
+	{
+		FILE* inFile = nullptr;
+		errno_t err = fopen_s(&inFile, cacheFileNameFull.c_str(), "rb");
+		if (err != 0)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Open " + cacheFileNameFull + " in errore - Err=" + to_string(err)).c_str()));
+
+		if (fread(shortBuffer, 1, 1, inFile) != 1)	// "0"
+			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Read error 1!").c_str()));
+
+		// get size of m_vectGridVertices.size() type: in short the size of a size_t
+		serializeToByteStream<size_t>(m_vectGridVertices.size(), shortBuffer, size);
+		// read the serialized size of the vector of GridVertex
+		if (fread(shortBuffer, size, 1, inFile) != 1)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Read error 2!").c_str()));
+		// and deserialize it
+		size_t vectSize = deserializeFromByteStream<size_t>(shortBuffer, size);
+
+		// alloc buffer to contain the serialized entire vector of GridVertex
+		size_t streamBufferSize = vectSize * serializedVertexSize;
+		BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
+		if (streamBuffer == nullptr)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Allocation error!").c_str()));
+
+		//size_t num = 0;
+		//size_t sizeRead = 0;
+		//while (!feof(inFile))
+		//{
+		//	size_t i = fread(streamBuffer + sizeRead, serializedVertexSize, 1, inFile);
+		//	sizeRead += serializedVertexSize;
+		//	num++;
+		//}
+		size_t s = fread(streamBuffer, streamBufferSize, 1, inFile);
+		//size_t s = fread(streamBuffer, serializedVertexSize, vectSize, inFile);
+		//if (s != 1)
+		//{
+		//	free(streamBuffer);
+		//	int i = feof(inFile);
+		//	i = ferror(inFile);
+		//	throw(MapManagerException(__FUNCTION__, string("Read error 3! feof " + to_string(feof(inFile)) + " ferror " + to_string(ferror(inFile))).c_str()));
+		//}
+
+		fclose(inFile);
+
+		m_vectGridVertices.clear();
+
+		BYTE* movingStreamBuffer = streamBuffer;
+		BYTE* endOfBuffer = streamBuffer + streamBufferSize;
+		while (movingStreamBuffer < endOfBuffer)
+		{
+			m_vectGridVertices.push_back(TheWorld_Utils::GridVertex(movingStreamBuffer, size));	// circa 2 sec
+			movingStreamBuffer += size;
+		}
+
+		free(streamBuffer);
+
+		if (m_vectGridVertices.size() != vectSize)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Sequence error 4!").c_str()));
+
+		if (viewerPosX != 0 && viewerPosZ != 0)
+		{
+			std::vector<float> inCoords;
+			std::vector<float> outCoords;
+			inCoords.push_back(viewerPosX);
+			inCoords.push_back(viewerPosZ);
+			m_quadTree->Viewer()->Globals()->Client()->MapManagerCalcNextCoordOnTheGridInWUs(inCoords, outCoords);
+			viewerPosX = outCoords[0];
+			viewerPosZ = outCoords[1];
+		}
+
+		m_populated = true;
+
+		return;
+	}
+
+	float lowerXGridVertex = m_quadrantId.getLowerXGridVertex();
+	float lowerZGridVertex = m_quadrantId.getLowerZGridVertex();
+	float gridStepinWU = m_quadrantId.getGridStepInWU();
+	int numVerticesPerSize = m_quadrantId.getNumVerticesPerSize();
+	int lvl = m_quadrantId.getLevel();
+	std::string buffGridVertices;
+	TimerMs clock; // Timer<milliseconds, steady_clock>
+	clock.tick();
+	m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(viewerPosX, viewerPosZ,
+																	 lowerXGridVertex, lowerZGridVertex,
+																	 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
+																	 numVerticesPerSize, gridStepinWU, lvl,
+																	 buffGridVertices);
+	clock.tock();
+	m_quadTree->Viewer()->Globals()->debugPrint(String("DURATION - QUADRANT ") + getId().getId().c_str() + " TAG=" + getId().getTag().c_str() + " - client MapManagerGetVertices " + std::to_string(clock.duration().count()).c_str() + " ms");
+
+	//std::vector<SQLInterface::GridVertex> worldVertices;
+	//float lowerXGridVertex = m_quadrantId.getLowerXGridVertex();
+	//float lowerZGridVertex = m_quadrantId.getLowerZGridVertex();
+	//float gridStepinWU = m_quadrantId.getGridStepInWU();
+	//m_mapManager->getVertices(lowerXGridVertex, lowerZGridVertex, TheWorld_MapManager::MapManager::anchorType::upperleftcorner, m_quadrantId.getNumVerticesPerSize(), m_quadrantId.getNumVerticesPerSize(), worldVertices, gridStepinWU, m_quadrantId.getLevel());
+
+	//for (int z = 0; z < m_quadrantId.getNumVerticesPerSize(); z++)			// m_heightMapImage->get_height()
+	//	for (int x = 0; x < m_quadrantId.getNumVerticesPerSize(); x++)		// m_heightMapImage->get_width()
+	//	{
+	//		SQLInterface::GridVertex& v = worldVertices[z * m_quadrantId.getNumVerticesPerSize() + x];
+	//		m_vectGridVertices.push_back(GridVertex(v.posX(), v.altitude(), v.posZ(), m_quadrantId.getLevel()));
+	//	}
+
+	//if (viewerPosX != 0 && viewerPosZ != 0)
+	//{
+	//	viewerPosX = m_quadTree->Viewer()->Globals()->Client()->MapManagercalcNextCoordOnTheGridInWUs(viewerPosX);
+	//	viewerPosZ = m_quadTree->Viewer()->Globals()->Client()->MapManagercalcNextCoordOnTheGridInWUs(viewerPosZ);
+	//}
+
+	{
+		const char* movingStreamBuffer = buffGridVertices.c_str();
+		const char* endOfBuffer = movingStreamBuffer + buffGridVertices.size();
+		
+		movingStreamBuffer++;	// bypass "0"
+
+		size_t vectSize = deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+		movingStreamBuffer += size;
+
+		m_vectGridVertices.clear();
+
+		while (movingStreamBuffer < endOfBuffer)
+		{
+			m_vectGridVertices.push_back(TheWorld_Utils::GridVertex((BYTE*)movingStreamBuffer, size));	// circa 2 sec
+			movingStreamBuffer += size;
+		}
+
+		if (m_vectGridVertices.size() != vectSize)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Sequence error 4!").c_str()));
+	}
+	
+	FILE* outFile = nullptr;
+	errno_t err = fopen_s(&outFile, cacheFileNameFull.c_str(), "wb");
+	if (err != 0)
+	{
+		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Open " + cacheFileNameFull + " in errore - Err=" + to_string(err)).c_str()));
+	}
+
+	{
+		if (fwrite(buffGridVertices.c_str(), buffGridVertices.size(), 1, outFile) != 1)
+		{
+			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Write error 3!").c_str()));
+		}
+	}
+
+	//{
+	//	size_t vectSize = m_vectGridVertices.size();
+
+	//	size_t streamBufferSize = vectSize * serializedVertexSize;
+	//	BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
+	//	if (streamBuffer == nullptr)
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Allocation error!").c_str()));
+
+	//	size_t sizeToWrite = 0;
+	//	for (size_t idx = 0; idx < vectSize; idx++)
+	//	{
+	//		m_vectGridVertices[idx].serialize(streamBuffer + sizeToWrite, size);
+	//		sizeToWrite += size;
+	//	}
+
+	//	if (fwrite("0", 1, 1, outFile) != 1)
+	//	{
+	//		free(streamBuffer);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Write error 1!").c_str()));
+	//	}
+
+	//	serializeToByteStream<size_t>(vectSize, shortBuffer, size);
+	//	if (fwrite(shortBuffer, size, 1, outFile) != 1)
+	//	{
+	//		free(streamBuffer);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Write error 2!").c_str()));
+	//	}
+
+	//	if (fwrite(streamBuffer, sizeToWrite, 1, outFile) != 1)
+	//	{
+	//		free(streamBuffer);
+	//		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Write error 3!").c_str()));
+	//	}
+
+	//	free(streamBuffer);
+	//}
+
+	fclose(outFile);
+
+	m_populated = true;
+
+	return;
 }
 

@@ -14,7 +14,8 @@
 #include <thread>
 
 #include "GDN_TheWorld_Globals.h"
-#include <MapManager.h>
+#include "QuadTree.h"
+//#include <MapManager.h>
 
 namespace godot
 {
@@ -24,7 +25,7 @@ namespace godot
 	class GDN_TheWorld_Globals;
 	class GDN_TheWorld_Camera;
 
-	typedef std::map<TheWorld_MapManager::MapManager::QuadrantId, std::unique_ptr<QuadTree>> MapQuadTree;
+	typedef std::map<QuadrantId, std::unique_ptr<QuadTree>> MapQuadTree;
 
 #define STREAMER_SLEEP_TIME	10
 #define FAR_HORIZON_MULTIPLIER	50
@@ -106,7 +107,7 @@ namespace godot
 		};
 		//TheWorld_MapManager::MapManager::Quadrant* loadWorldData(float& x, float& z, int level, int numWorldVerticesPerSize);
 		void printKeyboardMapping(void);
-		void streamer();
+		void streamer(void);
 
 	private:
 		bool m_initialized;
@@ -154,7 +155,7 @@ namespace godot
 		
 		// World Data
 		MapQuadTree m_mapQuadTree;
-		TheWorld_MapManager::MapManager::QuadrantId m_computedCameraQuadrantId;
+		QuadrantId m_computedCameraQuadrantId;
 		bool m_refreshMapQuadTree;
 		int m_numWorldVerticesPerSize;
 		int m_worldViewerLevel;		// actually world viewer manage one level at the time, otherwise we should have multiple quadtrees

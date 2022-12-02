@@ -1,7 +1,9 @@
 #pragma once
 
+#include "framework.h"
 #include <cfloat>
 #include <assert.h> 
+#include <guiddef.h>
 #include <string> 
 #include <chrono>
 
@@ -62,6 +64,8 @@ public:
 
 #define TimerMs Timer<std::chrono::milliseconds, std::chrono::steady_clock>
 #define TimerMcs Timer<std::chrono::microseconds, std::chrono::steady_clock>
+
+std::string ToString(GUID* guid);
 
 class Utils
 {
@@ -224,4 +228,135 @@ static bool equal(const float f0, const float f1, const float epsilon = 0.00001)
 {
 	//return fabs(f0-f1) <= epsilon;
 	return fabs(f0 - f1) <= epsilon * Utils::max3(1.0f, fabsf(f0), fabsf(f1));
+}
+
+
+template <typename T>
+void serializeToByteStream(T in, BYTE* stream, size_t& size)
+{
+	T* pIn = &in;
+	BYTE* pc = reinterpret_cast<BYTE*>(pIn);
+	for (size_t i = 0; i < sizeof(T); i++)
+	{
+		stream[i] = *pc;
+		pc++;
+	}
+	size = sizeof(T);
+}
+
+template <typename T>
+T deserializeFromByteStream(BYTE* stream, size_t& size)
+{
+	T* pOut = reinterpret_cast<T*>(stream);
+	size = sizeof(T);
+	return *pOut;
+}
+
+namespace TheWorld_Utils
+{
+	// Grid / GridVertex are in WUs
+	class GridVertex
+	{
+	public:
+		GridVertex(void) : x(0.0f), y(0.0f), z(0.0f), level(0) {}
+		GridVertex(float _x, float _y, float _z, int _level) { this->x = _x;	this->y = _y;	this->z = _z;	this->level = _level; }
+		//GridVertex(std::string serializedBuffer)
+		//{
+		//	sscanf_s(serializedBuffer.c_str(), "%f-%f-%f-%d", &x, &y, &z, &level);
+		//}
+		//GridVertex(const char* serializedBuffer)
+		//{
+		//	sscanf_s(serializedBuffer, "%f-%f-%f-%d", &x, &y, &z, &level);
+		//}
+		GridVertex(BYTE* stream, size_t& size)
+		{
+			// optimize method
+			//*this = deserializeFromByteStream<GridVertex>(stream, size);
+
+			// alternative method
+			size_t _size;
+			size = 0;
+			x = deserializeFromByteStream<float>(stream + size, _size);
+			size += _size;
+			y = deserializeFromByteStream<float>(stream + size, _size);
+			size += _size;
+			z = deserializeFromByteStream<float>(stream + size, _size);
+			size += _size;
+			level = deserializeFromByteStream<int>(stream + size, _size);
+			size += _size;
+		}
+
+		~GridVertex()
+		{
+		}
+
+		// needed to use an istance of gridPoint as a key in a map (to keep the map sorted by z and by x for equal z)
+		// first row, second row, ... etc
+		bool operator<(const GridVertex& p) const
+		{
+			if (z < p.z)
+				return true;
+			if (z > p.z)
+				return false;
+			else
+				return x < p.x;
+		}
+
+		bool operator==(const GridVertex& p) const
+		{
+			if (x == p.x && y == p.y && z == p.z && level == p.level)
+				return true;
+			else
+				return false;
+		}
+
+		bool equalsApartFromAltitude(const GridVertex& p) const
+		{
+			if (x == p.x && z == p.z && level == p.level)
+				return true;
+			else
+				return false;
+		}
+
+		//std::string serialize(void)
+		//{
+		//	char buffer[256];
+		//	sprintf_s(buffer, "%f-%f-%f-%d", x, y, z, level);
+		//	return buffer;
+		//}
+
+		void serialize(BYTE* stream, size_t& size)
+		{
+			// optimize method
+			//serializeToByteStream<GridVertex>(*this, stream, size);
+
+			// alternative method
+			size_t sz;
+			serializeToByteStream<float>(x, stream, sz);
+			size = sz;
+			serializeToByteStream<float>(y, stream + size, sz);
+			size += sz;
+			serializeToByteStream<float>(z, stream + size, sz);
+			size += sz;
+			serializeToByteStream<int>(level, stream + size, sz);
+			size += sz;
+		}
+
+		std::string toString()
+		{
+			return "Level=" + std::to_string(level) + "-X=" + std::to_string(x) + "-Z=" + std::to_string(z) + "-Altitude=" + std::to_string(y);
+		}
+
+		float altitude(void) { return y; }
+		float posX(void) { return x; }
+		float posZ(void) { return z; }
+		int lvl(void) { return level; }
+		void setAltitude(float a) { y = a; }
+
+	private:
+		float x;
+		float y;
+		float z;
+		int level;
+	};
 }
