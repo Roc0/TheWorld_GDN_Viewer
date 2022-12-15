@@ -356,6 +356,7 @@ namespace godot
 		virtual void setVisible(bool b);
 		virtual void setDebugContentVisible(bool b);
 		virtual void applyAABB(void);
+		virtual void checkAndCalcAABB();
 		virtual void dump(void);
 		virtual void setCameraPos(Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
@@ -383,7 +384,11 @@ namespace godot
 		std::string getId(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod).getId(); };
 		ChunkPos getPos(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod); }
 		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
-		AABB getAABB(void) { return m_aabb; };
+		AABB getAABB(void)
+		{
+			checkAndCalcAABB();
+			return m_aabb;
+		};
 		void getCameraPos(Vector3& globalCoordCameraLastPos);
 		bool isCameraVerticalOnChunk(void) { return m_isCameraVerticalOnChunk; }
 		void resetCameraVerticalOnChunk(void) { m_isCameraVerticalOnChunk = false; }
@@ -461,6 +466,7 @@ namespace godot
 		virtual void setVisible(bool b);
 		virtual void setDebugContentVisible(bool b);
 		virtual void applyAABB(void);
+		virtual void checkAndCalcDebugMeshAABB();
 		virtual void dump(void);
 		virtual void setCameraPos(Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);

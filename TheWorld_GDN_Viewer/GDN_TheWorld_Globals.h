@@ -14,7 +14,7 @@
 #include "ClientServer.h"
 //#include "QuadTree.h"
 //#include <MapManager.h>
-#include "Utils.h"
+#include "TheWorld_Utils.h"
 
 #define THEWORLD_VIEWER_CHUNK_SIZE_SHIFT				5
 #define THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT		10
@@ -31,6 +31,19 @@
 namespace godot
 {
 	class GridVertex;
+	class GDN_TheWorld_Globals;
+	class GDN_TheWorld_Viewer;
+	class TheWorld_MapManager::MapManager;
+
+
+	enum class TheWorldStatus
+	{
+		error = -1,
+		uninitialized = 0,
+		initialized = 1,
+		connectedToServer = 2,
+		sessionInitialized = 3
+	};
 
 	static bool equal(Vector3 v1, Vector3 v2, const float epsilon = 0.00001)
 	{
@@ -40,20 +53,23 @@ namespace godot
 	class GDN_TheWorld_Globals_Client : public TheWorld_ClientServer::ClientInterface
 	{
 	public:
-		GDN_TheWorld_Globals_Client(plog::Severity sev);
+		GDN_TheWorld_Globals_Client(GDN_TheWorld_Globals* globals, plog::Severity sev);
 
-		float MapManagerGridStepInWU(void);
+		//float MapManagerGridStepInWU(void);
 		void MapManagerSetLogMaxSeverity(plog::Severity sev);
-		void MapManagerCalcNextCoordOnTheGridInWUs(std::vector<float>& inCoords, std::vector<float>& outCoords);
-		void MapManagerGetVertices(float& viewerPosX, float& viewerPosZ, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, std::string& buffGridVertices);
+		void ServerInitializeSession(plog::Severity sev);
+		//void MapManagerCalcNextCoordOnTheGridInWUs(std::vector<float>& inCoords, std::vector<float>& outCoords);
+		void MapManagerGetVertices(float viewerPosX, float viewerPosZ, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, bool setCamera, float cameraDistanceFromTerrain, std::string meshId);
+	
 	private:
+		//GDN_TheWorld_Globals* Globals(bool useCache);
+
+	private:
+		GDN_TheWorld_Globals* m_globals;
 	};
 
 
-	class GDN_TheWorld_Viewer;
-	class TheWorld_MapManager::MapManager;
-
-	class GDN_TheWorld_Globals : public Node
+	class GDN_TheWorld_Globals : public Node, public TheWorld_ClientServer::ClientCallback
 	{
 		GODOT_CLASS(GDN_TheWorld_Globals, Node)
 
@@ -93,6 +109,7 @@ namespace godot
 			WireframeOnAABB = 1,
 			WireframeSquare = 2
 		};
+
 		static ChunkDebugMode rotateChunkDebugMode(ChunkDebugMode mode)
 		{
 			if (mode == GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
@@ -109,14 +126,25 @@ namespace godot
 		~GDN_TheWorld_Globals();
 		void init(void);
 		void deinit(void);
+		void connectToServer(void);
+		void disconnectFromServer(void);
 		bool resize(int chunkSizeShift, int heightmapResolutionShift, bool force = false);
 
+		static std::string getClientDataDir(void);
+
+		void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
+		
 		static void _register_methods()
 		{
 			register_method("_ready", &GDN_TheWorld_Globals::_ready);
 			register_method("_process", &GDN_TheWorld_Globals::_process);
 			register_method("_input", &GDN_TheWorld_Globals::_input);
 			register_method("_notification", &GDN_TheWorld_Globals::_notification);
+			
+			register_method("get_status", &GDN_TheWorld_Globals::get_status);
+
+			register_method("connect_to_server", &GDN_TheWorld_Globals::connectToServer);
+			register_method("disconnect_from_server", &GDN_TheWorld_Globals::disconnectFromServer);
 
 			register_method("set_debug_enabled", &GDN_TheWorld_Globals::setDebugEnabled);
 			register_method("is_debug_enabled", &GDN_TheWorld_Globals::isDebugEnabled);
@@ -139,6 +167,19 @@ namespace godot
 			register_method("get_grid_step_in_wu", &GDN_TheWorld_Globals::gridStepInHeightmapWUs);
 
 			register_method("viewer", &GDN_TheWorld_Globals::Viewer);
+		}
+
+		enum class TheWorldStatus status(void)
+		{
+			return m_status;
+		}
+		int get_status(void)
+		{
+			return (int)m_status;
+		}
+		void setStatus(enum class TheWorldStatus status)
+		{
+			m_status = status;
 		}
 
 		//
@@ -333,6 +374,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		enum class TheWorldStatus m_status;
 		bool m_isDebugEnabled;
 		int m_chunkSizeShift;
 		int m_heightmapResolutionShift;

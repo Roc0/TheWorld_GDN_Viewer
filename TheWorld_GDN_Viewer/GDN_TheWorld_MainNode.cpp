@@ -112,7 +112,7 @@ void GDN_TheWorld_MainNode::_process(float _delta)
 
 bool GDN_TheWorld_MainNode::init(Node* pMainNode, Node* pWorldMainNode)
 {
-	// Must exist a Node acting as Main and a Node acting as the world; globals will be child of the first and the viewer will be a child of this second
+	// Must exist: a Node acting as Main and a Node acting as the world; globals will be child of the first and the viewer will be a child of this second
 	if (!pWorldMainNode || !pMainNode)
 		return false;
 
@@ -145,7 +145,7 @@ bool GDN_TheWorld_MainNode::init(Node* pMainNode, Node* pWorldMainNode)
 	{
 		pWorldMainNode->add_child(viewer);
 		viewer->set_name(THEWORLD_VIEWER_NODE_NAME);
-		viewer->init();
+		//viewer->init();
 	}
 	else
 		return false;

@@ -36,7 +36,7 @@
     <ClInclude Include="GDN_TheWorld_Camera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Utils.h">
+    <ClInclude Include="TheWorld_Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="GDN_TheWorld_MainNode.h">
@@ -89,7 +89,7 @@
     <ClCompile Include="Chunk.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Utils.cpp">
+    <ClCompile Include="TheWorld_Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ClientServer.cpp">

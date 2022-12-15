@@ -1,10 +1,12 @@
 #pragma once
 #include <Godot.hpp>
+#include <Array.hpp>
 #include <Node.hpp>
 #include <ResourceLoader.hpp>
 #include <ImageTexture.hpp>
 #include <Shader.hpp>
 #include <ShaderMaterial.hpp>
+#include <OS.hpp>
 
 #include <map>
 #include <vector>
@@ -72,7 +74,10 @@ namespace godot
 
 		QuadrantId(float x, float z, int level, int numVerticesPerSize, float gridStepInWU)
 		{
-			float gridSizeInWU = numVerticesPerSize * gridStepInWU;
+			float gridSizeInWU = (numVerticesPerSize - 1) * gridStepInWU;
+			float f = x / gridSizeInWU;
+			f = floor(f);
+			f = f * gridSizeInWU;
 			m_lowerXGridVertex = floor(x / gridSizeInWU) * gridSizeInWU;
 			m_lowerZGridVertex = floor(z / gridSizeInWU) * gridSizeInWU;
 			m_numVerticesPerSize = numVerticesPerSize;
@@ -176,7 +181,6 @@ namespace godot
 		{
 			m_quadrantId = quadrantId;
 			m_quadTree = quadTree;
-			m_populated = false;
 		}
 
 		~Quadrant()
@@ -189,7 +193,7 @@ namespace godot
 			m_quadrantId = quadrantId;
 		}
 
-		_declspec(dllexport) void populateGridVertices(float& initialViewerPosX, float& initialViewerPosZ);
+		_declspec(dllexport) void populateGridVertices(float initialViewerPosX, float initialViewerPosZ, bool setCamera, float cameraDistanceFromTerrain);
 
 		std::vector<TheWorld_Utils::GridVertex>& getGridVertices(void)
 		{
@@ -198,12 +202,18 @@ namespace godot
 
 		QuadrantId getId(void) { return m_quadrantId; }
 
-		bool isPopulated(void) { return m_populated; }
+		void setMeshId(std::string meshId)
+		{
+			m_meshId = meshId;
+		}
+
+		TheWorld_Utils::MeshCacheBuffer getMeshCacheBuffer(void);
+		//std::string getCacheFileName();
 
 	private:
 		QuadrantId m_quadrantId;
 		std::vector<TheWorld_Utils::GridVertex> m_vectGridVertices;
-		bool m_populated;
+		std::string m_meshId;
 		QuadTree* m_quadTree;
 	};
 
@@ -222,11 +232,28 @@ namespace godot
 		ShaderTerrainData();
 		~ShaderTerrainData();
 		void init(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
-		bool materialParamsNeedUpdate(void) { return m_materialParamsNeedUpdate; }
-		void materialParamsNeedUpdate(bool b) { m_materialParamsNeedUpdate = b; }
+		bool materialParamsNeedReset(void)
+		{
+			return m_materialParamsNeedReset;
+		}
+		void materialParamsNeedReset(bool b)
+		{
+			m_materialParamsNeedReset = b;
+		}
+		void resetMaterialParams(TheWorld_Utils::MeshCacheBuffer& cache);
+		bool materialParamsNeedUpdate(void)
+		{
+			return m_materialParamsNeedUpdate;
+		}
+		void materialParamsNeedUpdate(bool b)
+		{
+			m_materialParamsNeedUpdate = b;
+		}
 		void updateMaterialParams(void);
-		void resetMaterialParams(void);
-		Ref<Material> getMaterial(void) { return m_material; };
+		Ref<Material> getMaterial(void)
+		{
+			return m_material;
+		};
 
 	private:
 		void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
@@ -237,6 +264,7 @@ namespace godot
 		QuadTree* m_quadTree;
 		Ref<ShaderMaterial> m_material;
 		bool m_materialParamsNeedUpdate;
+		bool m_materialParamsNeedReset;
 
 		Ref<Image> m_heightMapImage;
 		Ref<Texture> m_heightMapTexture;
@@ -282,7 +310,15 @@ namespace godot
 		void clearChildren(void);
 		void assignChunk(void);
 		Chunk* getChunk(void) { return m_chunk; }
-		AABB getChunkAABB(void) { return m_chunkAABB; }
+		AABB getChunkAABB(void)
+		{
+			AABB aabb;
+			if (m_chunkAABB == aabb)
+			{
+				m_chunkAABB = m_chunk->getAABB();
+			}
+			return m_chunkAABB;
+		}
 		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
 		void setCameraPos(Vector3 globalCoordCameraLastPos);
 
@@ -299,13 +335,20 @@ namespace godot
 		float m_chunkSizeInWUs;
 	};
 
+	enum class QuadrantStatus
+	{
+		uninitialized = 0,
+		getVerticesInProgress = 1,
+		initialized = 2
+	};
+
 	class QuadTree
 	{
 	public:
 		QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantId quadrantId);
 		~QuadTree();
 
-		void init(float& viewerPosX, float& viewerPosZ);
+		void init(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
 		
 		void update(Vector3 cameraPosGlobalCoord);
 		Chunk* getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir);
@@ -362,27 +405,79 @@ namespace godot
 						num++;
 			return num;
 		}
-		Quadrant* getQuadrant(void) {	return m_worldQuadrant;	}
-		void updateMaterialParams(void);
+		Quadrant* getQuadrant(void) { return m_worldQuadrant; }
 		void resetMaterialParams(void);
+		bool materialParamsNeedReset(void);
+		void materialParamsNeedReset(bool b, TheWorld_Utils::MeshCacheBuffer* cache);
+		void updateMaterialParams(void);
 		bool materialParamsNeedUpdate(void);
 		void materialParamsNeedUpdate(bool b);
-		ShaderTerrainData& getShaderTerrainData(void) { return m_shaderTerrainData; }
-		bool isValid(void) { return m_isValid; }
-		void setValid(bool b = true) { m_isValid = b; }
+		ShaderTerrainData& getShaderTerrainData(void)
+		{
+			return m_shaderTerrainData;
+		}
+		bool statusInitialized(void)
+		{
+			return status() == QuadrantStatus::initialized;
+		}
+		bool statusGetVerticesInProgress(void)
+		{
+			return status() == QuadrantStatus::getVerticesInProgress;
+		}
+		bool statusUninitialized(void)
+		{
+			return status() == QuadrantStatus::uninitialized;
+		}
+		enum class QuadrantStatus currentStatus(void)
+		{
+			return m_status;
+		}
+		enum class QuadrantStatus status(void)
+		{
+			if (m_status == QuadrantStatus::getVerticesInProgress)
+			{
+				TheWorld_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+				long long elapsedFromStatusChange = (now - m_lastStatusChange).count();
+				if (elapsedFromStatusChange > (THEWORLD_CLIENTSERVER_MAPVERTICES_TIME_TO_LIVE * 2))
+					m_status = QuadrantStatus::uninitialized;
+			}
+			return m_status;
+		}
+		void setStatus(enum class QuadrantStatus status)
+		{
+			m_lastStatusChange = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+			m_status = status;
+		}
+		bool isValid(void)
+		{
+			return status() == QuadrantStatus::initialized;
+		}
 		bool isVisible(void) { return m_isVisible; }
 		void setVisible(bool b) { m_isVisible = b; }
 		void refreshTime(std::timespec& time) { m_refreshTime = time; }
 		std::timespec getRefreshTime(void) { return m_refreshTime; }
-		void setTag(string tag) { m_tag = tag; }
+		void setTag(string tag)
+		{
+			m_tag = tag;
+		}
+		std::string getTag(void)
+		{
+			return m_tag;
+		}
 		Transform internalTransformGlobalCoord(void);
 		GDN_TheWorld_Viewer* Viewer(void) { return m_viewer; }
+		std::recursive_mutex& getQuadrantMutex(void)
+		{
+			return m_mtxQuadrant;
+		}
 
 	private:
 		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode);
 
 	private:
-		bool m_isValid;
+		enum class QuadrantStatus m_status;
+		std::recursive_mutex m_mtxQuadrant;
+		TheWorld_Utils::MsTimePoint m_lastStatusChange;
 		bool m_isVisible;
 		string m_tag;
 		std::unique_ptr<Quad> m_root;
@@ -392,6 +487,7 @@ namespace godot
 		Quadrant* m_worldQuadrant;
 		ShaderTerrainData m_shaderTerrainData;
 		std::timespec m_refreshTime;
+		TheWorld_Utils::MeshCacheBuffer m_cache;
 
 		// Statistics
 		int m_numSplits;

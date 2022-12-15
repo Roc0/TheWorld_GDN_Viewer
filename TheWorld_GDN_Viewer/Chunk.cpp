@@ -5,7 +5,7 @@
 
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
-#include "Utils.h"
+#include "TheWorld_Utils.h"
 
 #include <VisualServer.hpp>
 #include <World.hpp>
@@ -53,10 +53,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Q
 
 	m_meshGlobaTransform = Transform(Basis(), Vector3((real_t)m_originXInWUsGlobal, 0, m_originZInWUsGlobal));
 
-	getGlobalCoordAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGVs);
-	m_globalCoordAABB = m_aabb;
-	m_aabb.position.x = 0;	// AABB is relative to the chunk
-	m_aabb.position.z = 0;
+	//checkAndCalcAABB();
 
 	m_useVisualServer = m_viewer->useVisualServer();
 
@@ -68,6 +65,18 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Q
 Chunk::~Chunk()
 {
 	deinit();
+}
+
+void Chunk::checkAndCalcAABB()
+{
+	AABB aabb;
+	if (m_aabb == aabb && m_quadTree->statusInitialized())
+	{
+		getGlobalCoordAABB(m_aabb, m_firstWorldVertCol, m_lastWorldVertCol, m_firstWorldVertRow, m_lastWorldVertRow, m_gridStepInGridInWGVs);
+		m_globalCoordAABB = m_aabb;
+		m_aabb.position.x = 0;	// AABB is relative to the chunk
+		m_aabb.position.z = 0;
+	}
 }
 
 void Chunk::initVisual(void)
@@ -193,6 +202,8 @@ void Chunk::setDebugContentVisible(bool b)
 
 void Chunk::applyAABB(void)
 {
+	checkAndCalcAABB();
+	
 	if (m_useVisualServer)
 	{
 		assert(m_meshInstanceRID != RID());
@@ -247,7 +258,7 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 			m_meshInstance->init(this);
 			m_meshInstance->add_to_group(GD_CHUNK_MESHINSTANCE_GROUP);
 			m_meshInstance->set_mesh(mesh);
-			string id = Utils::ReplaceString(getPos().getId(), ":", "");
+			string id = TheWorld_Utils::Utils::ReplaceString(getPos().getId(), ":", "");
 			String name = String("Chunk_") + String(id.c_str());
 			m_meshInstance->set_name(name);
 			m_viewer->add_child(m_meshInstance);
@@ -486,8 +497,8 @@ void Chunk::getGlobalCoordAABB(AABB& aabb, int firstWorldVertCol, int lastWorldV
 			}
 			else
 			{
-				minHeigth = Utils::min2(minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
-				maxHeigth = Utils::max2(maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
+				minHeigth = TheWorld_Utils::Utils::min2(minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
+				maxHeigth = TheWorld_Utils::Utils::max2(maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
 			}
 		}
 	}
@@ -555,9 +566,19 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 		vs->instance_set_visible(m_debugMeshInstanceRID, isDebugContentVisible());
 	}
 
-	m_debugMeshAABB = m_aabb;
+	//checkAndCalcDebugMeshAABB;
 
-	applyDebugMesh();
+	//applyDebugMesh();
+}
+
+void ChunkDebug::checkAndCalcDebugMeshAABB()
+{
+	AABB aabb;
+	if (m_debugMeshAABB == aabb && m_quadTree->statusInitialized())
+	{
+		checkAndCalcAABB();
+		m_debugMeshAABB = m_aabb;
+	}
 }
 
 ChunkDebug::~ChunkDebug()
@@ -609,6 +630,7 @@ void ChunkDebug::refresh(bool isVisible)
 {
 	Chunk::refresh(isVisible);
 	setDebugMesh(nullptr);
+	checkAndCalcAABB();
 	m_debugMeshAABB = m_aabb;
 }
 
@@ -627,6 +649,7 @@ void ChunkDebug::update(bool isVisible)
 
 Transform ChunkDebug::getDebugMeshGlobalTransform(void)
 {
+	checkAndCalcAABB();
 	Transform worldTransform = m_meshGlobaTransform * Transform(Basis().scaled(m_aabb.size));
 
 	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
@@ -721,6 +744,8 @@ void ChunkDebug::applyAABB(void)
 {
 	Chunk::applyAABB();
 
+	checkAndCalcDebugMeshAABB();
+
 	if (m_useVisualServer)
 	{
 		assert(m_debugMeshInstanceRID != RID());
@@ -780,7 +805,7 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 			m_debugMeshInstance = MeshInstance::_new();
 			m_debugMeshInstance->add_to_group(GD_DEBUGCHUNK_MESHINSTANCE_GROUP);
 			m_debugMeshInstance->set_mesh(mesh);
-			string id = Utils::ReplaceString(getPos().getId(), ":", "");
+			string id = TheWorld_Utils::Utils::ReplaceString(getPos().getId(), ":", "");
 			String name = String("ChunkDebug_") + String(id.c_str());
 			m_debugMeshInstance->set_name(name);
 			m_viewer->add_child(m_debugMeshInstance);
@@ -837,6 +862,8 @@ void ChunkDebug::applyDebugMesh()
 {
 	Chunk::applyDebugMesh();
 	
+	checkAndCalcAABB();
+
 	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
 	{
 		m_debugMeshAABB = m_aabb;

@@ -88,19 +88,30 @@ void GDN_TheWorld_Camera::_init()
 
 void GDN_TheWorld_Camera::_ready()
 {
-	Globals()->debugPrint("GDN_TheWorld_Camera::_ready");
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	globals->debugPrint("GDN_TheWorld_Camera::_ready");
 	//Node* parent = get_parent();
 	//String parentName = parent->get_name();
-	//Globals()->debugPrint("GDN_TheWorld_Camera::_ready - Parent name: " + parentName);
+	//globals->debugPrint("GDN_TheWorld_Camera::_ready - Parent name: " + parentName);
 }
 
 void GDN_TheWorld_Camera::_notification(int p_what)
 {
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	if (globals->status() != TheWorldStatus::sessionInitialized)
+		return;
+
 	switch (p_what)
 	{
 	case NOTIFICATION_PREDELETE:
 	{
-		Globals()->debugPrint("GDN_TheWorld_Camera::_notification - Destroy Camera");
+		globals->debugPrint("GDN_TheWorld_Camera::_notification - Destroy Camera");
 	}
 	break;
 	}
@@ -110,6 +121,13 @@ void GDN_TheWorld_Camera::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Globals()->debugPrint("GDN_TheWorld_Camera::_process");
+
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	if (globals->status() != TheWorldStatus::sessionInitialized)
+		return;
 
 	if (!isActiveCamera())
 	{
@@ -123,6 +141,13 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Globals()->debugPrint("GDN_TheWorld_Camera::_physics_process");
+
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	if (globals->status() != TheWorldStatus::sessionInitialized)
+		return;
 
 	if (!isActiveCamera())
 	{
@@ -221,6 +246,13 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 {
 	//Globals()->debugPrint("GDN_TheWorld_Camera::_input: " + event->as_text());
+
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	if (globals->status() != TheWorldStatus::sessionInitialized)
+		return;
 
 	if (!isActiveCamera())
 	{
@@ -401,9 +433,9 @@ bool GDN_TheWorld_Camera::updateCamera()
 		m_mouseRelativePosToRotate = Vector2(0, 0);
 
 		if (m_yawLimit < 360)
-			m_yaw = Utils::clamp(m_yaw, -m_yawLimit - m_totalYaw, m_yawLimit - m_totalYaw);
+			m_yaw = TheWorld_Utils::Utils::clamp(m_yaw, -m_yawLimit - m_totalYaw, m_yawLimit - m_totalYaw);
 		if (m_pitchLimit < 360)
-			m_pitch = Utils::clamp(m_pitch, -m_pitchLimit - m_totalPitch, m_pitchLimit - m_totalPitch);
+			m_pitch = TheWorld_Utils::Utils::clamp(m_pitch, -m_pitchLimit - m_totalPitch, m_pitchLimit - m_totalPitch);
 		m_totalYaw *= m_yaw;
 		m_totalPitch *= m_pitch;
 

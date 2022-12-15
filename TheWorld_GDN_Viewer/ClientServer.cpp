@@ -1,23 +1,84 @@
 //#include "pch.h"
+// SUPER DEBUGRIC
+#include <Godot.hpp>
+#include <ResourceLoader.hpp>
+#include <ImageTexture.hpp>
+// SUPER DEBUGRIC
+
 #include "ClientServer.h"
-#include "Utils.h"
+#include "TheWorld_Utils.h"
 
 #include <Mutex>
+#include <Functional>
 
 #include <Rpc.h>
 
+
 namespace TheWorld_ClientServer
 {
-	void ReplyMethod::onExecMethodAsync(void)
+	size_t ClientServerExecution::m_numCurrentServerExecutions = 0;
+	
+	void ClientServerExecution::onExecMethodAsync(void)
 	{
-		m_server->onExecMethodAsync(m_method, this);
+		TheWorld_Utils::TimerMs clock("ClientServerExecution::onExecMethodAsync", "SERVER SIDE " + m_method + " " + m_ref, false, true);
+		clock.tick();
+
+		serverExecutionStatus(ExecutionStatus::InProgress);
+
+		m_numCurrentServerExecutions++;
+		try
+		{
+			m_server->onExecMethodAsync(m_method, this);
+		}
+		catch (...)
+		{
+			clock.headerMsg("SERVER SIDE " + m_method + " " + m_ref + " (" + std::to_string(m_numCurrentServerExecutions) + ")");
+			m_numCurrentServerExecutions--;
+			serverExecutionStatus(ExecutionStatus::Completed);
+			return;
+		}
+		clock.headerMsg("SERVER SIDE " + m_method + " " + m_ref + " (" + std::to_string(m_numCurrentServerExecutions) + ")");
+		m_numCurrentServerExecutions--;
+		serverExecutionStatus(ExecutionStatus::Completed);
+	}
+	
+	bool ClientServerExecution::expiredTimeToLive(long long* _elapsedFromStartOfClientMethod)
+	{
+		if (m_expiredTimeToLive)
+			return true;
+
+		TheWorld_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+		long long elapsedFromStartOfClientMethod = (now - m_startExecution).count();
+		if (_elapsedFromStartOfClientMethod != nullptr)
+			*_elapsedFromStartOfClientMethod = elapsedFromStartOfClientMethod;
+		if (elapsedFromStartOfClientMethod > (long long)m_timeToLive)
+		{
+			m_expiredTimeToLive = true;
+			return true;
+		}
+		return false;
+	}
+
+	void ClientServerExecution::callCallback(void)
+	{
+		TheWorld_Utils::TimerMs clock("ClientServerExecution::callCallback", "CLIENT SIDE " + m_method + " " + m_ref, false, true);
+		clock.tick();
+
+		clientExecutionStatus(ExecutionStatus::InProgress);
+
+		if (clientCallbackSpecified())
+			m_clientCallback->replyFromServer(*this);
+		
+		clientExecutionStatus(ExecutionStatus::Completed);
 	}
 	
 	ClientInterface::ClientInterface(plog::Severity sev)
 	{
 		m_server = nullptr;
 		m_sev = sev;
-		m_msTimeout = 10000;
+		m_msTimeout = THEWORLD_CLIENTSERVER_DEFAULT_TIMEOUT;
+
+		m_receiverThreadRequiredExit = false;
 	}
 
 	ClientInterface::~ClientInterface(void)
@@ -35,11 +96,23 @@ namespace TheWorld_ClientServer
 
 		PLOG_INFO << "ClientInterface::connect - Server connected";
 
+		m_receiverThreadRequiredExit = false;
+		m_receiverThread = std::thread(&ClientInterface::receiver, this);
+
+		PLOG_INFO << "ClientInterface::connect - Receiver thread started";
+
 		return THEWORLD_CLIENTSERVER_RC_OK;
 	}
 
 	void ClientInterface::disconnect(void)
 	{
+		if (m_receiverThread.joinable())
+		{
+			m_receiverThreadRequiredExit = true;
+			m_receiverThread.join();
+			PLOG_INFO << "ClientInterface::connect - Receiver thread joined (stopped execution)";
+		}
+
 		if (m_server)
 		{
 			m_server->onDisconnect();
@@ -50,7 +123,7 @@ namespace TheWorld_ClientServer
 		}
 	}
 
-	int ClientInterface::execMethodAsync(std::string method, std::string& ref, std::vector<ClientServerVariant>& inputParams)
+	int ClientInterface::execMethodAsync(std::string method, std::string& ref, std::vector<ClientServerVariant>& inputParams, size_t timeToLive, ClientCallback* clientCallbak)
 	{
 		GUID newId;
 		RPC_STATUS ret_val = ::UuidCreate(&newId);
@@ -60,31 +133,27 @@ namespace TheWorld_ClientServer
 			return THEWORLD_CLIENTSERVER_RC_KO;
 		}
 
-		//WCHAR* wszUuid = NULL;
-		//::UuidToStringW(&newId, (RPC_WSTR*)&wszUuid);
-		//if (wszUuid == NULL)
-		//{
-		//	m_errMessage = "UuidToStringW in error";
-		//	return THEWORLD_CLIENTSERVER_RC_KO;
-		//}
-		
 		{
-			std::lock_guard<std::recursive_mutex> lock(m_mutexReplyMap);
-			ref = ToString(&newId);
-			m_ReplyMap[ref] = make_unique<ReplyMethod>(method, inputParams, ref, this, m_server);
-			std::thread* th = new std::thread(&ReplyMethod::onExecMethodAsync, m_ReplyMap[ref].get());
+			std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
+			ref = TheWorld_Utils::ToString(&newId);
+			m_ReplyMap[ref] = make_unique<ClientServerExecution>(method, inputParams, ref, this, m_server, timeToLive, clientCallbak);
+			//std::thread* th = new std::thread(&ClientServerExecution::onExecMethodAsync, m_ReplyMap[ref].get());
+			
+			PLOG_DEBUG << "ClientInterface::execMethodAsync - " + method + " " + ref;
+
+			ClientServerExecution* clientServerExecution = m_ReplyMap[ref].get();
+			std::function<void(void)> f = std::bind(&ClientServerExecution::onExecMethodAsync, clientServerExecution);
+			//std::function<void(void)> f1 = [=] {m_ReplyMap[ref]->onExecMethodAsync(); };
+			//m_server->queueJob( [=] { m_ReplyMap[ref]->onExecMethodAsync(); } ); // lambda expressione
+			m_server->queueJob(f, clientServerExecution);
 		}
 		
-		// free up the allocated string
-		//::RpcStringFreeW((RPC_WSTR*)&wszUuid);
-		//wszUuid = NULL;
-
 		return THEWORLD_CLIENTSERVER_RC_OK;
 	}
 	
 	int ClientInterface::replied(std::string& method, std::string& ref, bool& replied, size_t& numReplyParams, bool& error, int& errorCode, std::string& errorMessage)
 	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutexReplyMap);
+		std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
 
 		if (m_ReplyMap.find(ref) == m_ReplyMap.end())
 		{
@@ -92,7 +161,7 @@ namespace TheWorld_ClientServer
 			return THEWORLD_CLIENTSERVER_RC_KO;
 		}
 
-		ReplyMethod* reply = m_ReplyMap[ref].get();
+		ClientServerExecution* reply = m_ReplyMap[ref].get();
 
 		method = reply->getMethod();
 
@@ -113,7 +182,7 @@ namespace TheWorld_ClientServer
 
 	int ClientInterface::getReplyParam(std::string& ref, size_t index, ClientServerVariant& ReplyParam)
 	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutexReplyMap);
+		std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
 
 		if (m_ReplyMap.find(ref) == m_ReplyMap.end())
 		{
@@ -121,7 +190,7 @@ namespace TheWorld_ClientServer
 			return THEWORLD_CLIENTSERVER_RC_KO;
 		}
 
-		ReplyMethod* reply = m_ReplyMap[ref].get();
+		ClientServerExecution* reply = m_ReplyMap[ref].get();
 
 		if (reply->error())
 		{
@@ -145,7 +214,7 @@ namespace TheWorld_ClientServer
 
 	int ClientInterface::getReplyParams(std::string& ref, std::vector <ClientServerVariant>& replyParams)
 	{
-		std::lock_guard<std::recursive_mutex> lock(m_mutexReplyMap);
+		std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
 
 		if (m_ReplyMap.find(ref) == m_ReplyMap.end())
 		{
@@ -153,7 +222,7 @@ namespace TheWorld_ClientServer
 			return THEWORLD_CLIENTSERVER_RC_KO;
 		}
 
-		ReplyMethod* reply = m_ReplyMap[ref].get();
+		ClientServerExecution* reply = m_ReplyMap[ref].get();
 
 		if (reply->error())
 		{
@@ -172,96 +241,203 @@ namespace TheWorld_ClientServer
 			return THEWORLD_CLIENTSERVER_RC_METHOD_ONGOING;
 	}
 
-	int ClientInterface::execMethodSync(std::string method, std::vector<ClientServerVariant>& inputParams, std::vector <ClientServerVariant>& replyParams)
+//	int ClientInterface::execMethodSync(std::string method, std::vector<ClientServerVariant>& inputParams, std::vector <ClientServerVariant>& replyParams, size_t timeout)
+//	{
+//		PLOG_DEBUG << "execMethodSync: inizio";
+//
+//		int rc = THEWORLD_CLIENTSERVER_RC_OK;
+//
+//		replyParams.clear();
+//
+//		std::string ref;
+//
+//		ClientCallback* noCallback = nullptr;
+//
+//#define SHORT_ROAD 0
+//		if (SHORT_ROAD)
+//		{
+//			GUID newId;
+//			RPC_STATUS ret_val = ::UuidCreate(&newId);
+//			if (ret_val != RPC_S_OK)
+//			{
+//				PLOG_ERROR << "UuidCreate in error with rc " + std::to_string(ret_val);
+//				return THEWORLD_CLIENTSERVER_RC_KO;
+//			}
+//			
+//			ClientServerExecution* reply = nullptr;
+//			{
+//				std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
+//				ref = TheWorld_Utils::ToString(&newId);
+//				m_ReplyMap[ref] = make_unique<ClientServerExecution>(method, inputParams, ref, this, m_server, timeout, noCallback);
+//				reply = m_ReplyMap[ref].get();
+//				//std::thread* th = new std::thread(&ClientServerExecution::onExecMethodAsync, m_ReplyMap[ref].get());
+//			}
+//			reply->onExecMethodAsync();
+//		}
+//		else		
+//			rc = execMethodAsync(method, ref, inputParams, timeout, noCallback);
+//		
+//		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+//		{
+//			if (ref.length() > 0 && m_ReplyMap.contains(ref))
+//			{
+//				m_ReplyMap[ref]->eraseMe(true);
+//			}
+//			return rc;
+//		}
+//
+//		PLOG_DEBUG << "execMethodSync: attesa risposta";
+//		TheWorld_Utils::TimerMs clock;
+//		clock.tick();
+//		while (true)
+//		{
+//			bool replied = false, error = false;
+//			size_t numReplyParams = 0;
+//			int errorCode;
+//			std::string errorMessage;
+//			std::string method;
+//			rc = ClientInterface::replied(method, ref, replied, numReplyParams, error, errorCode, errorMessage);
+//			if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+//			{
+//				m_ReplyMap[ref]->eraseMe(true);
+//				return rc;
+//			}
+//			
+//			if (error)
+//			{
+//				PLOG_ERROR << "Method execution error - Method: " + method + " - Error: " + std::to_string(errorCode) + " - " + errorMessage;
+//				m_ReplyMap[ref]->eraseMe(true);
+//				return THEWORLD_CLIENTSERVER_RC_KO;
+//			}
+//
+//			size_t _timeout = timeout;
+//			if (_timeout == -1)
+//				_timeout = m_msTimeout;
+//			if (!replied)
+//			{
+//				clock.tock();
+//				long long elapsed = clock.duration().count();
+//				if (elapsed > (long long)_timeout)
+//				{
+//					rc = THEWORLD_CLIENTSERVER_RC_TIMEOUT_EXPIRED;
+//					m_ReplyMap[ref]->eraseMe(true);
+//					break;
+//				}
+//				else
+//					Sleep(5);
+//			}
+//			else
+//			{
+//				PLOG_DEBUG << "execMethodSync: callect params";
+//				rc = getReplyParams(ref, replyParams);
+//				//for (size_t idx = 0; idx < numReplyParams; idx++)
+//				//{
+//				//	ClientServerVariant replyParam;
+//				//	rc = getReplyParam(ref, idx, replyParam);
+//				//	if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+//				//		return rc;
+//				//	replyParams.push_back(replyParam);
+//				//}
+//				std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
+//				m_ReplyMap[ref]->eraseMe(true);
+//				break;
+//			}
+//		}
+//
+//		PLOG_DEBUG << "execMethodSync: fine";
+//
+//		return rc;
+//	}
+
+	void ClientInterface::receiver(void)
 	{
-		PLOG_DEBUG << "execMethodSync: inizio";
+		MapClientServerExecution toCallCallback;
 
-		int rc = THEWORLD_CLIENTSERVER_RC_OK;
+		m_tp.Start(4);
 
-		replyParams.clear();
-
-		std::string ref;
-		
-#define SHORT_ROAD 0
-		if (SHORT_ROAD)
-		{
-			GUID newId;
-			RPC_STATUS ret_val = ::UuidCreate(&newId);
-			if (ret_val != RPC_S_OK)
-			{
-				PLOG_ERROR << "UuidCreate in error with rc " + std::to_string(ret_val);
-				return THEWORLD_CLIENTSERVER_RC_KO;
-			}
-			
-			ReplyMethod* reply = nullptr;
-			{
-				std::lock_guard<std::recursive_mutex> lock(m_mutexReplyMap);
-				ref = ToString(&newId);
-				m_ReplyMap[ref] = make_unique<ReplyMethod>(method, inputParams, ref, this, m_server);
-				reply = m_ReplyMap[ref].get();
-				//std::thread* th = new std::thread(&ReplyMethod::onExecMethodAsync, m_ReplyMap[ref].get());
-			}
-			reply->onExecMethodAsync();
-		}
-		else		
-			rc = execMethodAsync(method, ref, inputParams);
-		
-		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
-			return rc;
-
-		PLOG_DEBUG << "execMethodSync: attesa risposta";
-		TimerMs clock;
-		clock.tick();
 		while (true)
 		{
-			bool replied = false, error = false;
-			size_t numReplyParams = 0;
-			int errorCode;
-			std::string errorMessage;
-			std::string method;
-			rc = ClientInterface::replied(method, ref, replied, numReplyParams, error, errorCode, errorMessage);
-			if (rc != THEWORLD_CLIENTSERVER_RC_OK)
-				return rc;
-			
-			if (error)
 			{
-				PLOG_ERROR << "Method execution error - Method: " + method + " - Error: " + std::to_string(errorCode) + " - " + errorMessage;
-				return THEWORLD_CLIENTSERVER_RC_KO;
-			}
-
-			if (!replied)
-			{
-				clock.tock();
-				long long elapsed = clock.duration().count();
-				if (elapsed > m_msTimeout)
+				std::list<std::string> tempKeyToErase;
+				for (auto iter = toCallCallback.begin(); iter != toCallCallback.end(); iter++)
 				{
-					rc = THEWORLD_CLIENTSERVER_RC_TIMEOUT_EXPIRED;
-					break;
+					if (iter->second->completedOnClient())
+					{
+						tempKeyToErase.push_back(iter->first);
+					}
 				}
-				else
-					Sleep(5);
+				for (auto key : tempKeyToErase)
+				{
+					toCallCallback.erase(key);
+				}
 			}
+			
+			if (m_receiverThreadRequiredExit)
+				break;
 			else
 			{
-				PLOG_DEBUG << "execMethodSync: callect params";
-				rc = getReplyParams(ref, replyParams);
-				//for (size_t idx = 0; idx < numReplyParams; idx++)
-				//{
-				//	ClientServerVariant replyParam;
-				//	rc = getReplyParam(ref, idx, replyParam);
-				//	if (rc != THEWORLD_CLIENTSERVER_RC_OK)
-				//		return rc;
-				//	replyParams.push_back(replyParam);
-				//}
-				break;
+				bool locked = m_mtxReplyMap.try_lock();
+				if (locked)
+				{
+					MapClientServerExecution tempToErase;
+
+					for (MapClientServerExecution::iterator itReply = m_ReplyMap.begin(); itReply != m_ReplyMap.end(); itReply++)
+					{
+						if (itReply->second->replied() || itReply->second->error())
+						{
+							if (itReply->second->completedOnServer())
+							{
+								if (itReply->second->clientCallbackSpecified())
+								{
+									toCallCallback[itReply->first] = make_unique<ClientServerExecution>(*itReply->second);
+								}
+								else if (itReply->second->eraseMe())
+								{
+									tempToErase[itReply->first] = make_unique<ClientServerExecution>(*itReply->second);
+								}
+							}
+						}
+					}
+					for (MapClientServerExecution::iterator itReply = toCallCallback.begin(); itReply != toCallCallback.end(); itReply++)
+					{
+						if (m_ReplyMap.contains(itReply->first))
+						{
+							m_ReplyMap.erase(itReply->first);
+						}
+					}
+					
+					for (MapClientServerExecution::iterator itReply = tempToErase.begin(); itReply != tempToErase.end(); itReply++)
+					{
+						if (m_ReplyMap.contains(itReply->first))
+						{
+							m_ReplyMap.erase(itReply->first);
+						}
+					}
+
+					m_mtxReplyMap.unlock();
+
+					tempToErase.clear();
+
+					for (MapClientServerExecution::iterator itReply = toCallCallback.begin(); itReply != toCallCallback.end(); itReply++)
+					{
+						if (itReply->second->toStartOnClient())
+						{
+							std::function<void(void)> f = std::bind(&ClientServerExecution::callCallback, itReply->second.get());
+							itReply->second->clientExecutionStatus(ExecutionStatus::InProgress);
+							m_tp.QueueJob(f);
+						}
+					}
+				}
 			}
+			
+			Sleep(THEWORLD_CLIENTSERVER_RECEIVER_SLEEP_TIME);
 		}
+		
+		m_tp.Stop();
 
-		PLOG_DEBUG << "execMethodSync: fine";
-
-		return rc;
+		toCallCallback.clear();
 	}
-
+	
 	ServerInterface::ServerInterface(plog::Severity sev)
 	{
 		m_client = nullptr;
@@ -278,8 +454,10 @@ namespace TheWorld_ClientServer
 	{
 		m_client = client;
 		m_mapManager = new TheWorld_MapManager::MapManager(NULL, m_sev, plog::get());
-		m_mapManager->instrument(true);
+		m_mapManager->instrument(false);
 		m_mapManager->consoleDebugMode(false);
+		m_tpSlowExecutions.Start(2);
+		m_tp.Start(2);
 		PLOG_INFO << "ServerInterface::onConnect - Server connected";
 		return THEWORLD_CLIENTSERVER_RC_OK;
 	}
@@ -288,23 +466,34 @@ namespace TheWorld_ClientServer
 	{
 		if (m_client != nullptr)
 		{
+			m_tp.Stop();
+			m_tpSlowExecutions.Stop();
 			m_client = nullptr;
 			delete m_mapManager;
 			PLOG_INFO << "ServerInterface::onDisconnect - Server Disconnected";
 		}
 	}
 
-	void ServerInterface::onExecMethodAsync(std::string method, ReplyMethod* reply)
+	bool ServerInterface::expiredTimeToLive(ClientServerExecution* reply)
+	{
+		long long elapsedFromStartOfClientMethod;
+		if (reply->expiredTimeToLive(&elapsedFromStartOfClientMethod))
+		{
+			reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, (std::string(__FUNCTION__) + std::string("Time To Live (") + std::to_string(reply->m_timeToLive) + std::string(") Expired: ") + std::to_string(elapsedFromStartOfClientMethod)).c_str());
+			return true;
+		}
+		else
+			return false;
+	}
+	
+	void ServerInterface::onExecMethodAsync(std::string method, ClientServerExecution* reply)
 	{
 		try
 		{
-			if (method == "MapManager::gridStepInWU")
-			{
-				float f = m_mapManager->gridStepInWU();
-				reply->replyParam(f);
-				reply->replyComplete();
-			}
-			else if (method == "MapManager::setLogMaxSeverity")
+			if (expiredTimeToLive(reply))
+				return;
+
+			if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_SETLOGMAXSEVERITY)
 			{
 				int* i = std::get_if<int>(&reply->m_inputParams[0]);
 				if (i == nullptr)
@@ -316,25 +505,37 @@ namespace TheWorld_ClientServer
 				m_mapManager->setLogMaxSeverity(sev);
 				reply->replyComplete();
 			}
-			else if (method == "MapManager::calcNextCoordOnTheGridInWUs")
+			else if (method == THEWORLD_CLIENTSERVER_METHOD_SERVER_INITIALIZATION)
 			{
-				for (size_t i = 0; i < reply->m_inputParams.size(); i++)
+				int* i = std::get_if<int>(&reply->m_inputParams[0]);
+				if (i == nullptr)
 				{
-					float* coord = std::get_if<float>(&reply->m_inputParams[i]);
-					if (coord == nullptr)
-					{
-						reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be a FLOAT");
-						return;
-					}
-					float f = m_mapManager->calcNextCoordOnTheGridInWUs(*coord);
-					reply->replyParam(f);
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be an INT");
+					return;
 				}
+				plog::Severity sev = plog::Severity(*i);
+				m_mapManager->setLogMaxSeverity(sev);
+				float f = m_mapManager->gridStepInWU();
+				reply->replyParam(f);
 				reply->replyComplete();
 			}
-			else if (method == "MapManager::getVertices")
+			//else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_CALCNEXTCOORDGETVERTICES)
+			//{
+			//	for (size_t i = 0; i < reply->m_inputParams.size(); i++)
+			//	{
+			//		float* coord = std::get_if<float>(&reply->m_inputParams[i]);
+			//		if (coord == nullptr)
+			//		{
+			//			reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be a FLOAT");
+			//			return;
+			//		}
+			//		float f = m_mapManager->calcNextCoordOnTheGridInWUs(*coord);
+			//		reply->replyParam(f);
+			//	}
+			//	reply->replyComplete();
+			//}
+			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
 			{
-				std::vector<TheWorld_MapManager::SQLInterface::GridVertex> worldVertices;
-				
 				float* viewerPosX = std::get_if<float>(&reply->m_inputParams[0]);
 				if (viewerPosX == nullptr)
 				{
@@ -363,90 +564,64 @@ namespace TheWorld_ClientServer
 					return;
 				}
 				
-				int* i = std::get_if<int>(&reply->m_inputParams[4]);
-				if (i == nullptr)
+				int* numVerticesPerSize = std::get_if<int>(&reply->m_inputParams[4]);
+				if (numVerticesPerSize == nullptr)
 				{
 					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Fifth param must be an INT");
 					return;
 				}
-				TheWorld_MapManager::MapManager::anchorType anchorType = TheWorld_MapManager::MapManager::anchorType (*i);
 				
-				int* numVerticesPerSize = std::get_if<int>(&reply->m_inputParams[5]);
-				if (numVerticesPerSize == nullptr)
-				{
-					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Sixth param must be an INT");
-					return;
-				}
-				
-				float* gridStepinWU = std::get_if<float>(&reply->m_inputParams[6]);
+				float* gridStepinWU = std::get_if<float>(&reply->m_inputParams[5]);
 				if (gridStepinWU == nullptr)
 				{
-					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Seventh param must be a FLOAT");
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Sixth param must be a FLOAT");
 					return;
 				}
 				
-				int* level = std::get_if<int>(&reply->m_inputParams[7]);
+				int* level = std::get_if<int>(&reply->m_inputParams[6]);
 				if (level == nullptr)
 				{
-					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Eight param must be an INT");
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Seventh param must be an INT");
 					return;
 				}
 
-				TimerMs clock; // Timer<milliseconds, steady_clock>
-				clock.tick();
-				m_mapManager->getVertices(*lowerXGridVertex, *lowerZGridVertex,
-															   anchorType,
-															   *numVerticesPerSize, *numVerticesPerSize,
-															   worldVertices, *gridStepinWU, *level);
-				clock.tock();
-				PLOG_DEBUG << std::string("DURATION MapManager::getVertices=") + std::to_string(clock.duration().count()).c_str() + " ms";
+				std::string* meshId = std::get_if<std::string>(&reply->m_inputParams[7]);
+				if (meshId == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Eight param must be an std::string");
+					return;
+				}
+
+				//TheWorld_Utils::TimerMs clock;
+				//clock.tick();
+				float _gridStepInWU;
+				std::string meshBuffer;
+				m_mapManager->getQuadrantVertices(*lowerXGridVertex, *lowerZGridVertex, *numVerticesPerSize, _gridStepInWU, *level, *meshId, meshBuffer);
+				//clock.tock();
+				//PLOG_DEBUG << std::string("ELAPSED MapManager::getVertices=") + std::to_string(clock.duration().count()).c_str() + " ms";
+
+				if (expiredTimeToLive(reply))
+					return;
+
+				if (_gridStepInWU != *gridStepinWU)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "gridStepinWU not compatible");
+					return;
+				}
 
 				float f = m_mapManager->calcNextCoordOnTheGridInWUs(*viewerPosX);
 				reply->replyParam(f);
 				f = m_mapManager->calcNextCoordOnTheGridInWUs(*viewerPosZ);
 				reply->replyParam(f);
 				
-				{
-					BYTE shortBuffer[256 + 1];
-					size_t size_tSize = 0;
-					serializeToByteStream<size_t>(size_tSize, shortBuffer, size_tSize);
-
-					// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
-					size_t serializedVertexSize = 0;
-					TheWorld_Utils::GridVertex v;
-					v.serialize(shortBuffer, serializedVertexSize);
-
-					size_t vertexArraySize = (*numVerticesPerSize) * (*numVerticesPerSize);
-					size_t streamBufferSize = 1 /* "0" */ + size_tSize /* the size of a size_t */ + vertexArraySize * serializedVertexSize;
-					BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
-					if (streamBuffer == nullptr)
-						throw(std::exception((std::string(__FUNCTION__) + std::string("Allocation error")).c_str()));
-
-					size_t streamBufferIterator = 0;
-					memcpy(streamBuffer + streamBufferIterator, "0", 1);
-					streamBufferIterator++;
-					
-					size_t size = 0;
-					serializeToByteStream<size_t>(vertexArraySize, streamBuffer + streamBufferIterator, size);
-					streamBufferIterator += size;
-
-					for (int z = 0; z < *numVerticesPerSize; z++)			// m_heightMapImage->get_height()
-						for (int x = 0; x < *numVerticesPerSize; x++)		// m_heightMapImage->get_width()
-						{
-							TheWorld_MapManager::SQLInterface::GridVertex& v = worldVertices[z * *numVerticesPerSize + x];
-							TheWorld_Utils::GridVertex v1(v.posX(), v.altitude(), v.posZ(), *level);
-							v1.serialize(streamBuffer + streamBufferIterator, size);
-							streamBufferIterator += size;
-						}
-
-					std::string GridVertexStream((char*)streamBuffer, streamBufferSize);
-					reply->replyParam(GridVertexStream);
-
-					free(streamBuffer);
-				}
+				reply->replyParam(meshBuffer);
 
 				reply->replyComplete();
 			}
+		}
+		catch (TheWorld_Utils::GDN_TheWorld_Exception& e)
+		{
+			reply->replyError(THEWORLD_CLIENTSERVER_RC_KO, e.exceptionName() + string(" caught - ") + e.what());
 		}
 		catch (TheWorld_MapManager::MapManagerException& e)
 		{
@@ -462,4 +637,11 @@ namespace TheWorld_ClientServer
 		}
 	}
 
+	void ServerInterface::queueJob(const std::function<void()>& job, ClientServerExecution* clientServerExecution)
+	{
+		if (clientServerExecution->getMethod() == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
+			m_tpSlowExecutions.QueueJob(job);
+		else
+			m_tp.QueueJob(job);
+	}
 }

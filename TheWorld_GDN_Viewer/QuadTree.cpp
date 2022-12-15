@@ -1,6 +1,6 @@
 //#include "pch.h"
 #include "QuadTree.h"
-#include "Utils.h"
+#include "TheWorld_Utils.h"
 
 #include <File.hpp>
 #include <OS.hpp>
@@ -129,7 +129,7 @@ void Quad::setCameraPos(Vector3 globalCoordCameraLastPos)
 	
 QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantId quadrantId)
 {
-	m_isValid = false;
+	setStatus(QuadrantStatus::uninitialized);
 	m_isVisible = false;
 	m_viewer = viewer;
 	m_numSplits = 0;
@@ -140,66 +140,30 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantId quadrantId)
 	int ret = timespec_get(&m_refreshTime, TIME_UTC);
 }
 
-void QuadTree::init(float& viewerPosX, float& viewerPosZ)
+void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
 {
-	TimerMs clock; // Timer<milliseconds, steady_clock>
-	clock.tick();
+	//TheWorld_Utils::TimerMs clock;
+	//clock.tick();
 
-	m_isValid = false;
+	if (status() != QuadrantStatus::uninitialized)
+		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Quadrant status not comply: " + to_string((int)status())).c_str()));
 
-	TimerMs clock1; // Timer<milliseconds, steady_clock>
+	std::lock_guard lock(m_mtxQuadrant);
+
+	setStatus(QuadrantStatus::getVerticesInProgress);
+
+	TheWorld_Utils::TimerMs clock1;
 	clock1.tick();
-	m_worldQuadrant->populateGridVertices(viewerPosX, viewerPosZ);
+	m_worldQuadrant->populateGridVertices(viewerPosX, viewerPosZ, setCamera, cameraDistanceFromTerrain);
 	clock1.tock();	
-	m_viewer->Globals()->debugPrint(String("DURATION - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - init (populateGridVertices) " + std::to_string(clock1.duration().count()).c_str() + " ms");
+	//m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - QuadTree::init (populateGridVertices) " + std::to_string(clock1.duration().count()).c_str() + " ms");
 
-	//{	// SUPER DEBUGRIC
-	//	m_viewer->Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
-	//	int res = m_viewer->Globals()->heightmapResolution() + 1;
-	//	std::vector<TheWorld_MapManager::MapManager::GridVertex>& gridVertices = m_worldQuadrant->getGridVertices();
-	//	for (int pz = 0; pz < res; pz++)
-	//		for (int px = 0; px < res; px++)
-	//		{
-	//			TheWorld_MapManager::MapManager::GridVertex& v = gridVertices[px + pz * res];
-	//			float altitude = v.altitude();
-	//			if (altitude > 0)
-	//				m_viewer->Globals()->debugPrint(v.toString().c_str());
-	//		}
-	//	m_viewer->Globals()->debugPrint("Fine SUPER DEBUGRIC!");
-	//}	// SUPER DEBUGRIC
-
-	//{	// SUPER DEBUGRIC
-	//	m_viewer->Globals()->debugPrint("Inizio SUPER DEBUGRIC!");
-	//	std::vector<TheWorld_MapManager::MapManager::GridVertex>& gridVertices = m_worldQuadrant->getGridVertices();
-	//	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-	//	Ref<Image> image = resLoader->load("res://height.res");
-	//	int res = (int)image->get_width();
-	//	assert(res == m_viewer->Globals()->heightmapResolution() + 1);
-	//	float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
-	//	image->lock();
-	//	for (int pz = 0; pz < res; pz++)
-	//		for (int px = 0; px < res; px++)
-	//		{
-	//			Color c = image->get_pixel(px, pz);
-	//			//m_worldVertices[px + pz * res].setAltitude(c.r);
-	//			gridVertices[px + pz * res].setAltitude(c.r * 3);
-	//		}
-	//	image->unlock();
-	//	m_viewer->Globals()->debugPrint("Fine SUPER DEBUGRIC!");
-	//}	// SUPER DEBUGRIC
-
-	m_shaderTerrainData.init(m_viewer, this);
+	getShaderTerrainData().init(m_viewer, this);
 
 	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::NotSet, m_viewer, this);
 
-	TimerMs clock2; // Timer<milliseconds, steady_clock>
-	clock2.tick();
-	resetMaterialParams();
-	clock2.tock();	
-	m_viewer->Globals()->debugPrint(String("DURATION - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - init (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
-
-	clock.tock();	
-	m_viewer->Globals()->debugPrint(String("DURATION - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - init " + std::to_string(clock.duration().count()).c_str() + " ms");
+	//clock.tock();
+	//m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - QuadTree::init " + std::to_string(clock.duration().count()).c_str() + " ms");
 }
 
 QuadTree::~QuadTree()
@@ -279,7 +243,7 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
 				// Split
 				quad->split();
 				for (int i = 0; i < 4; i++)
-					quad->getChild(i)->setCameraPos(cameraPosGlobalCoord);;
+					quad->getChild(i)->setCameraPos(cameraPosGlobalCoord);
 				m_numSplits++;
 			}
 		}
@@ -466,17 +430,33 @@ void QuadTree::updateMaterialParams(void)
 
 	if (m_shaderTerrainData.materialParamsNeedUpdate())
 	{
-		TimerMs clock; // Timer<milliseconds, steady_clock>
+		TheWorld_Utils::TimerMs clock;
 		clock.tick();
 		m_shaderTerrainData.updateMaterialParams();
-		clock.tock();	m_viewer->Globals()->debugPrint(String("DURATION - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
+		clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
 		m_shaderTerrainData.materialParamsNeedUpdate(false);
 	}
 }
 
-void QuadTree::resetMaterialParams(void)
+void QuadTree::resetMaterialParams()
 {
-	m_shaderTerrainData.resetMaterialParams();
+	if (materialParamsNeedReset())
+	{
+		m_shaderTerrainData.resetMaterialParams(m_cache);
+		materialParamsNeedReset(false, nullptr);
+	}
+}
+
+bool QuadTree::materialParamsNeedReset(void)
+{
+	return m_shaderTerrainData.materialParamsNeedReset();
+}
+
+void QuadTree::materialParamsNeedReset(bool b, TheWorld_Utils::MeshCacheBuffer* cache)
+{
+	if (cache != nullptr)
+		m_cache = *cache;
+	m_shaderTerrainData.materialParamsNeedReset(b);
 }
 
 bool QuadTree::materialParamsNeedUpdate(void)
@@ -640,6 +620,7 @@ ShaderTerrainData::ShaderTerrainData()
 	m_viewer = nullptr;
 	m_quadTree = nullptr;
 	m_materialParamsNeedUpdate = false;
+	m_materialParamsNeedReset = false;
 	m_heightMapTexModified = false;
 	m_normalMapTexModified = false;
 	//m_splat1MapTexModified = false;
@@ -666,126 +647,166 @@ void ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
 
 // it is expected that globals and World Datas are loaded
 // TODORIC: maybe usefull for performance reasons specify which texture need update and which rect of the texture 
-void ShaderTerrainData::resetMaterialParams(void)
+void ShaderTerrainData::resetMaterialParams(TheWorld_Utils::MeshCacheBuffer& cache)
 {
+	std::recursive_mutex& quadrantMutex = m_quadTree->getQuadrantMutex();
+	std::lock_guard lock(quadrantMutex);
+	
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
 
-	// Creating Heightmap Map Texture
-	{
-		Ref<Image> image = Image::_new();
-		image->create(_resolution, _resolution, false, Image::FORMAT_RH);
-		m_heightMapImage = image;
-	}
+	bool loadingHeighmapOK = false;
+	//m_heightMapImage = cache.readHeigthmap(loadingHeighmapOK);
+	bool loadingNormalmapOK = false;
+	//m_normalMapImage = cache.readNormalmap(loadingNormalmapOK);
 
-	// Creating Normal Map Texture
+	if (!loadingHeighmapOK || !loadingNormalmapOK)
 	{
-		Ref<Image> image = Image::_new();
-		image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
-		m_normalMapImage = image;
-	}
+		// Creating Heightmap Map Texture
+		{
+			Ref<Image> image = Image::_new();
+			image->create(_resolution, _resolution, false, Image::FORMAT_RH);
+			m_heightMapImage = image;
+		}
 
-	{
-		// Filling Heightmap Map Texture , Normal Map Texture
-		assert(_resolution == m_heightMapImage->get_height());
-		assert(_resolution == m_heightMapImage->get_width());
-		assert(_resolution == m_quadTree->getQuadrant()->getId().getNumVerticesPerSize());
-		float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
-		m_heightMapImage->lock();
-		m_normalMapImage->lock();
-		for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
-			for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
-			{
-				float h = m_quadTree->getQuadrant()->getGridVertices()[z * _resolution + x].altitude();
-				m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
-				//if (h != 0)	// DEBUGRIC
-				//	m_viewer->Globals()->debugPrint("Altitude not null.X=" + String(std::to_string(x).c_str()) + " Z=" + std::to_string(z).c_str() + " H=" + std::to_string(h).c_str());
+		// Creating Normal Map Texture
+		{
+			Ref<Image> image = Image::_new();
+			image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+			m_normalMapImage = image;
+		}
 
-				// h = height of the point for which we are computing the normal
-				// hr = height of the point on the rigth
-				// hl = height of the point on the left
-				// hf = height of the forward point (z growing)
-				// hb = height of the backward point (z lessening)
-				// step = step in WUs between points
-				// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
-				// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
-				Vector3 normal;
-				Vector3 P((float)x, h, (float)z);
-				if (x < _resolution - 1 && z < _resolution - 1)
+		{
+			std::vector<TheWorld_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
+
+			// Filling Heightmap Map Texture , Normal Map Texture
+			assert(_resolution == m_heightMapImage->get_height());
+			assert(_resolution == m_heightMapImage->get_width());
+			assert(_resolution == m_quadTree->getQuadrant()->getId().getNumVerticesPerSize());
+			float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
+			m_heightMapImage->lock();
+			m_normalMapImage->lock();
+			for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
+				for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
 				{
-					float hr = m_quadTree->getQuadrant()->getGridVertices()[z * _resolution + x + 1].altitude();
-					float hf = m_quadTree->getQuadrant()->getGridVertices()[(z + 1) * _resolution + x].altitude();
-					normal = Vector3(h - hr, gridStepInWUs, h - hf).normalized();
-					//{		// Verify
-					//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-					//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-					//	Vector3 normal1 = (PF - P).cross(PR - P).normalized();
-					//	if (!equal(normal1, normal))	// DEBUGRIC
-					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-					//}
-				}
-				else
-				{
-					if (x == _resolution - 1 && z == 0)
+					float h = gridVertices[z * _resolution + x].altitude();
+					m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
+					//if (h != 0)	// DEBUGRIC
+					//	m_viewer->Globals()->debugPrint("Altitude not null.X=" + String(std::to_string(x).c_str()) + " Z=" + std::to_string(z).c_str() + " H=" + std::to_string(h).c_str());
+
+					// h = height of the point for which we are computing the normal
+					// hr = height of the point on the rigth
+					// hl = height of the point on the left
+					// hf = height of the forward point (z growing)
+					// hb = height of the backward point (z lessening)
+					// step = step in WUs between points
+					// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
+					// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
+					Vector3 normal;
+					Vector3 P((float)x, h, (float)z);
+					if (x < _resolution - 1 && z < _resolution - 1)
 					{
-						float hf = m_quadTree->getQuadrant()->getGridVertices()[(z + 1) * _resolution + x].altitude();
-						float hl = m_quadTree->getQuadrant()->getGridVertices()[z * _resolution + x - 1].altitude();
-						normal = Vector3(hl - h, gridStepInWUs, h - hf).normalized();
-						//{		// Verify
-						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-						//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-						//	Vector3 normal1 = (PL - P).cross(PF - P).normalized();
-						//	if (!equal(normal1, normal))	// DEBUGRIC
-						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						//}
-					}
-					else if (x == 0 && z == _resolution - 1)
-					{
-						float hr = m_quadTree->getQuadrant()->getGridVertices()[z * _resolution + x + 1].altitude();
-						float hb = m_quadTree->getQuadrant()->getGridVertices()[(z - 1) * _resolution + x].altitude();
-						normal = Vector3(h - hr, gridStepInWUs, hb - h).normalized();
+						float hr = gridVertices[z * _resolution + x + 1].altitude();
+						float hf = gridVertices[(z + 1) * _resolution + x].altitude();
+						normal = Vector3(h - hr, gridStepInWUs, h - hf).normalized();
 						//{		// Verify
 						//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-						//	Vector3 PB((float)(x), hb, (float)(z - gridStepInWUs));
-						//	Vector3 normal1 = (PR - P).cross(PB - P).normalized();
+						//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
+						//	Vector3 normal1 = (PF - P).cross(PR - P).normalized();
 						//	if (!equal(normal1, normal))	// DEBUGRIC
 						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
 						//}
 					}
 					else
 					{
-						float hl = m_quadTree->getQuadrant()->getGridVertices()[z * _resolution + x - 1].altitude();
-						float hb = m_quadTree->getQuadrant()->getGridVertices()[(z - 1) * _resolution + x].altitude();
-						normal = Vector3(hl - h, gridStepInWUs, hb - h).normalized();
-						//{		// Verify
-						//	Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));
-						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-						//	Vector3 normal1 = (PB - P).cross(PL - P).normalized();
-						//	if (!equal(normal1, normal))	// DEBUGRIC
-						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						//}
+						if (x == _resolution - 1 && z == 0)
+						{
+							float hf = gridVertices[(z + 1) * _resolution + x].altitude();
+							float hl = gridVertices[z * _resolution + x - 1].altitude();
+							normal = Vector3(hl - h, gridStepInWUs, h - hf).normalized();
+							//{		// Verify
+							//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
+							//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
+							//	Vector3 normal1 = (PL - P).cross(PF - P).normalized();
+							//	if (!equal(normal1, normal))	// DEBUGRIC
+							//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+							//}
+						}
+						else if (x == 0 && z == _resolution - 1)
+						{
+							float hr = gridVertices[z * _resolution + x + 1].altitude();
+							float hb = gridVertices[(z - 1) * _resolution + x].altitude();
+							normal = Vector3(h - hr, gridStepInWUs, hb - h).normalized();
+							//{		// Verify
+							//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
+							//	Vector3 PB((float)(x), hb, (float)(z - gridStepInWUs));
+							//	Vector3 normal1 = (PR - P).cross(PB - P).normalized();
+							//	if (!equal(normal1, normal))	// DEBUGRIC
+							//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+							//}
+						}
+						else
+						{
+							float hl = gridVertices[z * _resolution + x - 1].altitude();
+							float hb = gridVertices[(z - 1) * _resolution + x].altitude();
+							normal = Vector3(hl - h, gridStepInWUs, hb - h).normalized();
+							//{		// Verify
+							//	Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));
+							//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
+							//	Vector3 normal1 = (PB - P).cross(PL - P).normalized();
+							//	if (!equal(normal1, normal))	// DEBUGRIC
+							//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+							//}
+						}
 					}
+					Color c = encodeNormal(normal);
+					m_normalMapImage->set_pixel(x, z, c);
 				}
-				m_normalMapImage->set_pixel(x, z, encodeNormal(normal));
-			}
-		m_normalMapImage->unlock();
-		m_heightMapImage->unlock();
+			m_normalMapImage->unlock();
+			m_heightMapImage->unlock();
 
-		{
-			Ref<ImageTexture> tex = ImageTexture::_new();
-			tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
-			m_heightMapTexture = tex;
-			m_heightMapTexModified = true;
-			//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
+			//cache.writeHeightmap(m_heightMapImage);
+			//cache.writeNormalmap(m_normalMapImage);
+
+			//{
+			//	int64_t h1 = m_heightMapImage->get_height();
+			//	int64_t w1 = m_heightMapImage->get_width();
+			//	Image::Format f1 = m_heightMapImage->get_format();
+			//	m_heightMapImage->convert(godot::Image::FORMAT_RGB8);
+			//	//m_heightMapImage = cache.readHeigthmap(loadingHeighmapOK);
+			//	m_heightMapImage->convert(Image::FORMAT_RH);
+			//	//m_normalMapImage = cache.readNormalmap(loadingNormalmapOK);
+			//	//m_normalMapImage->convert(Image::FORMAT_RGB8);
+			//	int64_t h = m_heightMapImage->get_height();
+			//	int64_t w = m_heightMapImage->get_width();
+			//	Image::Format f = m_heightMapImage->get_format();
+			//	m_heightMapImage->lock();
+			//	m_normalMapImage->lock();
+			//	for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
+			//		for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
+			//		{
+			//			Color c = m_heightMapImage->get_pixel(x, z);
+			//			c = m_normalMapImage->get_pixel(x, z);
+			//		}
+			//	m_normalMapImage->unlock();
+			//	m_heightMapImage->unlock();
+			//}
+		}
+	}
+
+	{
+		Ref<ImageTexture> tex = ImageTexture::_new();
+		tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
+		m_heightMapTexture = tex;
+		m_heightMapTexModified = true;
+		//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
 		}
 
-		{
-			Ref<ImageTexture> tex = ImageTexture::_new();
-			tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
-			m_normalMapTexture = tex;
-			m_normalMapTexModified = true;
-			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
-		}
-
+	{
+		Ref<ImageTexture> tex = ImageTexture::_new();
+		tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
+		m_normalMapTexture = tex;
+		m_normalMapTexModified = true;
+		//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
 	}
 
 	// Creating Splat Map Texture
@@ -962,10 +983,27 @@ size_t QuadrantId::distanceInPerimeter(QuadrantId& q)
 		return distanceOnZ;
 }
 
-void Quadrant::populateGridVertices(float& viewerPosX, float& viewerPosZ)
+TheWorld_Utils::MeshCacheBuffer Quadrant::getMeshCacheBuffer(void)
+{
+	std::string dir = GDN_TheWorld_Globals::getClientDataDir();
+	TheWorld_Utils::MeshCacheBuffer cache(dir, m_quadrantId.getGridStepInWU(), m_quadrantId.getNumVerticesPerSize(), m_quadrantId.getLevel(), m_quadrantId.getLowerXGridVertex(), m_quadrantId.getLowerZGridVertex());
+	return cache;
+}
+
+//std::string Quadrant::getCacheFileName()
+//{
+//	String userPath = OS::get_singleton()->get_user_data_dir();
+//	char* s = userPath.alloc_c_string();
+//	TheWorld_Utils::MeshCacheBuffer cache(std::string(s), m_quadrantId.getGridStepInWU(), m_quadrantId.getNumVerticesPerSize(), m_quadrantId.getLevel(), m_quadrantId.getLowerXGridVertex(), m_quadrantId.getLowerZGridVertex());
+//	godot::api->godot_free(s);
+//	std::string cachePath = cache.getFilePath();
+//	return cachePath;
+//}
+
+void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
 {
 	BYTE shortBuffer[256 + 1];
-	size_t size;
+	//TheWorld_Utils::TimerMs clock;
 
 	//{
 	//	GridVertex v(0.12F, 0.1212F, 0.1313F, 1);
@@ -979,96 +1017,8 @@ void Quadrant::populateGridVertices(float& viewerPosX, float& viewerPosZ)
 
 	size_t serializedVertexSize = 0;
 	TheWorld_Utils::GridVertex v;
-	// Serialize an empy GridVertex only to obtain the size of a serialized GridVertex
+	// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
 	v.serialize(shortBuffer, serializedVertexSize);
-
-	// look for cache in file system
-	char level[4];
-	snprintf(level, 4, "%03d", m_quadrantId.getLevel());
-	String userPath = OS::get_singleton()->get_user_data_dir();
-	char* s = userPath.alloc_c_string();
-	string cachePath = string(s) + "\\" + "Cache" + "\\" + "ST-" + to_string(m_quadrantId.getGridStepInWU()) + "_SZ-" + to_string(m_quadrantId.getNumVerticesPerSize()) + "\\L-" + string(level);
-	godot::api->godot_free(s);
-	if (!fs::exists(cachePath))
-	{
-		fs::create_directories(cachePath);
-	}
-	string cacheFileName = "X-" + to_string(m_quadrantId.getLowerXGridVertex()) + "_Z-" + to_string(m_quadrantId.getLowerZGridVertex());
-	string cacheFileNameFull = cachePath + "\\" + cacheFileName;
-	if (fs::exists(cacheFileNameFull))
-	{
-		FILE* inFile = nullptr;
-		errno_t err = fopen_s(&inFile, cacheFileNameFull.c_str(), "rb");
-		if (err != 0)
-			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Open " + cacheFileNameFull + " in errore - Err=" + to_string(err)).c_str()));
-
-		if (fread(shortBuffer, 1, 1, inFile) != 1)	// "0"
-			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Read error 1!").c_str()));
-
-		// get size of m_vectGridVertices.size() type: in short the size of a size_t
-		serializeToByteStream<size_t>(m_vectGridVertices.size(), shortBuffer, size);
-		// read the serialized size of the vector of GridVertex
-		if (fread(shortBuffer, size, 1, inFile) != 1)
-			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Read error 2!").c_str()));
-		// and deserialize it
-		size_t vectSize = deserializeFromByteStream<size_t>(shortBuffer, size);
-
-		// alloc buffer to contain the serialized entire vector of GridVertex
-		size_t streamBufferSize = vectSize * serializedVertexSize;
-		BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
-		if (streamBuffer == nullptr)
-			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Allocation error!").c_str()));
-
-		//size_t num = 0;
-		//size_t sizeRead = 0;
-		//while (!feof(inFile))
-		//{
-		//	size_t i = fread(streamBuffer + sizeRead, serializedVertexSize, 1, inFile);
-		//	sizeRead += serializedVertexSize;
-		//	num++;
-		//}
-		size_t s = fread(streamBuffer, streamBufferSize, 1, inFile);
-		//size_t s = fread(streamBuffer, serializedVertexSize, vectSize, inFile);
-		//if (s != 1)
-		//{
-		//	free(streamBuffer);
-		//	int i = feof(inFile);
-		//	i = ferror(inFile);
-		//	throw(MapManagerException(__FUNCTION__, string("Read error 3! feof " + to_string(feof(inFile)) + " ferror " + to_string(ferror(inFile))).c_str()));
-		//}
-
-		fclose(inFile);
-
-		m_vectGridVertices.clear();
-
-		BYTE* movingStreamBuffer = streamBuffer;
-		BYTE* endOfBuffer = streamBuffer + streamBufferSize;
-		while (movingStreamBuffer < endOfBuffer)
-		{
-			m_vectGridVertices.push_back(TheWorld_Utils::GridVertex(movingStreamBuffer, size));	// circa 2 sec
-			movingStreamBuffer += size;
-		}
-
-		free(streamBuffer);
-
-		if (m_vectGridVertices.size() != vectSize)
-			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Sequence error 4!").c_str()));
-
-		if (viewerPosX != 0 && viewerPosZ != 0)
-		{
-			std::vector<float> inCoords;
-			std::vector<float> outCoords;
-			inCoords.push_back(viewerPosX);
-			inCoords.push_back(viewerPosZ);
-			m_quadTree->Viewer()->Globals()->Client()->MapManagerCalcNextCoordOnTheGridInWUs(inCoords, outCoords);
-			viewerPosX = outCoords[0];
-			viewerPosZ = outCoords[1];
-		}
-
-		m_populated = true;
-
-		return;
-	}
 
 	float lowerXGridVertex = m_quadrantId.getLowerXGridVertex();
 	float lowerZGridVertex = m_quadrantId.getLowerZGridVertex();
@@ -1076,110 +1026,31 @@ void Quadrant::populateGridVertices(float& viewerPosX, float& viewerPosZ)
 	int numVerticesPerSize = m_quadrantId.getNumVerticesPerSize();
 	int lvl = m_quadrantId.getLevel();
 	std::string buffGridVertices;
-	TimerMs clock; // Timer<milliseconds, steady_clock>
-	clock.tick();
-	m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(viewerPosX, viewerPosZ,
-																	 lowerXGridVertex, lowerZGridVertex,
-																	 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
-																	 numVerticesPerSize, gridStepinWU, lvl,
-																	 buffGridVertices);
-	clock.tock();
-	m_quadTree->Viewer()->Globals()->debugPrint(String("DURATION - QUADRANT ") + getId().getId().c_str() + " TAG=" + getId().getTag().c_str() + " - client MapManagerGetVertices " + std::to_string(clock.duration().count()).c_str() + " ms");
 
-	//std::vector<SQLInterface::GridVertex> worldVertices;
-	//float lowerXGridVertex = m_quadrantId.getLowerXGridVertex();
-	//float lowerZGridVertex = m_quadrantId.getLowerZGridVertex();
-	//float gridStepinWU = m_quadrantId.getGridStepInWU();
-	//m_mapManager->getVertices(lowerXGridVertex, lowerZGridVertex, TheWorld_MapManager::MapManager::anchorType::upperleftcorner, m_quadrantId.getNumVerticesPerSize(), m_quadrantId.getNumVerticesPerSize(), worldVertices, gridStepinWU, m_quadrantId.getLevel());
+	// look for cache in file system
+	TheWorld_Utils::MeshCacheBuffer cache = getMeshCacheBuffer();
+	std::string meshId = cache.getMeshIdFromMeshCache();
 
-	//for (int z = 0; z < m_quadrantId.getNumVerticesPerSize(); z++)			// m_heightMapImage->get_height()
-	//	for (int x = 0; x < m_quadrantId.getNumVerticesPerSize(); x++)		// m_heightMapImage->get_width()
-	//	{
-	//		SQLInterface::GridVertex& v = worldVertices[z * m_quadrantId.getNumVerticesPerSize() + x];
-	//		m_vectGridVertices.push_back(GridVertex(v.posX(), v.altitude(), v.posZ(), m_quadrantId.getLevel()));
-	//	}
-
-	//if (viewerPosX != 0 && viewerPosZ != 0)
-	//{
-	//	viewerPosX = m_quadTree->Viewer()->Globals()->Client()->MapManagercalcNextCoordOnTheGridInWUs(viewerPosX);
-	//	viewerPosZ = m_quadTree->Viewer()->Globals()->Client()->MapManagercalcNextCoordOnTheGridInWUs(viewerPosZ);
-	//}
-
+	if (meshId.length() > 0)
 	{
-		const char* movingStreamBuffer = buffGridVertices.c_str();
-		const char* endOfBuffer = movingStreamBuffer + buffGridVertices.size();
-		
-		movingStreamBuffer++;	// bypass "0"
-
-		size_t vectSize = deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
-		movingStreamBuffer += size;
-
-		m_vectGridVertices.clear();
-
-		while (movingStreamBuffer < endOfBuffer)
-		{
-			m_vectGridVertices.push_back(TheWorld_Utils::GridVertex((BYTE*)movingStreamBuffer, size));	// circa 2 sec
-			movingStreamBuffer += size;
-		}
-
-		if (m_vectGridVertices.size() != vectSize)
-			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Sequence error 4!").c_str()));
+		//clock.tick();
+		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(viewerPosX, viewerPosZ,
+																		 lowerXGridVertex, lowerZGridVertex,
+																		 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
+																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrain, meshId);
+		//clock.tock();
+		//m_quadTree->Viewer()->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + getId().getId().c_str() + " TAG=" + getId().getTag().c_str() + " - client MapManagerGetVertices (quadrant found in cache) " + std::to_string(clock.duration().count()).c_str() + " ms");
 	}
-	
-	FILE* outFile = nullptr;
-	errno_t err = fopen_s(&outFile, cacheFileNameFull.c_str(), "wb");
-	if (err != 0)
+	else
 	{
-		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Open " + cacheFileNameFull + " in errore - Err=" + to_string(err)).c_str()));
+		//clock.tick();
+		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(viewerPosX, viewerPosZ,
+																		 lowerXGridVertex, lowerZGridVertex,
+																		 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
+																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrain, meshId);
+		//clock.tock();
+		//m_quadTree->Viewer()->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + getId().getId().c_str() + " TAG=" + getId().getTag().c_str() + " - client MapManagerGetVertices " + std::to_string(clock.duration().count()).c_str() + " ms");
 	}
-
-	{
-		if (fwrite(buffGridVertices.c_str(), buffGridVertices.size(), 1, outFile) != 1)
-		{
-			throw(GDN_TheWorld_Exception(__FUNCTION__, string("Write error 3!").c_str()));
-		}
-	}
-
-	//{
-	//	size_t vectSize = m_vectGridVertices.size();
-
-	//	size_t streamBufferSize = vectSize * serializedVertexSize;
-	//	BYTE* streamBuffer = (BYTE*)calloc(1, streamBufferSize);
-	//	if (streamBuffer == nullptr)
-	//		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Allocation error!").c_str()));
-
-	//	size_t sizeToWrite = 0;
-	//	for (size_t idx = 0; idx < vectSize; idx++)
-	//	{
-	//		m_vectGridVertices[idx].serialize(streamBuffer + sizeToWrite, size);
-	//		sizeToWrite += size;
-	//	}
-
-	//	if (fwrite("0", 1, 1, outFile) != 1)
-	//	{
-	//		free(streamBuffer);
-	//		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Write error 1!").c_str()));
-	//	}
-
-	//	serializeToByteStream<size_t>(vectSize, shortBuffer, size);
-	//	if (fwrite(shortBuffer, size, 1, outFile) != 1)
-	//	{
-	//		free(streamBuffer);
-	//		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Write error 2!").c_str()));
-	//	}
-
-	//	if (fwrite(streamBuffer, sizeToWrite, 1, outFile) != 1)
-	//	{
-	//		free(streamBuffer);
-	//		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Write error 3!").c_str()));
-	//	}
-
-	//	free(streamBuffer);
-	//}
-
-	fclose(outFile);
-
-	m_populated = true;
 
 	return;
 }

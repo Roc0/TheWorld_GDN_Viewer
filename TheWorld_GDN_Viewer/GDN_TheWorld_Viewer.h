@@ -37,7 +37,7 @@ namespace godot
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 	// Chunk and QuadTree coordinates are in Viewer Node local coordinate System
-	class GDN_TheWorld_Viewer : public Spatial
+	class GDN_TheWorld_Viewer : public Spatial, public TheWorld_ClientServer::ClientCallback
 	{
 		GODOT_CLASS(GDN_TheWorld_Viewer, Spatial)
 
@@ -46,6 +46,8 @@ namespace godot
 		~GDN_TheWorld_Viewer();
 		bool init(void);
 		void deinit(void);
+
+		void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
 
 		static void _register_methods();
 
@@ -61,6 +63,10 @@ namespace godot
 
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		void resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift);
+		bool initialWordlViewerPosSet(void)
+		{
+			return m_initialWordlViewerPosSet;
+		}
 		Spatial* getWorldNode(void);
 		MeshCache* getMeshCache(void) { return m_meshCache.get(); }
 		//void getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
@@ -82,6 +88,11 @@ namespace godot
 		int getNumChunks(void);
 		int getNumActiveChunks(void);
 		int getProcessDuration(void);
+		int getProcessNotOwnsLock(void);
+		int getNumQuadrant();
+		int getNuminitializedQuadrant();
+		int getNumVisibleQuadrant();
+		int getNuminitializedVisibleQuadrant();
 		void refreshQuadTreeStatistics(void);
 		GDN_TheWorld_Globals::ChunkDebugMode getRequiredChunkDebugMode(void)
 		{
@@ -128,6 +139,11 @@ namespace godot
 		int m_numJoins;
 		int m_numChunks;
 		int m_numActiveChunks;
+		int m_numProcessNotOwnsLock;
+		int m_numQuadrant;
+		int m_numinitializedQuadrant;
+		int m_numVisibleQuadrant;
+		int m_numinitializedVisibleQuadrant;
 		// Statistics data
 
 		bool m_debugContentVisibility;
@@ -155,6 +171,7 @@ namespace godot
 		
 		// World Data
 		MapQuadTree m_mapQuadTree;
+		std::recursive_mutex m_mtxQuadTree;
 		QuadrantId m_computedCameraQuadrantId;
 		bool m_refreshMapQuadTree;
 		int m_numWorldVerticesPerSize;
@@ -167,7 +184,6 @@ namespace godot
 		// streamer thread
 		std::thread m_streamerThread;
 		bool m_streamerThreadRequiredExit;
-		std::recursive_mutex m_mutexStreamerThread;
 	};
 
 }

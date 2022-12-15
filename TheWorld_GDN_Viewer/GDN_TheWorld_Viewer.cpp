@@ -12,6 +12,7 @@
 #include <Shader.hpp>
 #include <ImageTexture.hpp>
 #include <File.hpp>
+#include <filesystem>
 
 #include "MeshCache.h"
 #include "QuadTree.h"
@@ -20,6 +21,8 @@
 
 using namespace godot;
 using namespace std;
+
+namespace fs = std::filesystem;
 
 // World Node Local Coordinate System is the same as MapManager coordinate system
 // Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -34,6 +37,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("_notification", &GDN_TheWorld_Viewer::_notification);
 
 	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
+	register_method("initial_world_viewer_pos_set", &GDN_TheWorld_Viewer::initialWordlViewerPosSet);
 	register_method("dump_required", &GDN_TheWorld_Viewer::setDumpRequired);
 	//register_method("get_camera_chunk_global_transform_of_aabb", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB);
 	register_method("get_camera_chunk_local_aabb", &GDN_TheWorld_Viewer::getCameraChunkLocalAABB);
@@ -45,6 +49,11 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_num_joins", &GDN_TheWorld_Viewer::getNumJoins);
 	register_method("get_num_chunks", &GDN_TheWorld_Viewer::getNumChunks);
 	register_method("get_num_active_chunks", &GDN_TheWorld_Viewer::getNumActiveChunks);
+	register_method("get_num_quadrant", &GDN_TheWorld_Viewer::getNumQuadrant);
+	register_method("get_num_initialized_quadrant", &GDN_TheWorld_Viewer::getNuminitializedQuadrant);
+	register_method("get_num_visible_quadrant", &GDN_TheWorld_Viewer::getNumVisibleQuadrant);
+	register_method("get_num_initialized_visible_quadrant", &GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant);
+	register_method("get_num_process_not_owns_lock", &GDN_TheWorld_Viewer::getProcessNotOwnsLock);
 	register_method("get_process_duration", &GDN_TheWorld_Viewer::getProcessDuration);
 	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
 	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
@@ -76,6 +85,11 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numJoins = 0;
 	m_numActiveChunks = 0;
 	m_numChunks = 0;
+	m_numProcessNotOwnsLock = 0;
+	m_numQuadrant = 0;
+	m_numinitializedQuadrant = 0;
+	m_numVisibleQuadrant = 0;
+	m_numinitializedVisibleQuadrant = 0;
 	m_debugContentVisibility = true;
 	m_updateTerrainVisibilityRequired = false;
 	m_currentChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
@@ -114,6 +128,243 @@ void GDN_TheWorld_Viewer::deinit(void)
 
 }
 
+void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply)
+{
+	std::string method = reply.getMethod();
+
+	if (reply.error())
+	{
+		Globals()->setStatus(TheWorldStatus::error);
+		Globals()->errorPrint((std::string("GDN_TheWorld_Viewer::replyFromServer: error method ") + method + std::string(" rc=") + std::to_string(reply.getErrorCode()) + std::string(" ") + reply.getErrorMessage()).c_str());
+		return;
+	}
+
+	try
+	{
+		if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
+		{
+			TheWorld_Utils::TimerMs clock("GDN_TheWorld_Viewer::replyFromServer", "CLIENT SIDE", false, true);
+			
+			//clock.headerMsg("MapManager::getVertices - Acq input");
+			//clock.tick();
+
+			if (reply.getNumReplyParams() < 3)
+			{
+				std::string m = std::string("Reply MapManager::getVertices error (not enough params replied)");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+
+			ClientServerVariant v = reply.getReplyParam(0);
+			const auto _viewerPosX(std::get_if<float>(&v));
+			if (_viewerPosX == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not return a float as first return param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float viewerPosX = *_viewerPosX;
+
+			v = reply.getReplyParam(1);
+			const auto _viewerPosZ(std::get_if<float>(&v));
+			if (_viewerPosZ == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not return a float as second return param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float viewerPosZ = *_viewerPosZ;
+
+			ClientServerVariant vbuffGridVertices = reply.getReplyParam(2);
+			const auto _buffGridVerticesFromServer(std::get_if<std::string>(&vbuffGridVertices));
+			if (_buffGridVerticesFromServer == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not return a string as third return param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+
+			v = reply.getInputParam(2);
+			const auto _lowerXGridVertex(std::get_if<float>(&v));
+			if (_lowerXGridVertex == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a string as third input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float lowerXGridVertex = *_lowerXGridVertex;
+
+			v = reply.getInputParam(3);
+			const auto _lowerZGridVertex(std::get_if<float>(&v));
+			if (_lowerZGridVertex == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a string as forth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float lowerZGridVertex = *_lowerZGridVertex;
+
+			v = reply.getInputParam(4);
+			const auto _numVerticesPerSize(std::get_if<int>(&v));
+			if (_numVerticesPerSize == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a string as fifth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			int numVerticesPerSize = *_numVerticesPerSize;
+
+			v = reply.getInputParam(5);
+			const auto _gridStepinWU(std::get_if<float>(&v));
+			if (_gridStepinWU == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a string as sixth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float gridStepinWU = *_gridStepinWU;
+
+			v = reply.getInputParam(6);
+			const auto _level(std::get_if<int>(&v));
+			if (_level == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a string as seventh input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			int level = *_level;
+
+			v = reply.getInputParam(7);
+			const auto _meshIdFromServer(std::get_if<std::string>(&v));
+			if (_meshIdFromServer == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a string as eight input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			std::string meshIdFromServer = *_meshIdFromServer;
+
+			v = reply.getInputParam(8);
+			const auto _setCamera(std::get_if<bool>(&v));
+			if (_setCamera == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a string as nineth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			bool setCamera = *_setCamera;
+
+			v = reply.getInputParam(9);
+			const auto _cameraDistanceFromTerrain(std::get_if<float>(&v));
+			if (_cameraDistanceFromTerrain == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a string as tenth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraDistanceFromTerrain = *_cameraDistanceFromTerrain;
+
+			QuadrantId quadrantId(lowerXGridVertex, lowerZGridVertex, level, numVerticesPerSize, gridStepinWU);
+
+			//clock.tock();
+
+			//clock.headerMsg("MapManager::getVertices - Lock m_mtxQuadTree");
+			//clock.tick();
+			//std::lock_guard lock(m_mtxQuadTree);
+			m_mtxQuadTree.lock();
+			//clock.tock();
+			if (m_mapQuadTree.contains(quadrantId))
+			{
+				QuadTree* quadTree = m_mapQuadTree[quadrantId].get();
+				m_mtxQuadTree.unlock();
+				if (quadTree->status() == QuadrantStatus::getVerticesInProgress)
+				{
+					//clock.headerMsg("MapManager::getVertices - Lock quadrantMutex");
+					//clock.tick();
+					std::recursive_mutex& quadrantMutex = quadTree->getQuadrantMutex();
+					std::lock_guard lock(quadrantMutex);
+					//clock.tock();
+
+					std::vector<TheWorld_Utils::GridVertex>& vectGridVertices = quadTree->getQuadrant()->getGridVertices();
+
+					TheWorld_Utils::MeshCacheBuffer cache = quadTree->getQuadrant()->getMeshCacheBuffer();
+					std::string meshIdFromBuffer;
+					{
+						// ATTENZIONE
+						std::lock_guard lock(m_mtxQuadTree);	// SUPER DEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
+						cache.refreshMeshCacheFromBuffer(*_buffGridVerticesFromServer, meshIdFromBuffer, vectGridVertices);
+					}
+
+					if (meshIdFromBuffer != meshIdFromServer)
+						throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshIUd from server").c_str()));
+
+					if (vectGridVertices.size() == 0)
+						cache.readVerticesFromMeshCache(meshIdFromServer, vectGridVertices);
+
+					quadTree->getQuadrant()->setMeshId(meshIdFromServer);
+
+					clock.headerMsg("MapManager::getVertices - resetMaterialParams");
+					clock.tick();
+					{
+						// ATTENZIONE
+						//std::lock_guard lock(m_mtxQuadTree);
+						quadTree->materialParamsNeedReset(true, &cache);
+						quadTree->resetMaterialParams();
+					}
+					clock.tock();
+					//Globals()->debugPrint(String("ELAPSED - QUADRANT ") + quadTree->getQuadrant()->getId().getId().c_str() + " TAG=" + quadTree->getQuadrant()->getId().getTag().c_str() + " - GDN_TheWorld_Viewer::replyFromServer MapManager::getVertices (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
+
+					if (setCamera)
+					{
+						quadTree->setVisible(true);
+
+						forceRefreshMapQuadTree();
+
+						TheWorld_Utils::GridVertex viewerPos(viewerPosX, 0, viewerPosZ, level);
+						std::vector<TheWorld_Utils::GridVertex>::iterator it = std::find(vectGridVertices.begin(), vectGridVertices.end(), viewerPos);
+						if (it == vectGridVertices.end())
+						{
+							bool found = false;
+							for (it = vectGridVertices.begin(); it != vectGridVertices.end(); it++)
+							{
+								if (it->equalApartFromAltitude(viewerPos))
+								{
+									found = true;
+									break;
+								}
+							}
+							if (!found)
+								throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Not found WorldViewer Pos").c_str()));
+						}
+						Vector3 cameraPos(viewerPosX, it->altitude() + cameraDistanceFromTerrain, viewerPosZ);		// MapManager coordinates are local coordinates of WorldNode
+						Vector3 lookAt(viewerPosX + cameraDistanceFromTerrain, it->altitude(), viewerPosZ + cameraDistanceFromTerrain);
+
+						// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
+						//Transform t = get_transform();
+						//t.origin = Vector3(quadTree->getQuadrant()->getGridVertices()[0].posX(), 0, quadTree->getQuadrant()->getGridVertices()[0].posZ());
+						//set_transform(t);
+
+						WorldCamera()->initCameraInWorld(cameraPos, lookAt);
+
+						m_initialWordlViewerPosSet = true;
+					}
+
+					quadTree->setStatus(QuadrantStatus::initialized);
+					
+					m_refreshMapQuadTree = true;
+				}
+			}
+			else
+			{
+				m_mtxQuadTree.unlock();
+			}
+		}
+		else
+		{
+			Globals()->setStatus(TheWorldStatus::error);
+			Globals()->errorPrint((std::string("GDN_TheWorld_Viewer::replyFromServer: unknow method ") + method).c_str());
+		}
+	}
+	catch (GDN_TheWorld_Exception ex)
+	{
+		Globals()->setStatus(TheWorldStatus::error);
+		Globals()->errorPrint(String(ex.exceptionName()) + String(" caught - ") + ex.what());
+	}
+	catch (...)
+	{
+		Globals()->setStatus(TheWorldStatus::error);
+		Globals()->errorPrint("GDN_TheWorld_Globals::replyFromServer: exception caught");
+	}
+}
+
 void GDN_TheWorld_Viewer::_init(void)
 {
 	//Cannot find Globals pointer as current node is not yet in the scene
@@ -125,7 +376,14 @@ void GDN_TheWorld_Viewer::_init(void)
 
 void GDN_TheWorld_Viewer::_ready(void)
 {
-	Globals()->debugPrint("GDN_TheWorld_Viewer::_ready");
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	//if (globals->status() != TheWorldStatus::sessionInitialized)
+	//	return;
+
+	globals->debugPrint("GDN_TheWorld_Viewer::_ready");
 
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 
@@ -142,6 +400,13 @@ void GDN_TheWorld_Viewer::_ready(void)
 
 void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 {
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	if (globals->status() != TheWorldStatus::sessionInitialized)
+		return;
+
 	if (event->is_action_pressed("ui_toggle_debug_visibility"))
 	{
 		m_debugContentVisibility = !m_debugContentVisibility;
@@ -211,11 +476,18 @@ void GDN_TheWorld_Viewer::printKeyboardMapping(void)
 
 void GDN_TheWorld_Viewer::_notification(int p_what)
 {
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	if (globals->status() != TheWorldStatus::sessionInitialized)
+		return;
+
 	switch (p_what)
 	{
 		case NOTIFICATION_PREDELETE:
 		{
-			Globals()->debugPrint("GDN_TheWorld_Viewer::_notification - Destroy Viewer");
+			globals->debugPrint("GDN_TheWorld_Viewer::_notification - Destroy Viewer");
 			deinit();
 		}
 		break;
@@ -223,11 +495,11 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		{
 			printKeyboardMapping();
 			string s = "Use Visual Server: "; s += (m_useVisualServer ? "True" : "False");
-			Globals()->infoPrint(s.c_str());
-			Globals()->debugPrint("Enter world");
+			globals->infoPrint(s.c_str());
+			globals->debugPrint("Enter world");
 			if (m_initialWordlViewerPosSet)
 			{
-				std::lock_guard lock(m_mutexStreamerThread);
+				std::lock_guard lock(m_mtxQuadTree);
 				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 				{
 					Chunk::EnterWorldChunkAction action;
@@ -238,10 +510,10 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		break;
 		case NOTIFICATION_EXIT_WORLD:
 		{
-			Globals()->debugPrint("Exit world");
+			globals->debugPrint("Exit world");
 			if (m_initialWordlViewerPosSet)
 			{
-				std::lock_guard lock(m_mutexStreamerThread);
+				std::lock_guard lock(m_mtxQuadTree);
 				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 				{
 					Chunk::ExitWorldChunkAction action;
@@ -252,10 +524,10 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		break;
 		case NOTIFICATION_VISIBILITY_CHANGED:
 		{
-			Globals()->debugPrint("Visibility changed");
+			globals->debugPrint("Visibility changed");
 			if (m_initialWordlViewerPosSet)
 			{
-				std::lock_guard lock(m_mutexStreamerThread);
+				std::lock_guard lock(m_mtxQuadTree);
 				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 				{
 					Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
@@ -325,6 +597,13 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	// To activate _process method add this Node to a Godot Scene
 	//Godot::print("GDN_TheWorld_Viewer::_process");
 
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	if (globals->status() != TheWorldStatus::sessionInitialized)
+		return;
+
 	if (!WorldCamera() || !m_initialWordlViewerPosSet)
 		return;
 
@@ -332,14 +611,17 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (!activeCamera)
 		return;
 
-	//std::lock_guard lock(m_mutexStreamerThread);
-	std::unique_lock<std::recursive_mutex> lock(m_mutexStreamerThread, std::try_to_lock);
+	//std::lock_guard lock(m_mtxQuadTree);
+	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
 	if (!lock.owns_lock())
+	{
+		m_numProcessNotOwnsLock++;
 		return;
+	}
 
-	TimerMcs clock; // Timer<milliseconds, steady_clock>
+	TheWorld_Utils::TimerMcs clock;
 	clock.tick();
-	auto save_duration = finally([&clock, this] { 
+	auto save_duration = TheWorld_Utils::finally([&clock, this] {
 		clock.tock(); 
 		this->m_numProcessExecution++; 
 		this->m_duration += clock.duration().count(); 
@@ -374,8 +656,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS
 	{
 		float farHorizon = cameraPosGlobalCoord.y * FAR_HORIZON_MULTIPLIER;
-		if (Globals()->heightmapSizeInWUs() > farHorizon)
-			farHorizon = Globals()->heightmapSizeInWUs();
+		if (globals->heightmapSizeInWUs() > farHorizon)
+			farHorizon = globals->heightmapSizeInWUs();
 
 		// Look for Camera QuadTree: put it as first element of quadrantIdNeeded
 		vector<QuadrantId> quadrantIdNeeded;
@@ -395,11 +677,15 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		{
 			// ... btw we create new quad tree containing camera
 			float x = cameraPosGlobalCoord.x, z = cameraPosGlobalCoord.z;
-			float _gridStepInWU = Globals()->gridStepInWU();
+			float _gridStepInWU = globals->gridStepInWU();
 			QuadrantId q(x, z, m_worldViewerLevel, m_numWorldVerticesPerSize, _gridStepInWU);
 			quadrantIdNeeded.push_back(q);
 			quadrantIdNeeded[0].setTag("Camera");
 		}
+
+		//
+		// now quadrantIdNeeded has 1 element and quadrantIdNeeded[0] is the camera 
+		//
 
 		// if forced or the camera has changed quadrant the cache is repopulated
 		if (m_refreshMapQuadTree || m_computedCameraQuadrantId != quadrantIdNeeded[0])
@@ -515,7 +801,11 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				else
 				{
 					// Quadrant too far from camera: need to be deleted
-					quadrantToDelete.push_back(itQuadTree->first);
+					if (itQuadTree->second->currentStatus() == QuadrantStatus::initialized || itQuadTree->second->currentStatus() == QuadrantStatus::uninitialized)
+					{
+						itQuadTree->second->setVisible(false);
+						quadrantToDelete.push_back(itQuadTree->first);
+					}
 					if (m_cameraQuadTree != nullptr /* && m_cameraQuadTree->isValid()*/ && itQuadTree->first == m_cameraQuadTree->getQuadrant()->getId())
 					{
 						// if we delete the ones containing old camera chunk we invalidate it
@@ -746,11 +1036,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
+		//itQuadTree->second->resetMaterialParams();
 		itQuadTree->second->updateMaterialParams();
 	}
 
 	// Check for Dump
-	if (TIME_INTERVAL_BETWEEN_DUMP != 0 && Globals()->isDebugEnabled())
+	if (TIME_INTERVAL_BETWEEN_DUMP != 0 && globals->isDebugEnabled())
 	{
 		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastDump > TIME_INTERVAL_BETWEEN_DUMP * 1000)
@@ -771,12 +1062,14 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastStatistic > TIME_INTERVAL_BETWEEN_STATISTICS)
 		{
+			m_numProcessNotOwnsLock = 0;
+			
 			refreshQuadTreeStatistics();
 			
 			if (m_numProcessExecution > 0)
 			{
 				m_averageProcessDuration = int(m_duration / m_numProcessExecution);
-				//Globals()->debugPrint(String("m_numProcessExecution=") + std::to_string(m_numProcessExecution).c_str() + ", m_duration=" + std::to_string(m_duration).c_str() + ", m_averageProcessDuration=" + std::to_string(m_averageProcessDuration).c_str());
+				//globals->debugPrint(String("m_numProcessExecution=") + std::to_string(m_numProcessExecution).c_str() + ", m_duration=" + std::to_string(m_duration).c_str() + ", m_averageProcessDuration=" + std::to_string(m_averageProcessDuration).c_str());
 				m_duration = 0;
 				m_numProcessExecution = 0;
 			}
@@ -790,6 +1083,13 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 void GDN_TheWorld_Viewer::_physics_process(float _delta)
 {
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	if (globals->status() != TheWorldStatus::sessionInitialized)
+		return;
+
 	Input* input = Input::get_singleton();
 
 	if (input->is_action_pressed("ui_ctrl"))
@@ -857,48 +1157,11 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 		QuadrantId quadrantId(x, z, level, m_numWorldVerticesPerSize, _gridStepInWU);
 		quadrantId.setTag("Camera");
 
-		std::lock_guard lock(m_mutexStreamerThread);
+		std::lock_guard lock(m_mtxQuadTree);
 
 		m_mapQuadTree.clear();
 		m_mapQuadTree[quadrantId] = make_unique<QuadTree>(this, quadrantId);
-		//m_mapQuadTree[quadrantId]->setTag("Camera");
-		m_mapQuadTree[quadrantId]->init(x, z);
-		m_mapQuadTree[quadrantId]->setValid();
-		m_mapQuadTree[quadrantId]->setVisible(true);
-
-		forceRefreshMapQuadTree();
-
-		TheWorld_Utils::GridVertex viewerPos(x, 0, z, level);
-		std::vector<TheWorld_Utils::GridVertex> gridVertices = m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices();
-		std::vector<TheWorld_Utils::GridVertex>::iterator it = std::find(gridVertices.begin(), gridVertices.end(), viewerPos);
-		if (it == gridVertices.end())
-		{
-			bool found = false;
-			for (it = gridVertices.begin(); it != gridVertices.end(); it++)
-			{
-				if (it->equalsApartFromAltitude(viewerPos))
-				{
-					found = true;
-					break;
-				}
-			}
-			if (!found)
-			{
-				Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "Not found WorldViewer Pos");
-				return;
-			}
-		}
-		Vector3 cameraPos(x, it->altitude() + cameraDistanceFromTerrain, z);		// MapManager coordinates are local coordinates of WorldNode
-		Vector3 lookAt(x + cameraDistanceFromTerrain, it->altitude(), z + cameraDistanceFromTerrain);
-
-		// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
-		//Transform t = get_transform();
-		//t.origin = Vector3(m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices()[0].posX(), 0, m_mapQuadTree[quadrantId]->getQuadrant()->getGridVertices()[0].posZ());
-		//set_transform(t);
-		
-		WorldCamera()->initCameraInWorld(cameraPos, lookAt);
-
-		m_initialWordlViewerPosSet = true;
+		m_mapQuadTree[quadrantId]->init(x, z, true, cameraDistanceFromTerrain);
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
@@ -1043,22 +1306,49 @@ String GDN_TheWorld_Viewer::getCameraChunkId(void)
 
 void GDN_TheWorld_Viewer::refreshQuadTreeStatistics()
 {
+	std::lock_guard lock(m_mtxQuadTree);
+
 	int numSplits = 0;
 	int numJoins = 0;
 	int numChunks = 0;
 	int numActiveChunks = 0;
+	int numQuadrant = (int)m_mapQuadTree.size();
+	int numinitializedQuadrant = 0;
+	int numVisibleQuadrant = 0;
+	int numinitializedVisibleQuadrant = 0;
+
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		numSplits += itQuadTree->second->getNumSplits();
-		numJoins += itQuadTree->second->getNumJoins();
-		numChunks += itQuadTree->second->getNumChunks();
-		numActiveChunks += itQuadTree->second->getNumActiveChunks();
+		if (itQuadTree->second->isVisible())
+		{
+			numVisibleQuadrant++;
+			if (itQuadTree->second->statusInitialized())
+				numinitializedVisibleQuadrant++;
+		}
+		
+		if (itQuadTree->second->statusInitialized())
+		{
+			numSplits += itQuadTree->second->getNumSplits();
+			numJoins += itQuadTree->second->getNumJoins();
+			numChunks += itQuadTree->second->getNumChunks();
+			numActiveChunks += itQuadTree->second->getNumActiveChunks();
+			numinitializedQuadrant++;
+		}
 	}
 
 	m_numSplits = numSplits;
 	m_numJoins = numJoins;
 	m_numChunks = numChunks;
 	m_numActiveChunks = numActiveChunks;
+	m_numQuadrant = numQuadrant;
+	m_numinitializedQuadrant = numinitializedQuadrant;
+	m_numVisibleQuadrant = numVisibleQuadrant;
+	m_numinitializedVisibleQuadrant = numinitializedVisibleQuadrant;
+}
+
+int GDN_TheWorld_Viewer::getProcessNotOwnsLock(void)
+{
+	return m_numProcessNotOwnsLock;
 }
 
 int GDN_TheWorld_Viewer::getNumChunks(void)
@@ -1080,6 +1370,26 @@ int GDN_TheWorld_Viewer::getNumSplits()
 int GDN_TheWorld_Viewer::getNumJoins()
 {
 	return m_numJoins;
+}
+
+int GDN_TheWorld_Viewer::getNumQuadrant()
+{
+	return m_numQuadrant;
+}
+
+int GDN_TheWorld_Viewer::getNuminitializedQuadrant()
+{
+	return m_numinitializedQuadrant;
+}
+
+int GDN_TheWorld_Viewer::getNumVisibleQuadrant()
+{
+	return m_numVisibleQuadrant;
+}
+
+int GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant()
+{
+	return m_numinitializedVisibleQuadrant;
 }
 
 int GDN_TheWorld_Viewer::getProcessDuration(void)
@@ -1107,6 +1417,8 @@ void GDN_TheWorld_Viewer::dump()
 		dumpRecurseIntoChildrenNodes(nodes, 1);
 		Globals()->debugPrint("============================================");
 	}
+	
+	std::lock_guard lock(m_mtxQuadTree);
 
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
@@ -1146,9 +1458,10 @@ void GDN_TheWorld_Viewer::streamer(void)
 {
 	while (!m_streamerThreadRequiredExit)
 	{
+		try
 		{
-			//std::lock_guard lock(m_mutexStreamerThread);
-			std::unique_lock<std::recursive_mutex> lock(m_mutexStreamerThread, std::try_to_lock);
+			//std::lock_guard lock(m_mtxQuadTree);
+			std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
 			if (lock.owns_lock())
 			{
 				try
@@ -1160,19 +1473,19 @@ void GDN_TheWorld_Viewer::streamer(void)
 						{
 							for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 							{
-								if (!itQuadTree->second->isValid())
+								if (itQuadTree->second->status() == QuadrantStatus::uninitialized)
 								{
 									size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getId().distanceInPerimeter(m_computedCameraQuadrantId);
 									if (distanceInPerimeterFromCameraQuadrant == distance)
 									{
 										float x = 0, z = 0;
 										itQuadTree->second->init(x, z);
-										itQuadTree->second->setValid();
 										exitForNow = true;
 										break;
 									}
 								}
 							}
+
 							if (exitForNow)
 								break;
 						}
@@ -1180,15 +1493,23 @@ void GDN_TheWorld_Viewer::streamer(void)
 				}
 				catch (std::exception& e)
 				{
-					Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, string("GDN_TheWorld_Viewer::streamer - std::exception caught - ") + e.what());
+					Globals()->errorPrint((std::string("GDN_TheWorld_Viewer::streamer - std::exception caught - ") + e.what()).c_str());
 					throw(e);
 				}
 				catch (...)
 				{
-					Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "GDN_TheWorld_Viewer::streamer - Exception caught");
+					Globals()->errorPrint("GDN_TheWorld_Viewer::streamer - Exception caught");
 					throw(new exception("exception caught"));
 				}
 			}
+		}
+		catch (std::exception& e)
+		{
+			Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, string("GDN_TheWorld_Viewer::streamer - std::exception caught - ") + e.what());
+		}
+		catch (...)
+		{
+			Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "GDN_TheWorld_Viewer::streamer - Exception caught");
 		}
 
 		Sleep(STREAMER_SLEEP_TIME);
