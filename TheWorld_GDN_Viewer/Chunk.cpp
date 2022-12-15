@@ -842,7 +842,7 @@ void ChunkDebug::setCameraPos(Vector3 globalCoordCameraLastPos)
 
 		m_viewer->Globals()->debugPrint("Camera vertical on chunk ("
 			+ String(to_string(getPos().getSlotPosX()).c_str()) + ":" + to_string(getPos().getSlotPosZ()).c_str()
-			+ ") - Chunk pos (Global) = "
+			+ ") of " + m_quadTree->getQuadrant()->getId().getName().c_str() + " - Chunk pos (Global) = "
 			+ to_string(globalOriginXInGridInWUs).c_str() + ":" + to_string(globalOriginZInGridInWUs).c_str()
 			+ " - MinH = " + to_string(m_aabb.position.y).c_str()
 			+ " - MaxH = " + to_string((m_aabb.position + m_aabb.size).y).c_str()

@@ -69,15 +69,16 @@ namespace godot
 			m_gridStepInWU = quadrantId.m_gridStepInWU;
 			m_sizeInWU = quadrantId.m_sizeInWU;
 			m_tag = quadrantId.m_tag;
+			m_name = quadrantId.m_name;
 			m_initialized = true;
 		}
 
 		QuadrantId(float x, float z, int level, int numVerticesPerSize, float gridStepInWU)
 		{
 			float gridSizeInWU = (numVerticesPerSize - 1) * gridStepInWU;
-			float f = x / gridSizeInWU;
-			f = floor(f);
-			f = f * gridSizeInWU;
+			//float f = x / gridSizeInWU;
+			//f = floor(f);
+			//f = f * gridSizeInWU;
 			m_lowerXGridVertex = floor(x / gridSizeInWU) * gridSizeInWU;
 			m_lowerZGridVertex = floor(z / gridSizeInWU) * gridSizeInWU;
 			m_numVerticesPerSize = numVerticesPerSize;
@@ -85,6 +86,7 @@ namespace godot
 			m_gridStepInWU = gridStepInWU;
 			m_sizeInWU = (m_numVerticesPerSize - 1) * m_gridStepInWU;
 			m_initialized = true;
+			resetName();
 		}
 
 		bool operator<(const QuadrantId& quadrantId) const
@@ -133,6 +135,7 @@ namespace godot
 			m_gridStepInWU = quadrantId.m_gridStepInWU;
 			m_sizeInWU = quadrantId.m_sizeInWU;
 			m_tag = quadrantId.m_tag;
+			m_name = quadrantId.m_name;
 			m_initialized = true;
 			return *this;
 		}
@@ -142,17 +145,53 @@ namespace godot
 			return "ST" + to_string(m_gridStepInWU) + "_SZ" + to_string(m_numVerticesPerSize) + "_L" + to_string(m_level) + "_X" + to_string(m_lowerXGridVertex) + "_Z" + to_string(m_lowerZGridVertex);
 		}
 
-		float getLowerXGridVertex() { return m_lowerXGridVertex; };
-		float getLowerZGridVertex() { return m_lowerZGridVertex; };
-		int getNumVerticesPerSize() { return m_numVerticesPerSize; };
-		int getLevel() { return m_level; };
-		float getGridStepInWU() { return m_gridStepInWU; };
-		float getSizeInWU() { return m_sizeInWU; };
+		float getLowerXGridVertex()
+		{
+			return m_lowerXGridVertex; 
+		};
+		float getLowerZGridVertex() 
+		{
+			return m_lowerZGridVertex; 
+		};
+		int getNumVerticesPerSize()
+		{
+			return m_numVerticesPerSize;
+		};
+		int getLevel()
+		{
+			return m_level;
+		};
+		float getGridStepInWU() 
+		{
+			return m_gridStepInWU; 
+		};
+		float getSizeInWU()
+		{
+			return m_sizeInWU; 
+		};
 		_declspec(dllexport) QuadrantId getQuadrantId(enum class DirectionSlot dir, int numSlot = 1);
 		void setTag(std::string tag) { m_tag = tag; }
-		std::string getTag(void) { return m_tag; }
+		std::string getTag(void)
+		{
+			return m_tag;
+		}
 		_declspec(dllexport) size_t distanceInPerimeter(QuadrantId& q);
-		bool isInitialized(void) { return m_initialized; }
+		bool isInitialized(void)
+		{
+			return m_initialized;
+		}
+
+		std::string getName(void)
+		{
+			return m_name;
+		}
+
+	private:
+		void resetName(void)
+		{
+			float gridSizeInWU = (m_numVerticesPerSize - 1) * m_gridStepInWU;
+			m_name = "Quadrant-" + std::to_string((int)(m_lowerXGridVertex / gridSizeInWU)) + ":" + std::to_string((int)(m_lowerZGridVertex / gridSizeInWU));
+		}
 
 	private:
 		// ID
@@ -167,6 +206,7 @@ namespace godot
 
 		float m_sizeInWU;
 		std::string m_tag;
+		std::string m_name;
 	};
 
 	class Quadrant

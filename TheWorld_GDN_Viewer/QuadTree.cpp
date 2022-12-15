@@ -970,6 +970,8 @@ QuadrantId QuadrantId::getQuadrantId(enum class DirectionSlot dir, int numSlot)
 	break;
 	}
 
+	q.resetName();
+
 	return q;
 }
 
