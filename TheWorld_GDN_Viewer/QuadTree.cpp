@@ -655,9 +655,9 @@ void ShaderTerrainData::resetMaterialParams(TheWorld_Utils::MeshCacheBuffer& cac
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
 
 	bool loadingHeighmapOK = false;
-	//m_heightMapImage = cache.readHeigthmap(loadingHeighmapOK);
+	m_heightMapImage = cache.readImage(loadingHeighmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
 	bool loadingNormalmapOK = false;
-	//m_normalMapImage = cache.readNormalmap(loadingNormalmapOK);
+	m_normalMapImage = cache.readImage(loadingNormalmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
 
 	if (!loadingHeighmapOK || !loadingNormalmapOK)
 	{
@@ -764,9 +764,35 @@ void ShaderTerrainData::resetMaterialParams(TheWorld_Utils::MeshCacheBuffer& cac
 			m_normalMapImage->unlock();
 			m_heightMapImage->unlock();
 
-			//cache.writeHeightmap(m_heightMapImage);
-			//cache.writeNormalmap(m_normalMapImage);
+			cache.writeImage(m_heightMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
+			cache.writeImage(m_normalMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
 
+			//{
+			//	
+			//	int64_t h1 = m_heightMapImage->get_height();
+			//	int64_t w1 = m_heightMapImage->get_width();
+			//	Image::Format f1 = m_heightMapImage->get_format();
+
+			//	PoolByteArray datas1 = m_heightMapImage->get_data();
+			//	File* file = File::_new();
+			//	Error err = file->open("C:\\Users\\Riccardo\\appdata\\Roaming\\Godot\\app_userdata\\Godot Proj\\TheWorld\\Cache\\ST-5.000000_SZ-1025\\L-0\\prova.res", File::WRITE);
+			//	int64_t i64 = datas1.size();
+			//	file->store_64(i64);
+			//	file->store_buffer(datas1);
+			//	file->close();
+			//	err = file->open("C:\\Users\\Riccardo\\appdata\\Roaming\\Godot\\app_userdata\\Godot Proj\\TheWorld\\Cache\\ST-5.000000_SZ-1025\\L-0\\prova.res", File::READ);
+			//	i64 = file->get_64();
+			//	PoolByteArray datas2 = file->get_buffer(i64);
+			//	file->close();
+			//	i64 = datas2.size();
+			//	m_heightMapImage->create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, datas2);
+
+			//	int64_t h2 = m_heightMapImage->get_height();
+			//	int64_t w2 = m_heightMapImage->get_width();
+			//	Image::Format f2 = m_heightMapImage->get_format();
+			//}
+			
+			
 			//{
 			//	int64_t h1 = m_heightMapImage->get_height();
 			//	int64_t w1 = m_heightMapImage->get_width();
@@ -863,31 +889,30 @@ void ShaderTerrainData::updateMaterialParams(void)
 	if (m_viewer->is_inside_tree())
 	{
 		Transform globalTransform = m_quadTree->internalTransformGlobalCoord();
-		//globalTransform.origin = Vector3(0, 0, 0);		// DEBUGRIC
-		m_viewer->Globals()->debugPrint("internalTransformGlobalCoord" + String(" t=") + String(globalTransform));	// DEBUGRIC
+		//m_viewer->Globals()->debugPrint("internalTransformGlobalCoord" + String(" t=") + String(globalTransform));	// DEBUGRIC
 
 		Transform t = globalTransform.affine_inverse();
-		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));	// DEBUGRIC
+		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));	// DEBUGRIC
 		m_material->set_shader_param(SHADER_PARAM_INVERSE_TRANSFORM, t);
 
 		Basis b = globalTransform.basis.inverse().transposed();
-		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));	// DEBUGRIC
+		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));	// DEBUGRIC
 		m_material->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
 
 		float f = m_viewer->Globals()->gridStepInWU();
-		m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));	// DEBUGRIC
+		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));	// DEBUGRIC
 		m_material->set_shader_param(SHADER_PARAM_GRID_STEP, f);
 
 		if (m_heightMapTexModified)
 		{
-			m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));	// DEBUGRIC
+			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));	// DEBUGRIC
 			m_material->set_shader_param(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
 			m_heightMapTexModified = false;
 		}
 
 		if (m_normalMapTexModified)
 		{
-			m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));	// DEBUGRIC
+			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));	// DEBUGRIC
 			m_material->set_shader_param(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
 			m_normalMapTexModified = false;
 		}

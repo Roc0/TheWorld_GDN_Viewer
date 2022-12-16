@@ -3,7 +3,8 @@
 	// SUPER DEBUGRIC
 	#include <Godot.hpp>
 	#include <ResourceLoader.hpp>
-	// SUPER DEBUGRIC
+	#include <File.hpp>
+// SUPER DEBUGRIC
 #endif
 #include "TheWorld_Utils.h"
 #include <filesystem>
@@ -28,9 +29,9 @@ namespace TheWorld_Utils
 		m_meshFilePath = m_cacheDir + "\\" + cacheFileName;
 
 #ifdef _THEWORLD_CLIENT
-		std::string heightmapFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + "_heightmap.png";
+		std::string heightmapFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + "_heightmap.res";
 		m_heightmapFilePath = m_cacheDir + "\\" + heightmapFileName;
-		std::string normalmapFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + "_normalmap.png";
+		std::string normalmapFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + "_normalmap.res";
 		m_normalmapFilePath = m_cacheDir + "\\" + normalmapFileName;
 #endif
 	}
@@ -376,54 +377,119 @@ namespace TheWorld_Utils
 
 #ifdef _THEWORLD_CLIENT
 
-	void MeshCacheBuffer::writeHeightmap(godot::Ref<godot::Image> heightMapImage)
+	void MeshCacheBuffer::writeImage(godot::Ref<godot::Image> image, enum class ImageType type)
 	{
-		godot::Error err = heightMapImage->save_png(godot::String(m_heightmapFilePath.c_str()));
+		std::string _fileName;
+		if (type == ImageType::heightmap)
+			_fileName = m_heightmapFilePath;
+		else if (type == ImageType::normalmap)
+			_fileName = m_normalmapFilePath;
+		else
+			throw(std::exception((std::string(__FUNCTION__) + std::string("Unknown image type (") + std::to_string((int)type) + ")").c_str()));
+		godot::String fileName = _fileName.c_str();
+
+		int64_t w = image->get_width();
+		int64_t h = image->get_height();
+		godot::Image::Format f = image->get_format();
+		godot::PoolByteArray data = image->get_data();
+		int64_t size = data.size();
+		godot::File* file = godot::File::_new();
+		godot::Error err = file->open(fileName, godot::File::WRITE);
 		if (err != godot::Error::OK)
-			throw(std::exception((std::string(__FUNCTION__) + std::string("save_png heightmap error") + std::to_string((int)err)).c_str()));
-	}
-	void MeshCacheBuffer::writeNormalmap(godot::Ref<godot::Image> normalMapImage)
-	{
-		godot::Error err = normalMapImage->save_png(godot::String(m_normalmapFilePath.c_str()));
-		if (err != godot::Error::OK)
-			throw(std::exception((std::string(__FUNCTION__) + std::string("save_png normalmap error") + std::to_string((int)err)).c_str()));
+			throw(std::exception((std::string(__FUNCTION__) + std::string("file->open error (") + std::to_string((int)err) + ") : " + _fileName).c_str()));
+		file->store_64(w);
+		file->store_64(h);
+		file->store_64((int64_t)f);
+		file->store_64(size);
+		file->store_buffer(data);
+		file->close();
 	}
 
-	godot::Ref<godot::Image> MeshCacheBuffer::readHeigthmap(bool& ok)
+	godot::Ref<godot::Image> MeshCacheBuffer::readImage(bool& ok, enum class ImageType type)
 	{
-		ok = true;
+		std::string _fileName;
+		if (type == ImageType::heightmap)
+			_fileName = m_heightmapFilePath;
+		else if (type == ImageType::normalmap)
+			_fileName = m_normalmapFilePath;
+		else
+			throw(std::exception((std::string(__FUNCTION__) + std::string("Unknown image type (") + std::to_string((int)type) + ")").c_str()));
+		godot::String fileName = _fileName.c_str();
 
-		if (!fs::exists(m_heightmapFilePath))
+		if (!fs::exists(_fileName))
 		{
 			ok = false;
 			return nullptr;
 		}
 
-		godot::Ref<godot::Image> heightMapImage = godot::Image::_new();
-		godot::Error err = heightMapImage->load(godot::String(m_heightmapFilePath.c_str()));
+		godot::File* file = godot::File::_new();
+		godot::Error err = file->open(fileName, godot::File::READ);
 		if (err != godot::Error::OK)
-			throw(std::exception((std::string(__FUNCTION__) + std::string("load heightmap error") + std::to_string((int)err)).c_str()));
+			throw(std::exception((std::string(__FUNCTION__) + std::string("file->open error (") + std::to_string((int)err) + ") : " + _fileName).c_str()));
+		int64_t w = file->get_64();
+		int64_t h = file->get_64();
+		godot::Image::Format f = (godot::Image::Format)file->get_64();
+		int64_t size = file->get_64();
+		godot::PoolByteArray data = file->get_buffer(size);
+		file->close();
 
-		return heightMapImage;
-	}
+		godot::Ref<godot::Image> image = godot::Image::_new();
+		image->create_from_data(w, h, false, f, data);
 
-	godot::Ref<godot::Image> MeshCacheBuffer::readNormalmap(bool& ok)
-	{
 		ok = true;
 
-		if (!fs::exists(m_normalmapFilePath))
-		{
-			ok = false;
-			return nullptr;
-		}
-
-		godot::Ref<godot::Image> normalMapImage = godot::Image::_new();
-		godot::Error err = normalMapImage->load(godot::String(m_normalmapFilePath.c_str()));
-		if (err != godot::Error::OK)
-			throw(std::exception((std::string(__FUNCTION__) + std::string("load normalmap error") + std::to_string((int)err)).c_str()));
-
-		return normalMapImage;
+		return image;
 	}
+		
+	//void MeshCacheBuffer::writeHeightmap(godot::Ref<godot::Image> heightMapImage)
+	//{
+	//	godot::Error err = heightMapImage->save_png(godot::String(m_heightmapFilePath.c_str()));
+	//	if (err != godot::Error::OK)
+	//		throw(std::exception((std::string(__FUNCTION__) + std::string("save_png heightmap error") + std::to_string((int)err)).c_str()));
+	//}
+
+	//void MeshCacheBuffer::writeNormalmap(godot::Ref<godot::Image> normalMapImage)
+	//{
+	//	godot::Error err = normalMapImage->save_png(godot::String(m_normalmapFilePath.c_str()));
+	//	if (err != godot::Error::OK)
+	//		throw(std::exception((std::string(__FUNCTION__) + std::string("save_png normalmap error") + std::to_string((int)err)).c_str()));
+	//}
+
+	//godot::Ref<godot::Image> MeshCacheBuffer::readHeigthmap(bool& ok)
+	//{
+	//	ok = true;
+
+	//	if (!fs::exists(m_heightmapFilePath))
+	//	{
+	//		ok = false;
+	//		return nullptr;
+	//	}
+
+	//	godot::Ref<godot::Image> heightMapImage = godot::Image::_new();
+	//	godot::Error err = heightMapImage->load(godot::String(m_heightmapFilePath.c_str()));
+	//	if (err != godot::Error::OK)
+	//		throw(std::exception((std::string(__FUNCTION__) + std::string("load heightmap error") + std::to_string((int)err)).c_str()));
+
+	//	return heightMapImage;
+	//}
+
+	//godot::Ref<godot::Image> MeshCacheBuffer::readNormalmap(bool& ok)
+	//{
+	//	ok = true;
+
+	//	if (!fs::exists(m_normalmapFilePath))
+	//	{
+	//		ok = false;
+	//		return nullptr;
+	//	}
+
+	//	godot::Ref<godot::Image> normalMapImage = godot::Image::_new();
+	//	godot::Error err = normalMapImage->load(godot::String(m_normalmapFilePath.c_str()));
+	//	if (err != godot::Error::OK)
+	//		throw(std::exception((std::string(__FUNCTION__) + std::string("load normalmap error") + std::to_string((int)err)).c_str()));
+
+	//	return normalMapImage;
+	//}
 
 #endif
 

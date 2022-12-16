@@ -154,10 +154,18 @@ namespace TheWorld_Utils
 		}
 
 #ifdef _THEWORLD_CLIENT
-		void writeHeightmap(godot::Ref<godot::Image> heightMapImage);
-		void writeNormalmap(godot::Ref<godot::Image> normalMapImage);
-		godot::Ref<godot::Image> readHeigthmap(bool& ok);
-		godot::Ref<godot::Image> readNormalmap(bool& ok);
+		//void writeHeightmap(godot::Ref<godot::Image> heightMapImage);
+		//void writeNormalmap(godot::Ref<godot::Image> normalMapImage);
+		//godot::Ref<godot::Image> readHeigthmap(bool& ok);
+		//godot::Ref<godot::Image> readNormalmap(bool& ok);
+		enum class ImageType
+		{
+			heightmap = 0,
+			normalmap = 1
+		};
+
+		void writeImage(godot::Ref<godot::Image> image, enum class ImageType type);
+		godot::Ref<godot::Image> readImage(bool& ok, enum class ImageType type);
 #endif
 
 	private:
