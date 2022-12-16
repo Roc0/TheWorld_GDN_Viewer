@@ -48,6 +48,7 @@ namespace TheWorld_Utils
 		{
 			_counterStarted = false;
 			_headerMsg = headerMsg;
+			_save_headerMsg = headerMsg;
 			_method = method;
 			_tickMsg = tickMsg;
 			_tockMsg = tockMsg;
@@ -106,6 +107,11 @@ namespace TheWorld_Utils
 			_headerMsg = headerMsg;
 		}
 
+		void headerMsgSuffix(std::string _headerMsgSuffix)
+		{
+			_headerMsg = _save_headerMsg + _headerMsgSuffix;
+		}
+
 		void method(std::string method)
 		{
 			_method = method;
@@ -120,6 +126,7 @@ namespace TheWorld_Utils
 	private:
 		bool _counterStarted;
 		std::string _headerMsg;
+		std::string _save_headerMsg;
 		std::string _method;
 		bool _tickMsg;
 		bool _tockMsg;

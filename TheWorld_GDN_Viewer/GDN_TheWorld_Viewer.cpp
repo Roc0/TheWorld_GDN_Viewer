@@ -291,15 +291,15 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 					quadTree->getQuadrant()->setMeshId(meshIdFromServer);
 
-					clock.headerMsg("MapManager::getVertices - resetMaterialParams");
-					clock.tick();
+					//clock.headerMsg("MapManager::getVertices - resetMaterialParams");
+					//clock.tick();
 					{
 						// ATTENZIONE
 						//std::lock_guard lock(m_mtxQuadTree);
 						quadTree->materialParamsNeedReset(true, &cache);
 						quadTree->resetMaterialParams();
 					}
-					clock.tock();
+					//clock.tock();
 					//Globals()->debugPrint(String("ELAPSED - QUADRANT ") + quadTree->getQuadrant()->getId().getId().c_str() + " TAG=" + quadTree->getQuadrant()->getId().getTag().c_str() + " - GDN_TheWorld_Viewer::replyFromServer MapManager::getVertices (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
 
 					if (setCamera)
@@ -690,6 +690,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		// if forced or the camera has changed quadrant the cache is repopulated
 		if (m_refreshMapQuadTree || m_computedCameraQuadrantId != quadrantIdNeeded[0])
 		{
+			TheWorld_Utils::TimerMs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, true);
+			clock1.tick();
+
 			Transform t = get_global_transform();
 			t.origin = Vector3(quadrantIdNeeded[0].getLowerXGridVertex(), 0, quadrantIdNeeded[0].getLowerZGridVertex());
 			set_global_transform(t);
@@ -850,7 +853,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			// All chunk that need an update (those are chunk that got split or joined)
 			std::vector<Chunk*> vectChunkUpdate = itQuadTree->second->getChunkUpdate();
 
-			// Forcing update to all neighboring chunks to readjust the seams
+			// Forcing update to all neighboring chunks to readjust the seams (by populating vectAdditionalUpdateChunk)
 			std::vector<Chunk*> vectAdditionalUpdateChunk;
 			for (std::vector<Chunk*>::iterator itChunk = vectChunkUpdate.begin(); itChunk != vectChunkUpdate.end(); itChunk++)
 			{
