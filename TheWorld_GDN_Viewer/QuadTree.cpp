@@ -273,6 +273,86 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
 	quad->setCameraPos(cameraPosGlobalCoord);
 }
 
+//void QuadTree::checkIntegrity(Vector3 cameraPosGlobalCoord)
+//{
+//	if (!isValid())
+//		return;
+//
+//	if (!isVisible())
+//		return;
+//
+//	if (m_root->isLeaf())
+//		return;
+//
+//	for (int i = 0; i < 4; i++)
+//		internalCheckIntegrity(cameraPosGlobalCoord, m_root->getChild(i), m_root.get());
+//}
+//
+//void QuadTree::internalCheckIntegrity(Vector3 cameraPosGlobalCoord, Quad* quad, Quad* parent)
+//{
+//	if (quad->isLeaf())
+//	{
+//		if (quad->Lod() > 0)
+//		{
+//			for (int i = 0; i < 4; i++)
+//			{
+//				// brothers including self
+//				Quad* bro = parent->getChild(i);
+//				if (quad != bro)
+//				{
+//					// brothers
+//					if (!bro->getChild(0)->isLeaf())
+//					{
+//						// Split
+//						quad->split();
+//						for (int i = 0; i < 4; i++)
+//							quad->getChild(i)->setCameraPos(cameraPosGlobalCoord);
+//						m_numSplits++;
+//					}
+//				}
+//			}
+//		}
+//	}
+//	else
+//	{
+//		for (int i = 0; i < 4; i++)
+//			internalCheckIntegrity(cameraPosGlobalCoord, quad->getChild(i), quad);
+//	}
+//}
+
+bool QuadTree::isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantId& XMinusQuadrantId, QuadrantId& XPlusQuadrantId, QuadrantId& ZMinusQuadrantId, QuadrantId& ZPlusQuadrantId)
+{
+	bool ret = false;
+
+	if (pos.getSlotPosX() == 0)
+	{
+		XMinusQuadrantId = getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::XMinus);
+		ret = true;
+	}
+
+	if (pos.getSlotPosZ() == 0)
+	{
+		ZMinusQuadrantId = getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::ZMinus);
+		ret = true;
+	}
+
+	int numChunksPerSide = m_viewer->Globals()->numChunksPerHeightmapSide(pos.getLod());
+
+	if (pos.getSlotPosX() == (numChunksPerSide - 1))
+	{
+		XPlusQuadrantId = getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::XPlus);
+		ret = true;
+	}
+
+	if (pos.getSlotPosZ() == (numChunksPerSide - 1))
+	{
+		ZPlusQuadrantId = getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::ZPlus);
+		ret = true;
+	}
+
+	return ret;
+}
+
 Chunk* QuadTree::getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir)
 {
 	Chunk* chunk = nullptr;

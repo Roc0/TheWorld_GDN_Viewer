@@ -295,7 +295,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					//clock.tick();
 					{
 						// ATTENZIONE
-						//std::lock_guard lock(m_mtxQuadTree);
+						std::lock_guard lock(m_mtxQuadTree);
 						quadTree->materialParamsNeedReset(true, &cache);
 						quadTree->resetMaterialParams();
 					}
@@ -854,6 +854,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			std::vector<Chunk*> vectChunkUpdate = itQuadTree->second->getChunkUpdate();
 
 			// Forcing update to all neighboring chunks to readjust the seams (by populating vectAdditionalUpdateChunk)
+			// chunks affected are neighboring ones with same lod or less (more definded) ==> neighboring chunks with greater lod (less defined) are not selcted
+			// as the seams are calculated on chunks with lessere lof (more defined chunks) if the neighborings have different lod
 			std::vector<Chunk*> vectAdditionalUpdateChunk;
 			for (std::vector<Chunk*>::iterator itChunk = vectChunkUpdate.begin(); itChunk != vectChunkUpdate.end(); itChunk++)
 			{
@@ -861,55 +863,67 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 					continue;
 
 				Chunk::ChunkPos pos = (*itChunk)->getPos();
-
-				// In case the chunk got split forcing update to left, right, bottom, top chunks
-				Chunk* chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);		// x lessening
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//
-					// - o
-					//
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);			// x growing
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//
-					//   o -
-					//
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//   -
-					//   o
-					//
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-				chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);
-				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-				{
-					//
-					//   o
-					//   -
-					chunk->setPendingUpdate(true);
-					vectAdditionalUpdateChunk.push_back(chunk);
-				}
-
-				// In case the chunk got joined
 				int lod = pos.getLod();
+				int numChunksPerSideAtLowerLod = 0;
+				Chunk::ChunkPos posFirstInternalChunk(0, 0, 0); 
+				if (lod > 0)
+				{
+					posFirstInternalChunk = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+					numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+				}
+
+				{
+					// In case the chunk got split/joined forcing update to left, right, bottom, top chunks with same lod
+					Chunk* chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);	// x lessening
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//
+						// - o
+						//
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);			// x growing
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//
+						//   o -
+						//
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);			// z lessening
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//   -
+						//   o
+						//
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+					chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);			// z growing
+					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+					{
+						//
+						//   o
+						//   -
+						chunk->setPendingUpdate(true);
+						vectAdditionalUpdateChunk.push_back(chunk);
+					}
+				}
+
+				// In case the chunk got joined: we have to look for adjacent chunks with lower lod (more defined)
 				if (lod > 0 && (*itChunk)->gotJustJoined())
 				{
-					(*itChunk)->setJustJoined(false);
+					//(*itChunk)->setJustJoined(false);
 
-					Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
 					//	o =
 					//	= =
-					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XMinusQuadSecondChunk);
+					//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+					//	o =
+					//	= =
+					Chunk* chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XMinusQuadSecondChunk);
 					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 					{
 						//  
@@ -919,6 +933,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						chunk->setPendingUpdate(true);
 						vectAdditionalUpdateChunk.push_back(chunk);
 					}
+					//	o =
+					//	= =
 					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XMinusQuadForthChunk);
 					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 					{
@@ -929,6 +945,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						chunk->setPendingUpdate(true);
 						vectAdditionalUpdateChunk.push_back(chunk);
 					}
+					//	o =
+					//	= =
 					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XPlusQuadFirstChunk);
 					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 					{
@@ -939,6 +957,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						chunk->setPendingUpdate(true);
 						vectAdditionalUpdateChunk.push_back(chunk);
 					}
+					//	o =
+					//	= =
 					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::XPlusQuadThirdChunk);
 					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 					{
@@ -949,9 +969,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						chunk->setPendingUpdate(true);
 						vectAdditionalUpdateChunk.push_back(chunk);
 					}
+					//	o =
+					//	= =
 					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZMinusQuadThirdChunk);
 					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 					{
+						//      
 						//    -
 						//	  o =
 						//	  = =
@@ -959,9 +982,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						chunk->setPendingUpdate(true);
 						vectAdditionalUpdateChunk.push_back(chunk);
 					}
+					//	o =
+					//	= =
 					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZMinusQuadForthChunk);
 					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 					{
+						//      
 						//      -
 						//	  o =
 						//	  = =
@@ -969,6 +995,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						chunk->setPendingUpdate(true);
 						vectAdditionalUpdateChunk.push_back(chunk);
 					}
+					//	o =
+					//	= =
 					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZPlusQuadFirstChunk);
 					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 					{
@@ -976,9 +1004,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						//	  o =
 						//	  = =
 						//    -
+						//      
 						chunk->setPendingUpdate(true);
 						vectAdditionalUpdateChunk.push_back(chunk);
 					}
+					//	o =
+					//	= =
 					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunk, Chunk::DirectionSlot::ZPlusQuadSecondChunk);
 					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
 					{
@@ -986,10 +1017,266 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						//	  o =
 						//	  = =
 						//      -
+						//      
 						chunk->setPendingUpdate(true);
 						vectAdditionalUpdateChunk.push_back(chunk);
 					}
 				}
+
+				// if the current chunk is on a border of the quadrant we need to look for adjacent chunks (with same lod or lesser if the chunk was just joined) in Adjacent quadrant
+				QuadrantId XMinusQuadrantId, XPlusQuadrantId, ZMinusQuadrantId, ZPlusQuadrantId;
+				if (itQuadTree->second->isChunkOnBorderOfQuadrant(pos, XMinusQuadrantId, XPlusQuadrantId, ZMinusQuadrantId, ZPlusQuadrantId))
+				{
+					int numChunksPerSide = Globals()->numChunksPerHeightmapSide(pos.getLod());
+
+					// if the chunks is adjacent to another quadrant
+					if (XMinusQuadrantId.isInitialized())
+					{
+						// take the adjacent quadrant if it exists
+						auto iter = m_mapQuadTree.find(XMinusQuadrantId);
+						if (iter != m_mapQuadTree.end())
+						{
+							QuadTree* quadTreeXMinus = iter->second.get();
+							if (quadTreeXMinus->isValid())
+							{
+								Chunk::ChunkPos posSameLodOnAdjacentQuadrant(numChunksPerSide - 1, pos.getSlotPosZ(), pos.getLod());
+								Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeXMinus->getChunkAt(posSameLodOnAdjacentQuadrant);
+								if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
+								{
+									//
+									// - | o
+									//
+									chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
+									vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
+								}
+
+								if (lod > 0 && ((*itChunk)->gotJustJoined() || lod == Globals()->lodMaxDepth()))
+								{
+									//	o =
+									//	= =
+									//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+									//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+
+									{
+										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(numChunksPerSideAtLowerLod - 1, posFirstInternalChunk.getSlotPosZ(), posFirstInternalChunk.getLod());
+										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+										{
+											//  
+											//	- | o =
+											//	  | = =
+											//  
+											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+										}
+									}
+									{
+										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(numChunksPerSideAtLowerLod - 1, posFirstInternalChunk.getSlotPosZ() + 1, posFirstInternalChunk.getLod());
+										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+										{
+											//  
+											//	  | o =
+											//	- | = =
+											//  
+											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+										}
+									}
+								}
+							}
+						}
+					}
+
+					if (XPlusQuadrantId.isInitialized())
+					{
+						// take the adjacent quadrant if it exists
+						auto iter = m_mapQuadTree.find(XPlusQuadrantId);
+						if (iter != m_mapQuadTree.end())
+						{
+							QuadTree* quadTreeXPlus = iter->second.get();
+							if (quadTreeXPlus->isValid())
+							{
+								Chunk::ChunkPos posSameLodOnAdjacentQuadrant(0, pos.getSlotPosZ(), pos.getLod());
+								Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeXPlus->getChunkAt(posSameLodOnAdjacentQuadrant);
+								if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
+								{
+									//
+									//   o | -
+									//
+									chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
+									vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
+								}
+
+								if (lod > 0 && (*itChunk)->gotJustJoined())
+								{
+									//	o =
+									//	= =
+									//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+									//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+
+									{
+										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(0, posFirstInternalChunk.getSlotPosZ(), posFirstInternalChunk.getLod());
+										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+										{
+											//  
+											//	o = | -
+											//	= = |
+											//  
+											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+										}
+									}
+									{
+										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(0, posFirstInternalChunk.getSlotPosZ() + 1, posFirstInternalChunk.getLod());
+										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+										{
+											//  
+											//	o = |
+											//	= = | -
+											//  
+											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+										}
+									}
+								}
+							}
+						}
+					}
+
+					if (ZMinusQuadrantId.isInitialized())
+					{
+						// take the adjacent quadrant if it exists
+						auto iter = m_mapQuadTree.find(ZMinusQuadrantId);
+						if (iter != m_mapQuadTree.end())
+						{
+							QuadTree* quadTreeZMinus = iter->second.get();
+							if (quadTreeZMinus->isValid())
+							{
+								Chunk::ChunkPos posSameLodOnAdjacentQuadrant(pos.getSlotPosX(), numChunksPerSide - 1, pos.getLod());
+								Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeZMinus->getChunkAt(posSameLodOnAdjacentQuadrant);
+								if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
+								{
+									//   -
+									//   =
+									//   o
+									//
+									chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
+									vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
+								}
+
+								if (lod > 0 && (*itChunk)->gotJustJoined())
+								{
+									//	o =
+									//	= =
+									//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+									//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+
+									{
+										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunk.getSlotPosX(), numChunksPerSideAtLowerLod - 1, posFirstInternalChunk.getLod());
+										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+										{
+											//  
+											//  -
+											//  = =
+											//	o =
+											//	= =
+											//  
+											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+										}
+									}
+									{
+										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunk.getSlotPosX() + 1, numChunksPerSideAtLowerLod - 1, posFirstInternalChunk.getLod());
+										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+										{
+											//  
+											//    -
+											//  = =
+											//	o =
+											//	= =
+											//  
+											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+										}
+									}
+								}
+							}
+						}
+					}
+
+					if (ZPlusQuadrantId.isInitialized())
+					{
+						// take the adjacent quadrant if it exists
+						auto iter = m_mapQuadTree.find(ZPlusQuadrantId);
+						if (iter != m_mapQuadTree.end())
+						{
+							QuadTree* quadTreeZPlus = iter->second.get();
+							if (quadTreeZPlus->isValid())
+							{
+								//
+								//   o
+								//   =
+								//   -
+								Chunk::ChunkPos posSameLodOnAdjacentQuadrant(pos.getSlotPosX(), 0, pos.getLod());
+								Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeZPlus->getChunkAt(posSameLodOnAdjacentQuadrant);
+								if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
+								{
+									chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
+									vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
+								}
+
+								if (lod > 0 && (*itChunk)->gotJustJoined())
+								{
+									//	o =
+									//	= =
+									//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+									//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+
+									{
+										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunk.getSlotPosX(), 0, posFirstInternalChunk.getLod());
+										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+										{
+											//  
+											//	o =
+											//	= =
+											//  = =
+											//  -
+											//  
+											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+										}
+									}
+									{
+										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunk.getSlotPosX() + 1, 0, posFirstInternalChunk.getLod());
+										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+										{
+											//  
+											//	o =
+											//	= =
+											//  = =
+											//    -
+											//  
+											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
 				// Anycase clear flag just joined
 				if ((*itChunk)->gotJustJoined())
 					(*itChunk)->setJustJoined(false);
@@ -1114,6 +1401,15 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 //	// Return the transformation of the viewer Node in local coordinates relative to itself appling a scale factor (m_mapScaleVector)
 //	return Transform(Basis().scaled(m_mapScaleVector), Vector3(0, 0, 0));
 //}
+
+QuadTree* GDN_TheWorld_Viewer::getQuadTreeFromInternalMap(QuadrantId id)
+{
+	auto iter = m_mapQuadTree.find(id);
+	if (iter == m_mapQuadTree.end())
+		return nullptr;
+
+	return iter->second.get();
+}
 
 GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
 {
@@ -1365,32 +1661,32 @@ int GDN_TheWorld_Viewer::getNumActiveChunks(void)
 }
 
 
-int GDN_TheWorld_Viewer::getNumSplits()
+int GDN_TheWorld_Viewer::getNumSplits(void)
 {
 	return m_numSplits;
 }
 
-int GDN_TheWorld_Viewer::getNumJoins()
+int GDN_TheWorld_Viewer::getNumJoins(void)
 {
 	return m_numJoins;
 }
 
-int GDN_TheWorld_Viewer::getNumQuadrant()
+int GDN_TheWorld_Viewer::getNumQuadrant(void)
 {
 	return m_numQuadrant;
 }
 
-int GDN_TheWorld_Viewer::getNuminitializedQuadrant()
+int GDN_TheWorld_Viewer::getNuminitializedQuadrant(void)
 {
 	return m_numinitializedQuadrant;
 }
 
-int GDN_TheWorld_Viewer::getNumVisibleQuadrant()
+int GDN_TheWorld_Viewer::getNumVisibleQuadrant(void)
 {
 	return m_numVisibleQuadrant;
 }
 
-int GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant()
+int GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant(void)
 {
 	return m_numinitializedVisibleQuadrant;
 }

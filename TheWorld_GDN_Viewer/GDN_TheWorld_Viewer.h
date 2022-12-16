@@ -89,10 +89,10 @@ namespace godot
 		int getNumActiveChunks(void);
 		int getProcessDuration(void);
 		int getProcessNotOwnsLock(void);
-		int getNumQuadrant();
-		int getNuminitializedQuadrant();
-		int getNumVisibleQuadrant();
-		int getNuminitializedVisibleQuadrant();
+		int getNumQuadrant(void);
+		int getNuminitializedQuadrant(void);
+		int getNumVisibleQuadrant(void);
+		int getNuminitializedVisibleQuadrant(void);
 		void refreshQuadTreeStatistics(void);
 		GDN_TheWorld_Globals::ChunkDebugMode getRequiredChunkDebugMode(void)
 		{
@@ -105,6 +105,7 @@ namespace godot
 		bool useVisualServer(void) { return m_useVisualServer; }
 		void forceRefreshMapQuadTree(void) { m_refreshMapQuadTree = true; }
 		//Vector3 getMapScaleVector(void) { return m_mapScaleVector; }
+		QuadTree* getQuadTreeFromInternalMap(QuadrantId id);
 
 	private:
 		void onTransformChanged(void);

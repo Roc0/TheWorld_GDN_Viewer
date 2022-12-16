@@ -366,7 +366,7 @@ namespace godot
 		enum PosInQuad m_posInQuad;
 		std::array<std::unique_ptr<Quad>, 4> m_children;
 		Chunk* m_chunk;
-		int m_slotPosX;	// express the orizzontal (X) and vertical (Z) position of the quad (and of the corrispondig chunk) in the grid of chunks
+		int m_slotPosX;	// expresses the orizzontal (X) and vertical (Z) position of the quad (and of the corrispondig chunk) in the grid of chunks
 		int m_slotPosZ;	// at the current (of the quad) lod : 0 the first chunk, 1 the following to the max number of chunks on a size for the specific lod
 		int m_lod;
 		GDN_TheWorld_Viewer* m_viewer;
@@ -391,8 +391,10 @@ namespace godot
 		void init(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
 		
 		void update(Vector3 cameraPosGlobalCoord);
+		//void checkIntegrity(Vector3 cameraPosGlobalCoord);
 		Chunk* getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir);
 		Chunk* getChunkAt(Chunk::ChunkPos pos);
+		bool isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantId& XMinusQuadrantId, QuadrantId& XPlusQuadrantId, QuadrantId& ZMinusQuadrantId, QuadrantId& ZPlusQuadrantId);
 		void addChunk(Chunk* chunk);
 		void addChunkUpdate(Chunk* chunk);
 		void clearChunkUpdate(void);
@@ -513,6 +515,7 @@ namespace godot
 
 	private:
 		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode);
+		//void internalCheckIntegrity(Vector3 cameraPosGlobalCoord, Quad* quad, Quad* parent);
 
 	private:
 		enum class QuadrantStatus m_status;
