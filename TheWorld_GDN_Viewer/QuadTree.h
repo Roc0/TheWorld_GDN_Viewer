@@ -23,7 +23,7 @@ namespace godot
 	class GDN_TheWorld_Viewer;
 	class QuadTree;
 
-	class QuadrantId
+	class QuadrantPos
 	{
 	public:
 		enum class DirectionSlot
@@ -52,7 +52,7 @@ namespace godot
 
 		};
 
-		QuadrantId()
+		QuadrantPos()
 		{
 			m_lowerXGridVertex = m_lowerZGridVertex = m_gridStepInWU = 0;
 			m_numVerticesPerSize = m_level = 0;
@@ -60,20 +60,20 @@ namespace godot
 			m_initialized = false;
 		}
 
-		QuadrantId(const QuadrantId& quadrantId)
+		QuadrantPos(const QuadrantPos& quadrantPos)
 		{
-			m_lowerXGridVertex = quadrantId.m_lowerXGridVertex;
-			m_lowerZGridVertex = quadrantId.m_lowerZGridVertex;
-			m_numVerticesPerSize = quadrantId.m_numVerticesPerSize;
-			m_level = quadrantId.m_level;
-			m_gridStepInWU = quadrantId.m_gridStepInWU;
-			m_sizeInWU = quadrantId.m_sizeInWU;
-			m_tag = quadrantId.m_tag;
-			m_name = quadrantId.m_name;
+			m_lowerXGridVertex = quadrantPos.m_lowerXGridVertex;
+			m_lowerZGridVertex = quadrantPos.m_lowerZGridVertex;
+			m_numVerticesPerSize = quadrantPos.m_numVerticesPerSize;
+			m_level = quadrantPos.m_level;
+			m_gridStepInWU = quadrantPos.m_gridStepInWU;
+			m_sizeInWU = quadrantPos.m_sizeInWU;
+			m_tag = quadrantPos.m_tag;
+			m_name = quadrantPos.m_name;
 			m_initialized = true;
 		}
 
-		QuadrantId(float x, float z, int level, int numVerticesPerSize, float gridStepInWU)
+		QuadrantPos(float x, float z, int level, int numVerticesPerSize, float gridStepInWU)
 		{
 			float gridSizeInWU = (numVerticesPerSize - 1) * gridStepInWU;
 			//float f = x / gridSizeInWU;
@@ -89,58 +89,58 @@ namespace godot
 			resetName();
 		}
 
-		bool operator<(const QuadrantId& quadrantId) const
+		bool operator<(const QuadrantPos& quadrantPos) const
 		{
-			assert(m_level == quadrantId.m_level);
-			if (m_level < quadrantId.m_level)
+			assert(m_level == quadrantPos.m_level);
+			if (m_level < quadrantPos.m_level)
 				return true;
-			if (m_level > quadrantId.m_level)
+			if (m_level > quadrantPos.m_level)
 				return false;
-			// m_level == quadrantId.m_level
+			// m_level == quadrantPos.m_level
 
-			assert(m_sizeInWU == quadrantId.m_sizeInWU);
-			if (m_sizeInWU < quadrantId.m_sizeInWU)
+			assert(m_sizeInWU == quadrantPos.m_sizeInWU);
+			if (m_sizeInWU < quadrantPos.m_sizeInWU)
 				return true;
-			if (m_sizeInWU > quadrantId.m_sizeInWU)
+			if (m_sizeInWU > quadrantPos.m_sizeInWU)
 				return false;
-			// m_sizeInWU == quadrantId.m_sizeInWU
+			// m_sizeInWU == quadrantPos.m_sizeInWU
 
-			if (m_lowerZGridVertex < quadrantId.m_lowerZGridVertex)
+			if (m_lowerZGridVertex < quadrantPos.m_lowerZGridVertex)
 				return true;
-			if (m_lowerZGridVertex > quadrantId.m_lowerZGridVertex)
+			if (m_lowerZGridVertex > quadrantPos.m_lowerZGridVertex)
 				return false;
-			// m_lowerZGridVertex == quadrantId.m_lowerZGridVertex
+			// m_lowerZGridVertex == quadrantPos.m_lowerZGridVertex
 
-			return m_lowerXGridVertex < quadrantId.m_lowerXGridVertex;
+			return m_lowerXGridVertex < quadrantPos.m_lowerXGridVertex;
 		}
 
-		bool operator==(const QuadrantId& quadrantId) const
+		bool operator==(const QuadrantPos& quadrantPos) const
 		{
-			if (m_lowerXGridVertex == quadrantId.m_lowerXGridVertex
-				&& m_lowerZGridVertex == quadrantId.m_lowerZGridVertex
-				&& m_numVerticesPerSize == quadrantId.m_numVerticesPerSize
-				&& m_level == quadrantId.m_level
-				&& m_gridStepInWU == quadrantId.m_gridStepInWU)
+			if (m_lowerXGridVertex == quadrantPos.m_lowerXGridVertex
+				&& m_lowerZGridVertex == quadrantPos.m_lowerZGridVertex
+				&& m_numVerticesPerSize == quadrantPos.m_numVerticesPerSize
+				&& m_level == quadrantPos.m_level
+				&& m_gridStepInWU == quadrantPos.m_gridStepInWU)
 				return true;
 			else
 				return false;
 		}
 
-		QuadrantId operator=(const QuadrantId& quadrantId)
+		QuadrantPos operator=(const QuadrantPos& quadrantPos)
 		{
-			m_lowerXGridVertex = quadrantId.m_lowerXGridVertex;
-			m_lowerZGridVertex = quadrantId.m_lowerZGridVertex;
-			m_numVerticesPerSize = quadrantId.m_numVerticesPerSize;
-			m_level = quadrantId.m_level;
-			m_gridStepInWU = quadrantId.m_gridStepInWU;
-			m_sizeInWU = quadrantId.m_sizeInWU;
-			m_tag = quadrantId.m_tag;
-			m_name = quadrantId.m_name;
+			m_lowerXGridVertex = quadrantPos.m_lowerXGridVertex;
+			m_lowerZGridVertex = quadrantPos.m_lowerZGridVertex;
+			m_numVerticesPerSize = quadrantPos.m_numVerticesPerSize;
+			m_level = quadrantPos.m_level;
+			m_gridStepInWU = quadrantPos.m_gridStepInWU;
+			m_sizeInWU = quadrantPos.m_sizeInWU;
+			m_tag = quadrantPos.m_tag;
+			m_name = quadrantPos.m_name;
 			m_initialized = true;
 			return *this;
 		}
 
-		std::string getId(void)
+		std::string getIdStr(void)
 		{
 			return "ST" + to_string(m_gridStepInWU) + "_SZ" + to_string(m_numVerticesPerSize) + "_L" + to_string(m_level) + "_X" + to_string(m_lowerXGridVertex) + "_Z" + to_string(m_lowerZGridVertex);
 		}
@@ -169,13 +169,13 @@ namespace godot
 		{
 			return m_sizeInWU; 
 		};
-		_declspec(dllexport) QuadrantId getQuadrantId(enum class DirectionSlot dir, int numSlot = 1);
+		_declspec(dllexport) QuadrantPos getQuadrantPos(enum class DirectionSlot dir, int numSlot = 1);
 		void setTag(std::string tag) { m_tag = tag; }
 		std::string getTag(void)
 		{
 			return m_tag;
 		}
-		_declspec(dllexport) size_t distanceInPerimeter(QuadrantId& q);
+		_declspec(dllexport) size_t distanceInPerimeter(QuadrantPos& q);
 		bool isInitialized(void)
 		{
 			return m_initialized;
@@ -217,7 +217,7 @@ namespace godot
 		//	m_mapManager = mapManager;
 		//}
 
-		Quadrant(QuadrantId& quadrantId, QuadTree* quadTree)
+		Quadrant(QuadrantPos& quadrantId, QuadTree* quadTree)
 		{
 			m_quadrantId = quadrantId;
 			m_quadTree = quadTree;
@@ -228,7 +228,7 @@ namespace godot
 			m_vectGridVertices.clear();
 		}
 
-		void implementId(QuadrantId& quadrantId)
+		void implementId(QuadrantPos& quadrantId)
 		{
 			m_quadrantId = quadrantId;
 		}
@@ -240,7 +240,7 @@ namespace godot
 			return m_vectGridVertices;
 		}
 
-		QuadrantId getId(void) { return m_quadrantId; }
+		QuadrantPos getId(void) { return m_quadrantId; }
 
 		void setMeshId(std::string meshId)
 		{
@@ -251,7 +251,7 @@ namespace godot
 		//std::string getCacheFileName();
 
 	private:
-		QuadrantId m_quadrantId;
+		QuadrantPos m_quadrantId;
 		std::vector<TheWorld_Utils::GridVertex> m_vectGridVertices;
 		std::string m_meshId;
 		QuadTree* m_quadTree;
@@ -385,7 +385,7 @@ namespace godot
 	class QuadTree
 	{
 	public:
-		QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantId quadrantId);
+		QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantId);
 		~QuadTree();
 
 		void init(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
@@ -394,7 +394,7 @@ namespace godot
 		//void checkIntegrity(Vector3 cameraPosGlobalCoord);
 		Chunk* getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir);
 		Chunk* getChunkAt(Chunk::ChunkPos pos);
-		bool isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantId& XMinusQuadrantId, QuadrantId& XPlusQuadrantId, QuadrantId& ZMinusQuadrantId, QuadrantId& ZPlusQuadrantId);
+		bool isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantPos& XMinusQuadrantPos, QuadrantPos& XPlusQuadrantPos, QuadrantPos& ZMinusQuadrantPos, QuadrantPos& ZPlusQuadrantPos);
 		void addChunk(Chunk* chunk);
 		void addChunkUpdate(Chunk* chunk);
 		void clearChunkUpdate(void);

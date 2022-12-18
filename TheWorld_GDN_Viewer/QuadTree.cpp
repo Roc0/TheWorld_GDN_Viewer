@@ -127,7 +127,7 @@ void Quad::setCameraPos(Vector3 globalCoordCameraLastPos)
 	}
 }
 	
-QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantId quadrantId)
+QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantId)
 {
 	setStatus(QuadrantStatus::uninitialized);
 	m_isVisible = false;
@@ -320,19 +320,19 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
 //	}
 //}
 
-bool QuadTree::isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantId& XMinusQuadrantId, QuadrantId& XPlusQuadrantId, QuadrantId& ZMinusQuadrantId, QuadrantId& ZPlusQuadrantId)
+bool QuadTree::isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantPos& XMinusQuadrantPos, QuadrantPos& XPlusQuadrantPos, QuadrantPos& ZMinusQuadrantPos, QuadrantPos& ZPlusQuadrantPos)
 {
 	bool ret = false;
 
 	if (pos.getSlotPosX() == 0)
 	{
-		XMinusQuadrantId = getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::XMinus);
+		XMinusQuadrantPos = getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
 		ret = true;
 	}
 
 	if (pos.getSlotPosZ() == 0)
 	{
-		ZMinusQuadrantId = getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::ZMinus);
+		ZMinusQuadrantPos = getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
 		ret = true;
 	}
 
@@ -340,13 +340,13 @@ bool QuadTree::isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantId& XMinus
 
 	if (pos.getSlotPosX() == (numChunksPerSide - 1))
 	{
-		XPlusQuadrantId = getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::XPlus);
+		XPlusQuadrantPos = getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
 		ret = true;
 	}
 
 	if (pos.getSlotPosZ() == (numChunksPerSide - 1))
 	{
-		ZPlusQuadrantId = getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::ZPlus);
+		ZPlusQuadrantPos = getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
 		ret = true;
 	}
 
@@ -513,7 +513,7 @@ void QuadTree::updateMaterialParams(void)
 		TheWorld_Utils::TimerMs clock;
 		clock.tick();
 		m_shaderTerrainData.updateMaterialParams();
-		clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
+		clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
 		m_shaderTerrainData.materialParamsNeedUpdate(false);
 	}
 }
@@ -560,7 +560,7 @@ void QuadTree::dump(void)
 
 	globals->debugPrint("====================================================================================================================================");
 
-	globals->debugPrint(String("DUMP QUADRANT ") + getQuadrant()->getId().getId().c_str() + " TAG=" + m_tag.c_str());
+	globals->debugPrint(String("DUMP QUADRANT ") + getQuadrant()->getId().getIdStr().c_str() + " TAG=" + m_tag.c_str());
 
 	if (isValid() && isVisible())
 	{
@@ -687,7 +687,7 @@ void QuadTree::dump(void)
 	}
 
 
-	globals->debugPrint(String("COMPLETED DUMP QUADRANT ") + getQuadrant()->getId().getId().c_str() + " TAG=" + m_tag.c_str());
+	globals->debugPrint(String("COMPLETED DUMP QUADRANT ") + getQuadrant()->getId().getIdStr().c_str() + " TAG=" + m_tag.c_str());
 
 	globals->debugPrint("====================================================================================================================================");
 
@@ -1047,9 +1047,9 @@ void ShaderTerrainData::debugPrintTexture(std::string tex_name, Ref<Texture> tex
 	_file->close();
 }
 
-QuadrantId QuadrantId::getQuadrantId(enum class DirectionSlot dir, int numSlot)
+QuadrantPos QuadrantPos::getQuadrantPos(enum class DirectionSlot dir, int numSlot)
 {
-	QuadrantId q = *this;
+	QuadrantPos q = *this;
 
 	switch (dir)
 	{
@@ -1080,7 +1080,7 @@ QuadrantId QuadrantId::getQuadrantId(enum class DirectionSlot dir, int numSlot)
 	return q;
 }
 
-size_t QuadrantId::distanceInPerimeter(QuadrantId& q)
+size_t QuadrantPos::distanceInPerimeter(QuadrantPos& q)
 {
 	size_t distanceOnX = (size_t)ceil(abs(q.getLowerXGridVertex() - getLowerXGridVertex()) / q.m_sizeInWU);
 	size_t distanceOnZ = (size_t)ceil(abs(q.getLowerZGridVertex() - getLowerZGridVertex()) / q.m_sizeInWU);

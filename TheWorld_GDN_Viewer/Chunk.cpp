@@ -258,7 +258,7 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 			m_meshInstance->init(this);
 			m_meshInstance->add_to_group(GD_CHUNK_MESHINSTANCE_GROUP);
 			m_meshInstance->set_mesh(mesh);
-			string id = TheWorld_Utils::Utils::ReplaceString(getPos().getId(), ":", "");
+			std::string id = TheWorld_Utils::Utils::ReplaceString(getPos().getIdStr(), ":", "");
 			String name = String("Chunk_") + String(id.c_str());
 			m_meshInstance->set_name(name);
 			m_viewer->add_child(m_meshInstance);
@@ -330,8 +330,8 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantId XMinusQuadrantId = m_quadTree->getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::XMinus);
-			QuadTree* XMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(XMinusQuadrantId);
+			QuadrantPos XMinusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
+			QuadTree* XMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(XMinusQuadrantPos);
 			if (XMinusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(numGreaterChunksPerSide - 1, posGreaterChunkContainingThisOne.getSlotPosZ(), posGreaterChunkContainingThisOne.getLod());
@@ -347,8 +347,8 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantId ZMinusQuadrantId = m_quadTree->getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::ZMinus);
-			QuadTree* ZMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZMinusQuadrantId);
+			QuadrantPos ZMinusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
+			QuadTree* ZMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZMinusQuadrantPos);
 			if (ZMinusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(posGreaterChunkContainingThisOne.getSlotPosX(), numGreaterChunksPerSide - 1, posGreaterChunkContainingThisOne.getLod());
@@ -372,8 +372,8 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantId XPlusQuadrantId = m_quadTree->getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::XPlus);
-			QuadTree* XPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(XPlusQuadrantId);
+			QuadrantPos XPlusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
+			QuadTree* XPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(XPlusQuadrantPos);
 			if (XPlusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(0, posGreaterChunkContainingThisOne.getSlotPosZ(), posGreaterChunkContainingThisOne.getLod());
@@ -389,8 +389,8 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantId ZMinusQuadrantId = m_quadTree->getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::ZMinus);
-			QuadTree* ZMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZMinusQuadrantId);
+			QuadrantPos ZMinusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
+			QuadTree* ZMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZMinusQuadrantPos);
 			if (ZMinusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(posGreaterChunkContainingThisOne.getSlotPosX(), numGreaterChunksPerSide - 1, posGreaterChunkContainingThisOne.getLod());
@@ -414,8 +414,8 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantId XMinusQuadrantId = m_quadTree->getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::XMinus);
-			QuadTree* XMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(XMinusQuadrantId);
+			QuadrantPos XMinusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
+			QuadTree* XMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(XMinusQuadrantPos);
 			if (XMinusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(numGreaterChunksPerSide - 1, posGreaterChunkContainingThisOne.getSlotPosZ(), posGreaterChunkContainingThisOne.getLod());
@@ -431,8 +431,8 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantId ZPlusQuadrantId = m_quadTree->getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::ZPlus);
-			QuadTree* ZPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZPlusQuadrantId);
+			QuadrantPos ZPlusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
+			QuadTree* ZPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZPlusQuadrantPos);
 			if (ZPlusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(posGreaterChunkContainingThisOne.getSlotPosX(), 0, posGreaterChunkContainingThisOne.getLod());
@@ -456,8 +456,8 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantId XPlusQuadrantId = m_quadTree->getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::XPlus);
-			QuadTree* XPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(XPlusQuadrantId);
+			QuadrantPos XPlusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
+			QuadTree* XPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(XPlusQuadrantPos);
 			if (XPlusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(0, posGreaterChunkContainingThisOne.getSlotPosZ(), posGreaterChunkContainingThisOne.getLod());
@@ -473,8 +473,8 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantId ZPlusQuadrantId = m_quadTree->getQuadrant()->getId().getQuadrantId(QuadrantId::DirectionSlot::ZPlus);
-			QuadTree* ZPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZPlusQuadrantId);
+			QuadrantPos ZPlusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
+			QuadTree* ZPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZPlusQuadrantPos);
 			if (ZPlusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(posGreaterChunkContainingThisOne.getSlotPosX(), 0, posGreaterChunkContainingThisOne.getLod());
@@ -644,7 +644,7 @@ void Chunk::dump(void)
 	float globalOriginXInGridInWUs = m_viewer->get_global_transform().origin.x + m_originXInWUsLocalToGrid;
 	float globalOriginZInGridInWUs = m_viewer->get_global_transform().origin.z + m_originZInWUsLocalToGrid;
 
-	globals->debugPrint(String("Chunk ID: ") + getPos().getId().c_str()
+	globals->debugPrint(String("Chunk ID: ") + getPos().getIdStr().c_str()
 		+ " - chunk size (WUs) " + to_string(m_chunkSizeInWUs).c_str()
 		+ " - Pos in GRID (local):"
 		+ " X = " + to_string(m_originXInWUsLocalToGrid).c_str()
@@ -920,7 +920,7 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 			m_debugMeshInstance = MeshInstance::_new();
 			m_debugMeshInstance->add_to_group(GD_DEBUGCHUNK_MESHINSTANCE_GROUP);
 			m_debugMeshInstance->set_mesh(mesh);
-			string id = TheWorld_Utils::Utils::ReplaceString(getPos().getId(), ":", "");
+			string id = TheWorld_Utils::Utils::ReplaceString(getPos().getIdStr(), ":", "");
 			String name = String("ChunkDebug_") + String(id.c_str());
 			m_debugMeshInstance->set_name(name);
 			m_viewer->add_child(m_debugMeshInstance);
@@ -1195,7 +1195,7 @@ void ChunkDebug::dump(void)
 
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
 
-	globals->debugPrint(String("Chunk ID: ") + getPos().getId().c_str()
+	globals->debugPrint(String("Chunk ID: ") + getPos().getIdStr().c_str()
 		+ " DEBUG MESH - MinH = " + to_string(m_debugMeshAABB.position.y).c_str()
 		+ " - MaxH = " + to_string((m_debugMeshAABB.position + m_debugMeshAABB.size).y).c_str()
 		+ (m_isCameraVerticalOnChunk ? " - CAMERA" : ""));
@@ -1210,7 +1210,7 @@ void GDN_Chunk_MeshInstance::_register_methods()
 	register_method("get_lod", &GDN_Chunk_MeshInstance::getLod);
 	register_method("get_slot_pos_x", &GDN_Chunk_MeshInstance::getSlotPosX);
 	register_method("get_slot_pos_z", &GDN_Chunk_MeshInstance::getSlotPosZ);
-	register_method("get_id", &GDN_Chunk_MeshInstance::getId);
+	register_method("get_id", &GDN_Chunk_MeshInstance::getIdStr);
 }
 
 GDN_Chunk_MeshInstance::GDN_Chunk_MeshInstance()
@@ -1273,8 +1273,8 @@ int GDN_Chunk_MeshInstance::getSlotPosZ(void)
 	return m_chunk->getSlotPosZ();
 }
 
-String GDN_Chunk_MeshInstance::getId(void)
+String GDN_Chunk_MeshInstance::getIdStr(void)
 {
-	return m_chunk->getId().c_str();
+	return m_chunk->getIdStr().c_str();
 }
 

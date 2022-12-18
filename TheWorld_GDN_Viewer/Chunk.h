@@ -48,7 +48,7 @@ namespace godot
 		int getLod(void);
 		int getSlotPosX(void);
 		int getSlotPosZ(void);
-		String getId(void);
+		String getIdStr(void);
 
 	private:
 		bool m_initialized;
@@ -329,7 +329,7 @@ namespace godot
 			int getLod(void) { return m_lod; }
 			int getSlotPosX(void) { return m_slotPosX; }
 			int getSlotPosZ(void) { return m_slotPosZ; }
-			std::string getId(void)
+			std::string getIdStr(void)
 			{
 				return "LOD:" + std::to_string(m_lod) + "-X:" + std::to_string(m_slotPosX) + "-Z:" + std::to_string(m_slotPosZ);
 			}
@@ -381,7 +381,7 @@ namespace godot
 		int getLod(void) { return m_lod; }
 		int getSlotPosX(void) { return m_slotPosX; }
 		int getSlotPosZ(void) { return m_slotPosZ; }
-		std::string getId(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod).getId(); };
+		std::string getIdStr(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod).getIdStr(); };
 		ChunkPos getPos(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod); }
 		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
 		AABB getAABB(void)

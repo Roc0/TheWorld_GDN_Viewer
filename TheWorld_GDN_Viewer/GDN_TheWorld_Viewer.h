@@ -25,7 +25,7 @@ namespace godot
 	class GDN_TheWorld_Globals;
 	class GDN_TheWorld_Camera;
 
-	typedef std::map<QuadrantId, std::unique_ptr<QuadTree>> MapQuadTree;
+	typedef std::map<QuadrantPos, std::unique_ptr<QuadTree>> MapQuadTree;
 
 #define STREAMER_SLEEP_TIME	10
 #define FAR_HORIZON_MULTIPLIER	50
@@ -83,6 +83,7 @@ namespace godot
 		Transform getCameraChunkMeshGlobalTransformApplied(void);
 		Transform getCameraChunkDebugMeshGlobalTransformApplied(void);
 		String getCameraChunkId(void);
+		String getCameraQuadrantName(void);
 		int getNumSplits(void);
 		int getNumJoins(void);
 		int getNumChunks(void);
@@ -105,7 +106,7 @@ namespace godot
 		bool useVisualServer(void) { return m_useVisualServer; }
 		void forceRefreshMapQuadTree(void) { m_refreshMapQuadTree = true; }
 		//Vector3 getMapScaleVector(void) { return m_mapScaleVector; }
-		QuadTree* getQuadTreeFromInternalMap(QuadrantId id);
+		QuadTree* getQuadTreeFromInternalMap(QuadrantPos pos);
 
 	private:
 		void onTransformChanged(void);
@@ -173,7 +174,7 @@ namespace godot
 		// World Data
 		MapQuadTree m_mapQuadTree;
 		std::recursive_mutex m_mtxQuadTree;
-		QuadrantId m_computedCameraQuadrantId;
+		QuadrantPos m_computedCameraQuadrantPos;
 		bool m_refreshMapQuadTree;
 		int m_numWorldVerticesPerSize;
 		int m_worldViewerLevel;		// actually world viewer manage one level at the time, otherwise we should have multiple quadtrees
