@@ -118,23 +118,23 @@ namespace TheWorld_Utils
 				//TheWorld_Utils::TimerMs clock("MeshCacheBuffer::refreshMeshCacheFromBuffer", m_meshId.c_str(), false, true);
 								
 				//clock.tick();
-				godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
-				godot::Ref<godot::Image> image = resLoader->load("res://height.res");
-				int res = (int)image->get_width();
-				image->lock();
-				for (int z = 0; z < res; z++)
-					for (int x = 0; x < res; x++)
-					{
-						godot::Color c = image->get_pixel(x, z);
-						TheWorld_Utils::GridVertex& v = vectGridVertices[z * res + x];
-						v.setAltitude(c.r * 3);
-					}
-				image->unlock();
+				//godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
+				//godot::Ref<godot::Image> image = resLoader->load("res://height.res");
+				//int res = (int)image->get_width();
+				//image->lock();
+				//for (int z = 0; z < res; z++)
+				//	for (int x = 0; x < res; x++)
+				//	{
+				//		godot::Color c = image->get_pixel(x, z);
+				//		TheWorld_Utils::GridVertex& v = vectGridVertices[z * res + x];
+				//		v.setAltitude(c.r * 3);
+				//	}
+				//image->unlock();
 				//clock.headerMsg("Mock Loop to replace altitudes" + m_meshId);
 				//clock.tock();
 
 				//clock.tick();
-				setBufferForMeshCache(meshId, res, vectGridVertices, buffer);
+				//setBufferForMeshCache(meshId, res, vectGridVertices, buffer);
 				//clock.headerMsg("Mock setBufferForMeshCache" + m_meshId);
 				//clock.tock();
 				// SUPER DEBUGRIC

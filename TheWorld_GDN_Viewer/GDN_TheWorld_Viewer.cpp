@@ -280,7 +280,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					std::string meshIdFromBuffer;
 					{
 						// ATTENZIONE
-						std::lock_guard lock(m_mtxQuadTree);	// SUPER DEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
+						//std::lock_guard lock(m_mtxQuadTree);	// SUPER DEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
 						cache.refreshMeshCacheFromBuffer(*_buffGridVerticesFromServer, meshIdFromBuffer, vectGridVertices);
 					}
 
