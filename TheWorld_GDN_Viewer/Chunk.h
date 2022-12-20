@@ -23,6 +23,7 @@ namespace godot
 
 	class GDN_TheWorld_Viewer;
 	class Chunk;
+	class Quad;
 	class QuadTree;
 
 	class GDN_Chunk_MeshInstance : public MeshInstance
@@ -394,7 +395,14 @@ namespace godot
 		void resetCameraVerticalOnChunk(void) { m_isCameraVerticalOnChunk = false; }
 		//Transform getGlobalTransform(void);
 		Transform getMeshGlobalTransform(void) { return m_meshGlobaTransform; }
-		void setPosInQuad(enum PosInQuad posInQuad) { m_posInQuad = posInQuad; };
+		void setPosInQuad(enum PosInQuad posInQuad, Quad* quad = nullptr) 
+		{
+			m_posInQuad = posInQuad;
+			if (m_posInQuad == PosInQuad::NotSet)
+				m_quad = nullptr;
+			else
+				m_quad = quad;
+		};
 		virtual void releaseDebugMesh(void);
 		virtual void releaseMesh(void);
 		//Ref<Mesh> getMesh() { return m_mesh; };
@@ -413,6 +421,7 @@ namespace godot
 		enum PosInQuad m_posInQuad;
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
+		Quad* m_quad;
 		//Transform m_parentTransform;
 		AABB m_aabb;						// AABB of the chunk in WUs relative to the chunk so X and Z are 0
 		AABB m_globalCoordAABB;				// AABB of the chunk in WUs in global coord.

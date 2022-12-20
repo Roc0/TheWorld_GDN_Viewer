@@ -191,6 +191,11 @@ namespace godot
 		m_viewer = NULL;
 	}
 
+	GDN_TheWorld_Globals::~GDN_TheWorld_Globals()
+	{
+		deinit();
+	}
+
 	void GDN_TheWorld_Globals::replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply)
 	{
 		std::string method = reply.getMethod();
@@ -281,9 +286,8 @@ namespace godot
 		PLOGI << "TheWorld Globals Initialized!";
 	}
 
-	GDN_TheWorld_Globals::~GDN_TheWorld_Globals()
+	void GDN_TheWorld_Globals::prepareDeinit(void)
 	{
-		deinit();
 	}
 
 	void GDN_TheWorld_Globals::deinit(void)
@@ -336,6 +340,15 @@ namespace godot
 		if (m_isDebugEnabled)
 			sev = PLOG_DEBUG_LEVEL;
 		m_client->ServerInitializeSession(sev);
+	}
+
+	void GDN_TheWorld_Globals::prepareDisconnectFromServer(void)
+	{
+		if (status() == TheWorldStatus::connectedToServer || status() == TheWorldStatus::sessionInitialized)
+		{
+			if (m_client != nullptr)
+				m_client->prepareDisconnect();
+		}
 	}
 
 	void GDN_TheWorld_Globals::disconnectFromServer(void)

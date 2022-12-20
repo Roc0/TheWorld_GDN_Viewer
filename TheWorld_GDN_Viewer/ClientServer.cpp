@@ -99,11 +99,21 @@ namespace TheWorld_ClientServer
 		return THEWORLD_CLIENTSERVER_RC_OK;
 	}
 
-	void ClientInterface::disconnect(void)
+	void ClientInterface::prepareDisconnect(void)
 	{
+		m_receiverThreadRequiredExit = true;
 		if (m_receiverThread.joinable())
 		{
-			m_receiverThreadRequiredExit = true;
+			m_receiverThread.join();
+			PLOG_INFO << "ClientInterface::prepareDisconnect - Receiver thread joined (stopped execution)";
+		}
+	}
+
+	void ClientInterface::disconnect(void)
+	{
+		m_receiverThreadRequiredExit = true;
+		if (m_receiverThread.joinable())
+		{
 			m_receiverThread.join();
 			PLOG_INFO << "ClientInterface::connect - Receiver thread joined (stopped execution)";
 		}

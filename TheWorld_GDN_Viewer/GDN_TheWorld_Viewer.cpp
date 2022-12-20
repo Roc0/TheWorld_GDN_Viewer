@@ -109,6 +109,29 @@ GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
 	deinit();
 }
 
+bool GDN_TheWorld_Viewer::init(void)
+{
+	PLOGI << "TheWorld Viewer Initializing...";
+
+	m_meshCache = make_unique<MeshCache>(this);
+	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
+
+	m_streamerThreadRequiredExit = false;
+	m_streamerThread = std::thread(&GDN_TheWorld_Viewer::streamer, this);
+
+	m_initialized = true;
+	PLOGI << "TheWorld Viewer Initialized!";
+
+	return true;
+}
+
+void GDN_TheWorld_Viewer::prepareDeinit(void)
+{
+	m_streamerThreadRequiredExit = true;
+	if (m_streamerThread.joinable())
+		m_streamerThread.join();
+}
+
 void GDN_TheWorld_Viewer::deinit(void)
 {
 	if (m_initialized)
@@ -116,7 +139,8 @@ void GDN_TheWorld_Viewer::deinit(void)
 		PLOGI << "TheWorld Viewer Deinitializing...";
 
 		m_streamerThreadRequiredExit = true;
-		m_streamerThread.join();
+		if (m_streamerThread.joinable())
+			m_streamerThread.join();
 
 		m_mapQuadTree.clear();
 		m_meshCache.reset();
@@ -126,7 +150,6 @@ void GDN_TheWorld_Viewer::deinit(void)
 		
 		Globals()->debugPrint("GDN_TheWorld_Viewer::deinit DONE!");
 	}
-
 }
 
 void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply)
@@ -575,22 +598,6 @@ String GDN_TheWorld_Viewer::getChunkDebugModeStr(void)
 		return "CHUNK_DEBUG_MODE_WIREFRAME_SQUARE";
 	else
 		return "";
-}
-
-bool GDN_TheWorld_Viewer::init(void)
-{
-	PLOGI << "TheWorld Viewer Initializing...";
-	
-	m_meshCache = make_unique<MeshCache>(this);
-	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
-
-	m_streamerThreadRequiredExit = false;
-	m_streamerThread = std::thread(&GDN_TheWorld_Viewer::streamer, this);
-
-	m_initialized = true;
-	PLOGI << "TheWorld Viewer Initialized!";
-
-	return true;
 }
 
 void GDN_TheWorld_Viewer::_process(float _delta)

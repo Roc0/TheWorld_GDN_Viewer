@@ -45,6 +45,7 @@ namespace godot
 		GDN_TheWorld_Viewer();
 		~GDN_TheWorld_Viewer();
 		bool init(void);
+		void prepareDeinit(void);
 		void deinit(void);
 
 		void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);

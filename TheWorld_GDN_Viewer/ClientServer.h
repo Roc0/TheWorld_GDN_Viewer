@@ -209,6 +209,7 @@ namespace TheWorld_ClientServer
 		ClientInterface(plog::Severity sev);
 		~ClientInterface(void);
 		virtual int connect(void);
+		virtual void prepareDisconnect(void);
 		virtual void disconnect(void);
 		virtual int execMethodAsync(std::string method, std::string& ref, std::vector<ClientServerVariant>& inputParams, size_t timeToLive = THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, ClientCallback* clientCallbak = nullptr);
 		//virtual int execMethodSync(std::string method, std::vector<ClientServerVariant>& inputParams, std::vector <ClientServerVariant>& replyParams, size_t timeout = THEWORLD_CLIENTSERVER_DEFAULT_TIMEOUT);

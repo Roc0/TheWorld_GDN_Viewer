@@ -1,10 +1,8 @@
 //#include "pch.h"
 #ifdef _THEWORLD_CLIENT
-	// SUPER DEBUGRIC
 	#include <Godot.hpp>
 	#include <ResourceLoader.hpp>
 	#include <File.hpp>
-// SUPER DEBUGRIC
 #endif
 #include "TheWorld_Utils.h"
 #include <filesystem>

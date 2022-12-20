@@ -14,6 +14,7 @@ void GDN_TheWorld_MainNode::_register_methods()
 	register_method("_notification", &GDN_TheWorld_MainNode::_notification);
 
 	register_method("init", &GDN_TheWorld_MainNode::init);
+	register_method("prepare_deinit", &GDN_TheWorld_MainNode::prepareDeinit);
 	register_method("deinit", &GDN_TheWorld_MainNode::deinit);
 	register_method("globals", &GDN_TheWorld_MainNode::Globals);
 }
@@ -28,51 +29,6 @@ GDN_TheWorld_MainNode::GDN_TheWorld_MainNode()
 GDN_TheWorld_MainNode::~GDN_TheWorld_MainNode()
 {
 	deinit();
-}
-
-void GDN_TheWorld_MainNode::deinit(void)
-{
-	if (m_initialized)
-	{
-		PLOGI << "TheWorld Main Node Deinitializing...";
-
-		//if (m_temp)
-		//{
-		//	Node* parent = m_temp->get_parent();
-		//	if (parent)
-		//		parent->remove_child(m_temp);
-		//	m_temp->deinit();
-		//	m_temp->queue_free();
-		//	m_temp = NULL;
-		//}
-		
-		GDN_TheWorld_Globals* globals = Globals();
-		if (globals)
-		{
-			GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
-			if (viewer)
-			{
-				Node* parent = viewer->get_parent();
-				if (parent)
-					parent->remove_child(viewer);
-				viewer->deinit();
-				viewer->queue_free();
-				//viewer->call_deferred("free");
-			}
-			PLOGI << "TheWorld Main Node Deinitialized!";
-			
-			Node* parent = globals->get_parent();
-			if (parent)
-				parent->remove_child(globals);
-			globals->deinit();
-			globals->queue_free();
-			//globals->call_deferred("free");
-		}
-
-		m_initialized = false;
-
-		Globals()->debugPrint("GDN_TheWorld_MainNode::deinit DONE!");
-	}
 }
 
 void GDN_TheWorld_MainNode::_init(void)
@@ -154,6 +110,70 @@ bool GDN_TheWorld_MainNode::init(Node* pMainNode, Node* pWorldMainNode)
 	PLOGI << "TheWorld Main Node Initialized!";
 
 	return true;
+}
+
+void GDN_TheWorld_MainNode::prepareDeinit(void)
+{
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals)
+	{
+		GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
+		if (viewer)
+			viewer->prepareDeinit();
+		
+		globals->prepareDisconnectFromServer();
+
+		globals->prepareDeinit();
+	}
+}
+
+void GDN_TheWorld_MainNode::deinit(void)
+{
+	if (m_initialized)
+	{
+		PLOGI << "TheWorld Main Node Deinitializing...";
+
+		//if (m_temp)
+		//{
+		//	Node* parent = m_temp->get_parent();
+		//	if (parent)
+		//		parent->remove_child(m_temp);
+		//	m_temp->deinit();
+		//	m_temp->queue_free();
+		//	m_temp = NULL;
+		//}
+
+		GDN_TheWorld_Globals* globals = Globals();
+		if (globals)
+		{
+			GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
+			if (viewer)
+			{
+				Node* parent = viewer->get_parent();
+				if (parent)
+					parent->remove_child(viewer);
+				viewer->deinit();
+				viewer->queue_free();
+				//viewer->call_deferred("free");
+			}
+			PLOGI << "TheWorld Main Node Deinitialized!";
+
+			Node* parent = globals->get_parent();
+			if (parent)
+				parent->remove_child(globals);
+			globals->deinit();
+			globals->queue_free();
+			//globals->call_deferred("free");
+		}
+
+		m_initialized = false;
+
+		Globals()->debugPrint("GDN_TheWorld_MainNode::deinit DONE!");
+
+		Node* parent = get_parent();
+		if (parent)
+			parent->remove_child(this);
+	}
 }
 
 GDN_TheWorld_Globals* GDN_TheWorld_MainNode::Globals(bool useCache)

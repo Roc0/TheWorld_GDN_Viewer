@@ -110,7 +110,7 @@ void Quad::assignChunk(void)
 		//m_chunk->setParentGlobalTransform(m_viewer->internalTransformGlobalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}
-	m_chunk->setPosInQuad(m_posInQuad);
+	m_chunk->setPosInQuad(m_posInQuad, this);
 	m_quadTree->addChunkUpdate(m_chunk);
 	m_chunk->setActive(true);
 	m_chunkAABB = m_chunk->getAABB();

@@ -25,6 +25,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Q
 	m_isCameraVerticalOnChunk = false;
 	m_viewer = viewer;
 	m_quadTree = quadTree;
+	m_quad = nullptr;
 	m_debugMode = m_viewer->getRequiredChunkDebugMode();
 	m_debugContentVisible = m_viewer->getDebugContentVisibility();
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();

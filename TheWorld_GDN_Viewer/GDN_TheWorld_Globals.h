@@ -125,8 +125,10 @@ namespace godot
 		GDN_TheWorld_Globals();
 		~GDN_TheWorld_Globals();
 		void init(void);
+		void prepareDeinit(void);
 		void deinit(void);
 		void connectToServer(void);
+		void prepareDisconnectFromServer(void);
 		void disconnectFromServer(void);
 		bool resize(int chunkSizeShift, int heightmapResolutionShift, bool force = false);
 
@@ -144,6 +146,7 @@ namespace godot
 			register_method("get_status", &GDN_TheWorld_Globals::get_status);
 
 			register_method("connect_to_server", &GDN_TheWorld_Globals::connectToServer);
+			register_method("prepare_disconnect_from_server", &GDN_TheWorld_Globals::prepareDisconnectFromServer);
 			register_method("disconnect_from_server", &GDN_TheWorld_Globals::disconnectFromServer);
 
 			register_method("set_debug_enabled", &GDN_TheWorld_Globals::setDebugEnabled);
