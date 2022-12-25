@@ -14,7 +14,8 @@ void GDN_TheWorld_MainNode::_register_methods()
 	register_method("_notification", &GDN_TheWorld_MainNode::_notification);
 
 	register_method("init", &GDN_TheWorld_MainNode::init);
-	register_method("prepare_deinit", &GDN_TheWorld_MainNode::prepareDeinit);
+	register_method("pre_deinit", &GDN_TheWorld_MainNode::preDeinit);
+	register_method("can_deinit", &GDN_TheWorld_MainNode::canDeinit);
 	register_method("deinit", &GDN_TheWorld_MainNode::deinit);
 	register_method("globals", &GDN_TheWorld_MainNode::Globals);
 }
@@ -49,7 +50,9 @@ void GDN_TheWorld_MainNode::_notification(int p_what)
 	{
 	case NOTIFICATION_PREDELETE:
 	{
-		Globals()->debugPrint("GDN_TheWorld_MainNode::_notification - Destroy Main Node");
+		GDN_TheWorld_Globals* globals = Globals();
+		if (globals != nullptr)
+			globals->debugPrint("GDN_TheWorld_MainNode::_notification - Destroy Main Node");
 	}
 	break;
 	}
@@ -66,7 +69,7 @@ void GDN_TheWorld_MainNode::_process(float _delta)
 	//Globals()->debugPrint("GDN_TheWorld_MainNode::_process");
 }
 
-bool GDN_TheWorld_MainNode::init(Node* pMainNode, Node* pWorldMainNode)
+bool GDN_TheWorld_MainNode::init(Node* pMainNode, Spatial* pWorldMainNode)
 {
 	// Must exist: a Node acting as Main and a Node acting as the world; globals will be child of the first and the viewer will be a child of this second
 	if (!pWorldMainNode || !pMainNode)
@@ -101,6 +104,8 @@ bool GDN_TheWorld_MainNode::init(Node* pMainNode, Node* pWorldMainNode)
 	{
 		pWorldMainNode->add_child(viewer);
 		viewer->set_name(THEWORLD_VIEWER_NODE_NAME);
+		Transform gt = pWorldMainNode->get_global_transform();
+		viewer->set_global_transform(gt);
 		//viewer->init();
 	}
 	else
@@ -112,19 +117,37 @@ bool GDN_TheWorld_MainNode::init(Node* pMainNode, Node* pWorldMainNode)
 	return true;
 }
 
-void GDN_TheWorld_MainNode::prepareDeinit(void)
+void GDN_TheWorld_MainNode::preDeinit(void)
 {
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals)
 	{
 		GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
 		if (viewer)
-			viewer->prepareDeinit();
+			viewer->preDeinit();
 		
 		globals->prepareDisconnectFromServer();
 
-		globals->prepareDeinit();
+		globals->preDeinit();
 	}
+}
+
+bool GDN_TheWorld_MainNode::canDeinit(void)
+{
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals)
+	{
+		GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
+		if (viewer && !viewer->canDeinit())
+			return false;
+
+		if (!globals->canDisconnectFromServer())
+			return false;
+
+		return globals->canDeinit();
+	}
+	else
+		return true;
 }
 
 void GDN_TheWorld_MainNode::deinit(void)

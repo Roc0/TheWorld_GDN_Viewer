@@ -74,6 +74,7 @@ namespace TheWorld_ClientServer
 		m_msTimeout = THEWORLD_CLIENTSERVER_DEFAULT_TIMEOUT;
 
 		m_receiverThreadRequiredExit = false;
+		m_receiverThreadRunning = false;
 	}
 
 	ClientInterface::~ClientInterface(void)
@@ -92,6 +93,7 @@ namespace TheWorld_ClientServer
 		PLOG_INFO << "ClientInterface::connect - Server connected";
 
 		m_receiverThreadRequiredExit = false;
+		m_receiverThreadRunning = true;
 		m_receiverThread = std::thread(&ClientInterface::receiver, this);
 
 		PLOG_INFO << "ClientInterface::connect - Receiver thread started";
@@ -102,11 +104,21 @@ namespace TheWorld_ClientServer
 	void ClientInterface::prepareDisconnect(void)
 	{
 		m_receiverThreadRequiredExit = true;
-		if (m_receiverThread.joinable())
-		{
-			m_receiverThread.join();
-			PLOG_INFO << "ClientInterface::prepareDisconnect - Receiver thread joined (stopped execution)";
-		}
+		//if (m_receiverThread.joinable())
+		//{
+		//	m_receiverThread.join();
+		//	PLOG_INFO << "ClientInterface::prepareDisconnect - Receiver thread joined (stopped execution)";
+		//}
+	}
+
+	bool ClientInterface::canDisconnect(void)
+	{
+		return !m_receiverThreadRunning;
+		//if (m_receiverThread.joinable())
+		//{
+		//	m_receiverThread.join();
+		//	PLOG_INFO << "ClientInterface::prepareDisconnect - Receiver thread joined (stopped execution)";
+		//}
 	}
 
 	void ClientInterface::disconnect(void)
@@ -356,6 +368,8 @@ namespace TheWorld_ClientServer
 
 	void ClientInterface::receiver(void)
 	{
+		m_receiverThreadRunning = true;
+
 		MapClientServerExecution toCallCallback;
 
 		m_tp.Start(4);
@@ -441,6 +455,8 @@ namespace TheWorld_ClientServer
 		m_tp.Stop();
 
 		toCallCallback.clear();
+
+		m_receiverThreadRunning = false;
 	}
 	
 	ServerInterface::ServerInterface(plog::Severity sev)

@@ -15,6 +15,7 @@
 #include <ctime>
 
 #include "Chunk.h"
+#include "Collider.h"
 
 #define _DEBUG_AAB	1
 
@@ -211,26 +212,28 @@ namespace godot
 
 	class Quadrant
 	{
+		friend class ShaderTerrainData;
+
 	public:
 		//Quadrant(MapManager* mapManager)
 		//{
 		//	m_mapManager = mapManager;
 		//}
 
-		Quadrant(QuadrantPos& quadrantId, QuadTree* quadTree)
+		Quadrant(QuadrantPos& quadrantPos, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
 		{
-			m_quadrantId = quadrantId;
+			m_quadrantPos = quadrantPos;
+			m_viewer = viewer;
 			m_quadTree = quadTree;
+			std::string dir = GDN_TheWorld_Globals::getClientDataDir();
+			m_cache = TheWorld_Utils::MeshCacheBuffer(dir, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
+			m_shaderTerrainData = make_unique<ShaderTerrainData>(viewer, quadTree);
+			//m_collider = make_unique<Collider>(quadTree);
 		}
 
 		~Quadrant()
 		{
 			m_vectGridVertices.clear();
-		}
-
-		void implementId(QuadrantPos& quadrantId)
-		{
-			m_quadrantId = quadrantId;
 		}
 
 		_declspec(dllexport) void populateGridVertices(float initialViewerPosX, float initialViewerPosZ, bool setCamera, float cameraDistanceFromTerrain);
@@ -240,21 +243,52 @@ namespace godot
 			return m_vectGridVertices;
 		}
 
-		QuadrantPos getId(void) { return m_quadrantId; }
+		PoolRealArray& getHeights(void)
+		{
+			return m_heigths;
+		}
+
+		QuadrantPos getPos(void)
+		{
+			return m_quadrantPos;
+		}
 
 		void setMeshId(std::string meshId)
 		{
 			m_meshId = meshId;
 		}
 
-		TheWorld_Utils::MeshCacheBuffer getMeshCacheBuffer(void);
-		//std::string getCacheFileName();
+		void refreshGridVertices(std::string buffer, std::string meshId, std::string& meshIdFromBuffer);
+
+		AABB& getGlobalCoordAABB(void)
+		{
+			return m_globalCoordAABB;
+		}
+
+		ShaderTerrainData* getShaderTerrainData(void)
+		{
+			return m_shaderTerrainData.get();
+		}
+
+		//Collider* getCollider(void)
+		//{
+		//	return m_collider.get();
+		//}
 
 	private:
-		QuadrantPos m_quadrantId;
-		std::vector<TheWorld_Utils::GridVertex> m_vectGridVertices;
-		std::string m_meshId;
+		TheWorld_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
+
+	private:
+		QuadrantPos m_quadrantPos;
+		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
+		std::vector<TheWorld_Utils::GridVertex> m_vectGridVertices;
+		PoolRealArray m_heigths;
+		std::string m_meshId;
+		TheWorld_Utils::MeshCacheBuffer m_cache;
+		AABB m_globalCoordAABB;
+		//std::unique_ptr<Collider> m_collider;
+		std::unique_ptr<ShaderTerrainData> m_shaderTerrainData;
 	};
 
 	class ShaderTerrainData
@@ -269,9 +303,9 @@ namespace godot
 #define SHADER_PARAM_GRID_STEP "u_grid_step_in_wu"
 
 	public:
-		ShaderTerrainData();
+		ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
 		~ShaderTerrainData();
-		void init(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
+		void init(void);
 		bool materialParamsNeedReset(void)
 		{
 			return m_materialParamsNeedReset;
@@ -280,7 +314,7 @@ namespace godot
 		{
 			m_materialParamsNeedReset = b;
 		}
-		void resetMaterialParams(TheWorld_Utils::MeshCacheBuffer& cache);
+		void resetMaterialParams(void);
 		bool materialParamsNeedUpdate(void)
 		{
 			return m_materialParamsNeedUpdate;
@@ -450,14 +484,10 @@ namespace godot
 		Quadrant* getQuadrant(void) { return m_worldQuadrant; }
 		void resetMaterialParams(void);
 		bool materialParamsNeedReset(void);
-		void materialParamsNeedReset(bool b, TheWorld_Utils::MeshCacheBuffer* cache);
+		void materialParamsNeedReset(bool b);
 		void updateMaterialParams(void);
 		bool materialParamsNeedUpdate(void);
 		void materialParamsNeedUpdate(bool b);
-		ShaderTerrainData& getShaderTerrainData(void)
-		{
-			return m_shaderTerrainData;
-		}
 		bool statusInitialized(void)
 		{
 			return status() == QuadrantStatus::initialized;
@@ -506,7 +536,7 @@ namespace godot
 		{
 			return m_tag;
 		}
-		Transform internalTransformGlobalCoord(void);
+		Transform getInternalGlobalTransform(void);
 		GDN_TheWorld_Viewer* Viewer(void) { return m_viewer; }
 		std::recursive_mutex& getQuadrantMutex(void)
 		{
@@ -528,9 +558,7 @@ namespace godot
 		Chunk::MapChunk m_mapChunk;
 		std::vector<Chunk*> m_vectChunkUpdate;
 		Quadrant* m_worldQuadrant;
-		ShaderTerrainData m_shaderTerrainData;
 		std::timespec m_refreshTime;
-		TheWorld_Utils::MeshCacheBuffer m_cache;
 
 		// Statistics
 		int m_numSplits;

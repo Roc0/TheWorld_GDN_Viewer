@@ -210,6 +210,7 @@ namespace TheWorld_ClientServer
 		~ClientInterface(void);
 		virtual int connect(void);
 		virtual void prepareDisconnect(void);
+		virtual bool canDisconnect(void);
 		virtual void disconnect(void);
 		virtual int execMethodAsync(std::string method, std::string& ref, std::vector<ClientServerVariant>& inputParams, size_t timeToLive = THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, ClientCallback* clientCallbak = nullptr);
 		//virtual int execMethodSync(std::string method, std::vector<ClientServerVariant>& inputParams, std::vector <ClientServerVariant>& replyParams, size_t timeout = THEWORLD_CLIENTSERVER_DEFAULT_TIMEOUT);
@@ -230,6 +231,7 @@ namespace TheWorld_ClientServer
 		// receiver thread
 		std::thread m_receiverThread;
 		bool m_receiverThreadRequiredExit;
+		bool m_receiverThreadRunning;
 		TheWorld_Utils::ThreadPool m_tp;
 	};
 

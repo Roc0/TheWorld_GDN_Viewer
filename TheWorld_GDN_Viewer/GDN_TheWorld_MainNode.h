@@ -1,6 +1,6 @@
 #pragma once
 #include <Godot.hpp>
-#include <Node.hpp>
+#include <Spatial.hpp>
 #include <Reference.hpp>
 #include <InputEvent.hpp>
 
@@ -16,8 +16,9 @@ namespace godot
 	public:
 		GDN_TheWorld_MainNode();
 		~GDN_TheWorld_MainNode();
-		bool init(Node* pMainNode, Node* pWorldMainNode);
-		void prepareDeinit(void);
+		bool init(Node* pMainNode, Spatial* pWorldMainNode);
+		void preDeinit(void);
+		bool canDeinit(void);
 		void deinit(void);
 		void _notification(int p_what);
 

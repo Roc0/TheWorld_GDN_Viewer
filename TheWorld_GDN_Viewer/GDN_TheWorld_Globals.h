@@ -125,10 +125,12 @@ namespace godot
 		GDN_TheWorld_Globals();
 		~GDN_TheWorld_Globals();
 		void init(void);
-		void prepareDeinit(void);
+		void preDeinit(void);
+		bool canDeinit(void);
 		void deinit(void);
 		void connectToServer(void);
 		void prepareDisconnectFromServer(void);
+		bool canDisconnectFromServer(void);
 		void disconnectFromServer(void);
 		bool resize(int chunkSizeShift, int heightmapResolutionShift, bool force = false);
 
@@ -144,6 +146,7 @@ namespace godot
 			register_method("_notification", &GDN_TheWorld_Globals::_notification);
 			
 			register_method("get_status", &GDN_TheWorld_Globals::get_status);
+			register_method("set_status", &GDN_TheWorld_Globals::set_status);
 
 			register_method("connect_to_server", &GDN_TheWorld_Globals::connectToServer);
 			register_method("prepare_disconnect_from_server", &GDN_TheWorld_Globals::prepareDisconnectFromServer);
@@ -176,13 +179,17 @@ namespace godot
 		{
 			return m_status;
 		}
-		int get_status(void)
-		{
-			return (int)m_status;
-		}
 		void setStatus(enum class TheWorldStatus status)
 		{
 			m_status = status;
+		}
+		int get_status(void)
+		{
+			return (int)status();
+		}
+		void set_status(int status)
+		{
+			setStatus((enum class TheWorldStatus)status);
 		}
 
 		//

@@ -173,7 +173,10 @@ namespace godot
 		class SwitchDebugModeAction : public ChunkAction
 		{
 		public:
-			SwitchDebugModeAction(enum class GDN_TheWorld_Globals::ChunkDebugMode mode) { m_mode = mode; }
+			SwitchDebugModeAction(enum class GDN_TheWorld_Globals::ChunkDebugMode mode)
+			{
+				m_mode = mode; 
+			}
 			virtual ~SwitchDebugModeAction() {}
 			virtual void exec(Chunk* chunk)
 			{
@@ -216,7 +219,10 @@ namespace godot
 		class VisibilityChangedChunkAction : public ChunkAction
 		{
 		public:
-			VisibilityChangedChunkAction(bool isVisibleInTree) { m_isVisibleInTree = isVisibleInTree; }
+			VisibilityChangedChunkAction(bool isVisibleInTree)
+			{
+				m_isVisibleInTree = isVisibleInTree; 
+			}
 			virtual ~VisibilityChangedChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
@@ -229,7 +235,10 @@ namespace godot
 		class DebugVisibilityChangedChunkAction : public ChunkAction
 		{
 		public:
-			DebugVisibilityChangedChunkAction(bool isVisible) { m_isVisible = isVisible; }
+			DebugVisibilityChangedChunkAction(bool isVisible)
+			{
+				m_isVisible = isVisible; 
+			}
 			virtual ~DebugVisibilityChangedChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
@@ -239,18 +248,17 @@ namespace godot
 			bool m_isVisible;
 		};
 
-		//class TransformChangedChunkAction : public ChunkAction
-		//{
-		//public:
-		//	TransformChangedChunkAction(Transform globalT) { m_globalT = globalT; }
-		//	virtual ~TransformChangedChunkAction() {}
-		//	virtual void exec(Chunk* chunk)
-		//	{
-		//		chunk->setParentGlobalTransform(m_globalT);
-		//	}
-		//private:
-		//	Transform m_globalT;
-		//};
+		class TransformChangedChunkAction : public ChunkAction
+		{
+		public:
+			TransformChangedChunkAction(void) {}
+			virtual ~TransformChangedChunkAction() {}
+			virtual void exec(Chunk* chunk)
+			{
+				chunk->onGlobalTransformChanged();
+			}
+		private:
+		};
 
 		class DumpChunkAction : public ChunkAction
 		{
@@ -267,7 +275,10 @@ namespace godot
 		class RefreshChunkAction : public ChunkAction
 		{
 		public:
-			RefreshChunkAction(bool isVisible) { m_isVisible = isVisible; }
+			RefreshChunkAction(bool isVisible) 
+			{
+				m_isVisible = isVisible; 
+			}
 			virtual ~RefreshChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
@@ -327,9 +338,18 @@ namespace godot
 				//m_lod = pos.m_lod;
 				return *this;
 			}
-			int getLod(void) { return m_lod; }
-			int getSlotPosX(void) { return m_slotPosX; }
-			int getSlotPosZ(void) { return m_slotPosZ; }
+			int getLod(void) 
+			{
+				return m_lod; 
+			}
+			int getSlotPosX(void)
+			{
+				return m_slotPosX; 
+			}
+			int getSlotPosZ(void)
+			{
+				return m_slotPosZ; 
+			}
 			std::string getIdStr(void)
 			{
 				return "LOD:" + std::to_string(m_lod) + "-X:" + std::to_string(m_slotPosX) + "-Z:" + std::to_string(m_slotPosZ);
@@ -353,7 +373,7 @@ namespace godot
 		// Actions
 		virtual void enterWorld(void);
 		virtual void exitWorld(void);
-		//virtual void setParentGlobalTransform(Transform t);
+		virtual void onGlobalTransformChanged(void);
 		virtual void setVisible(bool b);
 		virtual void setDebugContentVisible(bool b);
 		virtual void applyAABB(void);
@@ -362,9 +382,8 @@ namespace godot
 		virtual void setCameraPos(Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
 		virtual void applyDebugMesh(void);
-		//virtual Transform getGlobalTransformOfAABB(void);
-		virtual Transform getDebugMeshGlobalTransform(void);
-		virtual Transform getDebugMeshGlobalTransformApplied(void);
+		virtual Transform getDebugGlobalTransform(void);
+		virtual Transform getDebugGlobalTransformApplied(void);
 		virtual AABB getDebugMeshAABB(void) { return AABB(); };
 		virtual bool isMeshNull(void);
 		virtual bool isDebugMeshNull(void);
@@ -372,29 +391,74 @@ namespace godot
 		virtual void update(bool isVisible);
 		virtual void setActive(bool b);
 
-		bool isActive(void) { return m_active; }
-		bool isVisible(void) { return m_visible; }
-		bool isDebugContentVisible(void) { return m_debugContentVisible; }
-		bool isPendingUpdate(void) { return m_pendingUpdate; }
-		void setPendingUpdate(bool b) { m_pendingUpdate = b; }
-		bool gotJustJoined(void) { return m_justJoined; }
-		void setJustJoined(bool b) { m_justJoined = b; }
-		int getLod(void) { return m_lod; }
-		int getSlotPosX(void) { return m_slotPosX; }
-		int getSlotPosZ(void) { return m_slotPosZ; }
-		std::string getIdStr(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod).getIdStr(); };
-		ChunkPos getPos(void) { return ChunkPos(m_slotPosX, m_slotPosZ, m_lod); }
-		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
+		bool isActive(void)
+		{
+			return m_active; 
+		}
+		bool isVisible(void)
+		{
+			return m_visible; 
+		}
+		bool isDebugContentVisible(void)
+		{
+			return m_debugContentVisible; 
+		}
+		bool isPendingUpdate(void)
+		{
+			return m_pendingUpdate; 
+		}
+		void setPendingUpdate(bool b)
+		{
+			m_pendingUpdate = b; 
+		}
+		bool gotJustJoined(void)
+		{
+			return m_justJoined; 
+		}
+		void setJustJoined(bool b)
+		{
+			m_justJoined = b; 
+		}
+		int getLod(void)
+		{
+			return m_lod; 
+		}
+		int getSlotPosX(void)
+		{
+			return m_slotPosX; 
+		}
+		int getSlotPosZ(void)
+		{
+			return m_slotPosZ; 
+		}
+		std::string getIdStr(void)
+		{
+			return ChunkPos(m_slotPosX, m_slotPosZ, m_lod).getIdStr(); 
+		};
+		ChunkPos getPos(void)
+		{
+			return ChunkPos(m_slotPosX, m_slotPosZ, m_lod); 
+		}
+		float getChunkSizeInWUs(void)
+		{
+			return m_chunkSizeInWUs;
+		}
 		AABB getAABB(void)
 		{
 			checkAndCalcAABB();
 			return m_aabb;
 		};
 		void getCameraPos(Vector3& globalCoordCameraLastPos);
-		bool isCameraVerticalOnChunk(void) { return m_isCameraVerticalOnChunk; }
-		void resetCameraVerticalOnChunk(void) { m_isCameraVerticalOnChunk = false; }
-		//Transform getGlobalTransform(void);
-		Transform getMeshGlobalTransform(void) { return m_meshGlobaTransform; }
+		bool isCameraVerticalOnChunk(void)
+		{
+			return m_isCameraVerticalOnChunk;
+		}
+		void resetCameraVerticalOnChunk(void)
+		{
+			m_isCameraVerticalOnChunk = false;
+		}
+		Transform getGlobalTransform(void);
+		virtual Transform getGlobalTransformApplied(void);
 		void setPosInQuad(enum PosInQuad posInQuad, Quad* quad = nullptr) 
 		{
 			m_posInQuad = posInQuad;
@@ -407,10 +471,19 @@ namespace godot
 		virtual void releaseMesh(void);
 		//Ref<Mesh> getMesh() { return m_mesh; };
 		void getGlobalCoordAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
-		QuadTree* getQuadTree(void) { return m_quadTree; };
+		QuadTree* getQuadTree(void) 
+		{
+			return m_quadTree; 
+		};
 		bool isQuadTreeVisible(void);
-		float getLowerXInWUsGlobal(void) { return m_originXInWUsGlobal; }
-		float getLowerZInWUsGlobal(void) { return m_originZInWUsGlobal; }
+		float getLowerXInWUsGlobal(void)
+		{
+			return m_originXInWUsGlobal;
+		}
+		float getLowerZInWUsGlobal(void)
+		{
+			return m_originZInWUsGlobal;
+		}
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
@@ -422,7 +495,6 @@ namespace godot
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
 		Quad* m_quad;
-		//Transform m_parentTransform;
 		AABB m_aabb;						// AABB of the chunk in WUs relative to the chunk so X and Z are 0
 		AABB m_globalCoordAABB;				// AABB of the chunk in WUs in global coord.
 		int m_lod;
@@ -430,7 +502,8 @@ namespace godot
 		bool m_isCameraVerticalOnChunk;
 		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
 		bool m_debugContentVisible;
-		Transform m_meshGlobaTransform;
+		Transform m_initialGlobalTransform;
+		Transform m_globalTransformApplied;
 
 		int m_numVerticesPerChuckSide;		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int m_numChunksPerWorldGridSide;	// The number of chunks required to cover every side of the grid at the current lod value
@@ -471,7 +544,7 @@ namespace godot
 
 		virtual void enterWorld(void);
 		virtual void exitWorld(void);
-		//virtual void setParentGlobalTransform(Transform parentT);
+		virtual void onGlobalTransformChanged(void);
 		virtual void setVisible(bool b);
 		virtual void setDebugContentVisible(bool b);
 		virtual void applyAABB(void);
@@ -481,8 +554,8 @@ namespace godot
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
 		virtual void applyDebugMesh(void);
 		//virtual Transform getGlobalTransformOfAABB(void);
-		virtual Transform getDebugMeshGlobalTransform(void);
-		virtual Transform getDebugMeshGlobalTransformApplied(void);
+		virtual Transform getDebugGlobalTransform(void);
+		virtual Transform getDebugGlobalTransformApplied(void);
 		virtual AABB getDebugMeshAABB(void) { return m_debugMeshAABB; };
 		virtual bool isDebugMeshNull(void);
 		virtual void refresh(bool isVisible);
@@ -501,6 +574,6 @@ namespace godot
 		RID m_debugMeshRID;
 		Ref<Mesh> m_debugMesh;
 		AABB m_debugMeshAABB;
-		Transform m_debugMeshGlobaTransformApplied;
+		Transform m_debugGlobaTransformApplied;
 	};
 }

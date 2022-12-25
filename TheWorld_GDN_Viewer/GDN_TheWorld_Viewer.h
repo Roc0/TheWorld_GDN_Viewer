@@ -45,7 +45,8 @@ namespace godot
 		GDN_TheWorld_Viewer();
 		~GDN_TheWorld_Viewer();
 		bool init(void);
-		void prepareDeinit(void);
+		bool canDeinit(void);
+		void preDeinit(void);
 		void deinit(void);
 
 		void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
@@ -73,7 +74,8 @@ namespace godot
 		//void getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
 		//Transform internalTransformGlobalCoord(void);
 		//Transform internalTransformLocalCoord(void);
-		void setMapScale(Vector3 mapScaleVector);
+		//void setMapScale(Vector3 mapScaleVector);
+		Transform getInternalGlobalTransform(void);
 		void setDumpRequired(void) { m_dumpRequired = true; }
 		void dump(void);
 		void dumpRecurseIntoChildrenNodes(Array nodes, int level);
@@ -81,8 +83,8 @@ namespace godot
 		//Transform getCameraChunkGlobalTransformOfAABB(void);
 		AABB getCameraChunkLocalAABB(void);
 		AABB getCameraChunkLocalDebugAABB(void);
-		Transform getCameraChunkMeshGlobalTransformApplied(void);
-		Transform getCameraChunkDebugMeshGlobalTransformApplied(void);
+		Transform getCameraChunkGlobalTransformApplied(void);
+		Transform getCameraChunkDebugGlobalTransformApplied(void);
 		String getCameraChunkId(void);
 		String getCameraQuadrantName(void);
 		int getNumSplits(void);
@@ -103,7 +105,6 @@ namespace godot
 		String getChunkDebugModeStr(void);
 		bool getDebugContentVisibility(void) { return m_debugContentVisibility; }
 		String getDebugDrawMode(void);
-		//ShaderTerrainData& getShaderTerrainData(void) { return m_shaderTerrainData; }
 		bool useVisualServer(void) { return m_useVisualServer; }
 		void forceRefreshMapQuadTree(void) { m_refreshMapQuadTree = true; }
 		//Vector3 getMapScaleVector(void) { return m_mapScaleVector; }
@@ -119,7 +120,6 @@ namespace godot
 		{
 			m_worldCamera = camera;
 		};
-		//TheWorld_MapManager::MapManager::Quadrant* loadWorldData(float& x, float& z, int level, int numWorldVerticesPerSize);
 		void printKeyboardMapping(void);
 		void streamer(void);
 
@@ -187,6 +187,7 @@ namespace godot
 		// streamer thread
 		std::thread m_streamerThread;
 		bool m_streamerThreadRequiredExit;
+		bool m_streamerThreadRunning;
 	};
 
 }

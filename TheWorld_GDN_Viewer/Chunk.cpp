@@ -49,10 +49,10 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Q
 	m_justJoined = false;
 	m_matOverride = mat;
 
-	m_originXInWUsGlobal = m_quadTree->getQuadrant()->getId().getLowerXGridVertex() + m_originXInWUsLocalToGrid;
-	m_originZInWUsGlobal = m_quadTree->getQuadrant()->getId().getLowerZGridVertex() + m_originZInWUsLocalToGrid;
+	m_originXInWUsGlobal = m_quadTree->getQuadrant()->getPos().getLowerXGridVertex() + m_originXInWUsLocalToGrid;
+	m_originZInWUsGlobal = m_quadTree->getQuadrant()->getPos().getLowerZGridVertex() + m_originZInWUsLocalToGrid;
 
-	m_meshGlobaTransform = Transform(Basis(), Vector3((real_t)m_originXInWUsGlobal, 0, m_originZInWUsGlobal));
+	m_initialGlobalTransform = Transform(Basis(), Vector3((real_t)m_originXInWUsGlobal, 0, m_originZInWUsGlobal));
 
 	//checkAndCalcAABB();
 
@@ -60,7 +60,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Q
 
 	initVisual();
 
-	//globals->debugPrint("Chunk::Chunk - ID: " + String(getPos().getId().c_str()));
+	//globals->debugPrint("Chunk::Chunk - ID: " + String(getPos().getPos().c_str()));
 }
 
 Chunk::~Chunk()
@@ -102,7 +102,9 @@ void Chunk::initVisual(void)
 
 		vs->instance_set_visible(m_meshInstanceRID, isVisible());
 
-		VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_meshGlobaTransform);		// World coordinates
+		m_globalTransformApplied = getGlobalTransform();
+
+		VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
 	}
 }
 
@@ -147,26 +149,24 @@ void Chunk::exitWorld(void)
 	}
 }
 
-//void Chunk::setParentGlobalTransform(Transform parentT)
-//{
-//	// Pos of the lower point of the mesh of current chunk in global coord
-//	m_parentTransform = parentT;
-//	Transform worldTransform = getGlobalTransform();
-//
-//	if (m_useVisualServer)
-//	{
-//		assert(m_meshInstanceRID != RID());
-//		// Set the mesh pos in global coord
-//		VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, worldTransform);		// World coordinates
-//	}
-//	else
-//	{
-//		if (m_meshInstance != nullptr)
-//			m_meshInstance->set_global_transform(worldTransform);
-//	}
-//
-//	m_meshGlobaTransformApplied = worldTransform;
-//}
+void Chunk::onGlobalTransformChanged(void)
+{
+	if (m_useVisualServer)
+	{
+		assert(m_meshInstanceRID != RID());
+		m_globalTransformApplied = getGlobalTransform();
+		// Set the mesh pos in global coord
+		VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
+	}
+	else
+	{
+		if (m_meshInstance != nullptr)
+		{
+			m_globalTransformApplied = getGlobalTransform();
+			m_meshInstance->set_global_transform(m_globalTransformApplied);
+		}
+	}
+}
 
 void Chunk::setVisible(bool b)
 {
@@ -267,8 +267,9 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 				m_meshInstance->set_visible(true);
 			else
 				m_meshInstance->set_visible(false);
-			if (m_meshGlobaTransform != Transform())
-				m_meshInstance->set_global_transform(m_meshGlobaTransform);
+			Transform gt = getGlobalTransform();
+			if (gt != Transform())
+				m_meshInstance->set_global_transform(gt);
 			if (m_matOverride != nullptr)
 				m_meshInstance->set_surface_material(0, m_matOverride);
 		}
@@ -331,7 +332,7 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantPos XMinusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
+			QuadrantPos XMinusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
 			QuadTree* XMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(XMinusQuadrantPos);
 			if (XMinusQuadTree->isValid())
 			{
@@ -348,7 +349,7 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantPos ZMinusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
+			QuadrantPos ZMinusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
 			QuadTree* ZMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZMinusQuadrantPos);
 			if (ZMinusQuadTree->isValid())
 			{
@@ -373,7 +374,7 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantPos XPlusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
+			QuadrantPos XPlusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
 			QuadTree* XPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(XPlusQuadrantPos);
 			if (XPlusQuadTree->isValid())
 			{
@@ -390,7 +391,7 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantPos ZMinusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
+			QuadrantPos ZMinusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
 			QuadTree* ZMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZMinusQuadrantPos);
 			if (ZMinusQuadTree->isValid())
 			{
@@ -415,7 +416,7 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantPos XMinusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
+			QuadrantPos XMinusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
 			QuadTree* XMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(XMinusQuadrantPos);
 			if (XMinusQuadTree->isValid())
 			{
@@ -432,7 +433,7 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantPos ZPlusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
+			QuadrantPos ZPlusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
 			QuadTree* ZPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZPlusQuadrantPos);
 			if (ZPlusQuadTree->isValid())
 			{
@@ -457,7 +458,7 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantPos XPlusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
+			QuadrantPos XPlusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
 			QuadTree* XPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(XPlusQuadrantPos);
 			if (XPlusQuadTree->isValid())
 			{
@@ -474,7 +475,7 @@ void Chunk::update(bool isVisible)
 
 		if (numGreaterChunksPerSide > 0)
 		{
-			QuadrantPos ZPlusQuadrantPos = m_quadTree->getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
+			QuadrantPos ZPlusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
 			QuadTree* ZPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZPlusQuadrantPos);
 			if (ZPlusQuadTree->isValid())
 			{
@@ -553,31 +554,25 @@ void Chunk::getCameraPos(Vector3& globalCoordCameraLastPos)
 	globalCoordCameraLastPos = m_globalCoordCameraLastPos;
 }
 
-//Transform Chunk::getGlobalTransformOfAABB(void)
-//{
-//	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
-//	return m_parentTransform * Transform(Basis().scaled(m_aabb.size), pos + m_aabb.position);
-//}
+Transform Chunk::getGlobalTransform(void)
+{
+	Transform igt = m_viewer->getInternalGlobalTransform();
+	Transform gt = igt * m_initialGlobalTransform;
 
-//Transform Chunk::getGlobalTransform(void)
-//{
-//	// Return pos of the lower point of the mesh of current chunk in global coord
-//	Vector3 pos((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
-//	return m_parentTransform * Transform(Basis(), pos);
-//	//return m_parentTransform * Transform(Basis(), pos + m_aabb.position);		// DEBUGRIC: assign AABB pos to the mesh altitude
-//}
+	return gt;
+}
 
-//Transform Chunk::getMeshGlobalTransform(void)
-//{
-//	return m_meshGlobaTransform;
-//}
+Transform Chunk::getGlobalTransformApplied(void)
+{
+	return m_globalTransformApplied;
+}
 
-Transform Chunk::getDebugMeshGlobalTransform(void)
+Transform Chunk::getDebugGlobalTransform(void)
 {
 	return Transform();
 }
 
-Transform Chunk::getDebugMeshGlobalTransformApplied(void)
+Transform Chunk::getDebugGlobalTransformApplied(void)
 {
 	return Transform();
 }
@@ -593,7 +588,7 @@ void Chunk::applyDebugMesh()
 
 void Chunk::getGlobalCoordAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step)
 {
-	int numWorldVerticesPerSize = m_quadTree->getQuadrant()->getId().getNumVerticesPerSize();
+	int numWorldVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
 	int idxFirstColFirstRowWorldVert = numWorldVerticesPerSize * firstWorldVertRow + firstWorldVertCol;
 	int idxLastColFirstRowWorldVert = numWorldVerticesPerSize * firstWorldVertRow + lastWorldVertCol;
 	int idxFirstColLastRowWorldVert = numWorldVerticesPerSize * lastWorldVertRow + firstWorldVertCol;
@@ -637,7 +632,7 @@ void Chunk::dump(void)
 
 	//Transform localT(Basis(), Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));
 	//Transform worldT = m_parentTransform * localT;
-	//Transform worldT = m_meshGlobaTransform;
+	//Transform worldT = m_initialGlobalTransform;
 	//Vector3 v1 = worldT * Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
 	//Vector3 v2 = m_parentTransform * Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid);
 	//Vector3 v3 = m_viewer->to_global(Vector3((real_t)m_originXInWUsLocalToGrid, 0, (real_t)m_originZInWUsLocalToGrid));
@@ -660,7 +655,7 @@ void Chunk::dump(void)
 		+ " - MinH = " + to_string(m_aabb.position.y).c_str()
 		+ " - MaxH = " + to_string((m_aabb.position + m_aabb.size).y).c_str()
 		+ (m_isCameraVerticalOnChunk ? " - CAMERA" : ""));
-	globals->debugPrint(String("t: ") + m_meshGlobaTransform + String(" - t (debug): ") + getDebugMeshGlobalTransformApplied());
+	globals->debugPrint(String("t: ") + getGlobalTransformApplied() + String(" - t (debug): ") + getDebugGlobalTransformApplied());
 }
 
 ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, Ref<Material>& mat)
@@ -755,18 +750,10 @@ void ChunkDebug::update(bool isVisible)
 	Chunk::update(isVisible);
 }
 
-//Transform ChunkDebug::getGlobalTransformOfAABB(void)
-//{
-//	Transform worldTransform = Chunk::getGlobalTransformOfAABB();
-//	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
-//		worldTransform.origin.y = 0;
-//	return worldTransform;
-//}
-
-Transform ChunkDebug::getDebugMeshGlobalTransform(void)
+Transform ChunkDebug::getDebugGlobalTransform(void)
 {
 	checkAndCalcAABB();
-	Transform worldTransform = m_meshGlobaTransform * Transform(Basis().scaled(m_aabb.size));
+	Transform worldTransform = getGlobalTransformApplied() * Transform(Basis().scaled(m_aabb.size));
 
 	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
 		worldTransform.origin.y = 0;
@@ -774,31 +761,31 @@ Transform ChunkDebug::getDebugMeshGlobalTransform(void)
 	return worldTransform;
 }
 
-//void ChunkDebug::setParentGlobalTransform(Transform parentT)
-//{
-//	Chunk::setParentGlobalTransform(parentT);
-//
-//	Transform worldTransform = getDebugMeshGlobalTransform();
-//
-//	if (m_useVisualServer)
-//	{
-//		assert(m_debugMeshInstanceRID != RID());
-//		VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
-//	}
-//	else
-//	{
-//		if (m_debugMeshInstance != nullptr)
-//			m_debugMeshInstance->set_global_transform(worldTransform);
-//	}
-//	
-//	m_debugMeshGlobaTransformApplied = worldTransform;
-//
-//	//assert(m_debugMeshGlobaTransformApplied.origin == m_meshGlobaTransformApplied.origin);	// DEBUGRIC1
-//}
-
-Transform ChunkDebug::getDebugMeshGlobalTransformApplied(void)
+void ChunkDebug::onGlobalTransformChanged()
 {
-	return m_debugMeshGlobaTransformApplied;
+	Chunk::onGlobalTransformChanged();
+
+	Transform worldTransform = getDebugGlobalTransform();
+
+	if (m_useVisualServer)
+	{
+		assert(m_debugMeshInstanceRID != RID());
+		VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
+	}
+	else
+	{
+		if (m_debugMeshInstance != nullptr)
+			m_debugMeshInstance->set_global_transform(worldTransform);
+	}
+	
+	m_debugGlobaTransformApplied = worldTransform;
+
+	//assert(m_debugGlobaTransformApplied.origin == m_meshGlobaTransformApplied.origin);	// DEBUGRIC1
+}
+
+Transform ChunkDebug::getDebugGlobalTransformApplied(void)
+{
+	return m_debugGlobaTransformApplied;
 }
 
 void ChunkDebug::setActive(bool b)
@@ -929,8 +916,8 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 				m_debugMeshInstance->set_visible(true);
 			else
 				m_debugMeshInstance->set_visible(false);
-			if (m_debugMeshGlobaTransformApplied != Transform())
-				m_debugMeshInstance->set_global_transform(m_debugMeshGlobaTransformApplied);
+			if (m_debugGlobaTransformApplied != Transform())
+				m_debugMeshInstance->set_global_transform(m_debugGlobaTransformApplied);
 		}
 	}
 
@@ -958,7 +945,7 @@ void ChunkDebug::setCameraPos(Vector3 globalCoordCameraLastPos)
 
 		m_viewer->Globals()->debugPrint("Camera vertical on chunk ("
 			+ String(to_string(getPos().getSlotPosX()).c_str()) + ":" + to_string(getPos().getSlotPosZ()).c_str()
-			+ ") of " + m_quadTree->getQuadrant()->getId().getName().c_str() + " - Chunk pos (Global) = "
+			+ ") of " + m_quadTree->getQuadrant()->getPos().getName().c_str() + " - Chunk pos (Global) = "
 			+ to_string(globalOriginXInGridInWUs).c_str() + ":" + to_string(globalOriginZInGridInWUs).c_str()
 			+ " - MinH = " + to_string(m_aabb.position.y).c_str()
 			+ " - MaxH = " + to_string((m_aabb.position + m_aabb.size).y).c_str()
@@ -1093,16 +1080,16 @@ void ChunkDebug::applyDebugMesh()
 	setDebugMesh(nullptr);
 	setDebugMesh(mesh);
 
-	Transform worldTransform = getDebugMeshGlobalTransform();
+	Transform worldTransform = getDebugGlobalTransform();
 	if (m_useVisualServer)
 		VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
 	else
 		m_debugMeshInstance->set_global_transform(worldTransform);
-	m_debugMeshGlobaTransformApplied = worldTransform;
+	m_debugGlobaTransformApplied = worldTransform;
 
 
 	/*GDN_TheWorld_Globals* globals = m_viewer->Globals();
-	globals->debugPrint(String("Debug Mesh - ID: ") + getPos().getId().c_str()
+	globals->debugPrint(String("Debug Mesh - ID: ") + getPos().getPos().c_str()
 		+ String(" POS ==> ") + String("X = ") + String(to_string(worldTransform.origin.x).c_str())
 		+ String(", ") + String("Y = ") + String(to_string(worldTransform.origin.y).c_str())
 		+ String(", ") + String("Z = ") + String(to_string(worldTransform.origin.z).c_str())

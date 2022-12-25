@@ -100,7 +100,7 @@ void Quad::assignChunk(void)
 		// TODORIC Material stuff
 
 		// create chunk for current quad because this is the first time that is needed for current lod and pos
-		Ref<Material> mat = m_quadTree->getShaderTerrainData().getMaterial();
+		Ref<Material> mat = m_quadTree->getQuadrant()->getShaderTerrainData()->getMaterial();
 		if (_DEBUG_AAB)
 			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, m_quadTree, mat);
 		else
@@ -127,7 +127,7 @@ void Quad::setCameraPos(Vector3 globalCoordCameraLastPos)
 	}
 }
 	
-QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantId)
+QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantPos)
 {
 	setStatus(QuadrantStatus::uninitialized);
 	m_isVisible = false;
@@ -135,8 +135,8 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantId)
 	m_numSplits = 0;
 	m_numJoins = 0;
 	m_numLeaf = 0;
-	m_worldQuadrant = new Quadrant(quadrantId, this);
-	m_tag = quadrantId.getTag();
+	m_worldQuadrant = new Quadrant(quadrantPos, viewer, this);
+	m_tag = quadrantPos.getTag();
 	int ret = timespec_get(&m_refreshTime, TIME_UTC);
 }
 
@@ -158,9 +158,11 @@ void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float ca
 	clock1.tock();	
 	//m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - QuadTree::init (populateGridVertices) " + std::to_string(clock1.duration().count()).c_str() + " ms");
 
-	getShaderTerrainData().init(m_viewer, this);
+	getQuadrant()->getShaderTerrainData()->init();
 
 	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::NotSet, m_viewer, this);
+
+	//m_worldQuadrant->getCollider()->init(m_viewer, 1, 1);
 
 	//clock.tock();
 	//m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - QuadTree::init " + std::to_string(clock.duration().count()).c_str() + " ms");
@@ -227,9 +229,9 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
 	//Vector3 chunkCenterGlobal(real_t(quad->getChunk()->getLowerXInWUsGlobal() + chunkSizeInWUs / 2),
 	//									(chunkAABB.position + chunkAABB.size / 2).y, 
 	//									real_t(quad->getChunk()->getLowerZInWUsGlobal() + chunkSizeInWUs / 2));
-	Vector3 quadCenterGlobal(real_t((quad->slotPosX() * chunkSizeInWUs) + m_worldQuadrant->getId().getLowerXGridVertex() + chunkSizeInWUs / 2),
+	Vector3 quadCenterGlobal(real_t((quad->slotPosX() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerXGridVertex() + chunkSizeInWUs / 2),
 									(chunkAABB.position + chunkAABB.size / 2).y,
-									real_t((quad->slotPosZ() * chunkSizeInWUs) + m_worldQuadrant->getId().getLowerZGridVertex() + chunkSizeInWUs / 2));
+									real_t((quad->slotPosZ() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerZGridVertex() + chunkSizeInWUs / 2));
 	real_t splitDistance = chunkSizeInWUs * globals->splitScale();
 	if (quad->isLeaf())
 	{
@@ -326,13 +328,13 @@ bool QuadTree::isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantPos& XMinu
 
 	if (pos.getSlotPosX() == 0)
 	{
-		XMinusQuadrantPos = getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
+		XMinusQuadrantPos = getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
 		ret = true;
 	}
 
 	if (pos.getSlotPosZ() == 0)
 	{
-		ZMinusQuadrantPos = getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
+		ZMinusQuadrantPos = getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
 		ret = true;
 	}
 
@@ -340,13 +342,13 @@ bool QuadTree::isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantPos& XMinu
 
 	if (pos.getSlotPosX() == (numChunksPerSide - 1))
 	{
-		XPlusQuadrantPos = getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
+		XPlusQuadrantPos = getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
 		ret = true;
 	}
 
 	if (pos.getSlotPosZ() == (numChunksPerSide - 1))
 	{
-		ZPlusQuadrantPos = getQuadrant()->getId().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
+		ZPlusQuadrantPos = getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
 		ret = true;
 	}
 
@@ -508,13 +510,13 @@ void QuadTree::updateMaterialParams(void)
 	if (!isVisible())
 		return;
 
-	if (m_shaderTerrainData.materialParamsNeedUpdate())
+	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
 		TheWorld_Utils::TimerMs clock;
 		clock.tick();
-		m_shaderTerrainData.updateMaterialParams();
-		clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
-		m_shaderTerrainData.materialParamsNeedUpdate(false);
+		getQuadrant()->getShaderTerrainData()->updateMaterialParams();
+		clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
+		getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(false);
 	}
 }
 
@@ -522,36 +524,34 @@ void QuadTree::resetMaterialParams()
 {
 	if (materialParamsNeedReset())
 	{
-		m_shaderTerrainData.resetMaterialParams(m_cache);
-		materialParamsNeedReset(false, nullptr);
+		getQuadrant()->getShaderTerrainData()->resetMaterialParams();
+		materialParamsNeedReset(false);
 	}
 }
 
 bool QuadTree::materialParamsNeedReset(void)
 {
-	return m_shaderTerrainData.materialParamsNeedReset();
+	return getQuadrant()->getShaderTerrainData()->materialParamsNeedReset();
 }
 
-void QuadTree::materialParamsNeedReset(bool b, TheWorld_Utils::MeshCacheBuffer* cache)
+void QuadTree::materialParamsNeedReset(bool b)
 {
-	if (cache != nullptr)
-		m_cache = *cache;
-	m_shaderTerrainData.materialParamsNeedReset(b);
+	getQuadrant()->getShaderTerrainData()->materialParamsNeedReset(b);
 }
 
 bool QuadTree::materialParamsNeedUpdate(void)
 {
-	return m_shaderTerrainData.materialParamsNeedUpdate();
+	return getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate();
 }
 
 void QuadTree::materialParamsNeedUpdate(bool b)
 {
-	m_shaderTerrainData.materialParamsNeedUpdate(b);
+	getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(b);
 }
 
-Transform QuadTree::internalTransformGlobalCoord(void)
+Transform QuadTree::getInternalGlobalTransform(void)
 {
-	return Transform(Basis(), Vector3((real_t)getQuadrant()->getId().getLowerXGridVertex(), 0, (real_t)getQuadrant()->getId().getLowerZGridVertex()));
+	return Transform(Basis(), Vector3((real_t)getQuadrant()->getPos().getLowerXGridVertex(), 0, (real_t)getQuadrant()->getPos().getLowerZGridVertex()));
 }
 
 void QuadTree::dump(void)
@@ -560,7 +560,7 @@ void QuadTree::dump(void)
 
 	globals->debugPrint("====================================================================================================================================");
 
-	globals->debugPrint(String("DUMP QUADRANT ") + getQuadrant()->getId().getIdStr().c_str() + " TAG=" + m_tag.c_str());
+	globals->debugPrint(String("DUMP QUADRANT ") + getQuadrant()->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str());
 
 	if (isValid() && isVisible())
 	{
@@ -574,8 +574,8 @@ void QuadTree::dump(void)
 			+ String(" - ") + String("Num leaves: ") + String(to_string(m_numLeaf).c_str()));
 
 		globals->debugPrint(String("GRID POS (global)")
-			+ String(" - ") + String("X = ") + String(to_string(internalTransformGlobalCoord().origin.x).c_str())
-			+ String(" - ") + String("Z = ") + String(to_string(internalTransformGlobalCoord().origin.z).c_str()));
+			+ String(" - ") + String("X = ") + String(to_string(getInternalGlobalTransform().origin.x).c_str())
+			+ String(" - ") + String("Z = ") + String(to_string(getInternalGlobalTransform().origin.z).c_str()));
 
 		int numChunks = 0;
 		int numActiveChunks = 0;
@@ -687,7 +687,7 @@ void QuadTree::dump(void)
 	}
 
 
-	globals->debugPrint(String("COMPLETED DUMP QUADRANT ") + getQuadrant()->getId().getIdStr().c_str() + " TAG=" + m_tag.c_str());
+	globals->debugPrint(String("COMPLETED DUMP QUADRANT ") + getQuadrant()->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str());
 
 	globals->debugPrint("====================================================================================================================================");
 
@@ -695,10 +695,10 @@ void QuadTree::dump(void)
 	m_numJoins = 0;
 }
 
-ShaderTerrainData::ShaderTerrainData()
+ShaderTerrainData::ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
 {
-	m_viewer = nullptr;
-	m_quadTree = nullptr;
+	m_viewer = viewer;
+	m_quadTree = quadTree;
 	m_materialParamsNeedUpdate = false;
 	m_materialParamsNeedReset = false;
 	m_heightMapTexModified = false;
@@ -711,10 +711,8 @@ ShaderTerrainData::~ShaderTerrainData()
 {
 }
 
-void ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
+void ShaderTerrainData::init(void)
 {
-	m_viewer = viewer;
-	m_quadTree = quadTree;
 	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
 	String shaderPath = "res://shaders/lookdev.shader";
@@ -727,7 +725,7 @@ void ShaderTerrainData::init(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
 
 // it is expected that globals and World Datas are loaded
 // TODORIC: maybe usefull for performance reasons specify which texture need update and which rect of the texture 
-void ShaderTerrainData::resetMaterialParams(TheWorld_Utils::MeshCacheBuffer& cache)
+void ShaderTerrainData::resetMaterialParams(void)
 {
 	std::recursive_mutex& quadrantMutex = m_quadTree->getQuadrantMutex();
 	std::lock_guard lock(quadrantMutex);
@@ -735,9 +733,9 @@ void ShaderTerrainData::resetMaterialParams(TheWorld_Utils::MeshCacheBuffer& cac
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
 
 	bool loadingHeighmapOK = false;
-	m_heightMapImage = cache.readImage(loadingHeighmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
+	m_heightMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingHeighmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
 	bool loadingNormalmapOK = false;
-	m_normalMapImage = cache.readImage(loadingNormalmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
+	m_normalMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingNormalmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
 
 	if (!loadingHeighmapOK || !loadingNormalmapOK)
 	{
@@ -761,7 +759,7 @@ void ShaderTerrainData::resetMaterialParams(TheWorld_Utils::MeshCacheBuffer& cac
 			// Filling Heightmap Map Texture , Normal Map Texture
 			assert(_resolution == m_heightMapImage->get_height());
 			assert(_resolution == m_heightMapImage->get_width());
-			assert(_resolution == m_quadTree->getQuadrant()->getId().getNumVerticesPerSize());
+			assert(_resolution == m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize());
 			float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
 			m_heightMapImage->lock();
 			m_normalMapImage->lock();
@@ -844,8 +842,8 @@ void ShaderTerrainData::resetMaterialParams(TheWorld_Utils::MeshCacheBuffer& cac
 			m_normalMapImage->unlock();
 			m_heightMapImage->unlock();
 
-			cache.writeImage(m_heightMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
-			cache.writeImage(m_normalMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
+			m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_heightMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
+			m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_normalMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
 
 			//{
 			//	
@@ -968,8 +966,8 @@ void ShaderTerrainData::updateMaterialParams(void)
 
 	if (m_viewer->is_inside_tree())
 	{
-		Transform globalTransform = m_quadTree->internalTransformGlobalCoord();
-		//m_viewer->Globals()->debugPrint("internalTransformGlobalCoord" + String(" t=") + String(globalTransform));	// DEBUGRIC
+		Transform globalTransform = m_quadTree->getInternalGlobalTransform();
+		//m_viewer->Globals()->debugPrint("getInternalGlobalTransform" + String(" t=") + String(globalTransform));	// DEBUGRIC
 
 		Transform t = globalTransform.affine_inverse();
 		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));	// DEBUGRIC
@@ -1090,22 +1088,10 @@ size_t QuadrantPos::distanceInPerimeter(QuadrantPos& q)
 		return distanceOnZ;
 }
 
-TheWorld_Utils::MeshCacheBuffer Quadrant::getMeshCacheBuffer(void)
+TheWorld_Utils::MeshCacheBuffer& Quadrant::getMeshCacheBuffer(void)
 {
-	std::string dir = GDN_TheWorld_Globals::getClientDataDir();
-	TheWorld_Utils::MeshCacheBuffer cache(dir, m_quadrantId.getGridStepInWU(), m_quadrantId.getNumVerticesPerSize(), m_quadrantId.getLevel(), m_quadrantId.getLowerXGridVertex(), m_quadrantId.getLowerZGridVertex());
-	return cache;
+	return m_cache;
 }
-
-//std::string Quadrant::getCacheFileName()
-//{
-//	String userPath = OS::get_singleton()->get_user_data_dir();
-//	char* s = userPath.alloc_c_string();
-//	TheWorld_Utils::MeshCacheBuffer cache(std::string(s), m_quadrantId.getGridStepInWU(), m_quadrantId.getNumVerticesPerSize(), m_quadrantId.getLevel(), m_quadrantId.getLowerXGridVertex(), m_quadrantId.getLowerZGridVertex());
-//	godot::api->godot_free(s);
-//	std::string cachePath = cache.getFilePath();
-//	return cachePath;
-//}
 
 void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
 {
@@ -1127,11 +1113,11 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
 	v.serialize(shortBuffer, serializedVertexSize);
 
-	float lowerXGridVertex = m_quadrantId.getLowerXGridVertex();
-	float lowerZGridVertex = m_quadrantId.getLowerZGridVertex();
-	float gridStepinWU = m_quadrantId.getGridStepInWU();
-	int numVerticesPerSize = m_quadrantId.getNumVerticesPerSize();
-	int lvl = m_quadrantId.getLevel();
+	float lowerXGridVertex = m_quadrantPos.getLowerXGridVertex();
+	float lowerZGridVertex = m_quadrantPos.getLowerZGridVertex();
+	float gridStepinWU = m_quadrantPos.getGridStepInWU();
+	int numVerticesPerSize = m_quadrantPos.getNumVerticesPerSize();
+	int lvl = m_quadrantPos.getLevel();
 	std::string buffGridVertices;
 
 	// look for cache in file system
@@ -1162,3 +1148,30 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	return;
 }
 
+void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::string& meshIdFromBuffer)
+{
+	float minY = 0, maxY = 0;
+	m_cache.refreshVerticesFromBuffer(buffer, meshIdFromBuffer, m_vectGridVertices, (void*)&m_heigths, minY, maxY);
+
+	if (meshIdFromBuffer != meshId)
+		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshIUd from server").c_str()));
+
+	if (m_vectGridVertices.size() == 0)
+		m_cache.readVerticesFromMeshCache(meshId, m_vectGridVertices, (void*)&m_heigths, minY, maxY);
+
+	int areaSize = (m_viewer->Globals()->heightmapResolution() + 1) * (m_viewer->Globals()->heightmapResolution() + 1);
+
+	if (m_vectGridVertices.size() != areaSize)
+		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Grid Vertices not of the correct size").c_str()));
+
+	Vector3 startPosition(m_quadrantPos.getLowerXGridVertex(), minY, m_quadrantPos.getLowerZGridVertex());
+	Vector3 endPosition(startPosition.x + m_quadrantPos.getSizeInWU(), maxY, startPosition.z + m_quadrantPos.getSizeInWU());
+	Vector3 size = endPosition - startPosition;
+
+	m_globalCoordAABB.set_position(startPosition);
+	m_globalCoordAABB.set_size(size);
+	
+	m_meshId = meshId;
+
+	//m_collider->setData();
+}

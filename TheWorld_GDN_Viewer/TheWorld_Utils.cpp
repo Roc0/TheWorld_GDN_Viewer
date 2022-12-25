@@ -80,10 +80,8 @@ namespace TheWorld_Utils
 		return m_meshId;
 	}
 
-	void MeshCacheBuffer::refreshMeshCacheFromBuffer(std::string buffer, std::string& meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices)
+	void MeshCacheBuffer::refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY)
 	{
-		vectGridVertices.clear();
-	
 		size_t size = 0;
 
 		const char* movingStreamBuffer = buffer.c_str();
@@ -94,19 +92,50 @@ namespace TheWorld_Utils
 		size_t meshIdSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		movingStreamBuffer += size;
 
-		meshId = std::string(movingStreamBuffer, meshIdSize);
+		meshIdFromBuffer = std::string(movingStreamBuffer, meshIdSize);
 		movingStreamBuffer += meshIdSize;
 
-		m_meshId = meshId;
+		m_meshId = meshIdFromBuffer;
 
-		size_t vectSizeFromServer = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		movingStreamBuffer += size;
 
-		if (vectSizeFromServer > 0)
+#ifdef _THEWORLD_CLIENT
+		godot::PoolRealArray* heigthsP = (godot::PoolRealArray*)heigths;
+		heigthsP->resize((int)vectSize);
+#endif
+
+		vectGridVertices.clear();
+		vectGridVertices.resize((int)vectSize);
+
+		bool first = true;
+		int idx = 0;
+		if (vectSize > 0)
 		{
 			while (movingStreamBuffer < endOfBuffer)
 			{
-				vectGridVertices.push_back(TheWorld_Utils::GridVertex((BYTE*)movingStreamBuffer, size));
+				if (idx >= vectSize)
+					throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str())); 
+
+				TheWorld_Utils::GridVertex v = TheWorld_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
+				//vectGridVertices.push_back(v);
+				vectGridVertices[idx] = v;
+#ifdef _THEWORLD_CLIENT
+				heigthsP->set(idx, v.altitude());
+#endif
+				if (first)
+				{
+					minY = maxY = v.altitude();
+					first = false;
+				}
+				else
+				{
+					if (v.altitude() > maxY)
+						maxY = v.altitude();
+					if (v.altitude() < minY)
+						minY = v.altitude();
+				}
+				idx++;
 				movingStreamBuffer += size;
 			}
 
@@ -138,7 +167,7 @@ namespace TheWorld_Utils
 				// SUPER DEBUGRIC
 			}
 #endif
-			if (vectGridVertices.size() != vectSizeFromServer)
+			if (vectGridVertices.size() != vectSize)
 				throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Sequence error 4!").c_str()));
 
 			FILE* outFile = nullptr;
@@ -256,12 +285,12 @@ namespace TheWorld_Utils
 		::free(streamBuffer);
 	}
 		
-	void MeshCacheBuffer::readVerticesFromMeshCache(std::string _meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices)
+	void MeshCacheBuffer::readVerticesFromMeshCache(std::string _meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY)
 	{
 		std::string buffer;
 		size_t vectSizeFromCache;
 		size_t size;
-
+		
 		readBufferFromMeshCache(_meshId, buffer, vectSizeFromCache);
 
 		BYTE* movingStreamBuffer = (BYTE *)buffer.c_str();
@@ -285,11 +314,40 @@ namespace TheWorld_Utils
 		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		movingStreamBuffer += size;
 		
-		vectGridVertices.clear();
+#ifdef _THEWORLD_CLIENT
+		godot::PoolRealArray* heigthsP = (godot::PoolRealArray*)heigths;
+		heigthsP->resize((int)vectSize);
+#endif
 
+		vectGridVertices.clear();
+		vectGridVertices.resize((int)vectSize);
+
+		bool first = true;
+		int idx = 0;
 		while (movingStreamBuffer < endOfBuffer)
 		{
-			vectGridVertices.push_back(TheWorld_Utils::GridVertex(movingStreamBuffer, size));
+			if (idx >= vectSize)
+				throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str())); 
+
+			TheWorld_Utils::GridVertex v = TheWorld_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
+			//vectGridVertices.push_back(v);
+			vectGridVertices[idx] = v;
+#ifdef _THEWORLD_CLIENT
+			heigthsP->set(idx, v.altitude());
+#endif
+			if (first)
+			{
+				minY = maxY = v.altitude();
+				first = false;
+			}
+			else
+			{
+				if (v.altitude() > maxY)
+					maxY = v.altitude();
+				if (v.altitude() < minY)
+					minY = v.altitude();
+			}
+			idx++;
 			movingStreamBuffer += size;
 		}
 

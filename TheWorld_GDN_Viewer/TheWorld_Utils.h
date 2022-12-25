@@ -3,6 +3,7 @@
 #ifdef _THEWORLD_CLIENT
 	#include <Godot.hpp>
 	#include <ImageTexture.hpp>
+	#include <PoolArrays.hpp>
 #endif
 
 #include "framework.h"
@@ -145,9 +146,9 @@ namespace TheWorld_Utils
 		MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
 
 		std::string getMeshIdFromMeshCache(void);
-		void refreshMeshCacheFromBuffer(std::string buffer, std::string& meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices);
+		void refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
 		void readBufferFromMeshCache(std::string meshId, std::string& buffer, size_t& vectSizeFromCache);
-		void readVerticesFromMeshCache(std::string meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices);
+		void readVerticesFromMeshCache(std::string meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
 		void writeBufferToMeshCache(std::string buffer);
 		void setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, std::string& buffer);
 		//std::string getCacheDir()

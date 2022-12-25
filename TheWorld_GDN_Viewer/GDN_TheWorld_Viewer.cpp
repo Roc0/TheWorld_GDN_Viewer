@@ -5,6 +5,7 @@
 #include <SceneTree.hpp>
 #include <Viewport.hpp>
 #include <Engine.hpp>
+#include <World.hpp>
 #include <OS.hpp>
 #include <Input.hpp>
 #include <VisualServer.hpp>
@@ -42,8 +43,8 @@ void GDN_TheWorld_Viewer::_register_methods()
 	//register_method("get_camera_chunk_global_transform_of_aabb", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB);
 	register_method("get_camera_chunk_local_aabb", &GDN_TheWorld_Viewer::getCameraChunkLocalAABB);
 	register_method("get_camera_chunk_local_debug_aabb", &GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB);
-	register_method("get_camera_chunk_mesh_global_transform_applied", &GDN_TheWorld_Viewer::getCameraChunkMeshGlobalTransformApplied);
-	register_method("get_camera_chunk_debug_mesh_global_transform_applied", &GDN_TheWorld_Viewer::getCameraChunkDebugMeshGlobalTransformApplied);
+	register_method("get_camera_chunk_global_transform_applied", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformApplied);
+	register_method("get_camera_chunk_debug_global_transform_applied", &GDN_TheWorld_Viewer::getCameraChunkDebugGlobalTransformApplied);
 	register_method("get_camera_chunk_id", &GDN_TheWorld_Viewer::getCameraChunkId);
 	register_method("get_camera_quadrant_name", &GDN_TheWorld_Viewer::getCameraQuadrantName);
 	register_method("get_num_splits", &GDN_TheWorld_Viewer::getNumSplits);
@@ -73,10 +74,8 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_cameraChunk = nullptr;
 	m_cameraQuadTree = nullptr;
 	m_refreshMapQuadTree = false;
-	//m_numWorldVerticesX = 0;
-	//m_numWorldVerticesZ = 0;
 	m_globals = nullptr;
-	//m_mapScaleVector = Vector3(1, 1, 1);	// WARNING: AT THE MOMENT CAN BE ONLY 1, 1, 1 OTHERWISE WE SHOLD RESCALE LOCAL CHUNK MISURES (LOOK AT Chunk constructor) AND CAMERA POS
+	//m_mapScaleVector = Vector3(1, 1, 1);	// WARNING: AT THE MOMENT CAN BE ONLY 1, 1, 1 OTHERWISE WE SHOULD RESCALE LOCAL CHUNK MISURES (LOOK AT Chunk constructor) AND CAMERA POS
 	m_timeElapsedFromLastDump = 0;
 	m_timeElapsedFromLastStatistic = 0;
 	m_duration = 0;
@@ -100,6 +99,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_debugDraw = Viewport::DebugDraw::DEBUG_DRAW_DISABLED;
 	m_ctrlPressed = false;
 	m_streamerThreadRequiredExit = false;
+	m_streamerThreadRunning = false;
 	m_numVisibleQuadrantOnPerimeter = 0;
 	m_numCacheQuadrantOnPerimeter = 0;
 }
@@ -117,6 +117,7 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 
 	m_streamerThreadRequiredExit = false;
+	m_streamerThreadRunning = true;
 	m_streamerThread = std::thread(&GDN_TheWorld_Viewer::streamer, this);
 
 	m_initialized = true;
@@ -125,11 +126,16 @@ bool GDN_TheWorld_Viewer::init(void)
 	return true;
 }
 
-void GDN_TheWorld_Viewer::prepareDeinit(void)
+void GDN_TheWorld_Viewer::preDeinit(void)
 {
 	m_streamerThreadRequiredExit = true;
-	if (m_streamerThread.joinable())
-		m_streamerThread.join();
+	//if (m_streamerThread.joinable())
+	//	m_streamerThread.join();
+}
+
+bool GDN_TheWorld_Viewer::canDeinit(void)
+{
+	return !m_streamerThreadRunning;
 }
 
 void GDN_TheWorld_Viewer::deinit(void)
@@ -297,34 +303,25 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					std::lock_guard lock(quadrantMutex);
 					//clock.tock();
 
-					std::vector<TheWorld_Utils::GridVertex>& vectGridVertices = quadTree->getQuadrant()->getGridVertices();
-
-					TheWorld_Utils::MeshCacheBuffer cache = quadTree->getQuadrant()->getMeshCacheBuffer();
 					std::string meshIdFromBuffer;
 					{
 						// ATTENZIONE
 						//std::lock_guard lock(m_mtxQuadTree);	// SUPER DEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
-						cache.refreshMeshCacheFromBuffer(*_buffGridVerticesFromServer, meshIdFromBuffer, vectGridVertices);
+						quadTree->getQuadrant()->refreshGridVertices(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer);
 					}
-
-					if (meshIdFromBuffer != meshIdFromServer)
-						throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshIUd from server").c_str()));
-
-					if (vectGridVertices.size() == 0)
-						cache.readVerticesFromMeshCache(meshIdFromServer, vectGridVertices);
-
-					quadTree->getQuadrant()->setMeshId(meshIdFromServer);
+					
+					std::vector<TheWorld_Utils::GridVertex>& vectGridVertices = quadTree->getQuadrant()->getGridVertices();
 
 					//clock.headerMsg("MapManager::getVertices - resetMaterialParams");
 					//clock.tick();
 					{
 						// ATTENZIONE
 						std::lock_guard lock(m_mtxQuadTree);
-						quadTree->materialParamsNeedReset(true, &cache);
+						quadTree->materialParamsNeedReset(true);
 						quadTree->resetMaterialParams();
 					}
 					//clock.tock();
-					//Globals()->debugPrint(String("ELAPSED - QUADRANT ") + quadTree->getQuadrant()->getId().getId().c_str() + " TAG=" + quadTree->getQuadrant()->getId().getTag().c_str() + " - GDN_TheWorld_Viewer::replyFromServer MapManager::getVertices (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
+					//Globals()->debugPrint(String("ELAPSED - QUADRANT ") + quadTree->getQuadrant()->getPos().getId().c_str() + " TAG=" + quadTree->getQuadrant()->getPos().getTag().c_str() + " - GDN_TheWorld_Viewer::replyFromServer MapManager::getVertices (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
 
 					if (setCamera)
 					{
@@ -367,9 +364,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 				}
 			}
 			else
-			{
 				m_mtxQuadTree.unlock();
-			}
 		}
 		else
 		{
@@ -500,75 +495,101 @@ void GDN_TheWorld_Viewer::printKeyboardMapping(void)
 
 void GDN_TheWorld_Viewer::_notification(int p_what)
 {
-	GDN_TheWorld_Globals* globals = Globals();
-	if (globals == nullptr)
-		return;
 
-	if (globals->status() != TheWorldStatus::sessionInitialized)
-		return;
+	//GDN_TheWorld_Globals* globals = Globals();
+	//if (globals->status() != TheWorldStatus::sessionInitialized)
+	//	return;
 
 	switch (p_what)
 	{
 		case NOTIFICATION_PREDELETE:
 		{
-			globals->debugPrint("GDN_TheWorld_Viewer::_notification - Destroy Viewer");
+			GDN_TheWorld_Globals* globals = Globals();
+			if (globals != nullptr)
+				globals->debugPrint("GDN_TheWorld_Viewer::_notification - Destroy Viewer");
+	
 			deinit();
 		}
 		break;
 		case NOTIFICATION_ENTER_WORLD:
 		{
+			GDN_TheWorld_Globals* globals = Globals();
 			printKeyboardMapping();
 			string s = "Use Visual Server: "; s += (m_useVisualServer ? "True" : "False");
-			globals->infoPrint(s.c_str());
-			globals->debugPrint("Enter world");
-			if (m_initialWordlViewerPosSet)
+			if (globals != nullptr)
 			{
-				std::lock_guard lock(m_mtxQuadTree);
-				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-				{
-					Chunk::EnterWorldChunkAction action;
-					itQuadTree->second->ForAllChunk(action);
-				}
+				globals->infoPrint(s.c_str());
+				globals->debugPrint("Enter world");
 			}
+			//if (m_initialWordlViewerPosSet)
+			//{
+			std::lock_guard lock(m_mtxQuadTree);
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				if (!itQuadTree->second->isValid())
+					continue;
+
+				if (!itQuadTree->second->isVisible())
+					continue;
+
+				Chunk::EnterWorldChunkAction action;
+				itQuadTree->second->ForAllChunk(action);
+				//itQuadTree->second->getQuadrant()->getCollider()->enterWorld();
+			}
+			//}
 		}
 		break;
 		case NOTIFICATION_EXIT_WORLD:
 		{
-			globals->debugPrint("Exit world");
-			if (m_initialWordlViewerPosSet)
+			GDN_TheWorld_Globals* globals = Globals();
+			if (globals != nullptr)
+				globals->debugPrint("Exit world");
+			//if (m_initialWordlViewerPosSet)
+			//{
+			std::lock_guard lock(m_mtxQuadTree);
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
-				std::lock_guard lock(m_mtxQuadTree);
-				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-				{
-					Chunk::ExitWorldChunkAction action;
-					itQuadTree->second->ForAllChunk(action);
-				}
+				if (!itQuadTree->second->isValid())
+					continue;
+
+				if (!itQuadTree->second->isVisible())
+					continue;
+
+				Chunk::ExitWorldChunkAction action;
+				itQuadTree->second->ForAllChunk(action);
+				//itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
+				//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
 			}
+			//}
 		}
 		break;
 		case NOTIFICATION_VISIBILITY_CHANGED:
 		{
-			globals->debugPrint("Visibility changed");
-			if (m_initialWordlViewerPosSet)
+			GDN_TheWorld_Globals* globals = Globals();
+			if (globals != nullptr)
+				globals->debugPrint("Visibility changed");
+			//if (m_initialWordlViewerPosSet)
+			//{
+			std::lock_guard lock(m_mtxQuadTree);
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
-				std::lock_guard lock(m_mtxQuadTree);
-				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-				{
-					Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
-					itQuadTree->second->ForAllChunk(action);
-				}
+				if (!itQuadTree->second->isValid())
+					continue;
+
+				if (!itQuadTree->second->isVisible())
+					continue;
+
+				Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
+				itQuadTree->second->ForAllChunk(action);
 			}
+			//}
 		}
 		break;
-		//case NOTIFICATION_TRANSFORM_CHANGED:
-		//{
-		//	if (m_initialWordlViewerPosSet)
-		//	{
-		//		onTransformChanged();
-		//	}
-		//}
-		//break;
-	// TODORIC
+		case NOTIFICATION_TRANSFORM_CHANGED:
+		{
+			onTransformChanged();
+		}
+		break;
 	}
 }
 
@@ -671,11 +692,11 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		vector<QuadrantPos> quadrantPosNeeded;
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
-			float quadrantSizeInWU = itQuadTree->second->getQuadrant()->getId().getSizeInWU();
-			if (cameraPosGlobalCoord.x >= itQuadTree->second->getQuadrant()->getId().getLowerXGridVertex() && cameraPosGlobalCoord.x <= (itQuadTree->second->getQuadrant()->getId().getLowerXGridVertex() + quadrantSizeInWU)
-				&& cameraPosGlobalCoord.z >= itQuadTree->second->getQuadrant()->getId().getLowerZGridVertex() && cameraPosGlobalCoord.z <= (itQuadTree->second->getQuadrant()->getId().getLowerZGridVertex() + quadrantSizeInWU))
+			float quadrantSizeInWU = itQuadTree->second->getQuadrant()->getPos().getSizeInWU();
+			if (cameraPosGlobalCoord.x >= itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() && cameraPosGlobalCoord.x <= (itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() + quadrantSizeInWU)
+				&& cameraPosGlobalCoord.z >= itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() && cameraPosGlobalCoord.z <= (itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() + quadrantSizeInWU))
 			{
-				quadrantPosNeeded.push_back(itQuadTree->second->getQuadrant()->getId());
+				quadrantPosNeeded.push_back(itQuadTree->second->getQuadrant()->getPos());
 				quadrantPosNeeded[0].setTag("Camera");
 				break;
 			}
@@ -701,9 +722,10 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			TheWorld_Utils::TimerMs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, true);
 			clock1.tick();
 
-			Transform t = get_global_transform();
-			t.origin = Vector3(quadrantPosNeeded[0].getLowerXGridVertex(), 0, quadrantPosNeeded[0].getLowerZGridVertex());
-			set_global_transform(t);
+			// Da Rimuovere (???)
+			//Transform t = get_global_transform();
+			//t.origin = Vector3(quadrantPosNeeded[0].getLowerXGridVertex(), 0, quadrantPosNeeded[0].getLowerZGridVertex());
+			//set_global_transform(t);
 
 			m_refreshMapQuadTree = false;
 			m_computedCameraQuadrantPos = quadrantPosNeeded[0];
@@ -786,7 +808,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				{
 					// 
 					bool visibilityChanged = false;
-					if (itQuadTree->second->getQuadrant()->getId().distanceInPerimeter(quadrantPosNeeded[0]) > m_numVisibleQuadrantOnPerimeter)
+					if (itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(quadrantPosNeeded[0]) > m_numVisibleQuadrantOnPerimeter)
 					{
 						if (itQuadTree->second->isVisible())
 						{
@@ -817,7 +839,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						itQuadTree->second->setVisible(false);
 						quadrantToDelete.push_back(itQuadTree->first);
 					}
-					if (m_cameraQuadTree != nullptr /* && m_cameraQuadTree->isValid()*/ && itQuadTree->first == m_cameraQuadTree->getQuadrant()->getId())
+					if (m_cameraQuadTree != nullptr /* && m_cameraQuadTree->isValid()*/ && itQuadTree->first == m_cameraQuadTree->getQuadrant()->getPos())
 					{
 						// if we delete the ones containing old camera chunk we invalidate it
 						m_cameraChunk = nullptr;
@@ -1458,8 +1480,6 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 
 		m_numWorldVerticesPerSize = Globals()->heightmapResolution() + 1;
 		
-		//Quadrant* quadrant = loadWorldData(x, z, level, m_numWorldVerticesPerSize);
-		//QuadrantPos quadrantPos = quadrant->getId();
 		float _gridStepInWU = Globals()->gridStepInWU();
 		QuadrantPos quadrantPos(x, z, level, m_numWorldVerticesPerSize, _gridStepInWU);
 		quadrantPos.setTag("Camera");
@@ -1529,32 +1549,32 @@ Spatial* GDN_TheWorld_Viewer::getWorldNode(void)
 //	aabb.set_size(size);
 //}
 
-//void GDN_TheWorld_Viewer::onTransformChanged(void)
-//{
-//	Globals()->debugPrint("Transform changed");
-//	
-//	//The transformand other properties can be set by the scene loader, before we enter the tree
-//	if (!is_inside_tree())
-//		return;
-//
-//	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-//	{
-//		if (!itQuadTree->second->isValid())
-//			continue;
-//		if (!itQuadTree->second->isVisible())
-//			continue;
-//		Transform gt = internalTransformGlobalCoord();
-//
-//		Chunk::TransformChangedChunkAction action(gt);
-//		itQuadTree->second->ForAllChunk(action);
-//
-//		itQuadTree->second->materialParamsNeedUpdate(true);
-//
-//		// TODORIC Collider stuff
-//		//_if _collider != null:
-//		//	_collider.set_transform(gt)
-//	}
-//}
+void GDN_TheWorld_Viewer::onTransformChanged(void)
+{
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals != nullptr)
+		globals->debugPrint("Transform changed");
+	
+	//The transformand other properties can be set by the scene loader, before we enter the tree
+	if (!is_inside_tree())
+		return;
+
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (!itQuadTree->second->isValid())
+			continue;
+		
+		if (!itQuadTree->second->isVisible())
+			continue;
+		
+		Chunk::TransformChangedChunkAction action;
+		itQuadTree->second->ForAllChunk(action);
+
+		itQuadTree->second->materialParamsNeedUpdate(true);
+
+		//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
+	}
+}
 
 //void GDN_TheWorld_Viewer::setMapScale(Vector3 mapScaleVector)
 //{
@@ -1586,18 +1606,18 @@ AABB GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB(void)
 		return AABB();
 }
 
-Transform GDN_TheWorld_Viewer::getCameraChunkMeshGlobalTransformApplied(void)
+Transform GDN_TheWorld_Viewer::getCameraChunkGlobalTransformApplied(void)
 {
 	if (m_cameraChunk && !m_cameraChunk->isMeshNull())
-		return m_cameraChunk->getMeshGlobalTransform();
+		return m_cameraChunk->getGlobalTransformApplied();
 	else
 		return Transform();
 }
 
-Transform GDN_TheWorld_Viewer::getCameraChunkDebugMeshGlobalTransformApplied(void)
+Transform GDN_TheWorld_Viewer::getCameraChunkDebugGlobalTransformApplied(void)
 {
 	if (m_cameraChunk && !m_cameraChunk->isDebugMeshNull())
-		return m_cameraChunk->getDebugMeshGlobalTransformApplied();
+		return m_cameraChunk->getDebugGlobalTransformApplied();
 	else
 		return Transform();
 }
@@ -1614,7 +1634,7 @@ String GDN_TheWorld_Viewer::getCameraChunkId(void)
 String GDN_TheWorld_Viewer::getCameraQuadrantName(void)
 {
 	if (m_cameraQuadTree)
-		return m_cameraQuadTree->getQuadrant()->getId().getName().c_str();
+		return m_cameraQuadTree->getQuadrant()->getPos().getName().c_str();
 	else
 		return "";
 }
@@ -1771,6 +1791,8 @@ void GDN_TheWorld_Viewer::setCameraChunk(Chunk* chunk, QuadTree* quadTree)
 
 void GDN_TheWorld_Viewer::streamer(void)
 {
+	m_streamerThreadRunning = true;
+
 	while (!m_streamerThreadRequiredExit)
 	{
 		try
@@ -1790,7 +1812,7 @@ void GDN_TheWorld_Viewer::streamer(void)
 							{
 								if (itQuadTree->second->status() == QuadrantStatus::uninitialized)
 								{
-									size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getId().distanceInPerimeter(m_computedCameraQuadrantPos);
+									size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(m_computedCameraQuadrantPos);
 									if (distanceInPerimeterFromCameraQuadrant == distance)
 									{
 										float x = 0, z = 0;
@@ -1829,4 +1851,12 @@ void GDN_TheWorld_Viewer::streamer(void)
 
 		Sleep(STREAMER_SLEEP_TIME);
 	}
+
+	m_streamerThreadRunning = false;
+}
+
+Transform GDN_TheWorld_Viewer::getInternalGlobalTransform(void)
+{
+	Transform gt = get_global_transform();
+	return gt;
 }

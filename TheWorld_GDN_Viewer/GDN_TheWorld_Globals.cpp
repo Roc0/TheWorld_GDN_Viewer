@@ -286,8 +286,13 @@ namespace godot
 		PLOGI << "TheWorld Globals Initialized!";
 	}
 
-	void GDN_TheWorld_Globals::prepareDeinit(void)
+	void GDN_TheWorld_Globals::preDeinit(void)
 	{
+	}
+
+	bool GDN_TheWorld_Globals::canDeinit(void)
+	{
+		return true;
 	}
 
 	void GDN_TheWorld_Globals::deinit(void)
@@ -349,6 +354,11 @@ namespace godot
 			if (m_client != nullptr)
 				m_client->prepareDisconnect();
 		}
+	}
+
+	bool GDN_TheWorld_Globals::canDisconnectFromServer(void)
+	{
+		return m_client->canDisconnect();
 	}
 
 	void GDN_TheWorld_Globals::disconnectFromServer(void)

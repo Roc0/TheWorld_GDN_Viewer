@@ -100,18 +100,16 @@ void GDN_TheWorld_Camera::_ready()
 
 void GDN_TheWorld_Camera::_notification(int p_what)
 {
-	GDN_TheWorld_Globals* globals = Globals();
-	if (globals == nullptr)
-		return;
-
-	if (globals->status() != TheWorldStatus::sessionInitialized)
-		return;
+	//if (globals->status() != TheWorldStatus::sessionInitialized)
+	//	return;
 
 	switch (p_what)
 	{
 	case NOTIFICATION_PREDELETE:
 	{
-		globals->debugPrint("GDN_TheWorld_Camera::_notification - Destroy Camera");
+		GDN_TheWorld_Globals* globals = Globals();
+		if (globals != nullptr)
+			globals->debugPrint("GDN_TheWorld_Camera::_notification - Destroy Camera");
 	}
 	break;
 	}
