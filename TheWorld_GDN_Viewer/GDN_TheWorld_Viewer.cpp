@@ -75,7 +75,6 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_cameraQuadTree = nullptr;
 	m_refreshMapQuadTree = false;
 	m_globals = nullptr;
-	//m_mapScaleVector = Vector3(1, 1, 1);	// WARNING: AT THE MOMENT CAN BE ONLY 1, 1, 1 OTHERWISE WE SHOULD RESCALE LOCAL CHUNK MISURES (LOOK AT Chunk constructor) AND CAMERA POS
 	m_timeElapsedFromLastDump = 0;
 	m_timeElapsedFromLastStatistic = 0;
 	m_duration = 0;
@@ -1417,20 +1416,6 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 	else
 		m_ctrlPressed = false;
 }
-
-//Transform GDN_TheWorld_Viewer::internalTransformGlobalCoord(void)
-//{
-//	// Return the transformation of the viewer Node in global coordinates appling a scale factor (m_mapScaleVector)
-//	// Viewer Node origin is set to match the lower point of the grid in global coords (as expressed by Map manager) in resetInitialWordlViewerPos which load points from DB
-//	// ==> t.origin = Vector3(m_worldVertices[0].posX(), 0, m_worldVertices[0].posZ());
-//	return Transform(Basis().scaled(m_mapScaleVector), get_global_transform().origin);
-//}
-
-//Transform GDN_TheWorld_Viewer::internalTransformLocalCoord(void)
-//{
-//	// Return the transformation of the viewer Node in local coordinates relative to itself appling a scale factor (m_mapScaleVector)
-//	return Transform(Basis().scaled(m_mapScaleVector), Vector3(0, 0, 0));
-//}
 
 QuadTree* GDN_TheWorld_Viewer::getQuadTreeFromInternalMap(QuadrantPos pos)
 {

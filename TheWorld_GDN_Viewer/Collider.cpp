@@ -25,6 +25,7 @@ namespace godot
 
 	void Collider::init(Node* attachedNode, int64_t initialLayer, int64_t initialMask)
 	{
+		return;
 		assert(attachedNode != nullptr);
 
 		PhysicsServer* ps = PhysicsServer::get_singleton();
@@ -61,6 +62,7 @@ namespace godot
 
 	void Collider::deinit(void)
 	{
+		return;
 		if (m_initialized)
 		{
 			PhysicsServer* ps = PhysicsServer::get_singleton();
@@ -76,6 +78,7 @@ namespace godot
 
 	void Collider::enterWorld(void)
 	{
+		return;
 		Ref<World> world = m_quadTree->Viewer()->get_world();
 		if (world != nullptr && world.is_valid())
 		{
@@ -86,12 +89,14 @@ namespace godot
 
 	void Collider::exitWorld(void)
 	{
+		return;
 		PhysicsServer* ps = PhysicsServer::get_singleton();
 		ps->body_set_space(m_bodyRID, RID());
 	}
 
 	void Collider::setData(void)
 	{
+		return;
 		std::vector<TheWorld_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
 
 		int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
@@ -99,10 +104,12 @@ namespace godot
 		if (areaSize != m_quadTree->getQuadrant()->getHeights().size())
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Size of Heigths inconsistent, areaSize=" + std::to_string(areaSize) + " Heigths size=" + std::to_string(m_quadTree->getQuadrant()->getHeights().size())).c_str()));
 
+		PoolRealArray& heights = m_quadTree->getQuadrant()->getHeights();
+		size_t size = heights.size();
 		Dictionary data;
 		data["width"] = numVerticesPerSize;			// data["map_width"];	
 		data["depth"] = numVerticesPerSize;			// data["map_depth"];
-		data["heights"] = m_quadTree->getQuadrant()->getHeights();					// data["map_data"];
+		data["heights"] = heights;					// data["map_data"];
 		Vector3 startPoint = m_quadTree->getQuadrant()->getGlobalCoordAABB().position;
 		Vector3 endPoint = startPoint + m_quadTree->getQuadrant()->getGlobalCoordAABB().size;
 		data["min_height"] = startPoint.y;			// ???
@@ -115,11 +122,13 @@ namespace godot
 	}
 	void Collider::onGlobalTransformChanged(void)
 	{
+		return;
 		updateTransform();
 	}
 
 	void Collider::updateTransform()
 	{
+		return;
 		// set body to the center of the quadrant
 		//int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
 		//Transform t = igt * Transform(Basis(), 0.5 * Vector3((float)numVerticesPerSize, 0, (float)numVerticesPerSize));

@@ -70,17 +70,18 @@ namespace godot
 			return m_initialWordlViewerPosSet;
 		}
 		Spatial* getWorldNode(void);
-		MeshCache* getMeshCache(void) { return m_meshCache.get(); }
-		//void getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
-		//Transform internalTransformGlobalCoord(void);
-		//Transform internalTransformLocalCoord(void);
-		//void setMapScale(Vector3 mapScaleVector);
+		MeshCache* getMeshCache(void)
+		{
+			return m_meshCache.get(); 
+		}
 		Transform getInternalGlobalTransform(void);
-		void setDumpRequired(void) { m_dumpRequired = true; }
+		void setDumpRequired(void)
+		{
+			m_dumpRequired = true; 
+		}
 		void dump(void);
 		void dumpRecurseIntoChildrenNodes(Array nodes, int level);
 		void setCameraChunk(Chunk* chunk, QuadTree* quadTree);
-		//Transform getCameraChunkGlobalTransformOfAABB(void);
 		AABB getCameraChunkLocalAABB(void);
 		AABB getCameraChunkLocalDebugAABB(void);
 		Transform getCameraChunkGlobalTransformApplied(void);
@@ -103,11 +104,19 @@ namespace godot
 			return m_requiredChunkDebugMode;
 		}
 		String getChunkDebugModeStr(void);
-		bool getDebugContentVisibility(void) { return m_debugContentVisibility; }
+		bool getDebugContentVisibility(void)
+		{
+			return m_debugContentVisibility; 
+		}
 		String getDebugDrawMode(void);
-		bool useVisualServer(void) { return m_useVisualServer; }
-		void forceRefreshMapQuadTree(void) { m_refreshMapQuadTree = true; }
-		//Vector3 getMapScaleVector(void) { return m_mapScaleVector; }
+		bool useVisualServer(void)
+		{
+			return m_useVisualServer; 
+		}
+		void forceRefreshMapQuadTree(void) 
+		{
+			m_refreshMapQuadTree = true; 
+		}
 		QuadTree* getQuadTreeFromInternalMap(QuadrantPos pos);
 
 	private:

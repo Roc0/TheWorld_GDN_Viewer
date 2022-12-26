@@ -215,11 +215,6 @@ namespace godot
 		friend class ShaderTerrainData;
 
 	public:
-		//Quadrant(MapManager* mapManager)
-		//{
-		//	m_mapManager = mapManager;
-		//}
-
 		Quadrant(QuadrantPos& quadrantPos, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
 		{
 			m_quadrantPos = quadrantPos;
