@@ -34,7 +34,7 @@ namespace godot
 		ps->body_set_collision_mask(m_bodyRID, initialMask);
 
 		// SUPER DEBUGRIC - This is an attempt to workaround https ://github.com/godotengine/godot/issues/24390
-		ps->body_set_ray_pickable(m_bodyRID, false);
+		ps->body_set_ray_pickable(m_bodyRID, true);
 
 		// Initial data - This is a workaround to https://github.com/godotengine/godot/issues/25304
 		PoolRealArray arr;
@@ -120,13 +120,15 @@ namespace godot
 
 	void Collider::updateTransform()
 	{
-		int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
 		// set body to the center of the quadrant
+		//int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
+		//Transform t = igt * Transform(Basis(), 0.5 * Vector3((float)numVerticesPerSize, 0, (float)numVerticesPerSize));
+		float sizeInWU = m_quadTree->getQuadrant()->getPos().getSizeInWU();
 		Transform igt = m_quadTree->getInternalGlobalTransform();
-		Transform t = igt * Transform(Basis(), 0.5 * Vector3((float)numVerticesPerSize, 0, (float)numVerticesPerSize));
-		//Transform t = m_quadTree->getInternalGlobalTransform() * Transform(Basis(), 0.5 * Vector3((float)numVerticesPerSize, 0, (float)numVerticesPerSize));
+		Transform t(Basis(), 0.5 * Vector3((float)sizeInWU, 0, (float)sizeInWU));
+		Transform t1 = igt * t;
 		PhysicsServer* ps = PhysicsServer::get_singleton();
-		ps->body_set_state(m_bodyRID, PhysicsServer::BODY_STATE_TRANSFORM, t);
+		ps->body_set_state(m_bodyRID, PhysicsServer::BODY_STATE_TRANSFORM, t1);
 	}
 }
 

@@ -534,7 +534,7 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 
 				Chunk::EnterWorldChunkAction action;
 				itQuadTree->second->ForAllChunk(action);
-				//itQuadTree->second->getQuadrant()->getCollider()->enterWorld();
+				itQuadTree->second->getQuadrant()->getCollider()->enterWorld();
 			}
 			//}
 		}
@@ -557,8 +557,8 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 
 				Chunk::ExitWorldChunkAction action;
 				itQuadTree->second->ForAllChunk(action);
-				//itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
-				//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
+				itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
+				itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
 			}
 			//}
 		}
@@ -1572,7 +1572,7 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 
 		itQuadTree->second->materialParamsNeedUpdate(true);
 
-		//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
+		itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
 	}
 }
 

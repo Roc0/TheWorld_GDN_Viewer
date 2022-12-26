@@ -228,7 +228,7 @@ namespace godot
 			std::string dir = GDN_TheWorld_Globals::getClientDataDir();
 			m_cache = TheWorld_Utils::MeshCacheBuffer(dir, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
 			m_shaderTerrainData = make_unique<ShaderTerrainData>(viewer, quadTree);
-			//m_collider = make_unique<Collider>(quadTree);
+			m_collider = make_unique<Collider>(quadTree);
 		}
 
 		~Quadrant()
@@ -270,10 +270,10 @@ namespace godot
 			return m_shaderTerrainData.get();
 		}
 
-		//Collider* getCollider(void)
-		//{
-		//	return m_collider.get();
-		//}
+		Collider* getCollider(void)
+		{
+			return m_collider.get();
+		}
 
 	private:
 		TheWorld_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
@@ -287,7 +287,7 @@ namespace godot
 		std::string m_meshId;
 		TheWorld_Utils::MeshCacheBuffer m_cache;
 		AABB m_globalCoordAABB;
-		//std::unique_ptr<Collider> m_collider;
+		std::unique_ptr<Collider> m_collider;
 		std::unique_ptr<ShaderTerrainData> m_shaderTerrainData;
 	};
 
@@ -383,7 +383,10 @@ namespace godot
 		void split(void);
 		void clearChildren(void);
 		void assignChunk(void);
-		Chunk* getChunk(void) { return m_chunk; }
+		Chunk* getChunk(void) 
+		{
+			return m_chunk; 
+		}
 		AABB getChunkAABB(void)
 		{
 			AABB aabb;
@@ -393,7 +396,10 @@ namespace godot
 			}
 			return m_chunkAABB;
 		}
-		float getChunkSizeInWUs(void) { return m_chunkSizeInWUs; }
+		float getChunkSizeInWUs(void)
+		{
+			return m_chunkSizeInWUs; 
+		}
 		void setCameraPos(Vector3 globalCoordCameraLastPos);
 
 	private:
@@ -432,7 +438,10 @@ namespace godot
 		void addChunk(Chunk* chunk);
 		void addChunkUpdate(Chunk* chunk);
 		void clearChunkUpdate(void);
-		std::vector<Chunk*>& getChunkUpdate(void) { return m_vectChunkUpdate; }
+		std::vector<Chunk*>& getChunkUpdate(void)
+		{
+			return m_vectChunkUpdate; 
+		}
 		void ForAllChunk(Chunk::ChunkAction& chunkAction);
 		void dump(void);
 		int getNumSplits(void) {
@@ -481,7 +490,10 @@ namespace godot
 						num++;
 			return num;
 		}
-		Quadrant* getQuadrant(void) { return m_worldQuadrant; }
+		Quadrant* getQuadrant(void)
+		{
+			return m_worldQuadrant; 
+		}
 		void resetMaterialParams(void);
 		bool materialParamsNeedReset(void);
 		void materialParamsNeedReset(bool b);

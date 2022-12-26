@@ -162,7 +162,8 @@ void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float ca
 
 	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::NotSet, m_viewer, this);
 
-	//m_worldQuadrant->getCollider()->init(m_viewer, 1, 1);
+	m_worldQuadrant->getCollider()->init(m_viewer, 1, 1);
+	m_worldQuadrant->getCollider()->enterWorld();
 
 	//clock.tock();
 	//m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - QuadTree::init " + std::to_string(clock.duration().count()).c_str() + " ms");
@@ -551,7 +552,10 @@ void QuadTree::materialParamsNeedUpdate(bool b)
 
 Transform QuadTree::getInternalGlobalTransform(void)
 {
-	return Transform(Basis(), Vector3((real_t)getQuadrant()->getPos().getLowerXGridVertex(), 0, (real_t)getQuadrant()->getPos().getLowerZGridVertex()));
+	Transform t(Basis(), Vector3((real_t)getQuadrant()->getPos().getLowerXGridVertex(), 0, (real_t)getQuadrant()->getPos().getLowerZGridVertex()));
+	Transform gt = m_viewer->getInternalGlobalTransform();
+	Transform t1 = gt * t;
+	return t1;
 }
 
 void QuadTree::dump(void)
@@ -1173,5 +1177,5 @@ void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::
 	
 	m_meshId = meshId;
 
-	//m_collider->setData();
+	m_collider->setData();
 }
