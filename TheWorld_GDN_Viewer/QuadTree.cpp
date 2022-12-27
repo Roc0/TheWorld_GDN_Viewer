@@ -7,6 +7,7 @@
 
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
+#include "GDN_TheWorld_Quadrant.h"
 
 #include "assert.h"
 #include <filesystem>
@@ -136,6 +137,7 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantPos)
 	m_numJoins = 0;
 	m_numLeaf = 0;
 	m_worldQuadrant = new Quadrant(quadrantPos, viewer, this);
+	m_GDN_Quadrant = nullptr;
 	m_tag = quadrantPos.getTag();
 	int ret = timespec_get(&m_refreshTime, TIME_UTC);
 }
@@ -146,9 +148,16 @@ void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float ca
 	//clock.tick();
 
 	if (status() != QuadrantStatus::uninitialized)
-		throw(GDN_TheWorld_Exception(__FUNCTION__, string("Quadrant status not comply: " + to_string((int)status())).c_str()));
+		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Quadrant status not comply: " + std::to_string((int)status())).c_str()));
 
 	std::lock_guard lock(m_mtxQuadrant);
+
+	m_GDN_Quadrant = GDN_TheWorld_Quadrant::_new();
+	m_GDN_Quadrant->init(this);
+	std::string quadrantNodeName = m_worldQuadrant->getPos().getName();
+	m_GDN_Quadrant->set_name(quadrantNodeName.c_str());
+	m_viewer->add_child(m_GDN_Quadrant);
+	onGlobalTransformChanged();
 
 	setStatus(QuadrantStatus::getVerticesInProgress);
 
@@ -162,15 +171,32 @@ void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float ca
 
 	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::NotSet, m_viewer, this);
 
-	m_worldQuadrant->getCollider()->init(m_viewer, 1, 1);
-	m_worldQuadrant->getCollider()->enterWorld();
+	//m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
+	//m_worldQuadrant->getCollider()->enterWorld();
 
 	//clock.tock();
 	//m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - QuadTree::init " + std::to_string(clock.duration().count()).c_str() + " ms");
 }
 
+void QuadTree::onGlobalTransformChanged(void)
+{
+	QuadrantPos quadrantPos = getQuadrant()->getPos();
+	Transform gt = m_viewer->get_global_transform();
+	Transform t = gt * Transform(Basis(), Vector3(quadrantPos.getLowerXGridVertex(), 0, quadrantPos.getLowerZGridVertex()));
+	m_GDN_Quadrant->set_global_transform(t);
+}
+
 QuadTree::~QuadTree()
 {
+	if (m_GDN_Quadrant)
+	{
+		Node* parent = m_GDN_Quadrant->get_parent();
+		if (parent)
+			parent->remove_child(m_GDN_Quadrant);
+		m_GDN_Quadrant->queue_free();
+		m_GDN_Quadrant = nullptr;
+	}
+
 	m_root.reset();
 	
 	clearChunkUpdate();
@@ -525,6 +551,11 @@ void QuadTree::resetMaterialParams()
 {
 	if (materialParamsNeedReset())
 	{
+		m_worldQuadrant->getCollider()->deinit();
+		m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
+		m_worldQuadrant->getCollider()->enterWorld();
+		m_worldQuadrant->getCollider()->setData();
+
 		getQuadrant()->getShaderTerrainData()->resetMaterialParams();
 		materialParamsNeedReset(false);
 	}
@@ -568,18 +599,18 @@ void QuadTree::dump(void)
 
 	if (isValid() && isVisible())
 	{
-		globals->debugPrint(String("Num vertices per chunk side: ") + String(to_string(globals->numVerticesPerChuckSide()).c_str())
-			+ String(" - ") + String("Num vertices per grid size: ") + String(to_string(globals->heightmapResolution()).c_str())
-			+ String(" - ") + String("Grid size [WUs]: ") + String(to_string(globals->heightmapSizeInWUs()).c_str())
-			+ String(" - ") + String("Lod max depth: ") + String(to_string(globals->lodMaxDepth()).c_str()));
+		globals->debugPrint(String("Num vertices per chunk side: ") + String(std::to_string(globals->numVerticesPerChuckSide()).c_str())
+			+ String(" - ") + String("Num vertices per grid size: ") + String(std::to_string(globals->heightmapResolution()).c_str())
+			+ String(" - ") + String("Grid size [WUs]: ") + String(std::to_string(globals->heightmapSizeInWUs()).c_str())
+			+ String(" - ") + String("Lod max depth: ") + String(std::to_string(globals->lodMaxDepth()).c_str()));
 
-		globals->debugPrint(String("FROM LAST DUMP - Num quad split: ") + String(to_string(m_numSplits).c_str())
-			+ String(" - ") + String("Num quad join: ") + String(to_string(m_numJoins).c_str())
-			+ String(" - ") + String("Num leaves: ") + String(to_string(m_numLeaf).c_str()));
+		globals->debugPrint(String("FROM LAST DUMP - Num quad split: ") + String(std::to_string(m_numSplits).c_str())
+			+ String(" - ") + String("Num quad join: ") + String(std::to_string(m_numJoins).c_str())
+			+ String(" - ") + String("Num leaves: ") + String(std::to_string(m_numLeaf).c_str()));
 
 		globals->debugPrint(String("GRID POS (global)")
-			+ String(" - ") + String("X = ") + String(to_string(getInternalGlobalTransform().origin.x).c_str())
-			+ String(" - ") + String("Z = ") + String(to_string(getInternalGlobalTransform().origin.z).c_str()));
+			+ String(" - ") + String("X = ") + String(std::to_string(getInternalGlobalTransform().origin.x).c_str())
+			+ String(" - ") + String("Z = ") + String(std::to_string(getInternalGlobalTransform().origin.z).c_str()));
 
 		int numChunks = 0;
 		int numActiveChunks = 0;
@@ -598,14 +629,14 @@ void QuadTree::dump(void)
 				if (it1->second->isCameraVerticalOnChunk())
 					cameraChunk = it1->second;
 			}
-			globals->debugPrint("Num chunks at lod " + String(to_string(i).c_str()) + ": " + String(to_string(numChunksAtLod).c_str())
-				+ String("\t") + " Active " + String(to_string(numChunksActiveAtLod).c_str()));
+			globals->debugPrint("Num chunks at lod " + String(std::to_string(i).c_str()) + ": " + String(std::to_string(numChunksAtLod).c_str())
+				+ String("\t") + " Active " + String(std::to_string(numChunksActiveAtLod).c_str()));
 			numChunks += numChunksAtLod;
 			numActiveChunks += numChunksActiveAtLod;
 		}
 
-		globals->debugPrint("Num chunks: " + String(to_string(numChunks).c_str()));
-		globals->debugPrint("Num active chunks: " + String(to_string(numActiveChunks).c_str()));
+		globals->debugPrint("Num chunks: " + String(std::to_string(numChunks).c_str()));
+		globals->debugPrint("Num active chunks: " + String(std::to_string(numActiveChunks).c_str()));
 
 		// DEBUGRIC
 		//if (cameraChunk != nullptr)
@@ -613,7 +644,7 @@ void QuadTree::dump(void)
 		//	Ref<Mesh> cameraMesh = cameraChunk->getMesh();
 		//	Array cameraArrays = cameraMesh->surface_get_arrays(0);
 		//	PoolVector3Array cameraVerts = cameraArrays[Mesh::ARRAY_VERTEX];
-		//	globals->debugPrint("camerMesh Verts: " + String(to_string(cameraVerts.size()).c_str()));
+		//	globals->debugPrint("camerMesh Verts: " + String(std::to_string(cameraVerts.size()).c_str()));
 		//	Transform cameraT = cameraChunk->getMeshGlobalTransformApplied();
 		//	globals->debugPrint("camerMesh t= " + String(cameraT));
 		//	int numPointsPerSize = (int)sqrt(cameraVerts.size());
@@ -626,7 +657,7 @@ void QuadTree::dump(void)
 		//			s += " ";
 		//			i++;
 		//		}
-		//		globals->debugPrint("camerMesh r=" + String(to_string(z + 1).c_str()) + " " + s);
+		//		globals->debugPrint("camerMesh r=" + String(std::to_string(z + 1).c_str()) + " " + s);
 		//		s = "";
 		//	}
 
@@ -636,7 +667,7 @@ void QuadTree::dump(void)
 		//		Ref<Mesh> camerMeshXMinus = cameraChunkXMinus->getMesh();
 		//		Array cameraArraysXMinus = camerMeshXMinus->surface_get_arrays(0);
 		//		PoolVector3Array cameraVertsXMinus = cameraArraysXMinus[Mesh::ARRAY_VERTEX];
-		//		globals->debugPrint("camerMeshXMinus Verts: " + String(to_string(cameraVertsXMinus.size()).c_str()));
+		//		globals->debugPrint("camerMeshXMinus Verts: " + String(std::to_string(cameraVertsXMinus.size()).c_str()));
 		//		Transform cameraT = cameraChunkXMinus->getMeshGlobalTransformApplied();
 		//		globals->debugPrint("camerMeshXMinus t= " + String(cameraT));
 		//		int numPointsPerSize = (int)sqrt(cameraVertsXMinus.size());
@@ -649,7 +680,7 @@ void QuadTree::dump(void)
 		//				s += " ";
 		//				i++;
 		//			}
-		//			globals->debugPrint("camerMeshXMinus r=" + String(to_string(z + 1).c_str()) + " " + s);
+		//			globals->debugPrint("camerMeshXMinus r=" + String(std::to_string(z + 1).c_str()) + " " + s);
 		//			s = "";
 		//		}
 		//	}
@@ -659,7 +690,7 @@ void QuadTree::dump(void)
 		//		Ref<Mesh> camerMeshXPlus = cameraChunkXPlus->getMesh();
 		//		Array cameraArraysXPlus = camerMeshXPlus->surface_get_arrays(0);
 		//		PoolVector3Array cameraVertsXPlus = cameraArraysXPlus[Mesh::ARRAY_VERTEX];
-		//		globals->debugPrint("camerMeshXPlus Verts: " + String(to_string(cameraVertsXPlus.size()).c_str()));
+		//		globals->debugPrint("camerMeshXPlus Verts: " + String(std::to_string(cameraVertsXPlus.size()).c_str()));
 		//		Transform cameraT = cameraChunkXPlus->getMeshGlobalTransformApplied();
 		//		globals->debugPrint("camerMeshXPlus t= " + String(cameraT));
 		//		int numPointsPerSize = (int)sqrt(cameraVertsXPlus.size());
@@ -672,7 +703,7 @@ void QuadTree::dump(void)
 		//				s += " ";
 		//				i++;
 		//			}
-		//			globals->debugPrint("camerMeshXPlus r=" + String(to_string(z + 1).c_str()) + " " + s);
+		//			globals->debugPrint("camerMeshXPlus r=" + String(std::to_string(z + 1).c_str()) + " " + s);
 		//			s = "";
 		//		}
 		//	}
@@ -1177,5 +1208,5 @@ void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::
 	
 	m_meshId = meshId;
 
-	m_collider->setData();
+	//m_collider->setData();
 }

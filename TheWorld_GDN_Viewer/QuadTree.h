@@ -22,6 +22,7 @@
 namespace godot
 {
 	class GDN_TheWorld_Viewer;
+	class GDN_TheWorld_Quadrant;
 	class QuadTree;
 
 	class QuadrantPos
@@ -191,7 +192,7 @@ namespace godot
 		void resetName(void)
 		{
 			float gridSizeInWU = (m_numVerticesPerSize - 1) * m_gridStepInWU;
-			m_name = "Quadrant-" + std::to_string((int)(m_lowerXGridVertex / gridSizeInWU)) + ":" + std::to_string((int)(m_lowerZGridVertex / gridSizeInWU));
+			m_name = "Quadrant-" + std::to_string((int)(m_lowerXGridVertex / gridSizeInWU)) + "-" + std::to_string((int)(m_lowerZGridVertex / gridSizeInWU));
 		}
 
 	private:
@@ -423,8 +424,9 @@ namespace godot
 		QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantId);
 		~QuadTree();
 
+		void onGlobalTransformChanged(void);
+
 		void init(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
-		
 		void update(Vector3 cameraPosGlobalCoord);
 		//void checkIntegrity(Vector3 cameraPosGlobalCoord);
 		Chunk* getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir);
@@ -550,6 +552,11 @@ namespace godot
 			return m_mtxQuadrant;
 		}
 
+		GDN_TheWorld_Quadrant* getGDNQuadrant(void)
+		{
+			return m_GDN_Quadrant;
+		}
+
 	private:
 		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode);
 		//void internalCheckIntegrity(Vector3 cameraPosGlobalCoord, Quad* quad, Quad* parent);
@@ -566,6 +573,7 @@ namespace godot
 		std::vector<Chunk*> m_vectChunkUpdate;
 		Quadrant* m_worldQuadrant;
 		std::timespec m_refreshTime;
+		GDN_TheWorld_Quadrant* m_GDN_Quadrant;
 
 		// Statistics
 		int m_numSplits;

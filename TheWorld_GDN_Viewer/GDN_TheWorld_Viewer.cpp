@@ -315,9 +315,9 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					//clock.tick();
 					{
 						// ATTENZIONE
-						std::lock_guard lock(m_mtxQuadTree);
+						//std::lock_guard lock(m_mtxQuadTree);
 						quadTree->materialParamsNeedReset(true);
-						quadTree->resetMaterialParams();
+						//quadTree->resetMaterialParams();
 					}
 					//clock.tock();
 					//Globals()->debugPrint(String("ELAPSED - QUADRANT ") + quadTree->getQuadrant()->getPos().getId().c_str() + " TAG=" + quadTree->getQuadrant()->getPos().getTag().c_str() + " - GDN_TheWorld_Viewer::replyFromServer MapManager::getVertices (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
@@ -533,6 +533,7 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 
 				Chunk::EnterWorldChunkAction action;
 				itQuadTree->second->ForAllChunk(action);
+				
 				itQuadTree->second->getQuadrant()->getCollider()->enterWorld();
 			}
 			//}
@@ -556,8 +557,9 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 
 				Chunk::ExitWorldChunkAction action;
 				itQuadTree->second->ForAllChunk(action);
+				
 				itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
-				itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
+				//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
 			}
 			//}
 		}
@@ -748,7 +750,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				m_numVisibleQuadrantOnPerimeter = (size_t)floor((farHorizon - minimunDistanceOfCameraFromBordersOfQuadrant) / quadrantPosNeeded[0].getSizeInWU()) + 1;
 				if (m_numVisibleQuadrantOnPerimeter > 3)
 					m_numVisibleQuadrantOnPerimeter = 3;
-				//m_numVisibleQuadrantOnPerimeter = 0;	// SUPER DEBUGRIC only camera quadrant
+				m_numVisibleQuadrantOnPerimeter = 0;	// SUPER DEBUGRIC only camera quadrant
 			}
 
 			m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter * 2;
@@ -1355,7 +1357,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		//itQuadTree->second->resetMaterialParams();
+		itQuadTree->second->resetMaterialParams();
 		itQuadTree->second->updateMaterialParams();
 	}
 
@@ -1546,6 +1548,9 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
+		if (itQuadTree->second->status() != QuadrantStatus::uninitialized)
+			itQuadTree->second->onGlobalTransformChanged();
+
 		if (!itQuadTree->second->isValid())
 			continue;
 		

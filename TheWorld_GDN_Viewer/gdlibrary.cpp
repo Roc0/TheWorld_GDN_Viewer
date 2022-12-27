@@ -5,6 +5,7 @@
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Camera.h"
+#include "GDN_TheWorld_Quadrant.h"
 #include "Chunk.h"
 
 extern "C" void GDN_EXPORT godot_gdnative_init(godot_gdnative_init_options * o) {
@@ -23,4 +24,5 @@ extern "C" void GDN_EXPORT godot_nativescript_init(void* handle) {
 	godot::register_class<godot::GDN_TheWorld_Viewer>();
 	godot::register_class<godot::GDN_TheWorld_Camera>();
 	godot::register_class<godot::GDN_Chunk_MeshInstance>();
+	godot::register_class<godot::GDN_TheWorld_Quadrant>();
 }

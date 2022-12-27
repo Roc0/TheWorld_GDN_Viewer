@@ -173,6 +173,7 @@
     <ClInclude Include="GDN_TheWorld_Exception.h" />
     <ClInclude Include="GDN_TheWorld_Globals.h" />
     <ClInclude Include="GDN_TheWorld_MainNode.h" />
+    <ClInclude Include="GDN_TheWorld_Quadrant.h" />
     <ClInclude Include="MeshCache.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="GDN_TheWorld_Viewer.h" />
@@ -217,6 +218,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="GDN_TheWorld_MainNode.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="GDN_TheWorld_Quadrant.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
