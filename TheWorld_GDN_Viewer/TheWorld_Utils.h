@@ -180,6 +180,11 @@ namespace TheWorld_Utils
 		std::string m_meshFilePath;
 		std::string m_cacheDir;
 		std::string m_meshId;
+		float m_gridStepInWU;
+		size_t m_numVerticesPerSize;
+		int m_level;
+		float m_lowerXGridVertex;
+		float m_lowerZGridVertex;
 
 #ifdef _THEWORLD_CLIENT
 		std::string m_heightmapFilePath;

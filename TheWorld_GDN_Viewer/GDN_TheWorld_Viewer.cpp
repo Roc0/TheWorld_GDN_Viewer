@@ -305,7 +305,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					std::string meshIdFromBuffer;
 					{
 						// ATTENZIONE
-						//std::lock_guard lock(m_mtxQuadTree);	// SUPER DEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
+						//std::lock_guard lock(m_mtxQuadTree);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
 						quadTree->getQuadrant()->refreshGridVertices(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer);
 					}
 					
@@ -750,10 +750,17 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				m_numVisibleQuadrantOnPerimeter = (size_t)floor((farHorizon - minimunDistanceOfCameraFromBordersOfQuadrant) / quadrantPosNeeded[0].getSizeInWU()) + 1;
 				if (m_numVisibleQuadrantOnPerimeter > 3)
 					m_numVisibleQuadrantOnPerimeter = 3;
-				m_numVisibleQuadrantOnPerimeter = 0;	// SUPER DEBUGRIC only camera quadrant
 			}
 
 			m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter * 2;
+
+			{
+				//m_numVisibleQuadrantOnPerimeter = 0;	// SUPERDEBUGRIC only camera quadrant
+				//m_numCacheQuadrantOnPerimeter = 0;		// SUPERDEBUGRIC only camera quadrant
+
+				//m_numVisibleQuadrantOnPerimeter = 1;	// SUPERDEBUGRIC only camera quadrant & 1 surrounding
+				//m_numCacheQuadrantOnPerimeter = 1;		// SUPERDEBUGRIC only camera quadrant & 1 surrounding
+			}
 
 			// add horizontal (X axis) quadrants on the left and on the right
 			for (int i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
@@ -761,7 +768,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				QuadrantPos q = quadrantPosNeeded[0].getQuadrantPos(QuadrantPos::DirectionSlot::XPlus, 1 + i);
 				q.setTag(quadrantPosNeeded[0].getTag() + " X+" + std::to_string(1 + i));
 				quadrantPosNeeded.push_back(q);
-				//break;	// SUPER DEBUGRIC only X+1 quadrant
+				//break;	// SUPERDEBUGRIC only X+1 quadrant
 				q = quadrantPosNeeded[0].getQuadrantPos(QuadrantPos::DirectionSlot::XMinus, 1 + i);
 				q.setTag(quadrantPosNeeded[0].getTag() + " X-" + std::to_string(1 + i));
 				quadrantPosNeeded.push_back(q);
@@ -774,7 +781,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				// ... add vertical (Z axis) quadrants up and down
 				for (size_t i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
 				{
-					//break;	// SUPER DEBUGRIC only X+1 quadrant
+					//break;	// SUPERDEBUGRIC only X+1 quadrant
 					QuadrantPos q = quadrantPosNeeded[idx].getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus, 1 + int(i));
 					q.setTag(quadrantPosNeeded[idx].getTag() + " Z+" + std::to_string(1 + i));
 					quadrantPosNeeded.push_back(q);

@@ -7,6 +7,7 @@
 
 #include <PhysicsServer.hpp>
 #include <World.hpp>
+#include <Camera.hpp>
 
 //#define MOCK_COLLIDER true
 #define MOCK_COLLIDER false
@@ -16,6 +17,7 @@ namespace godot
 	Collider::Collider(QuadTree* quadTree)
 	{
 		m_initialized = false;
+		m_dataSet = false;
 		m_quadTree = quadTree;
 		m_shapeRID = RID();
 		m_bodyRID = RID();
@@ -31,6 +33,7 @@ namespace godot
 		if (MOCK_COLLIDER)
 			return;
 
+		assert(!m_initialized);
 		assert(attachedNode != nullptr);
 
 		PhysicsServer* ps = PhysicsServer::get_singleton();
@@ -39,7 +42,7 @@ namespace godot
 		ps->body_set_collision_layer(m_bodyRID, initialLayer);
 		ps->body_set_collision_mask(m_bodyRID, initialMask);
 
-		// SUPER DEBUGRIC - This is an attempt to workaround https ://github.com/godotengine/godot/issues/24390
+		// SUPERDEBUGRIC - This is an attempt to workaround https ://github.com/godotengine/godot/issues/24390
 		ps->body_set_ray_pickable(m_bodyRID, true);
 
 		// Initial data - This is a workaround to https://github.com/godotengine/godot/issues/25304
@@ -79,6 +82,7 @@ namespace godot
 			if (m_shapeRID != RID())
 				ps->free_rid(m_shapeRID);
 
+			m_dataSet = false;
 			m_initialized = false;
 		}
 	}
@@ -86,6 +90,10 @@ namespace godot
 	void Collider::enterWorld(void)
 	{
 		if (MOCK_COLLIDER)
+			return;
+
+		assert(m_initialized);
+		if (!m_initialized)
 			return;
 
 		Ref<World> world = m_quadTree->Viewer()->get_world();
@@ -101,6 +109,10 @@ namespace godot
 		if (MOCK_COLLIDER)
 			return;
 
+		assert(m_initialized);
+		if (!m_initialized)
+			return;
+
 		PhysicsServer* ps = PhysicsServer::get_singleton();
 		ps->body_set_space(m_bodyRID, RID());
 	}
@@ -108,6 +120,9 @@ namespace godot
 	void Collider::setData(void)
 	{
 		if (MOCK_COLLIDER)
+			return;
+
+		if (!m_initialized)
 			return;
 
 		std::vector<TheWorld_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
@@ -133,12 +148,37 @@ namespace godot
 
 		updateTransform();
 	}
+	
 	void Collider::onGlobalTransformChanged(void)
 	{
 		if (MOCK_COLLIDER)
 			return;
 
+		if (!m_initialized)
+			return;
+
 		updateTransform();
+	}
+
+	void Collider::onCameraTransformChanged(void)
+	{
+		if (MOCK_COLLIDER)
+			return;
+
+		if (!m_initialized)
+			return;
+
+		m_cameraGlobalTranform = m_quadTree->Viewer()->get_tree()->get_root()->get_camera()->get_global_transform();
+		float colliderAltitude = getColliderAltitude();
+		Transform t = getTransform();
+		t.origin.y = colliderAltitude;
+		setTransform(t);
+	}
+	
+	float Collider::getColliderAltitude(void)
+	{
+		float colliderAltitude = -(m_cameraGlobalTranform.origin.y / (float)2.34);
+		return colliderAltitude;
 	}
 
 	void Collider::updateTransform()
@@ -146,51 +186,64 @@ namespace godot
 		if (MOCK_COLLIDER)
 			return;
 
-		// set body to the center of the quadrant
-		//Transform t = igt * Transform(Basis(), 0.5 * Vector3((float)numVerticesPerSize, 0, (float)numVerticesPerSize));
-		int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
+		assert(m_initialized);
+		if (!m_initialized)
+			return;
+
+		//int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
 		float sizeInWU = m_quadTree->getQuadrant()->getPos().getSizeInWU();
 		float gridStepInWU = m_quadTree->getQuadrant()->getPos().getGridStepInWU();
 		Transform igt = m_quadTree->getInternalGlobalTransform();
-		
-		//Transform t(Basis(), 0.5 * Vector3((float)sizeInWU, 0, (float)sizeInWU));
-		//Transform bodyTranform = igt * t;
+		//float axisScaleFactr = sqrtf(powf(gridStepInWU, (float)2.0) / (float)2.0);
+		float axisScaleFactr = gridStepInWU;
+		Camera* cam = m_quadTree->Viewer()->get_tree()->get_root()->get_camera();
+		m_cameraGlobalTranform = cam->get_global_transform();
+		float colliderAltitude = getColliderAltitude();
+		//Vector3 centerOfQuadrant = igt.origin + 0.5 * Vector3(sizeInWU, 0, sizeInWU);
+		//Vector3 centerOfQuadrantDistFromCamera = cam->get_global_transform().origin - centerOfQuadrant;
 
-		//Transform t1 = igt * t;
-		//Transform bodyTranform = t1.scaled(Vector3(5.0, 5.0, 5.0));
-		
-		//Transform t1 = t.scaled(Vector3(5.0, 5.0, 5.0));
-		//Transform t(Basis().scaled(Vector3(5.0, 5.0, 5.0)));
-		
-		//Transform t(Basis().scaled(Vector3(5.0, 1.0, 5.0)), 0.5 * Vector3((float)sizeInWU, 0, (float)sizeInWU));
-		//Transform t(Basis().scaled(Vector3(5.0, 1.0, 5.0)), 0.5 * Vector3((float)numVerticesPerSize, 0, (float)numVerticesPerSize));
-		//Transform t(Basis().scaled(Vector3(5.0, 1.0, 5.0)), /*0.5 * */ Vector3((float)numVerticesPerSize, 0, (float)numVerticesPerSize));
-		//Transform t(Basis().scaled(Vector3(5.0, 1.0, 5.0)), Vector3((float)sizeInWU / 2, 0, (float)sizeInWU) / 2);
-		//Transform t(Basis().scaled(Vector3(4.0, 1.0, 4.0)), Vector3((float)sizeInWU / 1.5, 0, (float)sizeInWU) / 1.5);
-		//Transform t(Basis(), /*0.5 * */ Vector3((float)numVerticesPerSize, 0, (float)numVerticesPerSize));
+		//Transform t1;
+		//Transform bodyTranform1;
+		//t1 = Transform(Basis().scaled(Vector3(axisScaleFactr, 1.0, axisScaleFactr)));
+		//bodyTranform1 = igt * t1;
+		//bodyTranform1.origin = bodyTranform1.origin + Vector3((float)0.5 * sizeInWU, (float)0.0, (float)0.64 * sizeInWU);
 
-		//Transform t(Basis().scaled(Vector3(3.53, 1.0, 3.53)), Vector3((float)numVerticesPerSize, 0, (float)numVerticesPerSize));
-		//Transform bodyTranform = igt * t;
-		//bodyTranform.origin += 0.5 * Vector3(sizeInWU, 0, sizeInWU);
-
-		//Transform t;
+		//Transform t(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)), Vector3((float)0.5 * sizeInWU, (float)0.0, (float)0.64 * sizeInWU));
 		//Transform bodyTranform;
-		//t = Transform(Basis().scaled(Vector3((float)3.53, 1.0, (float)3.53)));
 		//bodyTranform = igt * t;
-		//bodyTranform.origin.x += sizeInWU / 2;
-		//bodyTranform.origin.z += sizeInWU / 2;
-		//bodyTranform.origin.z += sizeInWU / 10;
-		//bodyTranform.origin.z += sizeInWU / 25;
 
-		Transform t1;
-		Transform bodyTranform1;
-		float axisScaleFactr = sqrtf(powf(gridStepInWU, (float)2.0) / (float)2.0);
-		t1 = Transform(Basis().scaled(Vector3(axisScaleFactr, 1.0, axisScaleFactr)));
-		bodyTranform1 = igt * t1;
-		bodyTranform1.origin = bodyTranform1.origin + Vector3((float)0.5 * sizeInWU, (float)0.0, (float)0.64 * sizeInWU);
+		// le proporzioni sembrano corrette e z corta di un decimo per entrambi i quad. x corretta per Camera, eccessiva di quasi la metà del size per x
+		//Transform t(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)), Vector3((float)0.5 * sizeInWU, (float)0.0, (float)0.5 * sizeInWU));
+		
+		// set body to the center of the quadrant
+		Transform tTranslate(Basis(), Vector3((float)0.5 * sizeInWU, (float)colliderAltitude, (float)0.5 * sizeInWU));
+		Transform tScale(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)), Vector3(0, 0, 0));
+		Transform t = tTranslate * tScale;
+
+		m_colliderTransform = igt * t;
+		setTransform(m_colliderTransform);
+	}
+
+	void Collider::setTransform(Transform t)
+	{
+		assert(m_initialized);
+		if (!m_initialized)
+			return;
 
 		PhysicsServer* ps = PhysicsServer::get_singleton();
-		ps->body_set_state(m_bodyRID, PhysicsServer::BODY_STATE_TRANSFORM, bodyTranform1);
+		ps->body_set_state(m_bodyRID, PhysicsServer::BODY_STATE_TRANSFORM, t);
+		//ps->body_set_shape_transform(m_bodyRID, 0, t);
+	}
+
+	Transform Collider::getTransform(void)
+	{
+		assert(m_initialized);
+		if (!m_initialized)
+			return Transform();
+
+		PhysicsServer* ps = PhysicsServer::get_singleton();
+		Transform t = ps->body_get_state(m_bodyRID, PhysicsServer::BODY_STATE_TRANSFORM);
+		return t;
 	}
 }
 

@@ -780,7 +780,7 @@ void ChunkDebug::onGlobalTransformChanged()
 	
 	m_debugGlobaTransformApplied = worldTransform;
 
-	//assert(m_debugGlobaTransformApplied.origin == m_meshGlobaTransformApplied.origin);	// DEBUGRIC1
+	//assert(m_debugGlobaTransformApplied.origin == m_meshGlobaTransformApplied.origin);	// DEBUGRIC
 }
 
 Transform ChunkDebug::getDebugGlobalTransformApplied(void)
@@ -803,11 +803,11 @@ void ChunkDebug::setVisible(bool b)
 {
 	Chunk::setVisible(b);
 	
-	//Chunk::setVisible(false);	// SUPER DEBUGRIC
-	//if (m_isCameraVerticalOnChunk)	// SUPER DEBUGRIC
-	//	Chunk::setVisible(true);	// SUPER DEBUGRIC
-	//else							// SUPER DEBUGRIC
-	//	Chunk::setVisible(false);	// SUPER DEBUGRIC
+	//Chunk::setVisible(false);	// SUPERDEBUGRIC
+	//if (m_isCameraVerticalOnChunk)	// SUPERDEBUGRIC
+	//	Chunk::setVisible(true);	// SUPERDEBUGRIC
+	//else							// SUPERDEBUGRIC
+	//	Chunk::setVisible(false);	// SUPERDEBUGRIC
 
 	if (!isVisible())
 		b = false;

@@ -23,14 +23,20 @@ namespace godot
 		void setData(void);
 		void updateTransform();
 		void onGlobalTransformChanged(void);
+		void onCameraTransformChanged(void);
+		void setTransform(Transform t);
+		Transform getTransform(void);
+
+	private:
+		inline float getColliderAltitude(void);
 
 	private:
 		bool m_initialized;
+		bool m_dataSet;
 		QuadTree* m_quadTree;
 		RID m_shapeRID;
 		RID m_bodyRID;
-		Transform m_terrainTransform;
+		Transform m_colliderTransform;
+		Transform m_cameraGlobalTranform;
 	};
 }
-
-

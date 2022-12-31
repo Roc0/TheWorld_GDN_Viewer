@@ -190,6 +190,7 @@ QuadTree::~QuadTree()
 {
 	if (m_GDN_Quadrant)
 	{
+		m_GDN_Quadrant->deinit();
 		Node* parent = m_GDN_Quadrant->get_parent();
 		if (parent)
 			parent->remove_child(m_GDN_Quadrant);
@@ -751,7 +752,7 @@ void ShaderTerrainData::init(void)
 	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
 	String shaderPath = "res://shaders/lookdev.shader";
-	//String shaderPath = "res://shaders/test.shader";		// SUPER DEBUGRIC
+	//String shaderPath = "res://shaders/test.shader";		// SUPERDEBUGRIC
 	Ref<Shader> shader = resLoader->load(shaderPath);
 	mat->set_shader(shader);
 

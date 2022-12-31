@@ -63,8 +63,8 @@ namespace godot
 		PoolVector3Array positions;
 		PoolColorArray colors;
 		Color initialVertexColor = GDN_TheWorld_Globals::g_color_white;
-		//strideInWUs = (numVerticesPerChuckSide * strideInWUs) / 4;	// DEBUGRIC1
-		//numVerticesPerChuckSide = 4;								// DEBUGRIC1
+		//strideInWUs = (numVerticesPerChuckSide * strideInWUs) / 4;	// DEBUGRIC
+		//numVerticesPerChuckSide = 4;								// DEBUGRIC
 		positions.resize((int)pow(numVerticesPerChuckSide + 1, 2));
 		colors.resize((int)pow(numVerticesPerChuckSide + 1, 2));
 		int pos = 0;
@@ -82,7 +82,7 @@ namespace godot
 		void makeFlatChunk_makeIndices(PoolIntArray& indices, int numVerticesPerChuckSide, int seams);
 		makeFlatChunk_makeIndices(indices, numVerticesPerChuckSide, seams);
 
-		// DEBUGRIC1
+		// DEBUGRIC
 		/*
 		{
 			for (int i = 0; i < positions.size(); i++)
@@ -112,7 +112,7 @@ namespace godot
 			//}
 		}
 		*/
-		// DEBUGRIC1
+		// DEBUGRIC
 
 		godot::Array arrays;
 		arrays.resize(ArrayMesh::ARRAY_MAX);
@@ -200,12 +200,12 @@ void makeFlatChunk_makeIndices(godot::PoolIntArray& indices, int numVerticesPerC
 			int ixz01 = vertexIndex + numVerticesPerChuckSide + 1;	// same vertex on next row
 			int ixz11 = ixz01 + 1;												// next vertex
 
-			// second triangle
+			// first triangle
 			indices.append(ixz00);
 			indices.append(ixz10);
 			indices.append(ixz11);
 
-			// first triangle
+			// second triangle
 			indices.append(ixz00);
 			indices.append(ixz11);
 			indices.append(ixz01);

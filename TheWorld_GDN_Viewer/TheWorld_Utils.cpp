@@ -14,10 +14,21 @@ namespace TheWorld_Utils
 {
 	MeshCacheBuffer::MeshCacheBuffer(void)
 	{
+		m_gridStepInWU = -1;
+		m_numVerticesPerSize = -1;
+		m_level = 0;
+		m_lowerXGridVertex = 0;
+		m_lowerZGridVertex = 0;
 	}
 
 	MeshCacheBuffer::MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex)
 	{
+		m_gridStepInWU = gridStepInWU;
+		m_numVerticesPerSize = numVerticesPerSize;
+		m_level = level;
+		m_lowerXGridVertex = lowerXGridVertex;
+		m_lowerZGridVertex = lowerZGridVertex;
+
 		m_cacheDir = std::string(cacheDir) + "\\" + "Cache" + "\\" + "ST-" + std::to_string(gridStepInWU) + "_SZ-" + std::to_string(numVerticesPerSize) + "\\L-" + std::to_string(level);
 		if (!fs::exists(m_cacheDir))
 		{
@@ -141,7 +152,7 @@ namespace TheWorld_Utils
 
 #ifdef _THEWORLD_CLIENT
 			{
-				// SUPER DEBUGRIC
+				// SUPERDEBUGRIC
 				//TheWorld_Utils::TimerMs clock("MeshCacheBuffer::refreshMeshCacheFromBuffer", m_meshId.c_str(), false, true);
 								
 				//clock.tick();
@@ -164,7 +175,7 @@ namespace TheWorld_Utils
 				//setBufferForMeshCache(meshId, res, vectGridVertices, buffer);
 				//clock.headerMsg("Mock setBufferForMeshCache" + m_meshId);
 				//clock.tock();
-				// SUPER DEBUGRIC
+				// SUPERDEBUGRIC
 			}
 #endif
 			if (vectGridVertices.size() != vectSize)
@@ -312,6 +323,7 @@ namespace TheWorld_Utils
 		m_meshId = meshId;
 
 		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+		//size_t heightsArraySize = (m_numVerticesPerSize * m_gridStepInWU) * (m_numVerticesPerSize * m_gridStepInWU);
 		movingStreamBuffer += size;
 		
 #ifdef _THEWORLD_CLIENT
