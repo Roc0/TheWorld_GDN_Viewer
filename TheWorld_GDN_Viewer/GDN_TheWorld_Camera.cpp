@@ -396,9 +396,12 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 	real_t z_far = Camera::get_zfar();
 	real_t size = Camera::get_size();
 	Vector2 offset = Camera::get_frustum_offset();
+
+	Camera::set_zfar(10000.0);
+
 	// TODORIC mah
 	//Camera::set_frustum(size / 2, offset, z_near, z_far * 100);
-	Camera::set_frustum(size / 10.0F, offset, z_near, z_far * 100);
+	//Camera::set_frustum(size / 10.0F, offset, z_near, z_far * 100);
 	//Camera::set_frustum(size, offset, z_near, z_far * 100);
 
 	//Camera::set_orthogonal(size, z_near, z_far);

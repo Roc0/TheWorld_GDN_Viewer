@@ -467,6 +467,10 @@ namespace godot
 			else
 				m_quad = quad;
 		};
+		enum PosInQuad getPosInQuad(void)
+		{
+			return m_posInQuad;
+		}
 		virtual void releaseDebugMesh(void);
 		virtual void releaseMesh(void);
 		//Ref<Mesh> getMesh() { return m_mesh; };
@@ -483,6 +487,23 @@ namespace godot
 		float getLowerZInWUsGlobal(void)
 		{
 			return m_originZInWUsGlobal;
+		}
+
+		int getFirstWorldVertRow(void)
+		{
+			return m_firstWorldVertRow;
+		}
+		int getFirstWorldVertCol(void)
+		{
+			return m_firstWorldVertCol;
+		}
+		int getLastWorldVertRow(void)
+		{
+			return m_lastWorldVertRow;
+		}
+		int getLastWorldVertCol(void)
+		{
+			return m_lastWorldVertCol;
 		}
 
 	private:

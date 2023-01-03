@@ -333,7 +333,7 @@ void Chunk::update(bool isVisible)
 		if (numGreaterChunksPerSide > 0)
 		{
 			QuadrantPos XMinusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
-			QuadTree* XMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(XMinusQuadrantPos);
+			QuadTree* XMinusQuadTree = m_viewer->getQuadTree(XMinusQuadrantPos);
 			if (XMinusQuadTree != nullptr && XMinusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(numGreaterChunksPerSide - 1, posGreaterChunkContainingThisOne.getSlotPosZ(), posGreaterChunkContainingThisOne.getLod());
@@ -350,7 +350,7 @@ void Chunk::update(bool isVisible)
 		if (numGreaterChunksPerSide > 0)
 		{
 			QuadrantPos ZMinusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
-			QuadTree* ZMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZMinusQuadrantPos);
+			QuadTree* ZMinusQuadTree = m_viewer->getQuadTree(ZMinusQuadrantPos);
 			if (ZMinusQuadTree != nullptr && ZMinusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(posGreaterChunkContainingThisOne.getSlotPosX(), numGreaterChunksPerSide - 1, posGreaterChunkContainingThisOne.getLod());
@@ -375,7 +375,7 @@ void Chunk::update(bool isVisible)
 		if (numGreaterChunksPerSide > 0)
 		{
 			QuadrantPos XPlusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
-			QuadTree* XPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(XPlusQuadrantPos);
+			QuadTree* XPlusQuadTree = m_viewer->getQuadTree(XPlusQuadrantPos);
 			if (XPlusQuadTree != nullptr && XPlusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(0, posGreaterChunkContainingThisOne.getSlotPosZ(), posGreaterChunkContainingThisOne.getLod());
@@ -392,7 +392,7 @@ void Chunk::update(bool isVisible)
 		if (numGreaterChunksPerSide > 0)
 		{
 			QuadrantPos ZMinusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
-			QuadTree* ZMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZMinusQuadrantPos);
+			QuadTree* ZMinusQuadTree = m_viewer->getQuadTree(ZMinusQuadrantPos);
 			if (ZMinusQuadTree != nullptr && ZMinusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(posGreaterChunkContainingThisOne.getSlotPosX(), numGreaterChunksPerSide - 1, posGreaterChunkContainingThisOne.getLod());
@@ -417,7 +417,7 @@ void Chunk::update(bool isVisible)
 		if (numGreaterChunksPerSide > 0)
 		{
 			QuadrantPos XMinusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
-			QuadTree* XMinusQuadTree = m_viewer->getQuadTreeFromInternalMap(XMinusQuadrantPos);
+			QuadTree* XMinusQuadTree = m_viewer->getQuadTree(XMinusQuadrantPos);
 			if (XMinusQuadTree != nullptr && XMinusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(numGreaterChunksPerSide - 1, posGreaterChunkContainingThisOne.getSlotPosZ(), posGreaterChunkContainingThisOne.getLod());
@@ -434,7 +434,7 @@ void Chunk::update(bool isVisible)
 		if (numGreaterChunksPerSide > 0)
 		{
 			QuadrantPos ZPlusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
-			QuadTree* ZPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZPlusQuadrantPos);
+			QuadTree* ZPlusQuadTree = m_viewer->getQuadTree(ZPlusQuadrantPos);
 			if (ZPlusQuadTree != nullptr && ZPlusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(posGreaterChunkContainingThisOne.getSlotPosX(), 0, posGreaterChunkContainingThisOne.getLod());
@@ -459,7 +459,7 @@ void Chunk::update(bool isVisible)
 		if (numGreaterChunksPerSide > 0)
 		{
 			QuadrantPos XPlusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
-			QuadTree* XPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(XPlusQuadrantPos);
+			QuadTree* XPlusQuadTree = m_viewer->getQuadTree(XPlusQuadrantPos);
 			if (XPlusQuadTree != nullptr && XPlusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(0, posGreaterChunkContainingThisOne.getSlotPosZ(), posGreaterChunkContainingThisOne.getLod());
@@ -476,7 +476,7 @@ void Chunk::update(bool isVisible)
 		if (numGreaterChunksPerSide > 0)
 		{
 			QuadrantPos ZPlusQuadrantPos = m_quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
-			QuadTree* ZPlusQuadTree = m_viewer->getQuadTreeFromInternalMap(ZPlusQuadrantPos);
+			QuadTree* ZPlusQuadTree = m_viewer->getQuadTree(ZPlusQuadrantPos);
 			if (ZPlusQuadTree != nullptr && ZPlusQuadTree->isValid())
 			{
 				ChunkPos posGreaterChunkOnAdjacentQuadrant(posGreaterChunkContainingThisOne.getSlotPosX(), 0, posGreaterChunkContainingThisOne.getLod());

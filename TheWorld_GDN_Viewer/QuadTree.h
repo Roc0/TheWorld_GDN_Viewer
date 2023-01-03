@@ -557,6 +557,11 @@ namespace godot
 			return m_GDN_Quadrant;
 		}
 
+		Chunk::MapChunk& getMapChunk(void)
+		{
+			return m_mapChunk;
+		}
+
 	private:
 		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode);
 		//void internalCheckIntegrity(Vector3 cameraPosGlobalCoord, Quad* quad, Quad* parent);

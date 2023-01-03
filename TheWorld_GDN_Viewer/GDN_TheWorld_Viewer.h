@@ -79,6 +79,10 @@ namespace godot
 		{
 			m_dumpRequired = true; 
 		}
+		void trackChunk(bool b)
+		{
+			m_trackChunk = b;
+		}
 		void dump(void);
 		void dumpRecurseIntoChildrenNodes(Array nodes, int level);
 		void setCameraChunk(Chunk* chunk, QuadTree* quadTree);
@@ -117,7 +121,11 @@ namespace godot
 		{
 			m_refreshMapQuadTree = true; 
 		}
-		QuadTree* getQuadTreeFromInternalMap(QuadrantPos pos);
+		QuadTree* getQuadTree(QuadrantPos pos);
+		Chunk* getChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir);
+		Chunk* getChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir);
+		Chunk* getTrackedChunk(void);
+		String getTrackedChunkStr(void);
 
 	private:
 		void onTransformChanged(void);
@@ -140,6 +148,8 @@ namespace godot
 		int64_t m_timeElapsedFromLastDump;
 		bool m_initialWordlViewerPosSet;
 		bool m_dumpRequired;
+		bool m_trackChunk;
+		Chunk* lastTrackedChunk;
 		//Vector3 m_mapScaleVector;
 
 		// Statistics data
