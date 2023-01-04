@@ -41,9 +41,9 @@ namespace godot
 		void deinit(void);
 		void setColliderTransform(Transform t);
 		Transform getColliderTransform(void);
-		void setColliderMeshTransform(Transform t);
-		Transform getColliderMeshTransform(void);
-		void showColliderMesh(bool show = true);
+		void setDebugColliderMeshTransform(Transform t);
+		Transform getDebugColliderMeshTransform(void);
+		void showDebugColliderMesh(bool show = true);
 		void onGlobalTransformChanged(void);
 
 		//
@@ -58,7 +58,7 @@ namespace godot
 		void _notification(int p_what);
 
 	private:
-		void createColliderMeshInstance(void);
+		void createDebugColliderMeshInstance(void);
 
 	private:
 		QuadTree* m_quadTree;

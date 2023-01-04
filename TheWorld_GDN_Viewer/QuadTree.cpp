@@ -55,11 +55,17 @@ void Quad::split(void)
 	assert(m_lod > 0);
 	assert(m_children[0] == nullptr);
 	
+	//bool trackChunk = false;
+	//if (m_viewer->trackMouse() && m_quadTree->getQuadrant()->getPos().getName() == m_viewer->getMouseQuadrantHitName())
+	//	trackChunk = true;
+
 	for (int i = 0; i < 4; i++)
 	{
 		//int x = (m_slotPosX * 2) + (i & 1);
 		//int z = (m_slotPosZ * 2) + ((i & 2) >> 1);
 		m_children[i] = make_unique<Quad>((m_slotPosX * 2) + (i & 1), (m_slotPosZ * 2) + ((i & 2) >> 1), m_lod - 1, enum PosInQuad(i + 1), m_viewer, m_quadTree);
+		//if (trackChunk)
+		//	m_chunk->checkMouseHit();
 	}
 	
 	recycleChunk();
@@ -257,26 +263,47 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
 	//Vector3 chunkCenterGlobal(real_t(quad->getChunk()->getLowerXInWUsGlobal() + chunkSizeInWUs / 2),
 	//									(chunkAABB.position + chunkAABB.size / 2).y, 
 	//									real_t(quad->getChunk()->getLowerZInWUsGlobal() + chunkSizeInWUs / 2));
+
 	Vector3 quadCenterGlobal(real_t((quad->slotPosX() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerXGridVertex() + chunkSizeInWUs / 2),
-									(chunkAABB.position + chunkAABB.size / 2).y,
-									real_t((quad->slotPosZ() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerZGridVertex() + chunkSizeInWUs / 2));
+		(chunkAABB.position + chunkAABB.size / 2).y,
+		real_t((quad->slotPosZ() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerZGridVertex() + chunkSizeInWUs / 2));
+
+	Transform gt = m_viewer->get_global_transform();
+	Transform t = gt * Transform(Basis(), quadCenterGlobal);
+	quadCenterGlobal = t.origin;
+
+
 	real_t splitDistance = chunkSizeInWUs * globals->splitScale();
 	if (quad->isLeaf())
 	{
-		
+		bool trackChunk = false;
+		if (m_viewer->trackMouse() && getQuadrant()->getPos().getName() == m_viewer->getMouseQuadrantHitName())
+			trackChunk = true;
+
+		bool splitted = false;
 		m_numLeaf++;
 		if (quad->Lod() > 0)
 		{
 			real_t distance = quadCenterGlobal.distance_to(cameraPosGlobalCoord);
+			quad->getChunk()->setDistanceFromCamera(distance);
 			if (distance < splitDistance)
 			{
 				// Split
 				quad->split();
 				for (int i = 0; i < 4; i++)
+				{
 					quad->getChild(i)->setCameraPos(cameraPosGlobalCoord);
+					if (trackChunk)
+						quad->getChild(i)->getChunk()->checkMouseHit();
+					quad->getChild(i)->getChunk()->setDistanceFromCamera(distance);
+				}
+				splitted = true;
 				m_numSplits++;
 			}
 		}
+		
+		if (!splitted && trackChunk)
+			quad->getChunk()->checkMouseHit();
 	}
 	else
 	{
@@ -289,13 +316,20 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
 				allChildrenAreLeaf = false;
 		}
 		
-		if (allChildrenAreLeaf && quadCenterGlobal.distance_to(cameraPosGlobalCoord) > splitDistance)
+		
+		if (allChildrenAreLeaf)
 		{
-			// Join
-			quad->clearChildren();
-			quad->assignChunk();
-			quad->getChunk()->setJustJoined(true);
-			m_numJoins++;
+			real_t distance = quadCenterGlobal.distance_to(cameraPosGlobalCoord);
+			if (distance > splitDistance)
+			{
+				// Join
+				quad->clearChildren();
+				quad->assignChunk();
+				quad->getChunk()->setJustJoined(true);
+				m_numJoins++;
+				quad->getChunk()->checkMouseHit();
+				quad->getChunk()->setDistanceFromCamera(distance);
+			}
 		}
 	}
 	

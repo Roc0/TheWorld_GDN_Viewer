@@ -64,9 +64,9 @@ namespace godot
 
 		register_method("set_collider_transform", &GDN_TheWorld_Quadrant::setColliderTransform);
 		register_method("get_collider_transform", &GDN_TheWorld_Quadrant::getColliderTransform);
-		register_method("set_collider_mesh_transform", &GDN_TheWorld_Quadrant::setColliderMeshTransform);
-		register_method("get_collider_mesh_transform", &GDN_TheWorld_Quadrant::getColliderMeshTransform);
-		register_method("show_collider_mesh", &GDN_TheWorld_Quadrant::showColliderMesh);
+		register_method("set_collider_mesh_transform", &GDN_TheWorld_Quadrant::setDebugColliderMeshTransform);
+		register_method("get_collider_mesh_transform", &GDN_TheWorld_Quadrant::getDebugColliderMeshTransform);
+		register_method("show_collider_mesh", &GDN_TheWorld_Quadrant::showDebugColliderMesh);
 	}
 
 	void GDN_TheWorld_Quadrant::_init(void)
@@ -133,7 +133,7 @@ namespace godot
 		return m_quadTree->getQuadrant()->getCollider()->getTransform();
 	}
 
-	void GDN_TheWorld_Quadrant::setColliderMeshTransform(Transform t)
+	void GDN_TheWorld_Quadrant::setDebugColliderMeshTransform(Transform t)
 	{
 		if (m_colliderMeshInstance != nullptr)
 		{
@@ -141,7 +141,7 @@ namespace godot
 		}
 	}
 	
-	Transform GDN_TheWorld_Quadrant::getColliderMeshTransform(void)
+	Transform GDN_TheWorld_Quadrant::getDebugColliderMeshTransform(void)
 	{
 		Transform t;
 
@@ -153,12 +153,12 @@ namespace godot
 		return t;
 	}
 
-	void GDN_TheWorld_Quadrant::showColliderMesh(bool show)
+	void GDN_TheWorld_Quadrant::showDebugColliderMesh(bool show)
 	{
 		if (!show && m_colliderMeshInstance == nullptr)
 			return;
 		
-		createColliderMeshInstance();
+		createDebugColliderMeshInstance();
 
 		if (show)
 			m_colliderMeshInstance->set_visible(true);
@@ -166,7 +166,7 @@ namespace godot
 			m_colliderMeshInstance->set_visible(false);
 	}
 	
-	void GDN_TheWorld_Quadrant::createColliderMeshInstance(void)
+	void GDN_TheWorld_Quadrant::createDebugColliderMeshInstance(void)
 	{
 		if (m_colliderMeshInstance == nullptr)
 		{

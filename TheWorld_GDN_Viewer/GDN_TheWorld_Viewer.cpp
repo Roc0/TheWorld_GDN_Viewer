@@ -13,6 +13,7 @@
 #include <Shader.hpp>
 #include <ImageTexture.hpp>
 #include <File.hpp>
+#include <PhysicsDirectSpaceState.hpp>
 #include <filesystem>
 
 #include "MeshCache.h"
@@ -40,8 +41,6 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
 	register_method("initial_world_viewer_pos_set", &GDN_TheWorld_Viewer::initialWordlViewerPosSet);
 	register_method("dump_required", &GDN_TheWorld_Viewer::setDumpRequired);
-	register_method("track_chunk", &GDN_TheWorld_Viewer::trackChunk);
-	register_method("get_tracked_chunk_str", &GDN_TheWorld_Viewer::getTrackedChunkStr);
 	//register_method("get_camera_chunk_global_transform_of_aabb", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB);
 	register_method("get_camera_chunk_local_aabb", &GDN_TheWorld_Viewer::getCameraChunkLocalAABB);
 	register_method("get_camera_chunk_local_debug_aabb", &GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB);
@@ -61,6 +60,14 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_process_duration", &GDN_TheWorld_Viewer::getProcessDuration);
 	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
 	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
+	register_method("get_mouse_hit", &GDN_TheWorld_Viewer::getMouseHit);
+	register_method("get_mouse_quadrant_hit_name", &GDN_TheWorld_Viewer::_getMouseQuadrantHitName);
+	register_method("get_mouse_quadrant_hit_pos", &GDN_TheWorld_Viewer::getMouseQuadrantHitPos);
+	register_method("get_mouse_quadrant_hit_size", &GDN_TheWorld_Viewer::getMouseQuadrantHitSize);
+	register_method("get_mouse_chunk_hit_name", &GDN_TheWorld_Viewer::getMouseChunkHitId);
+	register_method("get_mouse_chunk_hit_pos", &GDN_TheWorld_Viewer::getMouseChunkHitPos);
+	register_method("get_mouse_chunk_hit_size", &GDN_TheWorld_Viewer::getMouseChunkHitSize);
+	register_method("get_mouse_chunk_hit_dist_from_cam", &GDN_TheWorld_Viewer::getMouseChunkHitDistFromCam);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -70,7 +77,6 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_firstProcess = true;
 	m_initialWordlViewerPosSet = false;
 	m_dumpRequired = false;
-	m_trackChunk = false;
 	lastTrackedChunk = nullptr;
 	m_refreshRequired = false;
 	m_worldViewerLevel = 0;
@@ -94,6 +100,11 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numVisibleQuadrant = 0;
 	m_numinitializedVisibleQuadrant = 0;
 	m_debugContentVisibility = true;
+	m_trackMouse = false;
+	m_timeElapsedFromLastMouseTrack = 0;
+	m_mouseQuadrantHitSize = 0;
+	m_mouseHitChunk = nullptr;
+	m_mouseHitQuadTree = nullptr;
 	m_updateTerrainVisibilityRequired = false;
 	m_currentChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
 	m_requiredChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
@@ -426,8 +437,13 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 	if (globals == nullptr)
 		return;
 
-	if (globals->status() != TheWorldStatus::sessionInitialized)
+	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
+
+	if (event->is_action_pressed("ui_toggle_track_mouse"))
+	{
+		m_trackMouse = !m_trackMouse;
+	}
 
 	if (event->is_action_pressed("ui_toggle_debug_visibility"))
 	{
@@ -635,7 +651,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (globals == nullptr)
 		return;
 
-	if (globals->status() != TheWorldStatus::sessionInitialized)
+	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
 	if (!WorldCamera() || !m_initialWordlViewerPosSet)
@@ -866,6 +882,46 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	}
 	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS
 
+	godot::Node* collider = nullptr;
+	if (m_trackMouse)
+	{
+		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
+		if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
+		{
+			godot::PhysicsDirectSpaceState* spaceState = get_world()->get_direct_space_state();
+			godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
+			godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
+			godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
+			godot::Dictionary rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
+			if (rayArray.has("position"))
+				m_mouseHit = rayArray["position"];
+			if (rayArray.has("collider"))
+			{
+				collider = rayArray["collider"];
+				if (collider->has_meta("QuadrantName"))
+				{
+					godot::String s = collider->get_meta("QuadrantName", "");
+					char* str = s.alloc_c_string();
+					m_mouseQuadrantHitName = str;
+					godot::api->godot_free(str);
+					m_mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
+					m_mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
+				}
+				//godot::PoolStringArray metas = collider->get_meta_list();
+				//for (int i = 0; i < metas.size(); i++)
+				//{
+				//	godot::String s = metas[i];
+				//	char* str = s.alloc_c_string();
+				//	std::string ss = str;
+				//	godot::api->godot_free(str);
+				//	godot::Variant v = collider->get_meta(s);
+				//}
+				//godot::String s = collider->get_meta("QuadrantName");
+			}
+			m_timeElapsedFromLastMouseTrack = timeElapsed;
+		}
+	}
+	
 	// UPDATE QUADS
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
@@ -1366,20 +1422,6 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		m_updateDebugModeRequired = false;
 	}
 
-	//if (m_trackChunk)
-	//{
-	//	Chunk* trackedChunk = getTrackedChunk();
-	//	if (trackedChunk != nullptr)
-	//	{
-	//		if (lastTrackedChunk != trackedChunk)
-	//		{
-	//			lastTrackedChunk = trackedChunk;
-	//			std::string strTrackedChunk = trackedChunk->getQuadTree()->getQuadrant()->getPos().getName() + "-" + trackedChunk->getPos().getIdStr();
-	//			Godot::print(strTrackedChunk.c_str());
-	//		}
-	//	}
-	//}
-	
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
 		itQuadTree->second->resetMaterialParams();
@@ -1433,7 +1475,7 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 	if (globals == nullptr)
 		return;
 
-	if (globals->status() != TheWorldStatus::sessionInitialized)
+	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
 	Input* input = Input::get_singleton();
@@ -1453,82 +1495,82 @@ QuadTree* GDN_TheWorld_Viewer::getQuadTree(QuadrantPos pos)
 	return iter->second.get();
 }
 
-String GDN_TheWorld_Viewer::getTrackedChunkStr(void)
-{
-	std::string strTrackedChunk;
+//String GDN_TheWorld_Viewer::getTrackedChunkStr(void)
+//{
+//	std::string strTrackedChunk;
+//
+//	Chunk* trackedChunk = getTrackedChunk();
+//	if (trackedChunk != nullptr)
+//		strTrackedChunk = trackedChunk->getQuadTree()->getQuadrant()->getPos().getName() + "-" + trackedChunk->getPos().getIdStr();
+//
+//	return strTrackedChunk.c_str();
+//}
 
-	Chunk* trackedChunk = getTrackedChunk();
-	if (trackedChunk != nullptr)
-		strTrackedChunk = trackedChunk->getQuadTree()->getQuadrant()->getPos().getName() + "-" + trackedChunk->getPos().getIdStr();
-
-	return strTrackedChunk.c_str();
-}
-
-Chunk* GDN_TheWorld_Viewer::getTrackedChunk(void)
-{
-	GDN_TheWorld_Camera* activeCamera = WorldCamera()->getActiveCamera();
-	if (!activeCamera)
-		return nullptr;
-
-	Vector2 mousePos = get_viewport()->get_mouse_position();
-
-	Chunk* chunk = nullptr;
-
-	std::lock_guard lock(m_mtxQuadTree);
-	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-	{
-		if (!itQuadTree->second->isValid())
-			continue;
-
-		if (!itQuadTree->second->isVisible())
-			continue;
-
-		std::vector<TheWorld_Utils::GridVertex>& vertices = itQuadTree->second->getQuadrant()->getGridVertices();
-
-		Point2 p1 = activeCamera->unproject_position(Vector3(vertices[0].posX(), vertices[0].altitude(), vertices[0].posZ()));
-		Point2 p2 = activeCamera->unproject_position(Vector3(vertices[vertices.size() - 1].posX(), vertices[vertices.size() - 1].altitude(), vertices[vertices.size() - 1].posZ()));
-		
-		//Rect2 rect(p1, p2 - p1);
-		//if (rect.has_point(mousePos))
-		float greaterX = (p1.x > p2.x ? p1.x : p2.x);
-		float greaterY = (p1.y > p2.y ? p1.y : p2.y);
-		float lowerX = (p1.x < p2.x ? p1.x : p2.x);
-		float lowerY = (p1.y < p2.y ? p1.y : p2.y);
-		if (mousePos.x >= lowerX && mousePos.x < greaterX && mousePos.y >= lowerY && mousePos.y < greaterY)
-		{
-			Chunk::MapChunk& mapChunk = itQuadTree->second->getMapChunk();
-
-			Chunk::MapChunk::iterator itMapChunk;
-			for (Chunk::MapChunk::iterator itMapChunk = mapChunk.begin(); itMapChunk != mapChunk.end(); itMapChunk++)
-				for (Chunk::MapChunkPerLod::iterator itMapChunkPerLod = itMapChunk->second.begin(); itMapChunkPerLod != itMapChunk->second.end(); itMapChunkPerLod++)
-					if (itMapChunkPerLod->second->isActive())
-					{
-						int numWorldVerticesPerSize = itQuadTree->second->getQuadrant()->getPos().getNumVerticesPerSize();
-
-						size_t idxFirstVertexOfChunk = itMapChunkPerLod->second->getFirstWorldVertRow() * numWorldVerticesPerSize + itMapChunkPerLod->second->getFirstWorldVertCol();
-						Point2 p1 = activeCamera->unproject_position(Vector3(vertices[idxFirstVertexOfChunk].posX(), vertices[idxFirstVertexOfChunk].altitude(), vertices[idxFirstVertexOfChunk].posZ()));
-						size_t idxLastVertexOfChunk = itMapChunkPerLod->second->getLastWorldVertRow() * numWorldVerticesPerSize + itMapChunkPerLod->second->getLastWorldVertCol();
-						Point2 p2 = activeCamera->unproject_position(Vector3(vertices[idxLastVertexOfChunk].posX(), vertices[idxLastVertexOfChunk].altitude(), vertices[idxLastVertexOfChunk].posZ()));
-
-						//Rect2 rect(p1, p2 - p1);
-						//if (rect.has_point(mousePos))
-						greaterX = (p1.x > p2.x ? p1.x : p2.x);
-						greaterY = (p1.y > p2.y ? p1.y : p2.y);
-						lowerX = (p1.x < p2.x ? p1.x : p2.x);
-						lowerY = (p1.y < p2.y ? p1.y : p2.y);
-						if (mousePos.x >= lowerX && mousePos.x < greaterX && mousePos.y >= lowerY && mousePos.y < greaterY)
-						{
-							chunk = itMapChunkPerLod->second;
-							break;
-						}
-					}
-
-			break;
-		}
-	}
-
-	return chunk;
-}
+//Chunk* GDN_TheWorld_Viewer::getTrackedChunk(void)
+//{
+//	GDN_TheWorld_Camera* activeCamera = WorldCamera()->getActiveCamera();
+//	if (!activeCamera)
+//		return nullptr;
+//
+//	Vector2 mousePos = get_viewport()->get_mouse_position();
+//
+//	Chunk* chunk = nullptr;
+//
+//	std::lock_guard lock(m_mtxQuadTree);
+//	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+//	{
+//		if (!itQuadTree->second->isValid())
+//			continue;
+//
+//		if (!itQuadTree->second->isVisible())
+//			continue;
+//
+//		std::vector<TheWorld_Utils::GridVertex>& vertices = itQuadTree->second->getQuadrant()->getGridVertices();
+//
+//		Point2 p1 = activeCamera->unproject_position(Vector3(vertices[0].posX(), vertices[0].altitude(), vertices[0].posZ()));
+//		Point2 p2 = activeCamera->unproject_position(Vector3(vertices[vertices.size() - 1].posX(), vertices[vertices.size() - 1].altitude(), vertices[vertices.size() - 1].posZ()));
+//		
+//		//Rect2 rect(p1, p2 - p1);
+//		//if (rect.has_point(mousePos))
+//		float greaterX = (p1.x > p2.x ? p1.x : p2.x);
+//		float greaterY = (p1.y > p2.y ? p1.y : p2.y);
+//		float lowerX = (p1.x < p2.x ? p1.x : p2.x);
+//		float lowerY = (p1.y < p2.y ? p1.y : p2.y);
+//		if (mousePos.x >= lowerX && mousePos.x < greaterX && mousePos.y >= lowerY && mousePos.y < greaterY)
+//		{
+//			Chunk::MapChunk& mapChunk = itQuadTree->second->getMapChunk();
+//
+//			Chunk::MapChunk::iterator itMapChunk;
+//			for (Chunk::MapChunk::iterator itMapChunk = mapChunk.begin(); itMapChunk != mapChunk.end(); itMapChunk++)
+//				for (Chunk::MapChunkPerLod::iterator itMapChunkPerLod = itMapChunk->second.begin(); itMapChunkPerLod != itMapChunk->second.end(); itMapChunkPerLod++)
+//					if (itMapChunkPerLod->second->isActive())
+//					{
+//						int numWorldVerticesPerSize = itQuadTree->second->getQuadrant()->getPos().getNumVerticesPerSize();
+//
+//						size_t idxFirstVertexOfChunk = itMapChunkPerLod->second->getFirstWorldVertRow() * numWorldVerticesPerSize + itMapChunkPerLod->second->getFirstWorldVertCol();
+//						Point2 p1 = activeCamera->unproject_position(Vector3(vertices[idxFirstVertexOfChunk].posX(), vertices[idxFirstVertexOfChunk].altitude(), vertices[idxFirstVertexOfChunk].posZ()));
+//						size_t idxLastVertexOfChunk = itMapChunkPerLod->second->getLastWorldVertRow() * numWorldVerticesPerSize + itMapChunkPerLod->second->getLastWorldVertCol();
+//						Point2 p2 = activeCamera->unproject_position(Vector3(vertices[idxLastVertexOfChunk].posX(), vertices[idxLastVertexOfChunk].altitude(), vertices[idxLastVertexOfChunk].posZ()));
+//
+//						//Rect2 rect(p1, p2 - p1);
+//						//if (rect.has_point(mousePos))
+//						greaterX = (p1.x > p2.x ? p1.x : p2.x);
+//						greaterY = (p1.y > p2.y ? p1.y : p2.y);
+//						lowerX = (p1.x < p2.x ? p1.x : p2.x);
+//						lowerY = (p1.y < p2.y ? p1.y : p2.y);
+//						if (mousePos.x >= lowerX && mousePos.x < greaterX && mousePos.y >= lowerY && mousePos.y < greaterY)
+//						{
+//							chunk = itMapChunkPerLod->second;
+//							break;
+//						}
+//					}
+//
+//			break;
+//		}
+//	}
+//
+//	return chunk;
+//}
 
 Chunk* GDN_TheWorld_Viewer::getChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir)
 {
@@ -1545,6 +1587,8 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos
 
 Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir)
 {
+	// A T T E N Z I O N E : DA TESTARE
+	
 	if (dir == Chunk::DirectionSlot::Center)
 		return chunk;
 
@@ -1786,6 +1830,14 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 	// Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 
+	enum class TheWorldStatus status = Globals()->status();
+	if (status < TheWorldStatus::sessionInitialized)
+		DebugBreak();
+
+	assert(status >= TheWorldStatus::sessionInitialized);
+	if (status < TheWorldStatus::sessionInitialized)
+		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Incorrect Status for resetInitialWordlViewerPos").c_str()));
+
 	m_initialWordlViewerPosSet = false;
 	
 	m_worldViewerLevel = level;
@@ -1812,6 +1864,8 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 		m_mapQuadTree.clear();
 		m_mapQuadTree[quadrantPos] = make_unique<QuadTree>(this, quadrantPos);
 		m_mapQuadTree[quadrantPos]->init(x, z, true, cameraDistanceFromTerrain);
+		
+		Globals()->setStatus(TheWorldStatus::worldDeployInProgress);
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
@@ -2131,11 +2185,16 @@ void GDN_TheWorld_Viewer::streamer(void)
 				{
 					if (m_computedCameraQuadrantPos.isInitialized())
 					{
+						bool allQuadrantInitialized = true;
+
 						bool exitForNow = false;
 						for (size_t distance = 0; distance <= m_numCacheQuadrantOnPerimeter; distance++)
 						{
 							for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 							{
+								if (itQuadTree->second->status() != QuadrantStatus::initialized)
+									allQuadrantInitialized = false;
+
 								if (itQuadTree->second->status() == QuadrantStatus::uninitialized)
 								{
 									size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(m_computedCameraQuadrantPos);
@@ -2152,6 +2211,9 @@ void GDN_TheWorld_Viewer::streamer(void)
 							if (exitForNow)
 								break;
 						}
+
+						if (allQuadrantInitialized)
+							Globals()->setStatus(TheWorldStatus::worldDeployed);
 					}
 				}
 				catch (std::exception& e)

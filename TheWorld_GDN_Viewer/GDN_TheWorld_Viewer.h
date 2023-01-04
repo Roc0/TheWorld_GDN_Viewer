@@ -33,6 +33,7 @@ namespace godot
 #define MIN_MAP_SCALE 0.01F
 #define TIME_INTERVAL_BETWEEN_DUMP 0			// secs, 0 = diasble periodic dump
 #define TIME_INTERVAL_BETWEEN_STATISTICS 500	// ms, 0 = diasble periodic dump
+#define TIME_INTERVAL_BETWEEN_MOUSE_TRACK 250	// ms
 
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -79,10 +80,6 @@ namespace godot
 		{
 			m_dumpRequired = true; 
 		}
-		void trackChunk(bool b)
-		{
-			m_trackChunk = b;
-		}
 		void dump(void);
 		void dumpRecurseIntoChildrenNodes(Array nodes, int level);
 		void setCameraChunk(Chunk* chunk, QuadTree* quadTree);
@@ -124,8 +121,79 @@ namespace godot
 		QuadTree* getQuadTree(QuadrantPos pos);
 		Chunk* getChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir);
 		Chunk* getChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir);
-		Chunk* getTrackedChunk(void);
-		String getTrackedChunkStr(void);
+		//Chunk* getTrackedChunk(void);
+		//String getTrackedChunkStr(void);
+		godot::Vector3 getMouseHit(void)
+		{
+			return m_mouseHit;
+		}
+		godot::String _getMouseQuadrantHitName(void)
+		{
+			return getMouseQuadrantHitName().c_str();
+		}
+		std::string getMouseQuadrantHitName(void)
+		{
+			return m_mouseQuadrantHitName;
+		}
+		godot::Vector3 getMouseQuadrantHitPos(void)
+		{
+			return m_mouseQuadrantHitPos;
+		}
+		float getMouseQuadrantHitSize(void)
+		{
+			return m_mouseQuadrantHitSize;
+		}
+		godot::String getMouseChunkHitId(void)
+		{
+			if (m_mouseHitChunk != nullptr && m_mouseHitQuadTree != nullptr)
+			{
+				return std::string(m_mouseHitQuadTree->getQuadrant()->getPos().getName() + " " + m_mouseHitChunk->getIdStr()).c_str();
+				//return m_mouseHitChunk->getIdStr().c_str();
+			}
+			else
+				return "";
+		}
+		godot::Vector3 getMouseChunkHitPos(void)
+		{
+			if (m_mouseHitChunk != nullptr && m_mouseHitQuadTree != nullptr)
+			{
+				return Vector3(m_mouseHitChunk->getLowerXInWUsGlobal(), 0, m_mouseHitChunk->getLowerZInWUsGlobal());
+			}
+			else
+				return Vector3();
+		}
+		float getMouseChunkHitSize(void)
+		{
+			if (m_mouseHitChunk != nullptr && m_mouseHitQuadTree != nullptr)
+			{
+				return m_mouseHitChunk->getChunkSizeInWUs();
+			}
+			else
+				return 0.0;
+		}
+
+		float getMouseChunkHitDistFromCam(void)
+		{
+			if (m_mouseHitChunk != nullptr && m_mouseHitQuadTree != nullptr)
+			{
+				return m_mouseHitChunk->getDistanceFromCamera();
+			}
+			else
+				return 0.0;
+		}
+
+		bool trackMouse(void)
+		{
+			return m_trackMouse;
+		}
+		void setMouseHitChunk(Chunk* chunk)
+		{
+			m_mouseHitChunk = chunk;
+		}
+		void setMouseHitQuadTree(QuadTree* quadTree)
+		{
+			m_mouseHitQuadTree = quadTree;
+		}
 
 	private:
 		void onTransformChanged(void);
@@ -148,7 +216,6 @@ namespace godot
 		int64_t m_timeElapsedFromLastDump;
 		bool m_initialWordlViewerPosSet;
 		bool m_dumpRequired;
-		bool m_trackChunk;
 		Chunk* lastTrackedChunk;
 		//Vector3 m_mapScaleVector;
 
@@ -167,6 +234,15 @@ namespace godot
 		int m_numVisibleQuadrant;
 		int m_numinitializedVisibleQuadrant;
 		// Statistics data
+
+		bool m_trackMouse;
+		int64_t m_timeElapsedFromLastMouseTrack;
+		godot::Vector3 m_mouseHit;
+		std::string m_mouseQuadrantHitName;
+		float m_mouseQuadrantHitSize;
+		godot::Vector3 m_mouseQuadrantHitPos;
+		Chunk* m_mouseHitChunk;
+		QuadTree* m_mouseHitQuadTree;
 
 		bool m_debugContentVisibility;
 		bool m_updateTerrainVisibilityRequired;

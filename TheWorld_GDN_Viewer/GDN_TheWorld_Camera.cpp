@@ -124,7 +124,7 @@ void GDN_TheWorld_Camera::_process(float _delta)
 	if (globals == nullptr)
 		return;
 
-	if (globals->status() != TheWorldStatus::sessionInitialized)
+	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
 	if (!isActiveCamera())
@@ -144,7 +144,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	if (globals == nullptr)
 		return;
 
-	if (globals->status() != TheWorldStatus::sessionInitialized)
+	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
 	if (!isActiveCamera())
@@ -249,7 +249,7 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 	if (globals == nullptr)
 		return;
 
-	if (globals->status() != TheWorldStatus::sessionInitialized)
+	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
 	if (!isActiveCamera())

@@ -18,6 +18,7 @@ using namespace godot;
 
 Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, Ref<Material>& mat)
 {
+	m_distanceFromCamera = 0;
 	m_slotPosX = slotPosX;
 	m_slotPosZ = slotPosZ;
 	m_lod = lod;
@@ -621,6 +622,30 @@ void Chunk::getGlobalCoordAABB(AABB& aabb, int firstWorldVertCol, int lastWorldV
 
 	aabb.set_position(startPosition);
 	aabb.set_size(size);
+}
+
+void Chunk::setDistanceFromCamera(float distanceFromCamera)
+{
+	m_distanceFromCamera = distanceFromCamera;
+}
+
+float Chunk::getDistanceFromCamera(void)
+{
+	return m_distanceFromCamera;
+}
+
+void Chunk::checkMouseHit(void)
+{
+	godot::Point2 origOfChunk(getLowerXInWUsGlobal(), getLowerZInWUsGlobal());
+	godot::Point2 size(getChunkSizeInWUs(), getChunkSizeInWUs());
+	godot::Rect2 rect(origOfChunk, size);
+	godot::Vector3 mouseHit = m_viewer->getMouseHit();
+	if (mouseHit.x >= origOfChunk.x && mouseHit.x <= origOfChunk.x + size.x && mouseHit.z >= origOfChunk.y && mouseHit.z <= origOfChunk.y + size.y)
+	//if (rect.has_point(godot::Point2(mouseHit.x, mouseHit.z)))
+	{
+		m_viewer->setMouseHitQuadTree(m_quadTree);
+		m_viewer->setMouseHitChunk(this);
+	}
 }
 
 void Chunk::dump(void)

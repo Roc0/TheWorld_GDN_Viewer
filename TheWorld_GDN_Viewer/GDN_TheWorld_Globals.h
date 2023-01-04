@@ -42,7 +42,9 @@ namespace godot
 		uninitialized = 0,
 		initialized = 1,
 		connectedToServer = 2,
-		sessionInitialized = 3
+		sessionInitialized = 3,
+		worldDeployInProgress = 4,
+		worldDeployed = 5
 	};
 
 	static bool equal(Vector3 v1, Vector3 v2, const float epsilon = 0.00001)

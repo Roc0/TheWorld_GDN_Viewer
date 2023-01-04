@@ -505,6 +505,9 @@ namespace godot
 		{
 			return m_lastWorldVertCol;
 		}
+		void checkMouseHit(void);
+		void setDistanceFromCamera(float distanceFromCamera);
+		float getDistanceFromCamera(void);
 
 	private:
 		void setMesh(Ref<Mesh> mesh);
@@ -525,6 +528,8 @@ namespace godot
 		bool m_debugContentVisible;
 		Transform m_initialGlobalTransform;
 		Transform m_globalTransformApplied;
+
+		float m_distanceFromCamera;
 
 		int m_numVerticesPerChuckSide;		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int m_numChunksPerWorldGridSide;	// The number of chunks required to cover every side of the grid at the current lod value
