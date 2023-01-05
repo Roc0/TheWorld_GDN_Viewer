@@ -62,6 +62,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_update_quads_duration", &GDN_TheWorld_Viewer::getUpdateQuadsDuration);
 	register_method("get_update_chunks_duration", &GDN_TheWorld_Viewer::getUpdateChunksDuration);
 	register_method("get_update_material_params_duration", &GDN_TheWorld_Viewer::getUpdateMaterialParamsDuration);
+	register_method("get_mouse_track_hit_duration", &GDN_TheWorld_Viewer::getMouseTrackHitDuration);
 	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
 	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
 	register_method("get_mouse_hit", &GDN_TheWorld_Viewer::getMouseHit);
@@ -97,6 +98,9 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numRefreshMapQuad = 0;
 	m_RefreshMapQuadDuration = 0;
 	m_averageRefreshMapQuadDuration = 0;
+	m_numMouseTrackHit = 0;
+	m_mouseTrackHitDuration = 0;
+	m_averageMouseTrackHitDuration = 0;
 	m_numUpdateQuads = 0;
 	m_updateQuadsDuration = 0;
 	m_averageUpdateQuadsDuration = 0;
@@ -719,7 +723,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	//Transform globalTransform = internalTransformGlobalCoord();
 	//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 
-	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS
+	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - START
 	{
 		float farHorizon = cameraPosGlobalCoord.y * FAR_HORIZON_MULTIPLIER;
 		if (globals->heightmapSizeInWUs() > farHorizon)
@@ -901,7 +905,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			quadrantToDelete.clear();
 		}
 	}
-	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS
+	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - END
 
 	godot::Node* collider = nullptr;
 	if (m_trackMouse)
@@ -909,6 +913,14 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
 		{
+			TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Track Mouse Chunk", false, false);
+			clock1.tick();
+			auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+				clock1.tock();
+				this->m_numMouseTrackHit++;
+				this->m_mouseTrackHitDuration += clock1.duration().count();
+				});
+
 			godot::PhysicsDirectSpaceState* spaceState = get_world()->get_direct_space_state();
 			godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
 			godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
@@ -955,7 +967,17 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
-			itQuadTree->second->update(cameraPosGlobalCoord);
+			itQuadTree->second->update(cameraPosGlobalCoord, true);
+			
+			while (true)
+			{
+				int numSplits = m_numSplits;
+				int numJoins = m_numJoins;
+
+				itQuadTree->second->update(cameraPosGlobalCoord, false);
+				if (numSplits == m_numSplits && numJoins == m_numJoins)
+					break;
+			}
 		}
 	}
 
@@ -1519,8 +1541,13 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				m_RefreshMapQuadDuration = 0;
 				m_numRefreshMapQuad = 0;
 			}
-			else
-				m_averageRefreshMapQuadDuration = 0;
+
+			if (m_numMouseTrackHit > 10)
+			{
+				m_averageMouseTrackHitDuration = int(m_mouseTrackHitDuration / m_numMouseTrackHit);
+				m_mouseTrackHitDuration = 0;
+				m_numMouseTrackHit = 0;
+			}
 
 			if (m_numUpdateQuads > 0)
 			{
@@ -2215,6 +2242,11 @@ int GDN_TheWorld_Viewer::getUpdateChunksDuration(void)
 int GDN_TheWorld_Viewer::getUpdateMaterialParamsDuration(void)
 {
 	return m_averageUpdateMaterialParamsDuration;
+}
+
+int GDN_TheWorld_Viewer::getMouseTrackHitDuration(void)
+{
+	return m_averageMouseTrackHitDuration;
 }
 
 void GDN_TheWorld_Viewer::dump()

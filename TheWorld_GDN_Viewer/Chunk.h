@@ -506,6 +506,7 @@ namespace godot
 			return m_lastWorldVertCol;
 		}
 		void checkMouseHit(void);
+		bool checkHit(godot::Vector3 hit);
 		void setDistanceFromCamera(float distanceFromCamera);
 		float getDistanceFromCamera(void);
 

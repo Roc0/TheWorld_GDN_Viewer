@@ -636,16 +636,34 @@ float Chunk::getDistanceFromCamera(void)
 
 void Chunk::checkMouseHit(void)
 {
-	godot::Point2 origOfChunk(getLowerXInWUsGlobal(), getLowerZInWUsGlobal());
-	godot::Point2 size(getChunkSizeInWUs(), getChunkSizeInWUs());
-	godot::Rect2 rect(origOfChunk, size);
 	godot::Vector3 mouseHit = m_viewer->getMouseHit();
-	if (mouseHit.x >= origOfChunk.x && mouseHit.x <= origOfChunk.x + size.x && mouseHit.z >= origOfChunk.y && mouseHit.z <= origOfChunk.y + size.y)
-	//if (rect.has_point(godot::Point2(mouseHit.x, mouseHit.z)))
+	if (checkHit(mouseHit))
 	{
 		m_viewer->setMouseHitQuadTree(m_quadTree);
 		m_viewer->setMouseHitChunk(this);
 	}
+
+	//godot::Point2 origOfChunk(getLowerXInWUsGlobal(), getLowerZInWUsGlobal());
+	//godot::Point2 size(getChunkSizeInWUs(), getChunkSizeInWUs());
+	////godot::Rect2 rect(origOfChunk, size);
+	//if (mouseHit.x >= origOfChunk.x && mouseHit.x <= origOfChunk.x + size.x && mouseHit.z >= origOfChunk.y && mouseHit.z <= origOfChunk.y + size.y)
+	////if (rect.has_point(godot::Point2(mouseHit.x, mouseHit.z)))
+	//{
+	//	m_viewer->setMouseHitQuadTree(m_quadTree);
+	//	m_viewer->setMouseHitChunk(this);
+	//}
+}
+
+bool Chunk::checkHit(godot::Vector3 hit)
+{
+	godot::Point2 origOfChunk(getLowerXInWUsGlobal(), getLowerZInWUsGlobal());
+	godot::Point2 size(getChunkSizeInWUs(), getChunkSizeInWUs());
+	//godot::Rect2 rect(origOfChunk, size);
+	//if (rect.has_point(godot::Point2(mouseHit.x, mouseHit.z)))
+	if (hit.x >= origOfChunk.x && hit.x <= origOfChunk.x + size.x && hit.z >= origOfChunk.y && hit.z <= origOfChunk.y + size.y)
+		return true;
+	else
+		return false;
 }
 
 void Chunk::dump(void)

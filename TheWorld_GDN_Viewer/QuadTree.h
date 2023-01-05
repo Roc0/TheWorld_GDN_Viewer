@@ -427,7 +427,7 @@ namespace godot
 		void onGlobalTransformChanged(void);
 
 		void init(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
-		void update(Vector3 cameraPosGlobalCoord);
+		void update(Vector3 cameraPosGlobalCoord, bool checkByDistanceFromCamera);
 		//void checkIntegrity(Vector3 cameraPosGlobalCoord);
 		Chunk* getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir);
 		Chunk* getChunkAt(Chunk::ChunkPos pos);
@@ -563,7 +563,7 @@ namespace godot
 		}
 
 	private:
-		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode);
+		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode, bool checkByDistanceFromCamera);
 		//void internalCheckIntegrity(Vector3 cameraPosGlobalCoord, Quad* quad, Quad* parent);
 
 	private:

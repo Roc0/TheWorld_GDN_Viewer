@@ -55,17 +55,11 @@ void Quad::split(void)
 	assert(m_lod > 0);
 	assert(m_children[0] == nullptr);
 	
-	//bool trackChunk = false;
-	//if (m_viewer->trackMouse() && m_quadTree->getQuadrant()->getPos().getName() == m_viewer->getMouseQuadrantHitName())
-	//	trackChunk = true;
-
 	for (int i = 0; i < 4; i++)
 	{
 		//int x = (m_slotPosX * 2) + (i & 1);
 		//int z = (m_slotPosZ * 2) + ((i & 2) >> 1);
 		m_children[i] = make_unique<Quad>((m_slotPosX * 2) + (i & 1), (m_slotPosZ * 2) + ((i & 2) >> 1), m_lod - 1, enum PosInQuad(i + 1), m_viewer, m_quadTree);
-		//if (trackChunk)
-		//	m_chunk->checkMouseHit();
 	}
 	
 	recycleChunk();
@@ -237,7 +231,7 @@ void QuadTree::ForAllChunk(Chunk::ChunkAction& chunkAction)
 	}
 }
 
-void QuadTree::update(Vector3 cameraPosGlobalCoord)
+void QuadTree::update(Vector3 cameraPosGlobalCoord, bool checkByDistanceFromCamera)
 {
 	if (!isValid())
 		return;
@@ -246,12 +240,15 @@ void QuadTree::update(Vector3 cameraPosGlobalCoord)
 		return;
 
 	m_numLeaf = 0;
-	internalUpdate(cameraPosGlobalCoord, m_root.get());
+	internalUpdate(cameraPosGlobalCoord, m_root.get(), checkByDistanceFromCamera);
 	assert(!m_root->isLeaf() || m_root->getChunk() != nullptr);
 }
 
-void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
+void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, bool checkByDistanceFromCamera)
 {
+	if (!checkByDistanceFromCamera)
+		return;
+
 	// cameraPosViewerNodeLocalCoord are in grid local coordinates (WUs)
 
 	GDN_TheWorld_Globals* globals = m_viewer->Globals();
@@ -311,7 +308,7 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
 		for (int i = 0; i < 4; i++)
 		{
 			Quad* child = quad->getChild(i);
-			internalUpdate(cameraPosGlobalCoord, child);
+			internalUpdate(cameraPosGlobalCoord, child, checkByDistanceFromCamera);
 			if (!child->isLeaf())
 				allChildrenAreLeaf = false;
 		}
