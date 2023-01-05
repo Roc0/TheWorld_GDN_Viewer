@@ -94,6 +94,10 @@ namespace godot
 		int getNumChunks(void);
 		int getNumActiveChunks(void);
 		int getProcessDuration(void);
+		int getRefreshMapQuadDuration(void);
+		int getUpdateQuadsDuration(void);
+		int getUpdateChunksDuration(void);
+		int getUpdateMaterialParamsDuration(void);
 		int getProcessNotOwnsLock(void);
 		int getNumQuadrant(void);
 		int getNuminitializedQuadrant(void);
@@ -221,8 +225,20 @@ namespace godot
 
 		// Statistics data
 		int m_numProcessExecution;
-		long long m_duration;
+		long long m_processDuration;
 		int m_averageProcessDuration;
+		int m_numRefreshMapQuad;
+		long long m_RefreshMapQuadDuration;
+		int m_averageRefreshMapQuadDuration;
+		int m_numUpdateQuads;
+		long long m_updateQuadsDuration;
+		int m_averageUpdateQuadsDuration;
+		int m_numUpdateChunks;
+		long long m_updateChunksDuration;
+		int m_averageUpdateChunksDuration;
+		int m_numUpdateMaterialParams;
+		long long m_updateMaterialParamsDuration;
+		int m_averageUpdateMaterialParamsDuration;
 		int64_t m_timeElapsedFromLastStatistic;
 		int m_numSplits;
 		int m_numJoins;

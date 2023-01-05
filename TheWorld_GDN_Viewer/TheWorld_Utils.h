@@ -394,11 +394,11 @@ namespace TheWorld_Utils
 
 	template <typename F>
 	struct FinalAction {
-		FinalAction(F f) : clean_{ f } {}
-		~FinalAction() { if (enabled_) clean_(); }
+		FinalAction(F f) : final_{ f } {}
+		~FinalAction() { if (enabled_) final_(); }
 		void disable() { enabled_ = false; };
 	private:
-		F clean_;
+		F final_;
 		bool enabled_{ true };
 	};
 

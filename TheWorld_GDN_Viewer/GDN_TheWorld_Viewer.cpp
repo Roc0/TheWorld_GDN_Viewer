@@ -58,6 +58,10 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_num_initialized_visible_quadrant", &GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant);
 	register_method("get_num_process_not_owns_lock", &GDN_TheWorld_Viewer::getProcessNotOwnsLock);
 	register_method("get_process_duration", &GDN_TheWorld_Viewer::getProcessDuration);
+	register_method("get_refresh_quads_duration", &GDN_TheWorld_Viewer::getRefreshMapQuadDuration);
+	register_method("get_update_quads_duration", &GDN_TheWorld_Viewer::getUpdateQuadsDuration);
+	register_method("get_update_chunks_duration", &GDN_TheWorld_Viewer::getUpdateChunksDuration);
+	register_method("get_update_material_params_duration", &GDN_TheWorld_Viewer::getUpdateMaterialParamsDuration);
 	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
 	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
 	register_method("get_mouse_hit", &GDN_TheWorld_Viewer::getMouseHit);
@@ -87,9 +91,21 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_globals = nullptr;
 	m_timeElapsedFromLastDump = 0;
 	m_timeElapsedFromLastStatistic = 0;
-	m_duration = 0;
+	m_processDuration = 0;
 	m_numProcessExecution = 0;
 	m_averageProcessDuration = 0;
+	m_numRefreshMapQuad = 0;
+	m_RefreshMapQuadDuration = 0;
+	m_averageRefreshMapQuadDuration = 0;
+	m_numUpdateQuads = 0;
+	m_updateQuadsDuration = 0;
+	m_averageUpdateQuadsDuration = 0;
+	m_numUpdateChunks = 0;
+	m_updateChunksDuration = 0;
+	m_averageUpdateChunksDuration = 0;
+	m_numUpdateMaterialParams = 0;
+	m_updateMaterialParamsDuration = 0;
+	m_averageUpdateMaterialParamsDuration = 0;
 	m_numSplits = 0;
 	m_numJoins = 0;
 	m_numActiveChunks = 0;
@@ -674,7 +690,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	auto save_duration = TheWorld_Utils::finally([&clock, this] {
 		clock.tock(); 
 		this->m_numProcessExecution++; 
-		this->m_duration += clock.duration().count(); 
+		this->m_processDuration += clock.duration().count();
 		});
 
 	if (m_firstProcess)
@@ -740,8 +756,13 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		// if forced or the camera has changed quadrant the cache is repopulated
 		if (m_refreshMapQuadTree || m_computedCameraQuadrantPos != quadrantPosNeeded[0])
 		{
-			TheWorld_Utils::TimerMs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, true);
+			TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, false);
 			clock1.tick();
+			auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+				clock1.tock();
+				this->m_numRefreshMapQuad++;
+				this->m_RefreshMapQuadDuration += clock1.duration().count();
+				});
 
 			// Da Rimuovere (???)
 			//Transform t = get_global_transform();
@@ -923,9 +944,19 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	}
 	
 	// UPDATE QUADS
-	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		itQuadTree->second->update(cameraPosGlobalCoord);
+		TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads", false, false);
+		clock1.tick();
+		auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+			clock1.tock();
+			this->m_numUpdateQuads++;
+			this->m_updateQuadsDuration += clock1.duration().count();
+			});
+
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		{
+			itQuadTree->second->update(cameraPosGlobalCoord);
+		}
 	}
 
 	if (m_refreshRequired)
@@ -940,6 +971,14 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	// UPDATE CHUNKS
 	{
+		TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Chunks", false, false);
+		clock1.tick();
+		auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+			clock1.tock();
+			this->m_numUpdateChunks++;
+			this->m_updateChunksDuration += clock1.duration().count();
+			});
+
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
 			if (!itQuadTree->second->isValid())
@@ -1422,10 +1461,20 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		m_updateDebugModeRequired = false;
 	}
 
-	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		itQuadTree->second->resetMaterialParams();
-		itQuadTree->second->updateMaterialParams();
+		TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Material Params", false, false);
+		clock1.tick();
+		auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+			clock1.tock();
+		this->m_numUpdateMaterialParams++;
+		this->m_updateMaterialParamsDuration += clock1.duration().count();
+			});
+
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		{
+			itQuadTree->second->resetMaterialParams();
+			itQuadTree->second->updateMaterialParams();
+		}
 	}
 
 	// Check for Dump
@@ -1456,14 +1505,50 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			
 			if (m_numProcessExecution > 0)
 			{
-				m_averageProcessDuration = int(m_duration / m_numProcessExecution);
-				//globals->debugPrint(String("m_numProcessExecution=") + std::to_string(m_numProcessExecution).c_str() + ", m_duration=" + std::to_string(m_duration).c_str() + ", m_averageProcessDuration=" + std::to_string(m_averageProcessDuration).c_str());
-				m_duration = 0;
+				m_averageProcessDuration = int(m_processDuration / m_numProcessExecution);
+				//globals->debugPrint(String("m_numProcessExecution=") + std::to_string(m_numProcessExecution).c_str() + ", m_processDuration=" + std::to_string(m_processDuration).c_str() + ", m_averageProcessDuration=" + std::to_string(m_averageProcessDuration).c_str());
+				m_processDuration = 0;
 				m_numProcessExecution = 0;
 			}
 			else
 				m_averageProcessDuration = 0;
-			
+
+			if (m_numRefreshMapQuad > 10)
+			{
+				m_averageRefreshMapQuadDuration = int(m_RefreshMapQuadDuration / m_numRefreshMapQuad);
+				m_RefreshMapQuadDuration = 0;
+				m_numRefreshMapQuad = 0;
+			}
+			else
+				m_averageRefreshMapQuadDuration = 0;
+
+			if (m_numUpdateQuads > 0)
+			{
+				m_averageUpdateQuadsDuration = int(m_updateQuadsDuration / m_numUpdateQuads);
+				m_updateQuadsDuration = 0;
+				m_numUpdateQuads = 0;
+			}
+			else
+				m_averageUpdateQuadsDuration = 0;
+
+			if (m_numUpdateChunks > 0)
+			{
+				m_averageUpdateChunksDuration = int(m_updateChunksDuration / m_numUpdateChunks);
+				m_updateChunksDuration = 0;
+				m_numUpdateChunks = 0;
+			}
+			else
+				m_averageUpdateChunksDuration = 0;
+
+			if (m_numUpdateMaterialParams > 0)
+			{
+				m_averageUpdateMaterialParamsDuration = int(m_updateMaterialParamsDuration / m_numUpdateMaterialParams);
+				m_updateMaterialParamsDuration = 0;
+				m_numUpdateMaterialParams = 0;
+			}
+			else
+				m_averageUpdateMaterialParamsDuration = 0;
+
 			m_timeElapsedFromLastStatistic = timeElapsed;
 		}
 	}
@@ -2110,6 +2195,26 @@ int GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant(void)
 int GDN_TheWorld_Viewer::getProcessDuration(void)
 {
 	return m_averageProcessDuration;
+}
+
+int GDN_TheWorld_Viewer::getRefreshMapQuadDuration(void)
+{
+	return m_averageRefreshMapQuadDuration;
+}
+
+int GDN_TheWorld_Viewer::getUpdateQuadsDuration(void)
+{
+	return m_averageUpdateQuadsDuration;
+}
+
+int GDN_TheWorld_Viewer::getUpdateChunksDuration(void)
+{
+	return m_averageUpdateChunksDuration;
+}
+
+int GDN_TheWorld_Viewer::getUpdateMaterialParamsDuration(void)
+{
+	return m_averageUpdateMaterialParamsDuration;
 }
 
 void GDN_TheWorld_Viewer::dump()
