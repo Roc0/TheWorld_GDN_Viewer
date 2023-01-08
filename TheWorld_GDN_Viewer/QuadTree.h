@@ -372,6 +372,10 @@ namespace godot
 		{
 			return m_lod;
 		}
+		enum PosInQuad getPosInQuad(void)
+		{
+			return m_posInQuad;
+		}
 
 		bool isLeaf(void);
 		Quad *getChild(int idx);
@@ -397,6 +401,18 @@ namespace godot
 			return m_chunkSizeInWUs; 
 		}
 		void setCameraPos(Vector3 globalCoordCameraLastPos);
+		void setSplitRequired(bool b)
+		{
+			if (b)
+				m_splitRequired = b;
+			else
+				m_splitRequired = b;
+		}
+		bool splitRequired(void)
+		{
+			return m_splitRequired;
+		}
+
 
 	private:
 		enum PosInQuad m_posInQuad;
@@ -409,6 +425,7 @@ namespace godot
 		QuadTree* m_quadTree;
 		AABB m_chunkAABB;
 		float m_chunkSizeInWUs;
+		bool m_splitRequired;
 	};
 
 	enum class QuadrantStatus
@@ -427,8 +444,13 @@ namespace godot
 		void onGlobalTransformChanged(void);
 
 		void init(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
-		void update(Vector3 cameraPosGlobalCoord);
-		//void checkIntegrity(Vector3 cameraPosGlobalCoord);
+		enum class UpdateStage
+		{
+			Stage1 = 1,
+			Stage2 = 2,
+			Stage3 = 3
+		};
+		void update(Vector3 cameraPosGlobalCoord, enum class UpdateStage updateStage, int& numSplitRequired);
 		Chunk* getChunkAt(Chunk::ChunkPos pos, enum class Chunk::DirectionSlot dir);
 		Chunk* getChunkAt(Chunk::ChunkPos pos);
 		bool isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantPos& XMinusQuadrantPos, QuadrantPos& XPlusQuadrantPos, QuadrantPos& ZMinusQuadrantPos, QuadrantPos& ZPlusQuadrantPos);
@@ -533,10 +555,22 @@ namespace godot
 		{
 			return status() == QuadrantStatus::initialized;
 		}
-		bool isVisible(void) { return m_isVisible; }
-		void setVisible(bool b) { m_isVisible = b; }
-		void refreshTime(std::timespec& time) { m_refreshTime = time; }
-		std::timespec getRefreshTime(void) { return m_refreshTime; }
+		bool isVisible(void)
+		{
+			return m_isVisible; 
+		}
+		void setVisible(bool b)
+		{
+			m_isVisible = b; 
+		}
+		void refreshTime(std::timespec& time)
+		{
+			m_refreshTime = time; 
+		}
+		std::timespec getRefreshTime(void) 
+		{
+			return m_refreshTime; 
+		}
 		void setTag(string tag)
 		{
 			m_tag = tag;
@@ -546,7 +580,10 @@ namespace godot
 			return m_tag;
 		}
 		Transform getInternalGlobalTransform(void);
-		GDN_TheWorld_Viewer* Viewer(void) { return m_viewer; }
+		GDN_TheWorld_Viewer* Viewer(void)
+		{
+			return m_viewer; 
+		}
 		std::recursive_mutex& getQuadrantMutex(void)
 		{
 			return m_mtxQuadrant;
@@ -563,8 +600,7 @@ namespace godot
 		}
 
 	private:
-		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode);
-		//void internalCheckIntegrity(Vector3 cameraPosGlobalCoord, Quad* quad, Quad* parent);
+		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode, enum class UpdateStage updateStage, int& numSplitRequired);
 
 	private:
 		enum class QuadrantStatus m_status;

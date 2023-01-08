@@ -26,6 +26,7 @@ Quad::Quad(int slotPosX, int slotPosZ, int lod, enum PosInQuad posInQuad, GDN_Th
 	m_viewer = viewer;
 	m_chunk = nullptr;
 	m_chunkSizeInWUs = 0;
+	m_splitRequired = false;
 
 	m_quadTree = quadTree;
 	
@@ -55,17 +56,11 @@ void Quad::split(void)
 	assert(m_lod > 0);
 	assert(m_children[0] == nullptr);
 	
-	//bool trackChunk = false;
-	//if (m_viewer->trackMouse() && m_quadTree->getQuadrant()->getPos().getName() == m_viewer->getMouseQuadrantHitName())
-	//	trackChunk = true;
-
 	for (int i = 0; i < 4; i++)
 	{
 		//int x = (m_slotPosX * 2) + (i & 1);
 		//int z = (m_slotPosZ * 2) + ((i & 2) >> 1);
 		m_children[i] = make_unique<Quad>((m_slotPosX * 2) + (i & 1), (m_slotPosZ * 2) + ((i & 2) >> 1), m_lod - 1, enum PosInQuad(i + 1), m_viewer, m_quadTree);
-		//if (trackChunk)
-		//	m_chunk->checkMouseHit();
 	}
 	
 	recycleChunk();
@@ -175,7 +170,7 @@ void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float ca
 
 	getQuadrant()->getShaderTerrainData()->init();
 
-	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::NotSet, m_viewer, this);
+	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::Root, m_viewer, this);
 
 	//m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
 	//m_worldQuadrant->getCollider()->enterWorld();
@@ -237,7 +232,7 @@ void QuadTree::ForAllChunk(Chunk::ChunkAction& chunkAction)
 	}
 }
 
-void QuadTree::update(Vector3 cameraPosGlobalCoord)
+void QuadTree::update(Vector3 cameraPosGlobalCoord, enum class UpdateStage updateStage, int& numSplitRequired)
 {
 	if (!isValid())
 		return;
@@ -246,143 +241,204 @@ void QuadTree::update(Vector3 cameraPosGlobalCoord)
 		return;
 
 	m_numLeaf = 0;
-	internalUpdate(cameraPosGlobalCoord, m_root.get());
+	internalUpdate(cameraPosGlobalCoord, m_root.get(), updateStage, numSplitRequired);
 	assert(!m_root->isLeaf() || m_root->getChunk() != nullptr);
 }
 
-void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad)
+void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum class UpdateStage updateStage, int& numSplitRequired)
 {
-	// cameraPosViewerNodeLocalCoord are in grid local coordinates (WUs)
-
-	GDN_TheWorld_Globals* globals = m_viewer->Globals();
-	float chunkSizeInWUs = globals->gridStepInHeightmapWUs(quad->Lod()) * globals->numVerticesPerChuckSide();									// chunk size in World Units
-	//float chunkSizeInWUs = quad->getChunkSizeInWUs();
-	//Vector3 chunkCenter = real_t(chunkSizeInWUs) * (Vector3(real_t(quad->slotPosX()), 0, real_t(quad->slotPosZ())) + Vector3(0.5, 0, 0.5));	// chunk center in local coord. respect Viewer Node (or the grid of chunks)
-	//chunkCenter.y = (chunkAABB.position + chunkAABB.size / 2).y;		// medium altitude of the chunk
-	AABB chunkAABB = quad->getChunkAABB();
-	//Vector3 chunkCenterGlobal(real_t(quad->getChunk()->getLowerXInWUsGlobal() + chunkSizeInWUs / 2),
-	//									(chunkAABB.position + chunkAABB.size / 2).y, 
-	//									real_t(quad->getChunk()->getLowerZInWUsGlobal() + chunkSizeInWUs / 2));
-
-	Vector3 quadCenterGlobal(real_t((quad->slotPosX() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerXGridVertex() + chunkSizeInWUs / 2),
-		(chunkAABB.position + chunkAABB.size / 2).y,
-		real_t((quad->slotPosZ() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerZGridVertex() + chunkSizeInWUs / 2));
-
-	Transform gt = m_viewer->get_global_transform();
-	Transform t = gt * Transform(Basis(), quadCenterGlobal);
-	quadCenterGlobal = t.origin;
-
-
-	real_t splitDistance = chunkSizeInWUs * globals->splitScale();
-	if (quad->isLeaf())
+	if (updateStage == UpdateStage::Stage1)
 	{
-		bool trackChunk = false;
-		if (m_viewer->trackMouse() && getQuadrant()->getPos().getName() == m_viewer->getMouseQuadrantHitName())
-			trackChunk = true;
+		// cameraPosViewerNodeLocalCoord are in grid local coordinates (WUs)
+		GDN_TheWorld_Globals* globals = m_viewer->Globals();
+		float chunkSizeInWUs = globals->gridStepInHeightmapWUs(quad->Lod()) * globals->numVerticesPerChuckSide();									// chunk size in World Units
+		//float chunkSizeInWUs = quad->getChunkSizeInWUs();
+		//Vector3 chunkCenter = real_t(chunkSizeInWUs) * (Vector3(real_t(quad->slotPosX()), 0, real_t(quad->slotPosZ())) + Vector3(0.5, 0, 0.5));	// chunk center in local coord. respect Viewer Node (or the grid of chunks)
+		//chunkCenter.y = (chunkAABB.position + chunkAABB.size / 2).y;		// medium altitude of the chunk
+		AABB chunkAABB = quad->getChunkAABB();
+		Vector3 quadCenterGlobal(real_t((quad->slotPosX() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerXGridVertex() + chunkSizeInWUs / 2),
+			(chunkAABB.position + chunkAABB.size / 2).y,
+			real_t((quad->slotPosZ() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerZGridVertex() + chunkSizeInWUs / 2));
 
-		bool splitted = false;
-		m_numLeaf++;
-		if (quad->Lod() > 0)
+		Transform gt = m_viewer->get_global_transform();
+		Transform t = gt * Transform(Basis(), quadCenterGlobal);
+		quadCenterGlobal = t.origin;
+
+
+		real_t splitDistance = chunkSizeInWUs * globals->splitScale();
+		if (quad->isLeaf())
 		{
-			real_t distance = quadCenterGlobal.distance_to(cameraPosGlobalCoord);
-			quad->getChunk()->setDistanceFromCamera(distance);
-			if (distance < splitDistance)
+			bool trackChunk = false;
+			if (m_viewer->trackMouse() && getQuadrant()->getPos().getName() == m_viewer->getMouseQuadrantHitName())
+				trackChunk = true;
+
+			bool splitted = false;
+			m_numLeaf++;
+			if (quad->Lod() > 0)
+			{
+				real_t distance = quadCenterGlobal.distance_to(cameraPosGlobalCoord);
+				quad->getChunk()->setDistanceFromCamera(distance);
+				if (distance < splitDistance)
+				{
+					// Split
+					quad->split();
+					for (int i = 0; i < 4; i++)
+					{
+						quad->getChild(i)->setCameraPos(cameraPosGlobalCoord);
+						if (trackChunk)
+							quad->getChild(i)->getChunk()->checkMouseHit();
+						quad->getChild(i)->getChunk()->setDistanceFromCamera(distance);
+					}
+					splitted = true;
+					m_numSplits++;
+				}
+			}
+
+			if (!splitted && trackChunk)
+				quad->getChunk()->checkMouseHit();
+		}
+		else
+		{
+			bool allChildrenAreLeaf = true;
+			for (int i = 0; i < 4; i++)
+			{
+				Quad* child = quad->getChild(i);
+				internalUpdate(cameraPosGlobalCoord, child, updateStage, numSplitRequired);
+				if (!child->isLeaf())
+					allChildrenAreLeaf = false;
+			}
+
+
+			if (allChildrenAreLeaf)
+			{
+				real_t distance = quadCenterGlobal.distance_to(cameraPosGlobalCoord);
+				if (distance > splitDistance)
+				{
+					// Join
+					quad->clearChildren();
+					quad->assignChunk();
+					quad->getChunk()->setJustJoined(true);
+					m_numJoins++;
+					quad->getChunk()->checkMouseHit();
+					quad->getChunk()->setDistanceFromCamera(distance);
+				}
+			}
+		}
+
+		// after all if quad is leaf: just joined or was leaf and it has not been splitted
+		quad->setCameraPos(cameraPosGlobalCoord);
+	}
+	else if (updateStage == UpdateStage::Stage2)
+	{
+		if (quad->isLeaf())
+		{
+			PosInQuad posInQuad = quad->getPosInQuad();
+			Chunk* chunk = quad->getChunk();
+			assert(chunk != nullptr);
+			
+			if (chunk != nullptr)
+			{
+				switch (posInQuad)
+				{
+					case PosInQuad::First:
+					{
+						Chunk* neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::XMinusChunk, Chunk::LookForChunk::HigherLod);
+						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
+						{
+							neighbourChunk->getQuad()->setSplitRequired(true);
+							numSplitRequired++;
+						}
+						neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::ZMinusChunk, Chunk::LookForChunk::HigherLod);
+						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
+						{
+							neighbourChunk->getQuad()->setSplitRequired(true);
+							numSplitRequired++;
+						}
+					}
+					break;
+					case PosInQuad::Second:
+					{
+						Chunk* neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::XPlusChunk, Chunk::LookForChunk::HigherLod);
+						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
+						{
+							neighbourChunk->getQuad()->setSplitRequired(true);
+							numSplitRequired++;
+						}
+						neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::ZMinusChunk, Chunk::LookForChunk::HigherLod);
+						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
+						{
+							neighbourChunk->getQuad()->setSplitRequired(true);
+							numSplitRequired++;
+						}
+					}
+					break;
+					case PosInQuad::Third:
+					{
+						Chunk* neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::XMinusChunk, Chunk::LookForChunk::HigherLod);
+						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
+						{
+							neighbourChunk->getQuad()->setSplitRequired(true);
+							numSplitRequired++;
+						}
+						neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::ZPlusChunk, Chunk::LookForChunk::HigherLod);
+						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
+						{
+							neighbourChunk->getQuad()->setSplitRequired(true);
+							numSplitRequired++;
+						}
+					}
+					break;
+					case PosInQuad::Forth:
+					{
+						Chunk* neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::XPlusChunk, Chunk::LookForChunk::HigherLod);
+						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
+						{
+							neighbourChunk->getQuad()->setSplitRequired(true);
+							numSplitRequired++;
+						}
+						neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::ZPlusChunk, Chunk::LookForChunk::HigherLod);
+						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
+						{
+							neighbourChunk->getQuad()->setSplitRequired(true);
+							numSplitRequired++;
+						}
+					}
+					break;
+				}
+			}
+		}
+		else
+		{
+			for (int i = 0; i < 4; i++)
+				internalUpdate(cameraPosGlobalCoord, quad->getChild(i), updateStage, numSplitRequired);
+		}
+
+	}
+	else
+	{
+		// (updateStage == UpdateStage::Stage3)
+		if (quad->isLeaf())
+		{
+			if (quad->splitRequired() && quad->Lod() > 0)
 			{
 				// Split
 				quad->split();
 				for (int i = 0; i < 4; i++)
 				{
 					quad->getChild(i)->setCameraPos(cameraPosGlobalCoord);
-					if (trackChunk)
-						quad->getChild(i)->getChunk()->checkMouseHit();
-					quad->getChild(i)->getChunk()->setDistanceFromCamera(distance);
 				}
-				splitted = true;
 				m_numSplits++;
 			}
 		}
-		
-		if (!splitted && trackChunk)
-			quad->getChunk()->checkMouseHit();
-	}
-	else
-	{
-		bool allChildrenAreLeaf = true;
-		for (int i = 0; i < 4; i++)
+		else
 		{
-			Quad* child = quad->getChild(i);
-			internalUpdate(cameraPosGlobalCoord, child);
-			if (!child->isLeaf())
-				allChildrenAreLeaf = false;
+			for (int i = 0; i < 4; i++)
+				internalUpdate(cameraPosGlobalCoord, quad->getChild(i), updateStage, numSplitRequired);
 		}
-		
-		
-		if (allChildrenAreLeaf)
-		{
-			real_t distance = quadCenterGlobal.distance_to(cameraPosGlobalCoord);
-			if (distance > splitDistance)
-			{
-				// Join
-				quad->clearChildren();
-				quad->assignChunk();
-				quad->getChunk()->setJustJoined(true);
-				m_numJoins++;
-				quad->getChunk()->checkMouseHit();
-				quad->getChunk()->setDistanceFromCamera(distance);
-			}
-		}
-	}
-	
-	// after all if quad is leaf: just joined or was leaf and it has not been splitted
-	quad->setCameraPos(cameraPosGlobalCoord);
-}
 
-//void QuadTree::checkIntegrity(Vector3 cameraPosGlobalCoord)
-//{
-//	if (!isValid())
-//		return;
-//
-//	if (!isVisible())
-//		return;
-//
-//	if (m_root->isLeaf())
-//		return;
-//
-//	for (int i = 0; i < 4; i++)
-//		internalCheckIntegrity(cameraPosGlobalCoord, m_root->getChild(i), m_root.get());
-//}
-//
-//void QuadTree::internalCheckIntegrity(Vector3 cameraPosGlobalCoord, Quad* quad, Quad* parent)
-//{
-//	if (quad->isLeaf())
-//	{
-//		if (quad->Lod() > 0)
-//		{
-//			for (int i = 0; i < 4; i++)
-//			{
-//				// brothers including self
-//				Quad* bro = parent->getChild(i);
-//				if (quad != bro)
-//				{
-//					// brothers
-//					if (!bro->getChild(0)->isLeaf())
-//					{
-//						// Split
-//						quad->split();
-//						for (int i = 0; i < 4; i++)
-//							quad->getChild(i)->setCameraPos(cameraPosGlobalCoord);
-//						m_numSplits++;
-//					}
-//				}
-//			}
-//		}
-//	}
-//	else
-//	{
-//		for (int i = 0; i < 4; i++)
-//			internalCheckIntegrity(cameraPosGlobalCoord, quad->getChild(i), quad);
-//	}
-//}
+		quad->setSplitRequired(false);
+	}
+}
 
 bool QuadTree::isChunkOnBorderOfQuadrant(Chunk::ChunkPos pos, QuadrantPos& XMinusQuadrantPos, QuadrantPos& XPlusQuadrantPos, QuadrantPos& ZMinusQuadrantPos, QuadrantPos& ZPlusQuadrantPos)
 {

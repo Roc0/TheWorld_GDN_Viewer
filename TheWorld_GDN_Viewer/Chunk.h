@@ -82,12 +82,21 @@ namespace godot
 		//	= =
 		//	= o
 		//  
-		Forth
+		Forth,
+		Root
 	};
 
 	class Chunk
 	{
 	public:
+		enum class LookForChunk
+		{
+			All = 0,
+			SameLod = 1,
+			LowerLod = 2,
+			HigherLod = 3
+		};
+
 		enum class DirectionSlot
 		{
 			Center = -1,
@@ -506,8 +515,13 @@ namespace godot
 			return m_lastWorldVertCol;
 		}
 		void checkMouseHit(void);
+		bool checkHit(godot::Vector3 hit);
 		void setDistanceFromCamera(float distanceFromCamera);
 		float getDistanceFromCamera(void);
+		Quad* getQuad(void)
+		{
+			return m_quad;
+		}
 
 	private:
 		void setMesh(Ref<Mesh> mesh);

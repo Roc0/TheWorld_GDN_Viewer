@@ -95,9 +95,12 @@ namespace godot
 		int getNumActiveChunks(void);
 		int getProcessDuration(void);
 		int getRefreshMapQuadDuration(void);
-		int getUpdateQuadsDuration(void);
+		int getUpdateQuads1Duration(void);
+		int getUpdateQuads2Duration(void);
+		int getUpdateQuads3Duration(void);
 		int getUpdateChunksDuration(void);
 		int getUpdateMaterialParamsDuration(void);
+		int getMouseTrackHitDuration(void);
 		int getProcessNotOwnsLock(void);
 		int getNumQuadrant(void);
 		int getNuminitializedQuadrant(void);
@@ -123,8 +126,8 @@ namespace godot
 			m_refreshMapQuadTree = true; 
 		}
 		QuadTree* getQuadTree(QuadrantPos pos);
-		Chunk* getChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir);
-		Chunk* getChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir);
+		Chunk* getActiveChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter);
+		Chunk* getActiveChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter);
 		//Chunk* getTrackedChunk(void);
 		//String getTrackedChunkStr(void);
 		godot::Vector3 getMouseHit(void)
@@ -149,7 +152,7 @@ namespace godot
 		}
 		godot::String getMouseChunkHitId(void)
 		{
-			if (m_mouseHitChunk != nullptr && m_mouseHitQuadTree != nullptr)
+			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() && m_mouseHitQuadTree != nullptr)
 			{
 				return std::string(m_mouseHitQuadTree->getQuadrant()->getPos().getName() + " " + m_mouseHitChunk->getIdStr()).c_str();
 				//return m_mouseHitChunk->getIdStr().c_str();
@@ -159,7 +162,7 @@ namespace godot
 		}
 		godot::Vector3 getMouseChunkHitPos(void)
 		{
-			if (m_mouseHitChunk != nullptr && m_mouseHitQuadTree != nullptr)
+			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() && m_mouseHitQuadTree != nullptr)
 			{
 				return Vector3(m_mouseHitChunk->getLowerXInWUsGlobal(), 0, m_mouseHitChunk->getLowerZInWUsGlobal());
 			}
@@ -168,7 +171,7 @@ namespace godot
 		}
 		float getMouseChunkHitSize(void)
 		{
-			if (m_mouseHitChunk != nullptr && m_mouseHitQuadTree != nullptr)
+			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() && m_mouseHitQuadTree != nullptr)
 			{
 				return m_mouseHitChunk->getChunkSizeInWUs();
 			}
@@ -178,7 +181,7 @@ namespace godot
 
 		float getMouseChunkHitDistFromCam(void)
 		{
-			if (m_mouseHitChunk != nullptr && m_mouseHitQuadTree != nullptr)
+			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() && m_mouseHitQuadTree != nullptr)
 			{
 				return m_mouseHitChunk->getDistanceFromCamera();
 			}
@@ -230,15 +233,24 @@ namespace godot
 		int m_numRefreshMapQuad;
 		long long m_RefreshMapQuadDuration;
 		int m_averageRefreshMapQuadDuration;
-		int m_numUpdateQuads;
-		long long m_updateQuadsDuration;
-		int m_averageUpdateQuadsDuration;
+		int m_numUpdateQuads1;
+		long long m_updateQuads1Duration;
+		int m_averageUpdateQuads1Duration;
+		int m_numUpdateQuads2;
+		long long m_updateQuads2Duration;
+		int m_averageUpdateQuads2Duration;
+		int m_numUpdateQuads3;
+		long long m_updateQuads3Duration;
+		int m_averageUpdateQuads3Duration;
 		int m_numUpdateChunks;
 		long long m_updateChunksDuration;
 		int m_averageUpdateChunksDuration;
 		int m_numUpdateMaterialParams;
 		long long m_updateMaterialParamsDuration;
 		int m_averageUpdateMaterialParamsDuration;
+		int m_numMouseTrackHit;
+		long long m_mouseTrackHitDuration;
+		int m_averageMouseTrackHitDuration;
 		int64_t m_timeElapsedFromLastStatistic;
 		int m_numSplits;
 		int m_numJoins;

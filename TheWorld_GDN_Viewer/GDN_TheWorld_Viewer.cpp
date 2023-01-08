@@ -59,9 +59,12 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_num_process_not_owns_lock", &GDN_TheWorld_Viewer::getProcessNotOwnsLock);
 	register_method("get_process_duration", &GDN_TheWorld_Viewer::getProcessDuration);
 	register_method("get_refresh_quads_duration", &GDN_TheWorld_Viewer::getRefreshMapQuadDuration);
-	register_method("get_update_quads_duration", &GDN_TheWorld_Viewer::getUpdateQuadsDuration);
+	register_method("get_update_quads1_duration", &GDN_TheWorld_Viewer::getUpdateQuads1Duration);
+	register_method("get_update_quads2_duration", &GDN_TheWorld_Viewer::getUpdateQuads2Duration);
+	register_method("get_update_quads3_duration", &GDN_TheWorld_Viewer::getUpdateQuads3Duration);
 	register_method("get_update_chunks_duration", &GDN_TheWorld_Viewer::getUpdateChunksDuration);
 	register_method("get_update_material_params_duration", &GDN_TheWorld_Viewer::getUpdateMaterialParamsDuration);
+	register_method("get_mouse_track_hit_duration", &GDN_TheWorld_Viewer::getMouseTrackHitDuration);
 	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
 	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
 	register_method("get_mouse_hit", &GDN_TheWorld_Viewer::getMouseHit);
@@ -97,9 +100,18 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numRefreshMapQuad = 0;
 	m_RefreshMapQuadDuration = 0;
 	m_averageRefreshMapQuadDuration = 0;
-	m_numUpdateQuads = 0;
-	m_updateQuadsDuration = 0;
-	m_averageUpdateQuadsDuration = 0;
+	m_numMouseTrackHit = 0;
+	m_mouseTrackHitDuration = 0;
+	m_averageMouseTrackHitDuration = 0;
+	m_numUpdateQuads1 = 0;
+	m_updateQuads1Duration = 0;
+	m_averageUpdateQuads1Duration = 0;
+	m_numUpdateQuads2 = 0;
+	m_updateQuads2Duration = 0;
+	m_averageUpdateQuads2Duration = 0;
+	m_numUpdateQuads3 = 0;
+	m_updateQuads3Duration = 0;
+	m_averageUpdateQuads3Duration = 0;
 	m_numUpdateChunks = 0;
 	m_updateChunksDuration = 0;
 	m_averageUpdateChunksDuration = 0;
@@ -719,7 +731,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	//Transform globalTransform = internalTransformGlobalCoord();
 	//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 
-	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS
+	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - START
 	{
 		float farHorizon = cameraPosGlobalCoord.y * FAR_HORIZON_MULTIPLIER;
 		if (globals->heightmapSizeInWUs() > farHorizon)
@@ -901,7 +913,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			quadrantToDelete.clear();
 		}
 	}
-	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS
+	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - END
 
 	godot::Node* collider = nullptr;
 	if (m_trackMouse)
@@ -909,6 +921,14 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
 		{
+			TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Track Mouse Chunk", false, false);
+			clock1.tick();
+			auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+				clock1.tock();
+				this->m_numMouseTrackHit++;
+				this->m_mouseTrackHitDuration += clock1.duration().count();
+				});
+
 			godot::PhysicsDirectSpaceState* spaceState = get_world()->get_direct_space_state();
 			godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
 			godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
@@ -943,20 +963,64 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		}
 	}
 	
-	// UPDATE QUADS
+	// UPDATE QUADS - Stage 1
 	{
-		TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads", false, false);
+		TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 1", false, false);
 		clock1.tick();
 		auto save_duration = TheWorld_Utils::finally([&clock1, this] {
 			clock1.tock();
-			this->m_numUpdateQuads++;
-			this->m_updateQuadsDuration += clock1.duration().count();
+			this->m_numUpdateQuads1++;
+			this->m_updateQuads1Duration += clock1.duration().count();
 			});
 
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
-			itQuadTree->second->update(cameraPosGlobalCoord);
+			int numSplitRequired = 0;
+			itQuadTree->second->update(cameraPosGlobalCoord, QuadTree::UpdateStage::Stage1, numSplitRequired);
 		}
+	}
+	
+	while (true)
+	{
+		int numSplitRequired = 0;
+
+		// UPDATE QUADS - Stage 2
+		{
+			TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 2", false, false);
+			clock1.tick();
+			auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+				clock1.tock();
+			this->m_numUpdateQuads2++;
+			this->m_updateQuads2Duration += clock1.duration().count();
+				});
+
+
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				itQuadTree->second->update(Vector3(), QuadTree::UpdateStage::Stage2, numSplitRequired);
+			}
+		}
+
+		if (numSplitRequired == 0)
+			break;
+		else
+		{
+			// UPDATE QUADS - Stage 3
+			TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 3", false, false);
+			clock1.tick();
+			auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+				clock1.tock();
+			this->m_numUpdateQuads3++;
+			this->m_updateQuads3Duration += clock1.duration().count();
+				});
+
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				int numSplitRequired = 0;
+				itQuadTree->second->update(cameraPosGlobalCoord, QuadTree::UpdateStage::Stage3, numSplitRequired);
+			}
+		}
+
 	}
 
 	if (m_refreshRequired)
@@ -1519,17 +1583,40 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				m_RefreshMapQuadDuration = 0;
 				m_numRefreshMapQuad = 0;
 			}
-			else
-				m_averageRefreshMapQuadDuration = 0;
 
-			if (m_numUpdateQuads > 0)
+			if (m_numMouseTrackHit > 10)
 			{
-				m_averageUpdateQuadsDuration = int(m_updateQuadsDuration / m_numUpdateQuads);
-				m_updateQuadsDuration = 0;
-				m_numUpdateQuads = 0;
+				m_averageMouseTrackHitDuration = int(m_mouseTrackHitDuration / m_numMouseTrackHit);
+				m_mouseTrackHitDuration = 0;
+				m_numMouseTrackHit = 0;
+			}
+
+			if (m_numUpdateQuads1 > 0)
+			{
+				m_averageUpdateQuads1Duration = int(m_updateQuads1Duration / m_numUpdateQuads1);
+				m_updateQuads1Duration = 0;
+				m_numUpdateQuads1 = 0;
 			}
 			else
-				m_averageUpdateQuadsDuration = 0;
+				m_averageUpdateQuads1Duration = 0;
+
+			if (m_numUpdateQuads2 > 0)
+			{
+				m_averageUpdateQuads2Duration = int(m_updateQuads2Duration / m_numUpdateQuads2);
+				m_updateQuads2Duration = 0;
+				m_numUpdateQuads2 = 0;
+			}
+			else
+				m_averageUpdateQuads2Duration = 0;
+
+			if (m_numUpdateQuads3 > 0)
+			{
+				m_averageUpdateQuads3Duration = int(m_updateQuads3Duration / m_numUpdateQuads3);
+				m_updateQuads3Duration = 0;
+				m_numUpdateQuads3 = 0;
+			}
+			else
+				m_averageUpdateQuads3Duration = 0;
 
 			if (m_numUpdateChunks > 0)
 			{
@@ -1657,7 +1744,7 @@ QuadTree* GDN_TheWorld_Viewer::getQuadTree(QuadrantPos pos)
 //	return chunk;
 //}
 
-Chunk* GDN_TheWorld_Viewer::getChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir)
+Chunk* GDN_TheWorld_Viewer::getActiveChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter)
 {
 	QuadTree* quadTree = getQuadTree(pos);
 	if (quadTree == nullptr)
@@ -1667,10 +1754,10 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos
 	if (chunk == nullptr)
 		return nullptr;
 
-	return getChunkAt(chunk, dir);
+	return getActiveChunkAt(chunk, dir, filter);
 }
 
-Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir)
+Chunk* GDN_TheWorld_Viewer::getActiveChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter)
 {
 	// A T T E N Z I O N E : DA TESTARE
 	
@@ -1686,12 +1773,18 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::Direction
 		
 	Chunk* retChunk = nullptr;
 
+	//int idx = 0;
 	switch (dir)
 	{
 	case Chunk::DirectionSlot::XMinusChunk:
 	{
 		if (posInQuad == PosInQuad::Second || posInQuad == PosInQuad::Forth)
-			retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);
+		{
+			if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
+				retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);
+			if (retChunk != nullptr && !retChunk->isActive())
+				retChunk = nullptr;
+		}
 		else
 		{
 			int lod = pos.getLod();
@@ -1701,38 +1794,87 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::Direction
 			if (chunk->getSlotPosX() == 0)
 			{
 				QuadTree* quadTreeXMinus = getQuadTree(quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XMinus));
-				if (quadTreeXMinus != nullptr)
+				if (quadTreeXMinus != nullptr && quadTreeXMinus->isValid() && quadTreeXMinus->isVisible())
 				{
 					Chunk::ChunkPos posLastChunkAtSameLod(numChunksPerHeightmapSide - 1, pos.getSlotPosZ(), lod);
-					retChunk = quadTreeXMinus->getChunkAt(posLastChunkAtSameLod);
-					if (retChunk == nullptr && lod > 0)
+					if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
 					{
-						// we have not found a chunk on the X minus quad at the same lod: looking for a chunk at lower lod (most defined)
-						Chunk::ChunkPos posSecondInternalChunkAtLowerLod = Chunk::ChunkPos(posLastChunkAtSameLod.getSlotPosX() * 2 + 1, posLastChunkAtSameLod.getSlotPosZ() * 2, lod - 1);
-						retChunk = quadTreeXMinus->getChunkAt(posSecondInternalChunkAtLowerLod);
+						retChunk = quadTreeXMinus->getChunkAt(posLastChunkAtSameLod);
+						if (retChunk != nullptr && !retChunk->isActive())
+							retChunk = nullptr;
 					}
-					if (retChunk == nullptr && lod > 0)
+					if (retChunk == nullptr)
 					{
-						// we have not found a chunk on the X minus quad nor at the same nor at lower lod: looking for a chunk at lower lod (most defined)
+						Chunk::ChunkPos posSecondInternalChunkAtLowerLod = Chunk::ChunkPos(posLastChunkAtSameLod.getSlotPosX() * 2 + 1, posLastChunkAtSameLod.getSlotPosZ() * 2, lod - 1);
 						Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(posLastChunkAtSameLod.getSlotPosX() / 2, posLastChunkAtSameLod.getSlotPosZ() / 2, lod + 1);
-						retChunk = quadTreeXMinus->getChunkAt(posChunkAtHigherLod);
+						while (true)
+						{
+							if (retChunk != nullptr || (posSecondInternalChunkAtLowerLod.getLod() < 0 && posChunkAtHigherLod.getLod() > maxLod))
+								break;
+
+							if (retChunk == nullptr && posSecondInternalChunkAtLowerLod.getLod() >= 0 && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::LowerLod))
+							{
+								// we have not found a chunk on the X minus quad at the same lod: looking for a chunk at lower lod (most defined)
+								retChunk = quadTreeXMinus->getChunkAt(posSecondInternalChunkAtLowerLod);
+								if (retChunk != nullptr && !retChunk->isActive())
+									retChunk = nullptr;
+							}
+							if (retChunk == nullptr && posChunkAtHigherLod.getLod() <= maxLod && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::HigherLod))
+							{
+								// we have not found a chunk on the X minus quad nor at the same nor at lower lod: looking for a chunk at higher lod (less defined)
+								retChunk = quadTreeXMinus->getChunkAt(posChunkAtHigherLod);
+								if (retChunk != nullptr && !retChunk->isActive())
+									retChunk = nullptr;
+							}
+
+							posSecondInternalChunkAtLowerLod = Chunk::ChunkPos(posSecondInternalChunkAtLowerLod.getSlotPosX() * 2 + 1, posSecondInternalChunkAtLowerLod.getSlotPosZ() * 2,
+								posSecondInternalChunkAtLowerLod.getLod() - 1);
+							posChunkAtHigherLod = Chunk::ChunkPos(posChunkAtHigherLod.getSlotPosX() / 2, posChunkAtHigherLod.getSlotPosZ() / 2, posChunkAtHigherLod.getLod() + 1);
+							//idx++;
+							//if (idx >= 2)
+							//	Godot::print("msg");
+						}
 					}
 				}
 			}
 			else
 			{
-				retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);
-				if (retChunk == nullptr && lod > 0)
+				if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
 				{
-					// we have not found a chunk on the X minus direction at the same lod: looking for a chunk at lower lod (most defined)
-					Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-					retChunk = quadTree->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XMinusChunk);
+					retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);
+					if (retChunk != nullptr && !retChunk->isActive())
+						retChunk = nullptr;
 				}
-				if (retChunk == nullptr && lod < maxLod)
+				if (retChunk != nullptr)
 				{
-					// we have not found a chunk on the X minus direction nor at same nor at lower lod: looking for a chunk at higher lod (less defined)
+					Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
 					Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(pos.getSlotPosX() / 2, pos.getSlotPosZ() / 2, lod + 1);
-					retChunk = quadTree->getChunkAt(posChunkAtHigherLod, Chunk::DirectionSlot::XMinusChunk);
+					while (true)
+					{
+						if (retChunk != nullptr || (posFirstInternalChunkAtLowerLod.getLod() < 0 && posChunkAtHigherLod.getLod() > maxLod))
+							break;
+
+						if (retChunk == nullptr && posFirstInternalChunkAtLowerLod.getLod() > 0 && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::LowerLod))
+						{
+							// we have not found a chunk on the X minus direction at the same lod: looking for a chunk at lower lod (most defined)
+							retChunk = quadTree->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XMinusChunk);
+							if (retChunk != nullptr && !retChunk->isActive())
+								retChunk = nullptr;
+						}
+						if (retChunk == nullptr && posChunkAtHigherLod.getLod() < maxLod && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::HigherLod))
+						{
+							// we have not found a chunk on the X minus direction nor at same nor at lower lod: looking for a chunk at higher lod (less defined)
+							retChunk = quadTree->getChunkAt(posChunkAtHigherLod, Chunk::DirectionSlot::XMinusChunk);
+							if (retChunk != nullptr && !retChunk->isActive())
+								retChunk = nullptr;
+						}
+
+						posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(posFirstInternalChunkAtLowerLod.getSlotPosX() * 2, posFirstInternalChunkAtLowerLod.getSlotPosZ() * 2, posFirstInternalChunkAtLowerLod.getLod() - 1);
+						posChunkAtHigherLod = Chunk::ChunkPos(posChunkAtHigherLod.getSlotPosX() / 2, posChunkAtHigherLod.getSlotPosZ() / 2, posChunkAtHigherLod.getLod() + 1);
+						//idx++;
+						//if (idx >= 2)
+						//	Godot::print("msg");
+					}
 				}
 			}
 		}
@@ -1741,7 +1883,12 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::Direction
 	case Chunk::DirectionSlot::XPlusChunk:
 	{
 		if (posInQuad == PosInQuad::First || posInQuad == PosInQuad::Third)
-			retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);
+		{
+			if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
+				retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);
+			if (retChunk != nullptr && !retChunk->isActive())
+				retChunk = nullptr;
+		}
 		else
 		{
 			int lod = pos.getLod();
@@ -1751,38 +1898,87 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::Direction
 			if (chunk->getSlotPosX() == numChunksPerHeightmapSide - 1)
 			{
 				QuadTree* quadTreeXPlus = getQuadTree(quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::XPlus));
-				if (quadTreeXPlus != nullptr)
+				if (quadTreeXPlus != nullptr && quadTreeXPlus->isValid() && quadTreeXPlus->isVisible())
 				{
 					Chunk::ChunkPos posFirstChunkAtSameLod(0, pos.getSlotPosZ(), lod);
-					retChunk = quadTreeXPlus->getChunkAt(posFirstChunkAtSameLod);
-					if (retChunk == nullptr && lod > 0)
+					if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
 					{
-						// we have not found a chunk on the X minus quad at the same lod: looking for a chunk at lower lod (most defined)
-						Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(posFirstChunkAtSameLod.getSlotPosX() * 2, posFirstChunkAtSameLod.getSlotPosZ() * 2, lod - 1);
-						retChunk = quadTreeXPlus->getChunkAt(posFirstInternalChunkAtLowerLod);
+						retChunk = quadTreeXPlus->getChunkAt(posFirstChunkAtSameLod);
+						if (retChunk != nullptr && !retChunk->isActive())
+							retChunk = nullptr;
 					}
-					if (retChunk == nullptr && lod < maxLod)
+					if (retChunk == nullptr)
 					{
-						// we have not found a chunk on the X minus quad nor at the same nor at lower lod: looking for a chunk at lower lod (most defined)
+						Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(posFirstChunkAtSameLod.getSlotPosX() * 2, posFirstChunkAtSameLod.getSlotPosZ() * 2, lod - 1);
 						Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(posFirstChunkAtSameLod.getSlotPosX() / 2, posFirstChunkAtSameLod.getSlotPosZ() / 2, lod + 1);
-						retChunk = quadTreeXPlus->getChunkAt(posChunkAtHigherLod);
+						while (true)
+						{
+							if (retChunk != nullptr || (posFirstInternalChunkAtLowerLod.getLod() < 0 && posChunkAtHigherLod.getLod() > maxLod))
+								break;
+
+							if (retChunk == nullptr && posFirstInternalChunkAtLowerLod.getLod() >= 0 && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::LowerLod))
+							{
+								// we have not found a chunk on the X minus quad at the same lod: looking for a chunk at lower lod (most defined)
+								retChunk = quadTreeXPlus->getChunkAt(posFirstInternalChunkAtLowerLod);
+								if (retChunk != nullptr && !retChunk->isActive())
+									retChunk = nullptr;
+							}
+							if (retChunk == nullptr && posChunkAtHigherLod.getLod() <= maxLod && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::HigherLod))
+							{
+								// we have not found a chunk on the X minus quad nor at the same nor at lower lod: looking for a chunk at higher lod (less defined)
+								retChunk = quadTreeXPlus->getChunkAt(posChunkAtHigherLod);
+								if (retChunk != nullptr && !retChunk->isActive())
+									retChunk = nullptr;
+							}
+
+							posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(posFirstInternalChunkAtLowerLod.getSlotPosX() * 2 + 1, posFirstInternalChunkAtLowerLod.getSlotPosZ() * 2,
+								posFirstInternalChunkAtLowerLod.getLod() - 1);
+							posChunkAtHigherLod = Chunk::ChunkPos(posChunkAtHigherLod.getSlotPosX() / 2, posChunkAtHigherLod.getSlotPosZ() / 2, posChunkAtHigherLod.getLod() + 1);
+							//idx++;
+							//if (idx >= 2)
+							//	Godot::print("msg");
+						}
 					}
 				}
 			}
 			else
 			{
-				retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);
-				if (retChunk == nullptr && lod > 0)
+				if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
 				{
-					// we have not found a chunk on the X minus direction at the same lod: looking for a chunk at lower lod (most defined)
-					Chunk::ChunkPos posSecondInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2 + 1, pos.getSlotPosZ() * 2, lod - 1);
-					retChunk = quadTree->getChunkAt(posSecondInternalChunkAtLowerLod, Chunk::DirectionSlot::XPlusChunk);
+					retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);
+					if (retChunk != nullptr && !retChunk->isActive())
+						retChunk = nullptr;
 				}
-				if (retChunk == nullptr && lod < maxLod)
+				if (retChunk != nullptr)
 				{
-					// we have not found a chunk on the X minus direction nor at same nor at lower lod: looking for a chunk at higher lod (less defined)
+					Chunk::ChunkPos posSecondInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2 + 1, pos.getSlotPosZ() * 2, lod - 1);
 					Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(pos.getSlotPosX() / 2, pos.getSlotPosZ() / 2, lod + 1);
-					retChunk = quadTree->getChunkAt(posChunkAtHigherLod, Chunk::DirectionSlot::XPlusChunk);
+					while (true)
+					{
+						if (retChunk != nullptr || (posSecondInternalChunkAtLowerLod.getLod() < 0 && posChunkAtHigherLod.getLod() > maxLod))
+							break;
+
+						if (retChunk == nullptr && posSecondInternalChunkAtLowerLod.getLod() > 0 && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::LowerLod))
+						{
+							// we have not found a chunk on the X minus direction at the same lod: looking for a chunk at lower lod (most defined)
+							retChunk = quadTree->getChunkAt(posSecondInternalChunkAtLowerLod, Chunk::DirectionSlot::XPlusChunk);
+							if (retChunk != nullptr && !retChunk->isActive())
+								retChunk = nullptr;
+						}
+						if (retChunk == nullptr && posChunkAtHigherLod.getLod() < maxLod && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::HigherLod))
+						{
+							// we have not found a chunk on the X minus direction nor at same nor at lower lod: looking for a chunk at higher lod (less defined)
+							retChunk = quadTree->getChunkAt(posChunkAtHigherLod, Chunk::DirectionSlot::XPlusChunk);
+							if (retChunk != nullptr && !retChunk->isActive())
+								retChunk = nullptr;
+						}
+
+						posSecondInternalChunkAtLowerLod = Chunk::ChunkPos(posSecondInternalChunkAtLowerLod.getSlotPosX() * 2, posSecondInternalChunkAtLowerLod.getSlotPosZ() * 2, posSecondInternalChunkAtLowerLod.getLod() - 1);
+						posChunkAtHigherLod = Chunk::ChunkPos(posChunkAtHigherLod.getSlotPosX() / 2, posChunkAtHigherLod.getSlotPosZ() / 2, posChunkAtHigherLod.getLod() + 1);
+						//idx++;
+						//if (idx >= 2)
+						//	Godot::print("msg");
+					}
 				}
 			}
 		}
@@ -1791,7 +1987,12 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::Direction
 	case Chunk::DirectionSlot::ZMinusChunk:
 	{
 		if (posInQuad == PosInQuad::Third || posInQuad == PosInQuad::Forth)
-			retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);
+		{
+			if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
+				retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);
+			if (retChunk != nullptr && !retChunk->isActive())
+				retChunk = nullptr;
+		}
 		else
 		{
 			int lod = pos.getLod();
@@ -1801,38 +2002,87 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::Direction
 			if (chunk->getSlotPosZ() == 0)
 			{
 				QuadTree* quadTreeZMinus = getQuadTree(quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus));
-				if (quadTreeZMinus != nullptr)
+				if (quadTreeZMinus != nullptr && quadTreeZMinus->isValid() && quadTreeZMinus->isVisible())
 				{
 					Chunk::ChunkPos posLastChunkAtSameLod(pos.getSlotPosX(), numChunksPerHeightmapSide - 1, lod);
-					retChunk = quadTreeZMinus->getChunkAt(posLastChunkAtSameLod);
-					if (retChunk == nullptr && lod > 0)
+					if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
 					{
-						// we have not found a chunk on the Z minus quad at the same lod: looking for a chunk at lower lod (most defined)
-						Chunk::ChunkPos posThirdInternalChunkAtLowerLod = Chunk::ChunkPos(posLastChunkAtSameLod.getSlotPosX() * 2, posLastChunkAtSameLod.getSlotPosZ() * 2 + 1, lod - 1);
-						retChunk = quadTreeZMinus->getChunkAt(posThirdInternalChunkAtLowerLod);
+						retChunk = quadTreeZMinus->getChunkAt(posLastChunkAtSameLod);
+						if (retChunk != nullptr && !retChunk->isActive())
+							retChunk = nullptr;
 					}
-					if (retChunk == nullptr && lod < maxLod)
+					if (retChunk == nullptr)
 					{
-						// we have not found a chunk on the X minus quad nor at the same nor at lower lod: looking for a chunk at lower lod (most defined)
+						Chunk::ChunkPos posThirdInternalChunkAtLowerLod = Chunk::ChunkPos(posLastChunkAtSameLod.getSlotPosX() * 2, posLastChunkAtSameLod.getSlotPosZ() * 2 + 1, lod - 1);
 						Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(posLastChunkAtSameLod.getSlotPosX() / 2, posLastChunkAtSameLod.getSlotPosZ() / 2, lod + 1);
-						retChunk = quadTreeZMinus->getChunkAt(posChunkAtHigherLod);
+						while (true)
+						{
+							if (retChunk != nullptr || (posThirdInternalChunkAtLowerLod.getLod() < 0 && posChunkAtHigherLod.getLod() > maxLod))
+								break;
+
+							if (retChunk == nullptr && posThirdInternalChunkAtLowerLod.getLod() >= 0 && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::LowerLod))
+							{
+								// we have not found a chunk on the X minus quad at the same lod: looking for a chunk at lower lod (most defined)
+								retChunk = quadTreeZMinus->getChunkAt(posThirdInternalChunkAtLowerLod);
+								if (retChunk != nullptr && !retChunk->isActive())
+									retChunk = nullptr;
+							}
+							if (retChunk == nullptr && posChunkAtHigherLod.getLod() <= maxLod && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::HigherLod))
+							{
+								// we have not found a chunk on the X minus quad nor at the same nor at lower lod: looking for a chunk at higher lod (less defined)
+								retChunk = quadTreeZMinus->getChunkAt(posChunkAtHigherLod);
+								if (retChunk != nullptr && !retChunk->isActive())
+									retChunk = nullptr;
+							}
+
+							posThirdInternalChunkAtLowerLod = Chunk::ChunkPos(posThirdInternalChunkAtLowerLod.getSlotPosX() * 2 + 1, posThirdInternalChunkAtLowerLod.getSlotPosZ() * 2,
+								posThirdInternalChunkAtLowerLod.getLod() - 1);
+							posChunkAtHigherLod = Chunk::ChunkPos(posChunkAtHigherLod.getSlotPosX() / 2, posChunkAtHigherLod.getSlotPosZ() / 2, posChunkAtHigherLod.getLod() + 1);
+							//idx++;
+							//if (idx >= 2)
+							//	Godot::print("msg");
+						}
 					}
 				}
 			}
 			else
 			{
-				retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);
-				if (retChunk == nullptr && lod > 0)
+				if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
 				{
-					// we have not found a chunk on the Z minus direction at the same lod: looking for a chunk at lower lod (most defined)
-					Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-					retChunk = quadTree->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZMinusChunk);
+					retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);
+					if (retChunk != nullptr && !retChunk->isActive())
+						retChunk = nullptr;
 				}
-				if (retChunk == nullptr && lod < maxLod)
+				if (retChunk != nullptr)
 				{
-					// we have not found a chunk on the X minus direction nor at same nor at lower lod: looking for a chunk at higher lod (less defined)
+					Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
 					Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(pos.getSlotPosX() / 2, pos.getSlotPosZ() / 2, lod + 1);
-					retChunk = quadTree->getChunkAt(posChunkAtHigherLod, Chunk::DirectionSlot::ZMinusChunk);
+					while (true)
+					{
+						if (retChunk != nullptr || (posFirstInternalChunkAtLowerLod.getLod() < 0 && posChunkAtHigherLod.getLod() > maxLod))
+							break;
+
+						if (retChunk == nullptr && posFirstInternalChunkAtLowerLod.getLod() > 0 && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::LowerLod))
+						{
+							// we have not found a chunk on the X minus direction at the same lod: looking for a chunk at lower lod (most defined)
+							retChunk = quadTree->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZMinusChunk);
+							if (retChunk != nullptr && !retChunk->isActive())
+								retChunk = nullptr;
+						}
+						if (retChunk == nullptr && posChunkAtHigherLod.getLod() < maxLod && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::HigherLod))
+						{
+							// we have not found a chunk on the X minus direction nor at same nor at lower lod: looking for a chunk at higher lod (less defined)
+							retChunk = quadTree->getChunkAt(posChunkAtHigherLod, Chunk::DirectionSlot::ZMinusChunk);
+							if (retChunk != nullptr && !retChunk->isActive())
+								retChunk = nullptr;
+						}
+
+						posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(posFirstInternalChunkAtLowerLod.getSlotPosX() * 2, posFirstInternalChunkAtLowerLod.getSlotPosZ() * 2, posFirstInternalChunkAtLowerLod.getLod() - 1);
+						posChunkAtHigherLod = Chunk::ChunkPos(posChunkAtHigherLod.getSlotPosX() / 2, posChunkAtHigherLod.getSlotPosZ() / 2, posChunkAtHigherLod.getLod() + 1);
+						//idx++;
+						//if (idx >= 2)
+						//	Godot::print("msg");
+					}
 				}
 			}
 		}
@@ -1841,7 +2091,12 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::Direction
 	case Chunk::DirectionSlot::ZPlusChunk:
 	{
 		if (posInQuad == PosInQuad::First || posInQuad == PosInQuad::Second)
-			retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);
+		{
+			if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
+				retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);
+			if (retChunk != nullptr && !retChunk->isActive())
+				retChunk = nullptr;
+		}
 		else
 		{
 			int lod = pos.getLod();
@@ -1851,38 +2106,87 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::Direction
 			if (chunk->getSlotPosZ() == numChunksPerHeightmapSide - 1)
 			{
 				QuadTree* quadTreeZPlus = getQuadTree(quadTree->getQuadrant()->getPos().getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus));
-				if (quadTreeZPlus != nullptr)
+				if (quadTreeZPlus != nullptr && quadTreeZPlus->isValid() && quadTreeZPlus->isVisible())
 				{
 					Chunk::ChunkPos posFirstChunkAtSameLod(pos.getSlotPosX(), 0, lod);
-					retChunk = quadTreeZPlus->getChunkAt(posFirstChunkAtSameLod);
-					if (retChunk == nullptr && lod > 0)
+					if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
 					{
-						// we have not found a chunk on the X minus quad at the same lod: looking for a chunk at lower lod (most defined)
-						Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(posFirstChunkAtSameLod.getSlotPosX() * 2, posFirstChunkAtSameLod.getSlotPosZ() * 2, lod - 1);
-						retChunk = quadTreeZPlus->getChunkAt(posFirstInternalChunkAtLowerLod);
+						retChunk = quadTreeZPlus->getChunkAt(posFirstChunkAtSameLod);
+						if (retChunk != nullptr && !retChunk->isActive())
+							retChunk = nullptr;
 					}
-					if (retChunk == nullptr && lod < maxLod)
+					if (retChunk == nullptr)
 					{
-						// we have not found a chunk on the X minus quad nor at the same nor at lower lod: looking for a chunk at lower lod (most defined)
+						Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(posFirstChunkAtSameLod.getSlotPosX() * 2, posFirstChunkAtSameLod.getSlotPosZ() * 2, lod - 1);
 						Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(posFirstChunkAtSameLod.getSlotPosX() / 2, posFirstChunkAtSameLod.getSlotPosZ() / 2, lod + 1);
-						retChunk = quadTreeZPlus->getChunkAt(posChunkAtHigherLod);
+						while (true)
+						{
+							if (retChunk != nullptr || (posFirstInternalChunkAtLowerLod.getLod() < 0 && posChunkAtHigherLod.getLod() > maxLod))
+								break;
+
+							if (retChunk == nullptr && posFirstInternalChunkAtLowerLod.getLod() >= 0 && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::LowerLod))
+							{
+								// we have not found a chunk on the X minus quad at the same lod: looking for a chunk at lower lod (most defined)
+								retChunk = quadTreeZPlus->getChunkAt(posFirstInternalChunkAtLowerLod);
+								if (retChunk != nullptr && !retChunk->isActive())
+									retChunk = nullptr;
+							}
+							if (retChunk == nullptr && posChunkAtHigherLod.getLod() <= maxLod && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::HigherLod))
+							{
+								// we have not found a chunk on the X minus quad nor at the same nor at lower lod: looking for a chunk at higher lod (less defined)
+								retChunk = quadTreeZPlus->getChunkAt(posChunkAtHigherLod);
+								if (retChunk != nullptr && !retChunk->isActive())
+									retChunk = nullptr;
+							}
+
+							posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(posFirstInternalChunkAtLowerLod.getSlotPosX() * 2 + 1, posFirstInternalChunkAtLowerLod.getSlotPosZ() * 2,
+								posFirstInternalChunkAtLowerLod.getLod() - 1);
+							posChunkAtHigherLod = Chunk::ChunkPos(posChunkAtHigherLod.getSlotPosX() / 2, posChunkAtHigherLod.getSlotPosZ() / 2, posChunkAtHigherLod.getLod() + 1);
+							//idx++;
+							//if (idx >= 2)
+							//	Godot::print("msg");
+						}
 					}
 				}
 			}
 			else
 			{
-				retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);
-				if (retChunk == nullptr && lod > 0)
+				if (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::SameLod)
 				{
-					// we have not found a chunk on the X minus direction at the same lod: looking for a chunk at lower lod (most defined)
-					Chunk::ChunkPos posThirdInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2 + 1, lod - 1);
-					retChunk = quadTree->getChunkAt(posThirdInternalChunkAtLowerLod, Chunk::DirectionSlot::ZPlusChunk);
+					retChunk = quadTree->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);
+					if (retChunk != nullptr && !retChunk->isActive())
+						retChunk = nullptr;
 				}
-				if (retChunk == nullptr && lod < maxLod)
+				if (retChunk != nullptr)
 				{
-					// we have not found a chunk on the X minus direction nor at same nor at lower lod: looking for a chunk at higher lod (less defined)
+					Chunk::ChunkPos posThirdInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2 + 1, lod - 1);
 					Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(pos.getSlotPosX() / 2, pos.getSlotPosZ() / 2, lod + 1);
-					retChunk = quadTree->getChunkAt(posChunkAtHigherLod, Chunk::DirectionSlot::ZPlusChunk);
+					while (true)
+					{
+						if (retChunk != nullptr || (posThirdInternalChunkAtLowerLod.getLod() < 0 && posChunkAtHigherLod.getLod() > maxLod))
+							break;
+
+						if (retChunk == nullptr && posThirdInternalChunkAtLowerLod.getLod() > 0 && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::LowerLod))
+						{
+							// we have not found a chunk on the X minus direction at the same lod: looking for a chunk at lower lod (most defined)
+							retChunk = quadTree->getChunkAt(posThirdInternalChunkAtLowerLod, Chunk::DirectionSlot::ZPlusChunk);
+							if (retChunk != nullptr && !retChunk->isActive())
+								retChunk = nullptr;
+						}
+						if (retChunk == nullptr && posChunkAtHigherLod.getLod() < maxLod && (filter == Chunk::LookForChunk::All || filter == Chunk::LookForChunk::HigherLod))
+						{
+							// we have not found a chunk on the X minus direction nor at same nor at lower lod: looking for a chunk at higher lod (less defined)
+							retChunk = quadTree->getChunkAt(posChunkAtHigherLod, Chunk::DirectionSlot::ZPlusChunk);
+							if (retChunk != nullptr && !retChunk->isActive())
+								retChunk = nullptr;
+						}
+
+						posThirdInternalChunkAtLowerLod = Chunk::ChunkPos(posThirdInternalChunkAtLowerLod.getSlotPosX() * 2, posThirdInternalChunkAtLowerLod.getSlotPosZ() * 2, posThirdInternalChunkAtLowerLod.getLod() - 1);
+						posChunkAtHigherLod = Chunk::ChunkPos(posChunkAtHigherLod.getSlotPosX() / 2, posChunkAtHigherLod.getSlotPosZ() / 2, posChunkAtHigherLod.getLod() + 1);
+						//idx++;
+						//if (idx >= 2)
+						//	Godot::print("msg");
+					}
 				}
 			}
 		}
@@ -1890,7 +2194,7 @@ Chunk* GDN_TheWorld_Viewer::getChunkAt(Chunk* chunk, enum class Chunk::Direction
 	break;
 	}
 
-	return chunk;
+	return retChunk;
 }
 
 GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
@@ -2202,9 +2506,19 @@ int GDN_TheWorld_Viewer::getRefreshMapQuadDuration(void)
 	return m_averageRefreshMapQuadDuration;
 }
 
-int GDN_TheWorld_Viewer::getUpdateQuadsDuration(void)
+int GDN_TheWorld_Viewer::getUpdateQuads1Duration(void)
 {
-	return m_averageUpdateQuadsDuration;
+	return m_averageUpdateQuads1Duration;
+}
+
+int GDN_TheWorld_Viewer::getUpdateQuads2Duration(void)
+{
+	return m_averageUpdateQuads2Duration;
+}
+
+int GDN_TheWorld_Viewer::getUpdateQuads3Duration(void)
+{
+	return m_averageUpdateQuads3Duration;
 }
 
 int GDN_TheWorld_Viewer::getUpdateChunksDuration(void)
@@ -2215,6 +2529,11 @@ int GDN_TheWorld_Viewer::getUpdateChunksDuration(void)
 int GDN_TheWorld_Viewer::getUpdateMaterialParamsDuration(void)
 {
 	return m_averageUpdateMaterialParamsDuration;
+}
+
+int GDN_TheWorld_Viewer::getMouseTrackHitDuration(void)
+{
+	return m_averageMouseTrackHitDuration;
 }
 
 void GDN_TheWorld_Viewer::dump()
