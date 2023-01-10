@@ -141,6 +141,7 @@ namespace godot
 		Vector3 startPoint = m_quadTree->getQuadrant()->getGlobalCoordAABB().position;
 		Vector3 endPoint = startPoint + m_quadTree->getQuadrant()->getGlobalCoordAABB().size;
 		data["min_height"] = startPoint.y;			// ???
+		//data["min_height"] = -endPoint.y;			// ???
 		data["max_height"] = endPoint.y;			// ???
 
 		PhysicsServer* ps = PhysicsServer::get_singleton();
