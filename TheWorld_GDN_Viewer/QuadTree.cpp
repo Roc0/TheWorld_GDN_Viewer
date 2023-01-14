@@ -252,9 +252,6 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum cla
 		// cameraPosViewerNodeLocalCoord are in grid local coordinates (WUs)
 		GDN_TheWorld_Globals* globals = m_viewer->Globals();
 		float chunkSizeInWUs = globals->gridStepInHeightmapWUs(quad->Lod()) * globals->numVerticesPerChuckSide();									// chunk size in World Units
-		//float chunkSizeInWUs = quad->getChunkSizeInWUs();
-		//Vector3 chunkCenter = real_t(chunkSizeInWUs) * (Vector3(real_t(quad->slotPosX()), 0, real_t(quad->slotPosZ())) + Vector3(0.5, 0, 0.5));	// chunk center in local coord. respect Viewer Node (or the grid of chunks)
-		//chunkCenter.y = (chunkAABB.position + chunkAABB.size / 2).y;		// medium altitude of the chunk
 		AABB chunkAABB = quad->getChunkAABB();
 		Vector3 quadCenterGlobal(real_t((quad->slotPosX() * chunkSizeInWUs) + m_worldQuadrant->getPos().getLowerXGridVertex() + chunkSizeInWUs / 2),
 			(chunkAABB.position + chunkAABB.size / 2).y,

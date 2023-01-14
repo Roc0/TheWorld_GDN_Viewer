@@ -392,7 +392,10 @@ namespace godot
 			AABB aabb;
 			if (m_chunkAABB == aabb)
 			{
-				m_chunkAABB = m_chunk->getAABB();
+				if (m_chunk != nullptr)
+					m_chunkAABB = m_chunk->getAABB();
+				else
+					return aabb;
 			}
 			return m_chunkAABB;
 		}

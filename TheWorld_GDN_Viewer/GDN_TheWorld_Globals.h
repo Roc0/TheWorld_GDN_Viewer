@@ -17,7 +17,7 @@
 #include "TheWorld_Utils.h"
 
 #define THEWORLD_VIEWER_CHUNK_SIZE_SHIFT				5
-#define THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT		10
+#define THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT		11	/* 10 */
 
 #define PLOG_DEFAULT_LEVEL plog::Severity::info
 #define PLOG_DEBUG_LEVEL plog::Severity::verbose
