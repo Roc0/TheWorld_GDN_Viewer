@@ -40,6 +40,95 @@ namespace TheWorld_ClientServer
 #define THEWORLD_CLIENTSERVER_METHOD_MAPM_SETLOGMAXSEVERITY				"MapManager::setLogMaxSeverity"
 //#define THEWORLD_CLIENTSERVER_METHOD_MAPM_CALCNEXTCOORDGETVERTICES		"MapManager::calcNextCoordOnTheGridInWUs"
 
+	class ServerThreadContext
+	{
+	public:
+		ServerThreadContext(plog::Severity sev)
+		{
+			m_sev = sev;
+		}
+
+		~ServerThreadContext()
+		{
+			deinit();
+		}
+
+		void deinit(void)
+		{
+			m_mapManager.reset();
+		}
+		
+		TheWorld_MapManager::MapManager* getMapManager(void)
+		{
+			if (m_mapManager == nullptr)
+			{
+				m_mapManager = make_unique<TheWorld_MapManager::MapManager>(nullptr, m_sev, plog::get(), nullptr, true);
+				m_mapManager->instrument(false);
+				m_mapManager->consoleDebugMode(false);
+			}
+			return m_mapManager.get();
+		}
+
+	private:
+		std::unique_ptr<TheWorld_MapManager::MapManager> m_mapManager;
+		plog::Severity m_sev;
+	};
+
+	class ServerThreadContextPool
+	{
+	public:
+		ServerThreadContextPool(plog::Severity sev)
+		{
+			m_sev = sev;
+		}
+
+		~ServerThreadContextPool()
+		{
+			m_mapCtxMtx.lock();
+			for (auto& item : m_mapCtx)
+			{
+			}
+			m_mapCtxMtx.unlock();
+		}
+
+		//void init()
+		//{
+		//	size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+		//	m_mapCtxMtx.lock();
+		//	if (!m_mapCtx.contains(tid))
+		//		m_mapCtx[tid] = make_unique<ServerThreadContext>(m_sev);
+		//	m_mapCtxMtx.unlock();
+		//}
+
+		ServerThreadContext* getCurrentContext(void)
+		{
+			size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+			m_mapCtxMtx.lock();
+			if (!m_mapCtx.contains(tid))
+				m_mapCtx[tid] = make_unique<ServerThreadContext>(m_sev);
+			ServerThreadContext* ctx = m_mapCtx[tid].get();
+			m_mapCtxMtx.unlock();
+			return ctx;
+		}
+
+		void resetForCurrentThread(void)
+		{
+			size_t tid = std::hash<std::thread::id>{}(std::this_thread::get_id());
+			m_mapCtxMtx.lock();
+			if (m_mapCtx.contains(tid))
+			{
+				m_mapCtx[tid]->deinit();
+				m_mapCtx.erase(tid);
+			}
+			m_mapCtxMtx.unlock();
+		}
+
+	private:
+		map<size_t, std::unique_ptr<ServerThreadContext>> m_mapCtx;
+		std::recursive_mutex m_mapCtxMtx;
+		plog::Severity m_sev;
+	};
+
 	enum class ExecutionStatus
 	{
 		ToStart = 0,
@@ -121,15 +210,33 @@ namespace TheWorld_ClientServer
 
 		bool expiredTimeToLive(long long* elapsedFromStartOfClientMethod = nullptr);
 
-		bool replied(void) { return m_replied; }
+		bool replied(void) 
+		{ 
+			return m_replied; 
+		}
 
-		ClientServerVariant getReplyParam(size_t index) { return m_replyParams[index]; }
-		size_t getNumReplyParams(void) { return m_replyParams.size(); }
+		ClientServerVariant getReplyParam(size_t index) 
+		{
+			return m_replyParams[index]; 
+		}
+		size_t getNumReplyParams(void) 
+		{
+			return m_replyParams.size(); 
+		}
 
-		ClientServerVariant getInputParam(size_t index) { return m_inputParams[index]; }
-		size_t getNumInputParams(void) { return m_inputParams.size(); }
+		ClientServerVariant getInputParam(size_t index)
+		{
+			return m_inputParams[index]; 
+		}
+		size_t getNumInputParams(void)
+		{
+			return m_inputParams.size(); 
+		}
 
-		std::string getMethod(void) { return m_method; }
+		std::string getMethod(void)
+		{
+			return m_method; 
+		}
 
 		void replyError(int errorCode, std::string errorMessage)
 		{
@@ -137,9 +244,18 @@ namespace TheWorld_ClientServer
 			m_errorCode = errorCode;
 			m_errorMessage = errorMessage;
 		}
-		bool error(void) { return m_error; }
-		int getErrorCode(void) { return m_errorCode; };
-		std::string getErrorMessage(void) { return m_errorMessage; };
+		bool error(void) 
+		{
+			return m_error; 
+		}
+		int getErrorCode(void) 
+		{
+			return m_errorCode; 
+		};
+		std::string getErrorMessage(void)
+		{
+			return m_errorMessage; 
+		};
 
 		void onExecMethodAsync(void);
 
@@ -147,8 +263,13 @@ namespace TheWorld_ClientServer
 		{
 			return m_clientCallback != nullptr;
 		}
-		bool eraseMe(void) { return m_eraseMe; }
-		void eraseMe(bool eraseMe) { m_eraseMe = eraseMe; }
+		bool eraseMe(void) 
+		{ return m_eraseMe; 
+		}
+		void eraseMe(bool eraseMe) 
+		{
+			m_eraseMe = eraseMe; 
+		}
 
 		bool completedOnServer(void)
 		{
@@ -213,7 +334,6 @@ namespace TheWorld_ClientServer
 		virtual bool canDisconnect(void);
 		virtual void disconnect(void);
 		virtual int execMethodAsync(std::string method, std::string& ref, std::vector<ClientServerVariant>& inputParams, size_t timeToLive = THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, ClientCallback* clientCallbak = nullptr);
-		//virtual int execMethodSync(std::string method, std::vector<ClientServerVariant>& inputParams, std::vector <ClientServerVariant>& replyParams, size_t timeout = THEWORLD_CLIENTSERVER_DEFAULT_TIMEOUT);
 		virtual int getReplyParam(std::string& ref, size_t index, ClientServerVariant& ReplyParam);
 		virtual int getReplyParams(std::string& ref, std::vector <ClientServerVariant>& replyParams);
 		virtual int replied(std::string& method, std::string& ref, bool& replied, size_t& numReplyParams, bool& error, int& errorCode, std::string& errorMessage);
@@ -235,7 +355,7 @@ namespace TheWorld_ClientServer
 		TheWorld_Utils::ThreadPool m_tp;
 	};
 
-	class ServerInterface
+	class ServerInterface : public TheWorld_Utils::ThreadInitDeinit
 	{
 	public:
 		ServerInterface(plog::Severity sev);
@@ -244,13 +364,26 @@ namespace TheWorld_ClientServer
 		virtual void onDisconnect(void);
 		virtual void onExecMethodAsync(std::string method, ClientServerExecution* reply);
 		void queueJob(const std::function<void()>& job, ClientServerExecution* clientServerExecution);
-	
+		virtual void serverThreadInit(void);
+		virtual void serverThreadDeinit(void);
+		virtual void threadInit(void)
+		{
+			serverThreadInit();
+		}
+		virtual void threadDeinit(void)
+		{
+			serverThreadDeinit();
+		}
+
 	private:
 		bool expiredTimeToLive(ClientServerExecution* reply);
 	
 	private:
+		std::unique_ptr<ServerThreadContextPool> m_threadContextPool;
+		std::recursive_mutex m_threadContextPoolMtx;
+		static bool s_staticServerInitializationDone;
+		static std::recursive_mutex s_staticServerInitializationMtx;
 		ClientInterface* m_client;
-		TheWorld_MapManager::MapManager* m_mapManager;
 		plog::Severity m_sev;
 		TheWorld_Utils::ThreadPool m_tpSlowExecutions;
 		TheWorld_Utils::ThreadPool m_tp;

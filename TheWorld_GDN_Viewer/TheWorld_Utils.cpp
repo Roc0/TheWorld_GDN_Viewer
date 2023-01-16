@@ -561,8 +561,11 @@ namespace TheWorld_Utils
 
 #endif
 
-	void ThreadPool::Start(size_t num_threads)
+	void ThreadPool::Start(size_t num_threads, const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction, ThreadInitDeinit* threadInitDeinit)
 	{
+		m_threadInitDeinit = threadInitDeinit;
+		m_threadInitFunction = threadInitFunction;
+		m_threadDeinitFunction = threadDeinitFunction;
 		uint32_t _num_threads = (uint32_t)num_threads;
 		if (_num_threads <= 0)
 			_num_threads  = std::thread::hardware_concurrency(); // Max # of threads the system supports
@@ -576,6 +579,13 @@ namespace TheWorld_Utils
 	
 	void ThreadPool::ThreadLoop()
 	{
+		if (m_threadInitDeinit != nullptr)
+			m_threadInitDeinit->threadInit();
+		//if (m_threadInitFunction != nullptr)
+		//{
+		//	(*m_threadInitFunction)();
+		//}
+
 		while (true)
 		{
 			std::function<void()> job;
@@ -584,13 +594,20 @@ namespace TheWorld_Utils
 				mutex_condition.wait(lock, [this] { return !jobs.empty() || should_terminate; });
 				if (should_terminate)
 				{
-					return;
+					break;
 				}
 				job = jobs.front();
 				jobs.pop();
 			}
 			job();
 		}
+
+		if (m_threadInitDeinit != nullptr)
+			m_threadInitDeinit->threadDeinit();
+		//if (m_threadDeinitFunction != nullptr)
+		//{
+		//	(*m_threadDeinitFunction)();
+		//}
 	}
 
 	void ThreadPool::QueueJob(const std::function<void()>& job)

@@ -12,7 +12,9 @@
 namespace TheWorld_ClientServer
 {
 	size_t ClientServerExecution::m_numCurrentServerExecutions = 0;
-	
+	bool ServerInterface::s_staticServerInitializationDone = false;
+	std::recursive_mutex ServerInterface::s_staticServerInitializationMtx;
+
 	void ClientServerExecution::onExecMethodAsync(void)
 	{
 		TheWorld_Utils::TimerMs clock("ClientServerExecution::onExecMethodAsync", "SERVER SIDE " + m_method + " " + m_ref, false, true);
@@ -154,14 +156,11 @@ namespace TheWorld_ClientServer
 			std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
 			ref = TheWorld_Utils::ToString(&newId);
 			m_ReplyMap[ref] = make_unique<ClientServerExecution>(method, inputParams, ref, this, m_server, timeToLive, clientCallbak);
-			//std::thread* th = new std::thread(&ClientServerExecution::onExecMethodAsync, m_ReplyMap[ref].get());
 			
 			PLOG_DEBUG << "ClientInterface::execMethodAsync - " + method + " " + ref;
 
 			ClientServerExecution* clientServerExecution = m_ReplyMap[ref].get();
 			std::function<void(void)> f = std::bind(&ClientServerExecution::onExecMethodAsync, clientServerExecution);
-			//std::function<void(void)> f1 = [=] {m_ReplyMap[ref]->onExecMethodAsync(); };
-			//m_server->queueJob( [=] { m_ReplyMap[ref]->onExecMethodAsync(); } ); // lambda expressione
 			m_server->queueJob(f, clientServerExecution);
 		}
 		
@@ -258,114 +257,6 @@ namespace TheWorld_ClientServer
 			return THEWORLD_CLIENTSERVER_RC_METHOD_ONGOING;
 	}
 
-//	int ClientInterface::execMethodSync(std::string method, std::vector<ClientServerVariant>& inputParams, std::vector <ClientServerVariant>& replyParams, size_t timeout)
-//	{
-//		PLOG_DEBUG << "execMethodSync: inizio";
-//
-//		int rc = THEWORLD_CLIENTSERVER_RC_OK;
-//
-//		replyParams.clear();
-//
-//		std::string ref;
-//
-//		ClientCallback* noCallback = nullptr;
-//
-//#define SHORT_ROAD 0
-//		if (SHORT_ROAD)
-//		{
-//			GUID newId;
-//			RPC_STATUS ret_val = ::UuidCreate(&newId);
-//			if (ret_val != RPC_S_OK)
-//			{
-//				PLOG_ERROR << "UuidCreate in error with rc " + std::to_string(ret_val);
-//				return THEWORLD_CLIENTSERVER_RC_KO;
-//			}
-//			
-//			ClientServerExecution* reply = nullptr;
-//			{
-//				std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
-//				ref = TheWorld_Utils::ToString(&newId);
-//				m_ReplyMap[ref] = make_unique<ClientServerExecution>(method, inputParams, ref, this, m_server, timeout, noCallback);
-//				reply = m_ReplyMap[ref].get();
-//				//std::thread* th = new std::thread(&ClientServerExecution::onExecMethodAsync, m_ReplyMap[ref].get());
-//			}
-//			reply->onExecMethodAsync();
-//		}
-//		else		
-//			rc = execMethodAsync(method, ref, inputParams, timeout, noCallback);
-//		
-//		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
-//		{
-//			if (ref.length() > 0 && m_ReplyMap.contains(ref))
-//			{
-//				m_ReplyMap[ref]->eraseMe(true);
-//			}
-//			return rc;
-//		}
-//
-//		PLOG_DEBUG << "execMethodSync: attesa risposta";
-//		TheWorld_Utils::TimerMs clock;
-//		clock.tick();
-//		while (true)
-//		{
-//			bool replied = false, error = false;
-//			size_t numReplyParams = 0;
-//			int errorCode;
-//			std::string errorMessage;
-//			std::string method;
-//			rc = ClientInterface::replied(method, ref, replied, numReplyParams, error, errorCode, errorMessage);
-//			if (rc != THEWORLD_CLIENTSERVER_RC_OK)
-//			{
-//				m_ReplyMap[ref]->eraseMe(true);
-//				return rc;
-//			}
-//			
-//			if (error)
-//			{
-//				PLOG_ERROR << "Method execution error - Method: " + method + " - Error: " + std::to_string(errorCode) + " - " + errorMessage;
-//				m_ReplyMap[ref]->eraseMe(true);
-//				return THEWORLD_CLIENTSERVER_RC_KO;
-//			}
-//
-//			size_t _timeout = timeout;
-//			if (_timeout == -1)
-//				_timeout = m_msTimeout;
-//			if (!replied)
-//			{
-//				clock.tock();
-//				long long elapsed = clock.duration().count();
-//				if (elapsed > (long long)_timeout)
-//				{
-//					rc = THEWORLD_CLIENTSERVER_RC_TIMEOUT_EXPIRED;
-//					m_ReplyMap[ref]->eraseMe(true);
-//					break;
-//				}
-//				else
-//					Sleep(5);
-//			}
-//			else
-//			{
-//				PLOG_DEBUG << "execMethodSync: callect params";
-//				rc = getReplyParams(ref, replyParams);
-//				//for (size_t idx = 0; idx < numReplyParams; idx++)
-//				//{
-//				//	ClientServerVariant replyParam;
-//				//	rc = getReplyParam(ref, idx, replyParam);
-//				//	if (rc != THEWORLD_CLIENTSERVER_RC_OK)
-//				//		return rc;
-//				//	replyParams.push_back(replyParam);
-//				//}
-//				std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
-//				m_ReplyMap[ref]->eraseMe(true);
-//				break;
-//			}
-//		}
-//
-//		PLOG_DEBUG << "execMethodSync: fine";
-//
-//		return rc;
-//	}
-
 	void ClientInterface::receiver(void)
 	{
 		m_receiverThreadRunning = true;
@@ -404,15 +295,23 @@ namespace TheWorld_ClientServer
 					{
 						if (itReply->second->replied() || itReply->second->error())
 						{
-							if (itReply->second->completedOnServer())
+							if (itReply->second->error())
 							{
-								if (itReply->second->clientCallbackSpecified())
+								PLOG_ERROR << "Server execution error - Method: " + itReply->second->getMethod() + " - Error: " + std::to_string(itReply->second->getErrorCode()) + " - " + itReply->second->getErrorMessage();
+								tempToErase[itReply->first] = make_unique<ClientServerExecution>(*itReply->second);
+							}
+							else
+							{
+								if (itReply->second->completedOnServer())
 								{
-									toCallCallback[itReply->first] = make_unique<ClientServerExecution>(*itReply->second);
-								}
-								else if (itReply->second->eraseMe())
-								{
-									tempToErase[itReply->first] = make_unique<ClientServerExecution>(*itReply->second);
+									if (itReply->second->clientCallbackSpecified())
+									{
+										toCallCallback[itReply->first] = make_unique<ClientServerExecution>(*itReply->second);
+									}
+									else if (itReply->second->eraseMe())
+									{
+										tempToErase[itReply->first] = make_unique<ClientServerExecution>(*itReply->second);
+									}
 								}
 							}
 						}
@@ -462,7 +361,6 @@ namespace TheWorld_ClientServer
 	ServerInterface::ServerInterface(plog::Severity sev)
 	{
 		m_client = nullptr;
-		m_mapManager = nullptr;
 		m_sev = sev;
 	}
 
@@ -473,12 +371,23 @@ namespace TheWorld_ClientServer
 
 	int ServerInterface::onConnect(ClientInterface* client)
 	{
+		s_staticServerInitializationMtx.lock();
+		if (!s_staticServerInitializationDone)
+		{
+			// Actually empty
+			s_staticServerInitializationDone = true;
+		}
+		s_staticServerInitializationMtx.unlock();
+		
 		m_client = client;
-		m_mapManager = new TheWorld_MapManager::MapManager(NULL, m_sev, plog::get());
-		m_mapManager->instrument(false);
-		m_mapManager->consoleDebugMode(false);
-		m_tpSlowExecutions.Start(2);
-		m_tp.Start(2);
+
+		m_threadContextPool = make_unique<ServerThreadContextPool>(m_sev);
+		
+		std::function<void(void)> threadInitFunction = std::bind(&ServerInterface::serverThreadInit, this);
+		std::function<void(void)> threadDeinitFunction = std::bind(&ServerInterface::serverThreadDeinit, this);
+		m_tpSlowExecutions.Start(2, &threadInitFunction, &threadDeinitFunction, this);
+		m_tp.Start(2, &threadInitFunction, &threadDeinitFunction, this);
+		
 		PLOG_INFO << "ServerInterface::onConnect - Server connected";
 		return THEWORLD_CLIENTSERVER_RC_OK;
 	}
@@ -489,8 +398,8 @@ namespace TheWorld_ClientServer
 		{
 			m_tp.Stop();
 			m_tpSlowExecutions.Stop();
+			m_threadContextPool.reset();
 			m_client = nullptr;
-			delete m_mapManager;
 			PLOG_INFO << "ServerInterface::onDisconnect - Server Disconnected";
 		}
 	}
@@ -509,6 +418,8 @@ namespace TheWorld_ClientServer
 	
 	void ServerInterface::onExecMethodAsync(std::string method, ClientServerExecution* reply)
 	{
+		// TODO gestione pool ServerThreadContext che contiene un map manager per ogni thread::id
+
 		try
 		{
 			if (expiredTimeToLive(reply))
@@ -523,7 +434,7 @@ namespace TheWorld_ClientServer
 					return;
 				}
 				plog::Severity sev = plog::Severity(*i);
-				m_mapManager->setLogMaxSeverity(sev);
+				m_threadContextPool->getCurrentContext()->getMapManager()->setLogMaxSeverity(sev);
 				reply->replyComplete();
 			}
 			else if (method == THEWORLD_CLIENTSERVER_METHOD_SERVER_INITIALIZATION)
@@ -535,8 +446,9 @@ namespace TheWorld_ClientServer
 					return;
 				}
 				plog::Severity sev = plog::Severity(*i);
-				m_mapManager->setLogMaxSeverity(sev);
-				float f = m_mapManager->gridStepInWU();
+				TheWorld_MapManager::MapManager* mapManager = m_threadContextPool->getCurrentContext()->getMapManager();
+				mapManager->setLogMaxSeverity(sev);
+				float f = mapManager->gridStepInWU();
 				reply->replyParam(f);
 				reply->replyComplete();
 			}
@@ -617,7 +529,8 @@ namespace TheWorld_ClientServer
 				//clock.tick();
 				float _gridStepInWU;
 				std::string meshBuffer;
-				m_mapManager->getQuadrantVertices(*lowerXGridVertex, *lowerZGridVertex, *numVerticesPerSize, _gridStepInWU, *level, *meshId, meshBuffer);
+				TheWorld_MapManager::MapManager* mapManager = m_threadContextPool->getCurrentContext()->getMapManager();
+				mapManager->getQuadrantVertices(*lowerXGridVertex, *lowerZGridVertex, *numVerticesPerSize, _gridStepInWU, *level, *meshId, meshBuffer);
 				//clock.tock();
 				//PLOG_DEBUG << std::string("ELAPSED MapManager::getVertices=") + std::to_string(clock.duration().count()).c_str() + " ms";
 
@@ -630,9 +543,9 @@ namespace TheWorld_ClientServer
 					return;
 				}
 
-				float f = m_mapManager->calcNextCoordOnTheGridInWUs(*viewerPosX);
+				float f = mapManager->calcNextCoordOnTheGridInWUs(*viewerPosX);
 				reply->replyParam(f);
-				f = m_mapManager->calcNextCoordOnTheGridInWUs(*viewerPosZ);
+				f = mapManager->calcNextCoordOnTheGridInWUs(*viewerPosZ);
 				reply->replyParam(f);
 				
 				reply->replyParam(meshBuffer);
@@ -664,5 +577,15 @@ namespace TheWorld_ClientServer
 			m_tpSlowExecutions.QueueJob(job);
 		else
 			m_tp.QueueJob(job);
+	}
+
+	void ServerInterface::serverThreadInit(void)
+	{
+		ServerThreadContext* threadCtx = m_threadContextPool->getCurrentContext();
+	}
+
+	void ServerInterface::serverThreadDeinit(void)
+	{
+		m_threadContextPool->resetForCurrentThread();
 	}
 }

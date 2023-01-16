@@ -192,10 +192,17 @@ namespace TheWorld_Utils
 #endif
 	};
 	
+	class ThreadInitDeinit
+	{
+		friend class ThreadPool;
+		virtual void threadInit(void) = 0;
+		virtual void threadDeinit(void) = 0;
+	};
+
 	class ThreadPool
 	{
 	public:
-		void Start(size_t num_threads = 0);
+		void Start(size_t num_threads = 0, const std::function<void()>* threadInitFunction = nullptr, const std::function<void()>* threadDeinitFunction = nullptr, ThreadInitDeinit* threadInitDeinit = nullptr);
 		void QueueJob(const std::function<void()>& job);
 		void Stop();
 		bool busy();
@@ -208,6 +215,9 @@ namespace TheWorld_Utils
 		std::condition_variable mutex_condition; // Allows threads to wait on new jobs or termination 
 		std::vector<std::thread> threads;
 		std::queue<std::function<void()>> jobs;
+		const std::function<void()>* m_threadInitFunction = nullptr;
+		const std::function<void()>* m_threadDeinitFunction = nullptr;
+		ThreadInitDeinit* m_threadInitDeinit = nullptr;
 	};
 
 	std::string ToString(GUID* guid);
