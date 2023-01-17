@@ -229,7 +229,11 @@ namespace godot
 
 		~Quadrant()
 		{
+			//TheWorld_Utils::TimerMs clock;
+			//clock.tick();
 			m_vectGridVertices.clear();
+			//clock.tock();
+			//godot::GDN_TheWorld_Globals::s_elapsed1 += clock.duration().count();
 		}
 
 		_declspec(dllexport) void populateGridVertices(float initialViewerPosX, float initialViewerPosZ, bool setCamera, float cameraDistanceFromTerrain);

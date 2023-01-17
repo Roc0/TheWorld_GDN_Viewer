@@ -190,9 +190,25 @@ void GDN_TheWorld_Viewer::deinit(void)
 		if (m_streamerThread.joinable())
 			m_streamerThread.join();
 
+		//{
+		//	godot::GDN_TheWorld_Globals::s_num = 0;
+		//	godot::GDN_TheWorld_Globals::s_elapsed1 = 0;
+		//	godot::GDN_TheWorld_Globals::s_elapsed2 = 0;
+		//	godot::GDN_TheWorld_Globals::s_elapsed3 = 0;
+		//	godot::GDN_TheWorld_Globals::s_elapsed4 = 0;
+		//	godot::GDN_TheWorld_Globals::s_elapsed5 = 0;
+		//}
 		m_mapQuadTree.clear();
+		//{
+		//	size_t el1 = godot::GDN_TheWorld_Globals::s_elapsed1 / godot::GDN_TheWorld_Globals::s_num;
+		//	size_t el2 = godot::GDN_TheWorld_Globals::s_elapsed2 / godot::GDN_TheWorld_Globals::s_num;
+		//	size_t el3 = godot::GDN_TheWorld_Globals::s_elapsed3 / godot::GDN_TheWorld_Globals::s_num;
+		//	size_t el4 = godot::GDN_TheWorld_Globals::s_elapsed4 / godot::GDN_TheWorld_Globals::s_num;
+		//	size_t el5 = godot::GDN_TheWorld_Globals::s_elapsed5 / godot::GDN_TheWorld_Globals::s_num;
+		//	size_t el = godot::GDN_TheWorld_Globals::s_elapsed1 / godot::GDN_TheWorld_Globals::s_num;
+		//}
 		m_meshCache.reset();
-		
+
 		m_initialized = false;
 		PLOGI << "TheWorld Viewer Deinitialized!";
 		

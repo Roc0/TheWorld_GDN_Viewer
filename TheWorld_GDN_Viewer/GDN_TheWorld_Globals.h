@@ -384,6 +384,14 @@ namespace godot
 		GDN_TheWorld_Viewer* Viewer(bool useCache = true);
 		GDN_TheWorld_Globals_Client* Client(void) { return m_client; }
 
+		// DEBUG
+		//static size_t s_num;
+		//static size_t s_elapsed1;
+		//static size_t s_elapsed2;
+		//static size_t s_elapsed3;
+		//static size_t s_elapsed4;
+		//static size_t s_elapsed5;
+
 	private:
 		bool m_initialized;
 		enum class TheWorldStatus m_status;

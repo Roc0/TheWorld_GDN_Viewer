@@ -561,11 +561,11 @@ namespace TheWorld_Utils
 
 #endif
 
-	void ThreadPool::Start(size_t num_threads, const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction, ThreadInitDeinit* threadInitDeinit)
+	void ThreadPool::Start(size_t num_threads, /*const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction,*/ ThreadInitDeinit* threadInitDeinit)
 	{
 		m_threadInitDeinit = threadInitDeinit;
-		m_threadInitFunction = threadInitFunction;
-		m_threadDeinitFunction = threadDeinitFunction;
+		//m_threadInitFunction = threadInitFunction;
+		//m_threadDeinitFunction = threadDeinitFunction;
 		uint32_t _num_threads = (uint32_t)num_threads;
 		if (_num_threads <= 0)
 			_num_threads  = std::thread::hardware_concurrency(); // Max # of threads the system supports

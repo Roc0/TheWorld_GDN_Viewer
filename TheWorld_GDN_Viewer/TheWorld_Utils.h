@@ -202,7 +202,7 @@ namespace TheWorld_Utils
 	class ThreadPool
 	{
 	public:
-		void Start(size_t num_threads = 0, const std::function<void()>* threadInitFunction = nullptr, const std::function<void()>* threadDeinitFunction = nullptr, ThreadInitDeinit* threadInitDeinit = nullptr);
+		void Start(size_t num_threads = 0, /*const std::function<void()>* threadInitFunction = nullptr, const std::function<void()>* threadDeinitFunction = nullptr,*/ ThreadInitDeinit* threadInitDeinit = nullptr);
 		void QueueJob(const std::function<void()>& job);
 		void Stop();
 		bool busy();
@@ -215,8 +215,8 @@ namespace TheWorld_Utils
 		std::condition_variable mutex_condition; // Allows threads to wait on new jobs or termination 
 		std::vector<std::thread> threads;
 		std::queue<std::function<void()>> jobs;
-		const std::function<void()>* m_threadInitFunction = nullptr;
-		const std::function<void()>* m_threadDeinitFunction = nullptr;
+		//const std::function<void()>* m_threadInitFunction = nullptr;
+		//const std::function<void()>* m_threadDeinitFunction = nullptr;
 		ThreadInitDeinit* m_threadInitDeinit = nullptr;
 	};
 

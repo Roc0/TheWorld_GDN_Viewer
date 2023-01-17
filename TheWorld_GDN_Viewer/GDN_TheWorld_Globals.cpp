@@ -35,6 +35,14 @@ const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_amber = godot::Co
 const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_apricot = godot::Color(251.0F / 255, 206.0F / 255, 177.0F / 255);
 const godot::Color godot::GDN_TheWorld_Globals::g_color_black = godot::Color(0.0F / 255, 0.0F / 255, 0.0F / 255);
 
+// DEBUG
+//size_t godot::GDN_TheWorld_Globals::s_num = 0;
+//size_t godot::GDN_TheWorld_Globals::s_elapsed1 = 0;
+//size_t godot::GDN_TheWorld_Globals::s_elapsed2 = 0;
+//size_t godot::GDN_TheWorld_Globals::s_elapsed3 = 0;
+//size_t godot::GDN_TheWorld_Globals::s_elapsed4 = 0;
+//size_t godot::GDN_TheWorld_Globals::s_elapsed5 = 0;
+
 namespace godot
 {
 	std::string GDN_TheWorld_Globals::getClientDataDir(void)

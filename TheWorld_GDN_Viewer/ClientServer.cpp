@@ -383,10 +383,10 @@ namespace TheWorld_ClientServer
 
 		m_threadContextPool = make_unique<ServerThreadContextPool>(m_sev);
 		
-		std::function<void(void)> threadInitFunction = std::bind(&ServerInterface::serverThreadInit, this);
-		std::function<void(void)> threadDeinitFunction = std::bind(&ServerInterface::serverThreadDeinit, this);
-		m_tpSlowExecutions.Start(2, &threadInitFunction, &threadDeinitFunction, this);
-		m_tp.Start(2, &threadInitFunction, &threadDeinitFunction, this);
+		//std::function<void(void)> threadInitFunction = std::bind(&ServerInterface::serverThreadInit, this);
+		//std::function<void(void)> threadDeinitFunction = std::bind(&ServerInterface::serverThreadDeinit, this);
+		m_tpSlowExecutions.Start(2, /*&threadInitFunction, &threadDeinitFunction,*/ this);
+		m_tp.Start(2, /*&threadInitFunction, &threadDeinitFunction,*/ this);
 		
 		PLOG_INFO << "ServerInterface::onConnect - Server connected";
 		return THEWORLD_CLIENTSERVER_RC_OK;

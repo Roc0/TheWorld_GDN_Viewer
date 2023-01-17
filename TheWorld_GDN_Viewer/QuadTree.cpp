@@ -15,6 +15,8 @@
 using namespace godot;
 namespace fs = std::filesystem;
 
+//extern int g_num = 0;
+
 // QuadTree coordinates are local to Viewer Node which contains the grid of quads: the first chunk (posX = posZ = 0) has its lower vertex in the origin of the Viwer Node
 
 Quad::Quad(int slotPosX, int slotPosZ, int lod, enum PosInQuad posInQuad, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
@@ -189,6 +191,10 @@ void QuadTree::onGlobalTransformChanged(void)
 
 QuadTree::~QuadTree()
 {
+	//godot::GDN_TheWorld_Globals::s_num++;
+	//TheWorld_Utils::TimerMs clock;
+	//clock.tick();
+
 	if (m_GDN_Quadrant)
 	{
 		m_GDN_Quadrant->deinit();
@@ -199,11 +205,21 @@ QuadTree::~QuadTree()
 		m_GDN_Quadrant = nullptr;
 	}
 
+	//clock.tock();
+	//godot::GDN_TheWorld_Globals::s_elapsed1 += clock.duration().count();
+
+	//clock.tick();
 	m_root.reset();
-	
+	//clock.tock();
+	//godot::GDN_TheWorld_Globals::s_elapsed2 += clock.duration().count();
+
+	//clock.tick();
 	clearChunkUpdate();
-	
+	//clock.tock();
+	//godot::GDN_TheWorld_Globals::s_elapsed3 += clock.duration().count();
+
 	// Delete all Chunks
+	//clock.tick();
 	for (Chunk::MapChunk::iterator it = m_mapChunk.begin(); it != m_mapChunk.end(); it++)
 	{
 		for (Chunk::MapChunkPerLod::iterator it1 = it->second.begin(); it1 != it->second.end(); it1++)
@@ -213,9 +229,14 @@ QuadTree::~QuadTree()
 		it->second.clear();
 	}
 	m_mapChunk.clear();
+	//clock.tock();
+	//godot::GDN_TheWorld_Globals::s_elapsed4 += clock.duration().count();
 
+	//clock.tick();
 	if (m_worldQuadrant)
 		delete m_worldQuadrant;
+	//clock.tock();
+	//godot::GDN_TheWorld_Globals::s_elapsed5 += clock.duration().count();
 }
 
 void QuadTree::ForAllChunk(Chunk::ChunkAction& chunkAction)
