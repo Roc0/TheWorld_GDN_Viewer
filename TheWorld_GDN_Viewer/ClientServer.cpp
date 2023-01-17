@@ -374,7 +374,7 @@ namespace TheWorld_ClientServer
 		s_staticServerInitializationMtx.lock();
 		if (!s_staticServerInitializationDone)
 		{
-			// Actually empty
+			TheWorld_MapManager::MapManager::staticInit(nullptr, plog::info, plog::get());
 			s_staticServerInitializationDone = true;
 		}
 		s_staticServerInitializationMtx.unlock();
@@ -401,6 +401,7 @@ namespace TheWorld_ClientServer
 			m_threadContextPool.reset();
 			m_client = nullptr;
 			PLOG_INFO << "ServerInterface::onDisconnect - Server Disconnected";
+			TheWorld_MapManager::MapManager::staticDeinit();
 		}
 	}
 
@@ -434,7 +435,7 @@ namespace TheWorld_ClientServer
 					return;
 				}
 				plog::Severity sev = plog::Severity(*i);
-				m_threadContextPool->getCurrentContext()->getMapManager()->setLogMaxSeverity(sev);
+				TheWorld_MapManager::MapManager::setLogMaxSeverity(sev);
 				reply->replyComplete();
 			}
 			else if (method == THEWORLD_CLIENTSERVER_METHOD_SERVER_INITIALIZATION)
@@ -446,9 +447,8 @@ namespace TheWorld_ClientServer
 					return;
 				}
 				plog::Severity sev = plog::Severity(*i);
-				TheWorld_MapManager::MapManager* mapManager = m_threadContextPool->getCurrentContext()->getMapManager();
-				mapManager->setLogMaxSeverity(sev);
-				float f = mapManager->gridStepInWU();
+				TheWorld_MapManager::MapManager::setLogMaxSeverity(sev);
+				float f = m_threadContextPool->getCurrentContext()->getMapManager()->gridStepInWU();
 				reply->replyParam(f);
 				reply->replyComplete();
 			}

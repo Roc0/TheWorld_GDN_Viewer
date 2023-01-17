@@ -190,7 +190,8 @@ namespace godot
 		m_bAppInError = false;
 		m_lastErrorCode = 0;
 
-		assert(resize(THEWORLD_VIEWER_CHUNK_SIZE_SHIFT, THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT, true));
+		bool b = resize(THEWORLD_VIEWER_CHUNK_SIZE_SHIFT, THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT, true);
+		assert(b);
 
 		//m_mapManager = NULL;
 		m_client = nullptr;

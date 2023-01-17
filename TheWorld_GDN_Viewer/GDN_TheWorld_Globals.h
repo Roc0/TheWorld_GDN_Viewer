@@ -285,6 +285,8 @@ namespace godot
 		// Number of vertices of the side of a chunk (-1) which is fixed (not a function of the lod) and is a multiple of 2
 		int numVerticesPerChuckSide(void)
 		{
+			if (m_numVerticesPerChuckSide == 0)
+				PLOG_DEBUG << "Ahi ahi m_numVerticesPerChuckSide == 0";
 			return m_numVerticesPerChuckSide; /* m_numVerticesPerChuckSide = 32 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 */
 		}	// Chunk num vertices -1
 		

@@ -46,6 +46,7 @@ namespace TheWorld_ClientServer
 		ServerThreadContext(plog::Severity sev)
 		{
 			m_sev = sev;
+			//TheWorld_MapManager::MapManager* mapManager = getMapManager();
 		}
 
 		~ServerThreadContext()
