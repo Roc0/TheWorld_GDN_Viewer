@@ -127,7 +127,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0;..\..\TheWorld_Utils</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
@@ -136,7 +136,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\bin;$(SolutionDir)x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgodot-cpp.windows.debug.64.lib;TheWorld_MapManager_d.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libgodot-cpp.windows.debug.64.lib;TheWorld_MapManager_d.lib;TheWorld_Utils_d.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -149,7 +149,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0;..\..\TheWorld_Utils;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
@@ -160,7 +160,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
       <AdditionalLibraryDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\bin;$(SolutionDir)x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libgodot-cpp.windows.release.64.lib;TheWorld_MapManager.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libgodot-cpp.windows.release.64.lib;TheWorld_MapManager.lib;TheWorld_Utils.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -178,7 +178,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="GDN_TheWorld_Viewer.h" />
     <ClInclude Include="QuadTree.h" />
-    <ClInclude Include="TheWorld_Utils.h" />
+    <ClInclude Include="Viewer_Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Chunk.cpp">
@@ -243,7 +243,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="TheWorld_Utils.cpp">
+    <ClCompile Include="Viewer_Utils.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>

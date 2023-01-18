@@ -5,7 +5,7 @@
 
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
-#include "TheWorld_Utils.h"
+#include "Viewer_Utils.h"
 
 #include <VisualServer.hpp>
 #include <World.hpp>
@@ -260,7 +260,7 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 			m_meshInstance->init(this);
 			m_meshInstance->add_to_group(GD_CHUNK_MESHINSTANCE_GROUP);
 			m_meshInstance->set_mesh(mesh);
-			std::string id = TheWorld_Utils::Utils::ReplaceString(getPos().getIdStr(), ":", "");
+			std::string id = TheWorld_Viewer_Utils::Utils::ReplaceString(getPos().getIdStr(), ":", "");
 			String name = String("Chunk_") + String(id.c_str());
 			m_meshInstance->set_name(name);
 			m_viewer->add_child(m_meshInstance);
@@ -609,8 +609,8 @@ void Chunk::getGlobalCoordAABB(AABB& aabb, int firstWorldVertCol, int lastWorldV
 			}
 			else
 			{
-				minHeigth = TheWorld_Utils::Utils::min2(minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
-				maxHeigth = TheWorld_Utils::Utils::max2(maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
+				minHeigth = TheWorld_Viewer_Utils::Utils::min2(minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
+				maxHeigth = TheWorld_Viewer_Utils::Utils::max2(maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
 			}
 		}
 	}
@@ -951,7 +951,7 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 			m_debugMeshInstance = MeshInstance::_new();
 			m_debugMeshInstance->add_to_group(GD_DEBUGCHUNK_MESHINSTANCE_GROUP);
 			m_debugMeshInstance->set_mesh(mesh);
-			string id = TheWorld_Utils::Utils::ReplaceString(getPos().getIdStr(), ":", "");
+			string id = TheWorld_Viewer_Utils::Utils::ReplaceString(getPos().getIdStr(), ":", "");
 			String name = String("ChunkDebug_") + String(id.c_str());
 			m_debugMeshInstance->set_name(name);
 			m_viewer->add_child(m_debugMeshInstance);

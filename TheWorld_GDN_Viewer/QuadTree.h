@@ -222,14 +222,14 @@ namespace godot
 			m_viewer = viewer;
 			m_quadTree = quadTree;
 			std::string dir = GDN_TheWorld_Globals::getClientDataDir();
-			m_cache = TheWorld_Utils::MeshCacheBuffer(dir, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
+			m_cache = TheWorld_Viewer_Utils::MeshCacheBuffer(dir, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
 			m_shaderTerrainData = make_unique<ShaderTerrainData>(viewer, quadTree);
 			m_collider = make_unique<Collider>(quadTree);
 		}
 
 		~Quadrant()
 		{
-			//TheWorld_Utils::TimerMs clock;
+			//TheWorld_Viewer_Utils::TimerMs clock;
 			//clock.tick();
 			m_vectGridVertices.clear();
 			//clock.tock();
@@ -238,7 +238,7 @@ namespace godot
 
 		_declspec(dllexport) void populateGridVertices(float initialViewerPosX, float initialViewerPosZ, bool setCamera, float cameraDistanceFromTerrain);
 
-		std::vector<TheWorld_Utils::GridVertex>& getGridVertices(void)
+		std::vector<TheWorld_Viewer_Utils::GridVertex>& getGridVertices(void)
 		{
 			return m_vectGridVertices;
 		}
@@ -276,16 +276,16 @@ namespace godot
 		}
 
 	private:
-		TheWorld_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
+		TheWorld_Viewer_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
 
 	private:
 		QuadrantPos m_quadrantPos;
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
-		std::vector<TheWorld_Utils::GridVertex> m_vectGridVertices;
+		std::vector<TheWorld_Viewer_Utils::GridVertex> m_vectGridVertices;
 		PoolRealArray m_heigths;
 		std::string m_meshId;
-		TheWorld_Utils::MeshCacheBuffer m_cache;
+		TheWorld_Viewer_Utils::MeshCacheBuffer m_cache;
 		AABB m_globalCoordAABB;
 		std::unique_ptr<Collider> m_collider;
 		std::unique_ptr<ShaderTerrainData> m_shaderTerrainData;
@@ -546,7 +546,7 @@ namespace godot
 		{
 			if (m_status == QuadrantStatus::getVerticesInProgress)
 			{
-				TheWorld_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+				TheWorld_Viewer_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 				long long elapsedFromStatusChange = (now - m_lastStatusChange).count();
 				if (elapsedFromStatusChange > (THEWORLD_CLIENTSERVER_MAPVERTICES_TIME_TO_LIVE * 2))
 					m_status = QuadrantStatus::uninitialized;
@@ -555,7 +555,7 @@ namespace godot
 		}
 		void setStatus(enum class QuadrantStatus status)
 		{
-			m_lastStatusChange = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+			m_lastStatusChange = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 			m_status = status;
 		}
 		bool isValid(void)
@@ -612,7 +612,7 @@ namespace godot
 	private:
 		enum class QuadrantStatus m_status;
 		std::recursive_mutex m_mtxQuadrant;
-		TheWorld_Utils::MsTimePoint m_lastStatusChange;
+		TheWorld_Viewer_Utils::MsTimePoint m_lastStatusChange;
 		bool m_isVisible;
 		string m_tag;
 		std::unique_ptr<Quad> m_root;

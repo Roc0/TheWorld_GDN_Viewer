@@ -1,6 +1,6 @@
 //#include "pch.h"
 #include "QuadTree.h"
-#include "TheWorld_Utils.h"
+#include "Viewer_Utils.h"
 
 #include <File.hpp>
 #include <OS.hpp>
@@ -147,13 +147,13 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantPos)
 
 void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
 {
-	//TheWorld_Utils::TimerMs clock;
+	//TheWorld_Viewer_Utils::TimerMs clock;
 	//clock.tick();
 
 	if (status() != QuadrantStatus::uninitialized)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Quadrant status not comply: " + std::to_string((int)status())).c_str()));
 
-	std::lock_guard lock(m_mtxQuadrant);
+	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadrant);
 
 	m_GDN_Quadrant = GDN_TheWorld_Quadrant::_new();
 	m_GDN_Quadrant->init(this);
@@ -164,7 +164,7 @@ void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float ca
 
 	setStatus(QuadrantStatus::getVerticesInProgress);
 
-	TheWorld_Utils::TimerMs clock1;
+	TheWorld_Viewer_Utils::TimerMs clock1;
 	clock1.tick();
 	m_worldQuadrant->populateGridVertices(viewerPosX, viewerPosZ, setCamera, cameraDistanceFromTerrain);
 	clock1.tock();	
@@ -192,7 +192,7 @@ void QuadTree::onGlobalTransformChanged(void)
 QuadTree::~QuadTree()
 {
 	//godot::GDN_TheWorld_Globals::s_num++;
-	//TheWorld_Utils::TimerMs clock;
+	//TheWorld_Viewer_Utils::TimerMs clock;
 	//clock.tick();
 
 	if (m_GDN_Quadrant)
@@ -648,7 +648,7 @@ void QuadTree::updateMaterialParams(void)
 
 	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
-		TheWorld_Utils::TimerMs clock;
+		TheWorld_Viewer_Utils::TimerMs clock;
 		clock.tick();
 		getQuadrant()->getShaderTerrainData()->updateMaterialParams();
 		clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
@@ -872,14 +872,14 @@ void ShaderTerrainData::init(void)
 void ShaderTerrainData::resetMaterialParams(void)
 {
 	std::recursive_mutex& quadrantMutex = m_quadTree->getQuadrantMutex();
-	std::lock_guard lock(quadrantMutex);
+	std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
 	
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
 
 	bool loadingHeighmapOK = false;
-	m_heightMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingHeighmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
+	m_heightMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingHeighmapOK, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::heightmap);
 	bool loadingNormalmapOK = false;
-	m_normalMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingNormalmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
+	m_normalMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingNormalmapOK, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::normalmap);
 
 	if (!loadingHeighmapOK || !loadingNormalmapOK)
 	{
@@ -898,7 +898,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 		}
 
 		{
-			std::vector<TheWorld_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
+			std::vector<TheWorld_Viewer_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
 
 			// Filling Heightmap Map Texture , Normal Map Texture
 			assert(_resolution == m_heightMapImage->get_height());
@@ -986,8 +986,8 @@ void ShaderTerrainData::resetMaterialParams(void)
 			m_normalMapImage->unlock();
 			m_heightMapImage->unlock();
 
-			m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_heightMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
-			m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_normalMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
+			m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_heightMapImage, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::heightmap);
+			m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_normalMapImage, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::normalmap);
 
 			//{
 			//	
@@ -1232,7 +1232,7 @@ size_t QuadrantPos::distanceInPerimeter(QuadrantPos& q)
 		return distanceOnZ;
 }
 
-TheWorld_Utils::MeshCacheBuffer& Quadrant::getMeshCacheBuffer(void)
+TheWorld_Viewer_Utils::MeshCacheBuffer& Quadrant::getMeshCacheBuffer(void)
 {
 	return m_cache;
 }
@@ -1240,7 +1240,7 @@ TheWorld_Utils::MeshCacheBuffer& Quadrant::getMeshCacheBuffer(void)
 void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
 {
 	BYTE shortBuffer[256 + 1];
-	//TheWorld_Utils::TimerMs clock;
+	//TheWorld_Viewer_Utils::TimerMs clock;
 
 	//{
 	//	GridVertex v(0.12F, 0.1212F, 0.1313F, 1);
@@ -1253,7 +1253,7 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	//}
 
 	size_t serializedVertexSize = 0;
-	TheWorld_Utils::GridVertex v;
+	TheWorld_Viewer_Utils::GridVertex v;
 	// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
 	v.serialize(shortBuffer, serializedVertexSize);
 
@@ -1265,7 +1265,7 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	std::string buffGridVertices;
 
 	// look for cache in file system
-	TheWorld_Utils::MeshCacheBuffer cache = getMeshCacheBuffer();
+	TheWorld_Viewer_Utils::MeshCacheBuffer cache = getMeshCacheBuffer();
 	std::string meshId = cache.getMeshIdFromMeshCache();
 
 	if (meshId.length() > 0)

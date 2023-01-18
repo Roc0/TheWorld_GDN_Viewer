@@ -14,7 +14,7 @@
 #include "ClientServer.h"
 //#include "QuadTree.h"
 //#include <MapManager.h>
-#include "TheWorld_Utils.h"
+#include "Viewer_Utils.h"
 
 #define THEWORLD_VIEWER_CHUNK_SIZE_SHIFT				5
 #define THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT		11	/* 10 */

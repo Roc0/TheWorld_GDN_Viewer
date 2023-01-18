@@ -4,13 +4,13 @@
 	#include <ResourceLoader.hpp>
 	#include <File.hpp>
 #endif
-#include "TheWorld_Utils.h"
+#include "Viewer_Utils.h"
 #include <filesystem>
 #include <string>
 
 namespace fs = std::filesystem;
 
-namespace TheWorld_Utils
+namespace TheWorld_Viewer_Utils
 {
 	MeshCacheBuffer::MeshCacheBuffer(void)
 	{
@@ -66,7 +66,7 @@ namespace TheWorld_Utils
 
 		// get size of a size_t
 		size_t size_tSize;
-		TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_tSize);
+		TheWorld_Viewer_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_tSize);
 
 		// read the serialized size of the mesh id
 		if (fread(shortBuffer, size_tSize, 1, inFile) != 1)
@@ -75,7 +75,7 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
 		}
 		// and deserialize it
-		size_t meshIdSize = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
+		size_t meshIdSize = TheWorld_Viewer_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
 
 		// read the mesh id
 		if (fread(shortBuffer, meshIdSize, 1, inFile) != 1)
@@ -91,7 +91,7 @@ namespace TheWorld_Utils
 		return m_meshId;
 	}
 
-	void MeshCacheBuffer::refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY)
+	void MeshCacheBuffer::refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY)
 	{
 		size_t size = 0;
 
@@ -100,7 +100,7 @@ namespace TheWorld_Utils
 
 		movingStreamBuffer++;	// bypass "0"
 
-		size_t meshIdSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+		size_t meshIdSize = TheWorld_Viewer_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		movingStreamBuffer += size;
 
 		meshIdFromBuffer = std::string(movingStreamBuffer, meshIdSize);
@@ -108,7 +108,7 @@ namespace TheWorld_Utils
 
 		m_meshId = meshIdFromBuffer;
 
-		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+		size_t vectSize = TheWorld_Viewer_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		movingStreamBuffer += size;
 
 #ifdef _THEWORLD_CLIENT
@@ -128,7 +128,7 @@ namespace TheWorld_Utils
 				if (idx >= vectSize)
 					throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str())); 
 
-				TheWorld_Utils::GridVertex v = TheWorld_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
+				TheWorld_Viewer_Utils::GridVertex v = TheWorld_Viewer_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
 				//vectGridVertices.push_back(v);
 				vectGridVertices[idx] = v;
 #ifdef _THEWORLD_CLIENT
@@ -153,7 +153,7 @@ namespace TheWorld_Utils
 #ifdef _THEWORLD_CLIENT
 			{
 				// SUPERDEBUGRIC
-				//TheWorld_Utils::TimerMs clock("MeshCacheBuffer::refreshMeshCacheFromBuffer", m_meshId.c_str(), false, true);
+				//TheWorld_Viewer_Utils::TimerMs clock("MeshCacheBuffer::refreshMeshCacheFromBuffer", m_meshId.c_str(), false, true);
 								
 				//clock.tick();
 				//godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
@@ -164,7 +164,7 @@ namespace TheWorld_Utils
 				//	for (int x = 0; x < res; x++)
 				//	{
 				//		godot::Color c = image->get_pixel(x, z);
-				//		TheWorld_Utils::GridVertex& v = vectGridVertices[z * res + x];
+				//		TheWorld_Viewer_Utils::GridVertex& v = vectGridVertices[z * res + x];
 				//		v.setAltitude(c.r * 3);
 				//	}
 				//image->unlock();
@@ -227,7 +227,7 @@ namespace TheWorld_Utils
 
 		// get size of a size_t
 		size_t size_tSize;
-		TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_tSize);
+		TheWorld_Viewer_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_tSize);
 
 		// read the serialized size of the mesh id
 		if (fread(shortBuffer, size_tSize, 1, inFile) != 1)
@@ -236,7 +236,7 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 2!").c_str()));
 		}
 		// and deserialize it
-		size_t meshIdSize = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
+		size_t meshIdSize = TheWorld_Viewer_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
 
 		// read the mesh id
 		if (fread(shortBuffer, meshIdSize, 1, inFile) != 1)
@@ -262,11 +262,11 @@ namespace TheWorld_Utils
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Read error 4!").c_str()));
 		}
 		// and deserialize it
-		vectSizeFromCache = TheWorld_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
+		vectSizeFromCache = TheWorld_Viewer_Utils::deserializeFromByteStream<size_t>(shortBuffer, size);
 
 		// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
 		size_t serializedVertexSize = 0;
-		TheWorld_Utils::GridVertex v;
+		TheWorld_Viewer_Utils::GridVertex v;
 		v.serialize(shortBuffer, serializedVertexSize);
 
 		// alloc buffer to contain the serialized entire vector of GridVertex
@@ -296,7 +296,7 @@ namespace TheWorld_Utils
 		::free(streamBuffer);
 	}
 		
-	void MeshCacheBuffer::readVerticesFromMeshCache(std::string _meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY)
+	void MeshCacheBuffer::readVerticesFromMeshCache(std::string _meshId, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY)
 	{
 		std::string buffer;
 		size_t vectSizeFromCache;
@@ -309,7 +309,7 @@ namespace TheWorld_Utils
 
 		movingStreamBuffer++;	// bypass "0"
 
-		size_t meshIdSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+		size_t meshIdSize = TheWorld_Viewer_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		movingStreamBuffer += size;
 
 		std::string meshId = std::string((char*)movingStreamBuffer, meshIdSize);
@@ -322,7 +322,7 @@ namespace TheWorld_Utils
 
 		m_meshId = meshId;
 
-		size_t vectSize = TheWorld_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
+		size_t vectSize = TheWorld_Viewer_Utils::deserializeFromByteStream<size_t>((BYTE*)movingStreamBuffer, size);
 		//size_t heightsArraySize = (m_numVerticesPerSize * m_gridStepInWU) * (m_numVerticesPerSize * m_gridStepInWU);
 		movingStreamBuffer += size;
 		
@@ -341,7 +341,7 @@ namespace TheWorld_Utils
 			if (idx >= vectSize)
 				throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str())); 
 
-			TheWorld_Utils::GridVertex v = TheWorld_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
+			TheWorld_Viewer_Utils::GridVertex v = TheWorld_Viewer_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
 			//vectGridVertices.push_back(v);
 			vectGridVertices[idx] = v;
 #ifdef _THEWORLD_CLIENT
@@ -392,17 +392,17 @@ namespace TheWorld_Utils
 #endif
 	}
 		
-	void MeshCacheBuffer::setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, std::string& buffer)
+	void MeshCacheBuffer::setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, std::string& buffer)
 	{
 		BYTE shortBuffer[256 + 1];
 
 		// get size of a size_t
 		size_t size_tSize;
-		TheWorld_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_tSize);
+		TheWorld_Viewer_Utils::serializeToByteStream<size_t>(0, shortBuffer, size_tSize);
 
 		// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
 		size_t serializedVertexSize = 0;
-		TheWorld_Utils::GridVertex v;
+		TheWorld_Viewer_Utils::GridVertex v;
 		v.serialize(shortBuffer, serializedVertexSize);
 
 		size_t vectSize = vectGridVertices.size();
@@ -417,21 +417,21 @@ namespace TheWorld_Utils
 		streamBufferIterator++;
 
 		size_t size = 0;
-		TheWorld_Utils::serializeToByteStream<size_t>(meshId.length(), streamBuffer + streamBufferIterator, size);
+		TheWorld_Viewer_Utils::serializeToByteStream<size_t>(meshId.length(), streamBuffer + streamBufferIterator, size);
 		streamBufferIterator += size;
 
 		memcpy(streamBuffer + streamBufferIterator, meshId.c_str(), meshId.length());
 		streamBufferIterator += meshId.length();
 
 		size = 0;
-		TheWorld_Utils::serializeToByteStream<size_t>(vectSize, streamBuffer + streamBufferIterator, size);
+		TheWorld_Viewer_Utils::serializeToByteStream<size_t>(vectSize, streamBuffer + streamBufferIterator, size);
 		streamBufferIterator += size;
 
 		if (vectSize != 0)
 			for (int z = 0; z < numVerticesPerSize; z++)			// m_heightMapImage->get_height()
 				for (int x = 0; x < numVerticesPerSize; x++)		// m_heightMapImage->get_width()
 				{
-					TheWorld_Utils::GridVertex& v = vectGridVertices[z * numVerticesPerSize + x];
+					TheWorld_Viewer_Utils::GridVertex& v = vectGridVertices[z * numVerticesPerSize + x];
 					v.serialize(streamBuffer + streamBufferIterator, size);
 					streamBufferIterator += size;
 				}

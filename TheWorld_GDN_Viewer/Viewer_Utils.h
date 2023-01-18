@@ -37,7 +37,7 @@ static constexpr float kEpsilon = 0.0001f;
 static constexpr float kAreaEpsilon = FLT_EPSILON;
 static constexpr float kNormalEpsilon = 0.001f;
 
-namespace TheWorld_Utils
+namespace TheWorld_Viewer_Utils
 {
 	template <class TimeT = std::chrono::milliseconds, class ClockT = std::chrono::steady_clock> class Timer
 	{
@@ -146,11 +146,11 @@ namespace TheWorld_Utils
 		MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
 
 		std::string getMeshIdFromMeshCache(void);
-		void refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
+		void refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
 		void readBufferFromMeshCache(std::string meshId, std::string& buffer, size_t& vectSizeFromCache);
-		void readVerticesFromMeshCache(std::string meshId, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
+		void readVerticesFromMeshCache(std::string meshId, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
 		void writeBufferToMeshCache(std::string buffer);
-		void setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, std::vector<TheWorld_Utils::GridVertex>& vectGridVertices, std::string& buffer);
+		void setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, std::string& buffer);
 		//std::string getCacheDir()
 		//{
 		//	return m_cacheDir;
@@ -591,6 +591,6 @@ namespace TheWorld_Utils
 static bool equal(const float f0, const float f1, const float epsilon = 0.00001)
 {
 	//return fabs(f0-f1) <= epsilon;
-	return fabs(f0 - f1) <= epsilon * TheWorld_Utils::Utils::max3(1.0f, fabsf(f0), fabsf(f1));
+	return fabs(f0 - f1) <= epsilon * TheWorld_Viewer_Utils::Utils::max3(1.0f, fabsf(f0), fabsf(f1));
 }
 

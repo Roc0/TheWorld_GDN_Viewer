@@ -18,6 +18,7 @@
 
 #include "MeshCache.h"
 #include "QuadTree.h"
+#include "Profiler.h"
 
 #include <algorithm>
 
@@ -231,7 +232,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 	{
 		if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
 		{
-			TheWorld_Utils::TimerMs clock("GDN_TheWorld_Viewer::replyFromServer", "CLIENT SIDE", false, true);
+			TheWorld_Viewer_Utils::TimerMs clock("GDN_TheWorld_Viewer::replyFromServer", "CLIENT SIDE", false, true);
 			
 			//clock.headerMsg("MapManager::getVertices - Acq input");
 			//clock.tick();
@@ -346,7 +347,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 			//clock.headerMsg("MapManager::getVertices - Lock m_mtxQuadTree");
 			//clock.tick();
-			//std::lock_guard lock(m_mtxQuadTree);
+			//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 			m_mtxQuadTree.lock();
 			//clock.tock();
 			if (m_mapQuadTree.contains(quadrantPos))
@@ -358,23 +359,23 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					//clock.headerMsg("MapManager::getVertices - Lock quadrantMutex");
 					//clock.tick();
 					std::recursive_mutex& quadrantMutex = quadTree->getQuadrantMutex();
-					std::lock_guard lock(quadrantMutex);
+					std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
 					//clock.tock();
 
 					std::string meshIdFromBuffer;
 					{
 						// ATTENZIONE
-						//std::lock_guard lock(m_mtxQuadTree);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
+						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
 						quadTree->getQuadrant()->refreshGridVertices(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer);
 					}
 					
-					std::vector<TheWorld_Utils::GridVertex>& vectGridVertices = quadTree->getQuadrant()->getGridVertices();
+					std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices = quadTree->getQuadrant()->getGridVertices();
 
 					//clock.headerMsg("MapManager::getVertices - resetMaterialParams");
 					//clock.tick();
 					{
 						// ATTENZIONE
-						//std::lock_guard lock(m_mtxQuadTree);
+						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 						quadTree->materialParamsNeedReset(true);
 						//quadTree->resetMaterialParams();
 					}
@@ -387,8 +388,8 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 						forceRefreshMapQuadTree();
 
-						TheWorld_Utils::GridVertex viewerPos(viewerPosX, 0, viewerPosZ, level);
-						std::vector<TheWorld_Utils::GridVertex>::iterator it = std::find(vectGridVertices.begin(), vectGridVertices.end(), viewerPos);
+						TheWorld_Viewer_Utils::GridVertex viewerPos(viewerPosX, 0, viewerPosZ, level);
+						std::vector<TheWorld_Viewer_Utils::GridVertex>::iterator it = std::find(vectGridVertices.begin(), vectGridVertices.end(), viewerPos);
 						if (it == vectGridVertices.end())
 						{
 							bool found = false;
@@ -586,7 +587,7 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 			}
 			//if (m_initialWordlViewerPosSet)
 			//{
-			std::lock_guard lock(m_mtxQuadTree);
+			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
 				if (!itQuadTree->second->isValid())
@@ -610,7 +611,7 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 				globals->debugPrint("Exit world");
 			//if (m_initialWordlViewerPosSet)
 			//{
-			std::lock_guard lock(m_mtxQuadTree);
+			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
 				if (!itQuadTree->second->isValid())
@@ -635,7 +636,7 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 				globals->debugPrint("Visibility changed");
 			//if (m_initialWordlViewerPosSet)
 			//{
-			std::lock_guard lock(m_mtxQuadTree);
+			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
 				if (!itQuadTree->second->isValid())
@@ -705,7 +706,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (!activeCamera)
 		return;
 
-	//std::lock_guard lock(m_mtxQuadTree);
+	//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
 	if (!lock.owns_lock())
 	{
@@ -713,9 +714,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		return;
 	}
 
-	TheWorld_Utils::TimerMcs clock;
+	TheWorld_Viewer_Utils::TimerMcs clock;
 	clock.tick();
-	auto save_duration = TheWorld_Utils::finally([&clock, this] {
+	auto save_duration = TheWorld_Viewer_Utils::finally([&clock, this] {
 		clock.tock(); 
 		this->m_numProcessExecution++; 
 		this->m_processDuration += clock.duration().count();
@@ -784,9 +785,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		// if forced or the camera has changed quadrant the cache is repopulated
 		if (m_refreshMapQuadTree || m_computedCameraQuadrantPos != quadrantPosNeeded[0])
 		{
-			TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, false);
+			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, false);
 			clock1.tick();
-			auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
 				clock1.tock();
 				this->m_numRefreshMapQuad++;
 				this->m_RefreshMapQuadDuration += clock1.duration().count();
@@ -937,9 +938,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
 		{
-			TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Track Mouse Chunk", false, false);
+			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Track Mouse Chunk", false, false);
 			clock1.tick();
-			auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
 				clock1.tock();
 				this->m_numMouseTrackHit++;
 				this->m_mouseTrackHitDuration += clock1.duration().count();
@@ -981,9 +982,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	
 	// UPDATE QUADS - Stage 1
 	{
-		TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 1", false, false);
+		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 1", false, false);
 		clock1.tick();
-		auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+		auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
 			clock1.tock();
 			this->m_numUpdateQuads1++;
 			this->m_updateQuads1Duration += clock1.duration().count();
@@ -1002,9 +1003,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 		// UPDATE QUADS - Stage 2
 		{
-			TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 2", false, false);
+			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 2", false, false);
 			clock1.tick();
-			auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
 				clock1.tock();
 			this->m_numUpdateQuads2++;
 			this->m_updateQuads2Duration += clock1.duration().count();
@@ -1022,9 +1023,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		else
 		{
 			// UPDATE QUADS - Stage 3
-			TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 3", false, false);
+			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 3", false, false);
 			clock1.tick();
-			auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
 				clock1.tock();
 			this->m_numUpdateQuads3++;
 			this->m_updateQuads3Duration += clock1.duration().count();
@@ -1051,9 +1052,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	// UPDATE CHUNKS
 	{
-		TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Chunks", false, false);
+		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Chunks", false, false);
 		clock1.tick();
-		auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+		auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
 			clock1.tock();
 			this->m_numUpdateChunks++;
 			this->m_updateChunksDuration += clock1.duration().count();
@@ -1542,9 +1543,9 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	}
 
 	{
-		TheWorld_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Material Params", false, false);
+		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Material Params", false, false);
 		clock1.tick();
-		auto save_duration = TheWorld_Utils::finally([&clock1, this] {
+		auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
 			clock1.tock();
 		this->m_numUpdateMaterialParams++;
 		this->m_updateMaterialParamsDuration += clock1.duration().count();
@@ -1704,7 +1705,7 @@ QuadTree* GDN_TheWorld_Viewer::getQuadTree(QuadrantPos pos)
 //
 //	Chunk* chunk = nullptr;
 //
-//	std::lock_guard lock(m_mtxQuadTree);
+//	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 //	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 //	{
 //		if (!itQuadTree->second->isValid())
@@ -1713,7 +1714,7 @@ QuadTree* GDN_TheWorld_Viewer::getQuadTree(QuadrantPos pos)
 //		if (!itQuadTree->second->isVisible())
 //			continue;
 //
-//		std::vector<TheWorld_Utils::GridVertex>& vertices = itQuadTree->second->getQuadrant()->getGridVertices();
+//		std::vector<TheWorld_Viewer_Utils::GridVertex>& vertices = itQuadTree->second->getQuadrant()->getGridVertices();
 //
 //		Point2 p1 = activeCamera->unproject_position(Vector3(vertices[0].posX(), vertices[0].altitude(), vertices[0].posZ()));
 //		Point2 p2 = activeCamera->unproject_position(Vector3(vertices[vertices.size() - 1].posX(), vertices[vertices.size() - 1].altitude(), vertices[vertices.size() - 1].posZ()));
@@ -2264,7 +2265,7 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 		QuadrantPos quadrantPos(x, z, level, m_numWorldVerticesPerSize, _gridStepInWU);
 		quadrantPos.setTag("Camera");
 
-		std::lock_guard lock(m_mtxQuadTree);
+		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 
 		m_mapQuadTree.clear();
 		m_mapQuadTree[quadrantPos] = make_unique<QuadTree>(this, quadrantPos);
@@ -2426,7 +2427,7 @@ String GDN_TheWorld_Viewer::getCameraQuadrantName(void)
 
 void GDN_TheWorld_Viewer::refreshQuadTreeStatistics()
 {
-	std::lock_guard lock(m_mtxQuadTree);
+	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 
 	int numSplits = 0;
 	int numJoins = 0;
@@ -2573,12 +2574,29 @@ void GDN_TheWorld_Viewer::dump()
 		Globals()->debugPrint("============================================");
 	}
 	
-	std::lock_guard lock(m_mtxQuadTree);
+	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
 		itQuadTree->second->dump();
 
+	}
+
+	std::vector<std::string> names = TheWorld_Utils::Profiler::names("");
+	if (names.size() > 0)
+	{
+		Globals()->debugPrint("== PROFILE DATA ==========================================");
+		for (auto& name : names)
+		{
+			size_t num = 0;
+			size_t elapsed = TheWorld_Utils::Profiler::elapsed("", name, num);
+			size_t avgElapsed = TheWorld_Utils::Profiler::averageElapsed("", name, num);
+			if (num > 0)
+			{
+				Globals()->debugPrint(String(name.c_str()) + " num=" + std::to_string(num).c_str() + " Elapsed=" + std::to_string(elapsed).c_str() + " Avg elapsed=" + std::to_string(avgElapsed).c_str());
+			}
+		}
+		Globals()->debugPrint("== PROFILE DATA ==========================================");
 	}
 
 	Globals()->debugPrint("DUMP COMPLETE");
@@ -2617,7 +2635,7 @@ void GDN_TheWorld_Viewer::streamer(void)
 	{
 		try
 		{
-			//std::lock_guard lock(m_mtxQuadTree);
+			//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 			std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
 			if (lock.owns_lock())
 			{

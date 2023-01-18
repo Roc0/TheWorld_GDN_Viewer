@@ -1,5 +1,5 @@
 //#include "pch.h"
-#include "TheWorld_Utils.h"
+#include "Viewer_Utils.h"
 
 #include "ClientServer.h"
 
@@ -17,7 +17,7 @@ namespace TheWorld_ClientServer
 
 	void ClientServerExecution::onExecMethodAsync(void)
 	{
-		TheWorld_Utils::TimerMs clock("ClientServerExecution::onExecMethodAsync", "SERVER SIDE " + m_method + " " + m_ref, false, true);
+		TheWorld_Viewer_Utils::TimerMs clock("ClientServerExecution::onExecMethodAsync", "SERVER SIDE " + m_method + " " + m_ref, false, true);
 		clock.tick();
 
 		serverExecutionStatus(ExecutionStatus::InProgress);
@@ -44,7 +44,7 @@ namespace TheWorld_ClientServer
 		if (m_expiredTimeToLive)
 			return true;
 
-		TheWorld_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+		TheWorld_Viewer_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 		long long elapsedFromStartOfClientMethod = (now - m_startExecution).count();
 		if (_elapsedFromStartOfClientMethod != nullptr)
 			*_elapsedFromStartOfClientMethod = elapsedFromStartOfClientMethod;
@@ -58,7 +58,7 @@ namespace TheWorld_ClientServer
 
 	void ClientServerExecution::callCallback(void)
 	{
-		TheWorld_Utils::TimerMs clock("ClientServerExecution::callCallback", "CLIENT SIDE " + m_method + " " + m_ref, false, true);
+		TheWorld_Viewer_Utils::TimerMs clock("ClientServerExecution::callCallback", "CLIENT SIDE " + m_method + " " + m_ref, false, true);
 		clock.tick();
 
 		clientExecutionStatus(ExecutionStatus::InProgress);
@@ -154,7 +154,7 @@ namespace TheWorld_ClientServer
 
 		{
 			std::lock_guard<std::recursive_mutex> lock(m_mtxReplyMap);
-			ref = TheWorld_Utils::ToString(&newId);
+			ref = TheWorld_Viewer_Utils::ToString(&newId);
 			m_ReplyMap[ref] = make_unique<ClientServerExecution>(method, inputParams, ref, this, m_server, timeToLive, clientCallbak);
 			
 			PLOG_DEBUG << "ClientInterface::execMethodAsync - " + method + " " + ref;
@@ -374,7 +374,7 @@ namespace TheWorld_ClientServer
 		s_staticServerInitializationMtx.lock();
 		if (!s_staticServerInitializationDone)
 		{
-			TheWorld_MapManager::MapManager::staticInit(nullptr, plog::info, plog::get());
+			TheWorld_MapManager::MapManager::staticInit(nullptr, plog::info, plog::get(), true);
 			s_staticServerInitializationDone = true;
 		}
 		s_staticServerInitializationMtx.unlock();
@@ -525,7 +525,7 @@ namespace TheWorld_ClientServer
 					return;
 				}
 
-				//TheWorld_Utils::TimerMs clock;
+				//TheWorld_Viewer_Utils::TimerMs clock;
 				//clock.tick();
 				float _gridStepInWU;
 				std::string meshBuffer;
@@ -553,7 +553,7 @@ namespace TheWorld_ClientServer
 				reply->replyComplete();
 			}
 		}
-		catch (TheWorld_Utils::GDN_TheWorld_Exception& e)
+		catch (TheWorld_Viewer_Utils::GDN_TheWorld_Exception& e)
 		{
 			reply->replyError(THEWORLD_CLIENTSERVER_RC_KO, e.exceptionName() + string(" caught - ") + e.what());
 		}

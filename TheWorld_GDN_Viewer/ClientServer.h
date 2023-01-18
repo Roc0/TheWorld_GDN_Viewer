@@ -1,7 +1,7 @@
 #pragma once
 
 #include <MapManager.h>
-#include "TheWorld_Utils.h"
+#include "Viewer_Utils.h"
 
 #include <string>
 #include <vector>
@@ -63,7 +63,7 @@ namespace TheWorld_ClientServer
 		{
 			if (m_mapManager == nullptr)
 			{
-				m_mapManager = make_unique<TheWorld_MapManager::MapManager>(nullptr, m_sev, plog::get(), nullptr, true);
+				m_mapManager = make_unique<TheWorld_MapManager::MapManager>(/*nullptr, m_sev, plog::get(),*/ nullptr, true);
 				m_mapManager->instrument(false);
 				m_mapManager->consoleDebugMode(false);
 			}
@@ -157,7 +157,7 @@ namespace TheWorld_ClientServer
 			m_client = client;
 			m_server = server;
 			m_clientCallback = callback;
-			m_startExecution = std::chrono::time_point_cast<TheWorld_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+			m_startExecution = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 			m_timeToLive = timeToLive;
 			if (m_timeToLive == -1)
 				m_timeToLive = THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE;
@@ -308,7 +308,7 @@ namespace TheWorld_ClientServer
 		ClientInterface* m_client;
 		ServerInterface* m_server;
 		ClientCallback* m_clientCallback;
-		TheWorld_Utils::MsTimePoint m_startExecution;
+		TheWorld_Viewer_Utils::MsTimePoint m_startExecution;
 		size_t m_timeToLive;
 		bool m_eraseMe;
 		bool m_expiredTimeToLive;
@@ -353,10 +353,10 @@ namespace TheWorld_ClientServer
 		std::thread m_receiverThread;
 		bool m_receiverThreadRequiredExit;
 		bool m_receiverThreadRunning;
-		TheWorld_Utils::ThreadPool m_tp;
+		TheWorld_Viewer_Utils::ThreadPool m_tp;
 	};
 
-	class ServerInterface : public TheWorld_Utils::ThreadInitDeinit
+	class ServerInterface : public TheWorld_Viewer_Utils::ThreadInitDeinit
 	{
 	public:
 		ServerInterface(plog::Severity sev);
@@ -386,8 +386,8 @@ namespace TheWorld_ClientServer
 		static std::recursive_mutex s_staticServerInitializationMtx;
 		ClientInterface* m_client;
 		plog::Severity m_sev;
-		TheWorld_Utils::ThreadPool m_tpSlowExecutions;
-		TheWorld_Utils::ThreadPool m_tp;
+		TheWorld_Viewer_Utils::ThreadPool m_tpSlowExecutions;
+		TheWorld_Viewer_Utils::ThreadPool m_tp;
 	};
 }
 
