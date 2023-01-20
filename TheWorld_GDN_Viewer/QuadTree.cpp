@@ -8,6 +8,7 @@
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Quadrant.h"
+#include "Profiler.h"
 
 #include "assert.h"
 #include <filesystem>
@@ -648,10 +649,12 @@ void QuadTree::updateMaterialParams(void)
 
 	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
-		TheWorld_Viewer_Utils::TimerMs clock;
-		clock.tick();
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 4 ") + __FUNCTION__, "itQuadTree->second->updateMaterialParams");
+
+		//TheWorld_Viewer_Utils::TimerMs clock;
+		//clock.tick();
 		getQuadrant()->getShaderTerrainData()->updateMaterialParams();
-		clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
+		//clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
 		getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(false);
 	}
 }
@@ -660,6 +663,7 @@ void QuadTree::resetMaterialParams()
 {
 	if (materialParamsNeedReset())
 	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 3 ") + __FUNCTION__, "itQuadTree->second->resetMaterialParams");
 		m_worldQuadrant->getCollider()->deinit();
 		m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
 		m_worldQuadrant->getCollider()->enterWorld();
@@ -877,12 +881,17 @@ void ShaderTerrainData::resetMaterialParams(void)
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
 
 	bool loadingHeighmapOK = false;
-	m_heightMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingHeighmapOK, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::heightmap);
 	bool loadingNormalmapOK = false;
-	m_normalMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingNormalmapOK, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::normalmap);
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 3.1 ") + __FUNCTION__, "Load images from FS");
+		m_heightMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingHeighmapOK, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::heightmap);
+		m_normalMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingNormalmapOK, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::normalmap);
+	}
 
 	if (!loadingHeighmapOK || !loadingNormalmapOK)
 	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 3.2 ") + __FUNCTION__, "Create Images from Vertex Array");
+
 		// Creating Heightmap Map Texture
 		{
 			Ref<Image> image = Image::_new();
@@ -1042,53 +1051,56 @@ void ShaderTerrainData::resetMaterialParams(void)
 	}
 
 	{
-		Ref<ImageTexture> tex = ImageTexture::_new();
-		tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
-		m_heightMapTexture = tex;
-		m_heightMapTexModified = true;
-		//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 3.3 ") + __FUNCTION__, "Create Texture from images");
+
+		{
+			Ref<ImageTexture> tex = ImageTexture::_new();
+			tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
+			m_heightMapTexture = tex;
+			m_heightMapTexModified = true;
+			//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
 		}
 
-	{
-		Ref<ImageTexture> tex = ImageTexture::_new();
-		tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
-		m_normalMapTexture = tex;
-		m_normalMapTexModified = true;
-		//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
+		{
+			Ref<ImageTexture> tex = ImageTexture::_new();
+			tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
+			m_normalMapTexture = tex;
+			m_normalMapTexModified = true;
+			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
+		}
+
+		// Creating Splat Map Texture
+		//{
+		//	Ref<Image> image = Image::_new();
+		//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+		//	image->fill(Color(1, 0, 0, 0));
+		//	m_splat1MapImage = image;
+		//}
+
+		// Filling Splat Map Texture
+		//{
+		//	Ref<ImageTexture> tex = ImageTexture::_new();
+		//	tex->create_from_image(m_splat1MapImage, Texture::FLAG_FILTER);
+		//	m_splat1MapTexture = tex;
+		//	m_splat1MapImageModified = true;
+		//}
+
+		// Creating Color Map Texture
+		//{
+		//	Ref<Image> image = Image::_new();
+		//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+		//	image->fill(Color(1, 1, 1, 1));
+		//	m_colorMapImage = image;
+		//}
+
+		// Filling Color Map Texture
+		//{
+		//	Ref<ImageTexture> tex = ImageTexture::_new();
+		//	tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
+		//	m_colorMapTexture = tex;
+		//	m_colorMapImageModified = true;
+		//}
 	}
-
-	// Creating Splat Map Texture
-	//{
-	//	Ref<Image> image = Image::_new();
-	//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-	//	image->fill(Color(1, 0, 0, 0));
-	//	m_splat1MapImage = image;
-	//}
-
-	// Filling Splat Map Texture
-	//{
-	//	Ref<ImageTexture> tex = ImageTexture::_new();
-	//	tex->create_from_image(m_splat1MapImage, Texture::FLAG_FILTER);
-	//	m_splat1MapTexture = tex;
-	//	m_splat1MapImageModified = true;
-	//}
-
-	// Creating Color Map Texture
-	//{
-	//	Ref<Image> image = Image::_new();
-	//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-	//	image->fill(Color(1, 1, 1, 1));
-	//	m_colorMapImage = image;
-	//}
-
-	// Filling Color Map Texture
-	//{
-	//	Ref<ImageTexture> tex = ImageTexture::_new();
-	//	tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
-	//	m_colorMapTexture = tex;
-	//	m_colorMapImageModified = true;
-	//}
-
 	// _update_all_vertical_bounds ???	// TODORIC
 	//	# RGF image where R is min heightand G is max height
 	//	var _chunked_vertical_bounds : = Image.new()	// _chunked_vertical_bounds.create(csize_x, csize_y, false, Image.FORMAT_RGF)
@@ -1106,7 +1118,7 @@ Color ShaderTerrainData::encodeNormal(Vector3 normal)
 void ShaderTerrainData::updateMaterialParams(void)
 {
 	// Completare da _update_material_params
-	m_viewer->Globals()->debugPrint("Updating terrain material params");
+	//m_viewer->Globals()->debugPrint("Updating terrain material params");
 
 	if (m_viewer->is_inside_tree())
 	{
@@ -1298,7 +1310,7 @@ void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::
 	m_cache.refreshVerticesFromBuffer(buffer, meshIdFromBuffer, m_vectGridVertices, (void*)&m_heigths, minY, maxY);
 
 	if (meshIdFromBuffer != meshId)
-		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshIUd from server").c_str()));
+		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshId from server").c_str()));
 
 	if (m_vectGridVertices.size() == 0)
 		m_cache.readVerticesFromMeshCache(meshId, m_vectGridVertices, (void*)&m_heigths, minY, maxY);

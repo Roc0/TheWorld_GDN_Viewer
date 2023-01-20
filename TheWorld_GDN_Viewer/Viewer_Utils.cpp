@@ -5,6 +5,7 @@
 	#include <File.hpp>
 #endif
 #include "Viewer_Utils.h"
+#include "Profiler.h"
 #include <filesystem>
 #include <string>
 
@@ -42,6 +43,28 @@ namespace TheWorld_Viewer_Utils
 		m_heightmapFilePath = m_cacheDir + "\\" + heightmapFileName;
 		std::string normalmapFileName = "X-" + std::to_string(lowerXGridVertex) + "_Z-" + std::to_string(lowerZGridVertex) + "_normalmap.res";
 		m_normalmapFilePath = m_cacheDir + "\\" + normalmapFileName;
+#endif
+	}
+
+	MeshCacheBuffer::MeshCacheBuffer(const MeshCacheBuffer& c)
+	{
+		*this = c;
+	}
+
+	void MeshCacheBuffer::operator=(const MeshCacheBuffer& c)
+	{
+		m_meshFilePath = c.m_meshFilePath;
+		m_cacheDir = c.m_cacheDir;
+		m_meshId = c.m_meshId;
+		m_gridStepInWU = c.m_gridStepInWU;
+		m_numVerticesPerSize = c.m_numVerticesPerSize;
+		m_level = c.m_level;
+		m_lowerXGridVertex = c.m_lowerXGridVertex;
+		m_lowerZGridVertex = c.m_lowerZGridVertex;
+
+#ifdef _THEWORLD_CLIENT
+		m_heightmapFilePath = c.m_heightmapFilePath;
+		m_normalmapFilePath = c.m_normalmapFilePath;
 #endif
 	}
 	
@@ -117,12 +140,13 @@ namespace TheWorld_Viewer_Utils
 #endif
 
 		vectGridVertices.clear();
-		vectGridVertices.resize((int)vectSize);
 
 		bool first = true;
 		int idx = 0;
 		if (vectSize > 0)
 		{
+			vectGridVertices.resize((int)vectSize);
+
 			while (movingStreamBuffer < endOfBuffer)
 			{
 				if (idx >= vectSize)
@@ -302,7 +326,10 @@ namespace TheWorld_Viewer_Utils
 		size_t vectSizeFromCache;
 		size_t size;
 		
-		readBufferFromMeshCache(_meshId, buffer, vectSizeFromCache);
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2.1.1.1 ") + __FUNCTION__, "MeshCacheBuffer::readVerticesFromMeshCache - readBufferFromMeshCache");
+			readBufferFromMeshCache(_meshId, buffer, vectSizeFromCache);
+		}
 
 		BYTE* movingStreamBuffer = (BYTE *)buffer.c_str();
 		BYTE* endOfBuffer = (BYTE*)movingStreamBuffer + buffer.size();
@@ -334,33 +361,37 @@ namespace TheWorld_Viewer_Utils
 		vectGridVertices.clear();
 		vectGridVertices.resize((int)vectSize);
 
-		bool first = true;
-		int idx = 0;
-		while (movingStreamBuffer < endOfBuffer)
 		{
-			if (idx >= vectSize)
-				throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str())); 
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2.1.1.2 ") + __FUNCTION__, "MeshCacheBuffer::readVerticesFromMeshCache - Loop popolamento array");
 
-			TheWorld_Viewer_Utils::GridVertex v = TheWorld_Viewer_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
-			//vectGridVertices.push_back(v);
-			vectGridVertices[idx] = v;
+			bool first = true;
+			int idx = 0;
+			while (movingStreamBuffer < endOfBuffer)
+			{
+				if (idx >= vectSize)
+					throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str()));
+
+				TheWorld_Viewer_Utils::GridVertex v = TheWorld_Viewer_Utils::GridVertex((BYTE*)movingStreamBuffer, size);
+				//vectGridVertices.push_back(v);
+				vectGridVertices[idx] = v;
 #ifdef _THEWORLD_CLIENT
-			heigthsP->set(idx, v.altitude());
+				heigthsP->set(idx, v.altitude());
 #endif
-			if (first)
-			{
-				minY = maxY = v.altitude();
-				first = false;
+				if (first)
+				{
+					minY = maxY = v.altitude();
+					first = false;
+				}
+				else
+				{
+					if (v.altitude() > maxY)
+						maxY = v.altitude();
+					if (v.altitude() < minY)
+						minY = v.altitude();
+				}
+				idx++;
+				movingStreamBuffer += size;
 			}
-			else
-			{
-				if (v.altitude() > maxY)
-					maxY = v.altitude();
-				if (v.altitude() < minY)
-					minY = v.altitude();
-			}
-			idx++;
-			movingStreamBuffer += size;
 		}
 
 		if (vectGridVertices.size() != vectSizeFromCache || vectGridVertices.size() != vectSize)
@@ -561,88 +592,89 @@ namespace TheWorld_Viewer_Utils
 
 #endif
 
-	void ThreadPool::Start(size_t num_threads, /*const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction,*/ ThreadInitDeinit* threadInitDeinit)
-	{
-		m_threadInitDeinit = threadInitDeinit;
-		//m_threadInitFunction = threadInitFunction;
-		//m_threadDeinitFunction = threadDeinitFunction;
-		uint32_t _num_threads = (uint32_t)num_threads;
-		if (_num_threads <= 0)
-			_num_threads  = std::thread::hardware_concurrency(); // Max # of threads the system supports
-		//const uint32_t num_threads = 2;
-		threads.resize(_num_threads);
-		for (uint32_t i = 0; i < _num_threads; i++)
-		{
-			threads.at(i) = std::thread(&ThreadPool::ThreadLoop, this);
-		}
-	}
+	//void ThreadPool::Start(size_t num_threads, /*const std::function<void()>* threadInitFunction, const std::function<void()>* threadDeinitFunction,*/ ThreadInitDeinit* threadInitDeinit)
+	//{
+	//	m_threadInitDeinit = threadInitDeinit;
+	//	//m_threadInitFunction = threadInitFunction;
+	//	//m_threadDeinitFunction = threadDeinitFunction;
+	//	uint32_t _num_threads = (uint32_t)num_threads;
+	//	if (_num_threads <= 0)
+	//		_num_threads  = std::thread::hardware_concurrency(); // Max # of threads the system supports
+	//	//const uint32_t num_threads = 2;
+	//	threads.resize(_num_threads);
+	//	for (uint32_t i = 0; i < _num_threads; i++)
+	//	{
+	//		threads.at(i) = std::thread(&ThreadPool::ThreadLoop, this);
+	//	}
+	//}
+	//
+	//void ThreadPool::ThreadLoop()
+	//{
+	//	if (m_threadInitDeinit != nullptr)
+	//		m_threadInitDeinit->threadInit();
+	//	//if (m_threadInitFunction != nullptr)
+	//	//{
+	//	//	(*m_threadInitFunction)();
+	//	//}
+
+	//	while (true)
+	//	{
+	//		std::function<void()> job;
+	//		{
+	//			std::unique_lock<std::mutex> lock(queue_mutex);
+	//			mutex_condition.wait(lock, [this] { return !jobs.empty() || should_terminate; });
+	//			if (should_terminate)
+	//			{
+	//				break;
+	//			}
+	//			job = jobs.front();
+	//			jobs.pop();
+	//		}
+	//		job();
+	//	}
+
+	//	if (m_threadInitDeinit != nullptr)
+	//		m_threadInitDeinit->threadDeinit();
+	//	//if (m_threadDeinitFunction != nullptr)
+	//	//{
+	//	//	(*m_threadDeinitFunction)();
+	//	//}
+	//}
+
+	//void ThreadPool::QueueJob(const std::function<void()>& job)
+	//{
+	//	{
+	//		std::unique_lock<std::mutex> lock(queue_mutex);
+	//		jobs.push(job);
+	//	}
+	//	mutex_condition.notify_one();
+	//}
+	//
+	//bool ThreadPool::busy()
+	//{
+	//	bool poolbusy;
+	//	{
+	//		std::unique_lock<std::mutex> lock(queue_mutex);
+	//		poolbusy = !jobs.empty();
+	//	}
+	//	return poolbusy;
+	//}
+
+	//void ThreadPool::Stop()
+	//{
+	//	{
+	//		std::unique_lock<std::mutex> lock(queue_mutex);
+	//		should_terminate = true;
+	//	}
+	//	mutex_condition.notify_all();
+	//	for (std::thread& active_thread : threads) {
+	//		active_thread.join();
+	//	}
+	//	threads.clear();
+	//}
+	//
 	
-	void ThreadPool::ThreadLoop()
-	{
-		if (m_threadInitDeinit != nullptr)
-			m_threadInitDeinit->threadInit();
-		//if (m_threadInitFunction != nullptr)
-		//{
-		//	(*m_threadInitFunction)();
-		//}
-
-		while (true)
-		{
-			std::function<void()> job;
-			{
-				std::unique_lock<std::mutex> lock(queue_mutex);
-				mutex_condition.wait(lock, [this] { return !jobs.empty() || should_terminate; });
-				if (should_terminate)
-				{
-					break;
-				}
-				job = jobs.front();
-				jobs.pop();
-			}
-			job();
-		}
-
-		if (m_threadInitDeinit != nullptr)
-			m_threadInitDeinit->threadDeinit();
-		//if (m_threadDeinitFunction != nullptr)
-		//{
-		//	(*m_threadDeinitFunction)();
-		//}
-	}
-
-	void ThreadPool::QueueJob(const std::function<void()>& job)
-	{
-		{
-			std::unique_lock<std::mutex> lock(queue_mutex);
-			jobs.push(job);
-		}
-		mutex_condition.notify_one();
-	}
-	
-	bool ThreadPool::busy()
-	{
-		bool poolbusy;
-		{
-			std::unique_lock<std::mutex> lock(queue_mutex);
-			poolbusy = !jobs.empty();
-		}
-		return poolbusy;
-	}
-
-	void ThreadPool::Stop()
-	{
-		{
-			std::unique_lock<std::mutex> lock(queue_mutex);
-			should_terminate = true;
-		}
-		mutex_condition.notify_all();
-		for (std::thread& active_thread : threads) {
-			active_thread.join();
-		}
-		threads.clear();
-	}
-	
-	std::string Utils::ReplaceString(std::string subject, const std::string& search, const std::string& replace)
+std::string Utils::ReplaceString(std::string subject, const std::string& search, const std::string& replace)
 	{
 		size_t pos = 0;
 		while ((pos = subject.find(search, pos)) != std::string::npos)

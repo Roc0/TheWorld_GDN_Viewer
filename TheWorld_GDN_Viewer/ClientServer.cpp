@@ -2,6 +2,7 @@
 #include "Viewer_Utils.h"
 
 #include "ClientServer.h"
+#include "Profiler.h"
 
 #include <Mutex>
 #include <Functional>
@@ -17,8 +18,8 @@ namespace TheWorld_ClientServer
 
 	void ClientServerExecution::onExecMethodAsync(void)
 	{
-		TheWorld_Viewer_Utils::TimerMs clock("ClientServerExecution::onExecMethodAsync", "SERVER SIDE " + m_method + " " + m_ref, false, true);
-		clock.tick();
+		//TheWorld_Viewer_Utils::TimerMs clock("ClientServerExecution::onExecMethodAsync", "SERVER SIDE " + m_method + " " + m_ref, false, true);
+		//clock.tick();
 
 		serverExecutionStatus(ExecutionStatus::InProgress);
 
@@ -29,12 +30,12 @@ namespace TheWorld_ClientServer
 		}
 		catch (...)
 		{
-			clock.headerMsg("SERVER SIDE " + m_method + " " + m_ref + " (" + std::to_string(m_numCurrentServerExecutions) + ")");
+			//clock.headerMsg("SERVER SIDE " + m_method + " " + m_ref + " (" + std::to_string(m_numCurrentServerExecutions) + ")");
 			m_numCurrentServerExecutions--;
 			serverExecutionStatus(ExecutionStatus::Completed);
 			return;
 		}
-		clock.headerMsg("SERVER SIDE " + m_method + " " + m_ref + " (" + std::to_string(m_numCurrentServerExecutions) + ")");
+		//clock.headerMsg("SERVER SIDE " + m_method + " " + m_ref + " (" + std::to_string(m_numCurrentServerExecutions) + ")");
 		m_numCurrentServerExecutions--;
 		serverExecutionStatus(ExecutionStatus::Completed);
 	}
@@ -58,10 +59,13 @@ namespace TheWorld_ClientServer
 
 	void ClientServerExecution::callCallback(void)
 	{
-		TheWorld_Viewer_Utils::TimerMs clock("ClientServerExecution::callCallback", "CLIENT SIDE " + m_method + " " + m_ref, false, true);
-		clock.tick();
+		//TheWorld_Viewer_Utils::TimerMs clock("ClientServerExecution::callCallback", "CLIENT SIDE " + m_method + " " + m_ref, false, true);
+		//clock.tick();
 
 		clientExecutionStatus(ExecutionStatus::InProgress);
+
+		// Set the server execution elapsed
+		size_t d = duration();
 
 		if (clientCallbackSpecified())
 			m_clientCallback->replyFromServer(*this);
@@ -157,7 +161,7 @@ namespace TheWorld_ClientServer
 			ref = TheWorld_Viewer_Utils::ToString(&newId);
 			m_ReplyMap[ref] = make_unique<ClientServerExecution>(method, inputParams, ref, this, m_server, timeToLive, clientCallbak);
 			
-			PLOG_DEBUG << "ClientInterface::execMethodAsync - " + method + " " + ref;
+			//PLOG_DEBUG << "ClientInterface::execMethodAsync - " + method + " " + ref;
 
 			ClientServerExecution* clientServerExecution = m_ReplyMap[ref].get();
 			std::function<void(void)> f = std::bind(&ClientServerExecution::onExecMethodAsync, clientServerExecution);
@@ -263,7 +267,7 @@ namespace TheWorld_ClientServer
 
 		MapClientServerExecution toCallCallback;
 
-		m_tp.Start(4);
+		m_tp.Start(30);
 
 		while (true)
 		{
@@ -385,8 +389,8 @@ namespace TheWorld_ClientServer
 		
 		//std::function<void(void)> threadInitFunction = std::bind(&ServerInterface::serverThreadInit, this);
 		//std::function<void(void)> threadDeinitFunction = std::bind(&ServerInterface::serverThreadDeinit, this);
-		m_tpSlowExecutions.Start(2, /*&threadInitFunction, &threadDeinitFunction,*/ this);
-		m_tp.Start(2, /*&threadInitFunction, &threadDeinitFunction,*/ this);
+		m_tpSlowExecutions.Start(24, /*&threadInitFunction, &threadDeinitFunction,*/ this);
+		m_tp.Start(6, /*&threadInitFunction, &threadDeinitFunction,*/ this);
 		
 		PLOG_INFO << "ServerInterface::onConnect - Server connected";
 		return THEWORLD_CLIENTSERVER_RC_OK;
@@ -469,6 +473,8 @@ namespace TheWorld_ClientServer
 			//}
 			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
 			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 1a ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);
+
 				float* viewerPosX = std::get_if<float>(&reply->m_inputParams[0]);
 				if (viewerPosX == nullptr)
 				{
@@ -581,6 +587,7 @@ namespace TheWorld_ClientServer
 
 	void ServerInterface::serverThreadInit(void)
 	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("ServerThreadInit ") + __FUNCTION__, "m_threadContextPool->getCurrentContext()");
 		ServerThreadContext* threadCtx = m_threadContextPool->getCurrentContext();
 	}
 

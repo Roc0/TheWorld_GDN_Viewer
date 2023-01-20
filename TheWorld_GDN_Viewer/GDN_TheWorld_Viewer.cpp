@@ -232,7 +232,11 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 	{
 		if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
 		{
-			TheWorld_Viewer_Utils::TimerMs clock("GDN_TheWorld_Viewer::replyFromServer", "CLIENT SIDE", false, true);
+			TheWorld_Utils::Profiler::addElapsedMs(std::string("WorldDeply 1 ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES, reply.duration());
+			
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2 ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);
+
+			//TheWorld_Viewer_Utils::TimerMs clock("GDN_TheWorld_Viewer::replyFromServer", "CLIENT SIDE", false, true);
 			
 			//clock.headerMsg("MapManager::getVertices - Acq input");
 			//clock.tick();
@@ -352,6 +356,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			//clock.tock();
 			if (m_mapQuadTree.contains(quadrantPos))
 			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2.1 ") + __FUNCTION__, "Elab. quadrant");
 				QuadTree* quadTree = m_mapQuadTree[quadrantPos].get();
 				m_mtxQuadTree.unlock();
 				if (quadTree->status() == QuadrantStatus::getVerticesInProgress)
@@ -366,6 +371,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					{
 						// ATTENZIONE
 						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
+						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2.1.1 ") + __FUNCTION__,"quadTree->getQuadrant()->refreshGridVertices");
 						quadTree->getQuadrant()->refreshGridVertices(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer);
 					}
 					
@@ -384,6 +390,8 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 					if (setCamera)
 					{
+						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2.1.2 ") + __FUNCTION__, "setCamera");
+
 						quadTree->setVisible(true);
 
 						forceRefreshMapQuadTree();
@@ -1553,8 +1561,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
-			itQuadTree->second->resetMaterialParams();
-			itQuadTree->second->updateMaterialParams();
+				itQuadTree->second->resetMaterialParams();
+				itQuadTree->second->updateMaterialParams();
 		}
 	}
 
@@ -2561,26 +2569,26 @@ void GDN_TheWorld_Viewer::dump()
 	float f = Engine::get_singleton()->get_frames_per_second();
 	Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
 
-	Node* node = get_node(NodePath("/root"));
-	if (node != nullptr)
-	{
-		Globals()->debugPrint("============================================");
-		Globals()->debugPrint("");
-		Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
-		Globals()->debugPrint("");
-		Globals()->debugPrint(node->get_name());
-		Array nodes = node->get_children();
-		dumpRecurseIntoChildrenNodes(nodes, 1);
-		Globals()->debugPrint("============================================");
-	}
+	//Node* node = get_node(NodePath("/root"));
+	//if (node != nullptr)
+	//{
+	//	Globals()->debugPrint("============================================");
+	//	Globals()->debugPrint("");
+	//	Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
+	//	Globals()->debugPrint("");
+	//	Globals()->debugPrint(node->get_name());
+	//	Array nodes = node->get_children();
+	//	dumpRecurseIntoChildrenNodes(nodes, 1);
+	//	Globals()->debugPrint("============================================");
+	//}
 	
-	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
-
-	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-	{
-		itQuadTree->second->dump();
-
-	}
+	//{
+	//	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+	//	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	//	{
+	//		itQuadTree->second->dump();
+	//	}
+	//}
 
 	std::vector<std::string> names = TheWorld_Utils::Profiler::names("");
 	if (names.size() > 0)
@@ -2589,11 +2597,14 @@ void GDN_TheWorld_Viewer::dump()
 		for (auto& name : names)
 		{
 			size_t num = 0;
-			size_t elapsed = TheWorld_Utils::Profiler::elapsed("", name, num);
-			size_t avgElapsed = TheWorld_Utils::Profiler::averageElapsed("", name, num);
+			size_t elapsed = TheWorld_Utils::Profiler::elapsedMs("", name, num);
+			size_t avgElapsed = TheWorld_Utils::Profiler::averageElapsedMs("", name, num);
+			size_t minElapsed = TheWorld_Utils::Profiler::minElapsedMs("", name);
+			size_t maxElapsed = TheWorld_Utils::Profiler::maxElapsedMs("", name);
 			if (num > 0)
 			{
-				Globals()->debugPrint(String(name.c_str()) + " num=" + std::to_string(num).c_str() + " Elapsed=" + std::to_string(elapsed).c_str() + " Avg elapsed=" + std::to_string(avgElapsed).c_str());
+				Globals()->debugPrint(String(name.c_str()) + " num=" + std::to_string(num).c_str() + " Elapsed=" + std::to_string(elapsed).c_str() + " Min elapsed=" + std::to_string(minElapsed).c_str() + " Max elapsed=" + std::to_string(maxElapsed).c_str() + " Avg elapsed=" + std::to_string(avgElapsed).c_str());
+				TheWorld_Utils::Profiler::reset("", name);
 			}
 		}
 		Globals()->debugPrint("== PROFILE DATA ==========================================");

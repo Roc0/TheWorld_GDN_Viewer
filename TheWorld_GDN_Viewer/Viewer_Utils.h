@@ -144,7 +144,10 @@ namespace TheWorld_Viewer_Utils
 	public:
 		MeshCacheBuffer(void);
 		MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
-
+		MeshCacheBuffer(const MeshCacheBuffer& c);
+		
+		void operator=(const MeshCacheBuffer& c);
+		
 		std::string getMeshIdFromMeshCache(void);
 		void refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
 		void readBufferFromMeshCache(std::string meshId, std::string& buffer, size_t& vectSizeFromCache);
@@ -192,33 +195,33 @@ namespace TheWorld_Viewer_Utils
 #endif
 	};
 	
-	class ThreadInitDeinit
-	{
-		friend class ThreadPool;
-		virtual void threadInit(void) = 0;
-		virtual void threadDeinit(void) = 0;
-	};
+	//class ThreadInitDeinit
+	//{
+	//	friend class ThreadPool;
+	//	virtual void threadInit(void) = 0;
+	//	virtual void threadDeinit(void) = 0;
+	//};
 
-	class ThreadPool
-	{
-	public:
-		void Start(size_t num_threads = 0, /*const std::function<void()>* threadInitFunction = nullptr, const std::function<void()>* threadDeinitFunction = nullptr,*/ ThreadInitDeinit* threadInitDeinit = nullptr);
-		void QueueJob(const std::function<void()>& job);
-		void Stop();
-		bool busy();
+	//class ThreadPool
+	//{
+	//public:
+	//	void Start(size_t num_threads = 0, /*const std::function<void()>* threadInitFunction = nullptr, const std::function<void()>* threadDeinitFunction = nullptr,*/ ThreadInitDeinit* threadInitDeinit = nullptr);
+	//	void QueueJob(const std::function<void()>& job);
+	//	void Stop();
+	//	bool busy();
 
-	private:
-		void ThreadLoop();
+	//private:
+	//	void ThreadLoop();
 
-		bool should_terminate = false;           // Tells threads to stop looking for jobs
-		std::mutex queue_mutex;                  // Prevents data races to the job queue
-		std::condition_variable mutex_condition; // Allows threads to wait on new jobs or termination 
-		std::vector<std::thread> threads;
-		std::queue<std::function<void()>> jobs;
-		//const std::function<void()>* m_threadInitFunction = nullptr;
-		//const std::function<void()>* m_threadDeinitFunction = nullptr;
-		ThreadInitDeinit* m_threadInitDeinit = nullptr;
-	};
+	//	bool should_terminate = false;           // Tells threads to stop looking for jobs
+	//	std::mutex queue_mutex;                  // Prevents data races to the job queue
+	//	std::condition_variable mutex_condition; // Allows threads to wait on new jobs or termination 
+	//	std::vector<std::thread> threads;
+	//	std::queue<std::function<void()>> jobs;
+	//	//const std::function<void()>* m_threadInitFunction = nullptr;
+	//	//const std::function<void()>* m_threadDeinitFunction = nullptr;
+	//	ThreadInitDeinit* m_threadInitDeinit = nullptr;
+	//};
 
 	std::string ToString(GUID* guid);
 

@@ -2,6 +2,8 @@
 
 #include <MapManager.h>
 #include "Viewer_Utils.h"
+#include "Utils.h"
+#include "Profiler.h"
 
 #include <string>
 #include <vector>
@@ -63,6 +65,7 @@ namespace TheWorld_ClientServer
 		{
 			if (m_mapManager == nullptr)
 			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("ServerThreadInit ") + __FUNCTION__, "Create m_mapManager");
 				m_mapManager = make_unique<TheWorld_MapManager::MapManager>(/*nullptr, m_sev, plog::get(),*/ nullptr, true);
 				m_mapManager->instrument(false);
 				m_mapManager->consoleDebugMode(false);
@@ -163,6 +166,7 @@ namespace TheWorld_ClientServer
 				m_timeToLive = THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE;
 			m_eraseMe = false;
 			m_expiredTimeToLive = false;
+			m_duration = -1;
 		}
 
 		ClientServerExecution(const ClientServerExecution& reply)
@@ -189,6 +193,7 @@ namespace TheWorld_ClientServer
 			m_timeToLive = reply.m_timeToLive;
 			m_eraseMe = reply.m_eraseMe;
 			m_expiredTimeToLive = reply.m_expiredTimeToLive;
+			m_duration = reply.m_duration;
 		}
 			
 		std::string getRef(void)
@@ -293,6 +298,15 @@ namespace TheWorld_ClientServer
 		{
 			m_clientExecutionStatus = status;
 		}
+		size_t duration(void)
+		{
+			if (m_duration == -1)
+			{
+				TheWorld_Viewer_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+				m_duration = (now - m_startExecution).count();
+			}
+			return m_duration;
+		}
 
 	private:
 		bool m_replied;
@@ -313,6 +327,7 @@ namespace TheWorld_ClientServer
 		bool m_eraseMe;
 		bool m_expiredTimeToLive;
 		static size_t m_numCurrentServerExecutions;
+		size_t m_duration;
 	};
 
 	typedef std::map<std::string, std::unique_ptr<ClientServerExecution>> MapClientServerExecution;
@@ -353,10 +368,10 @@ namespace TheWorld_ClientServer
 		std::thread m_receiverThread;
 		bool m_receiverThreadRequiredExit;
 		bool m_receiverThreadRunning;
-		TheWorld_Viewer_Utils::ThreadPool m_tp;
+		TheWorld_Utils::ThreadPool m_tp;
 	};
 
-	class ServerInterface : public TheWorld_Viewer_Utils::ThreadInitDeinit
+	class ServerInterface : public TheWorld_Utils::ThreadInitDeinit
 	{
 	public:
 		ServerInterface(plog::Severity sev);
@@ -386,8 +401,8 @@ namespace TheWorld_ClientServer
 		static std::recursive_mutex s_staticServerInitializationMtx;
 		ClientInterface* m_client;
 		plog::Severity m_sev;
-		TheWorld_Viewer_Utils::ThreadPool m_tpSlowExecutions;
-		TheWorld_Viewer_Utils::ThreadPool m_tp;
+		TheWorld_Utils::ThreadPool m_tpSlowExecutions;
+		TheWorld_Utils::ThreadPool m_tp;
 	};
 }
 

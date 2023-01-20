@@ -15,6 +15,7 @@
 //#include "QuadTree.h"
 //#include <MapManager.h>
 #include "Viewer_Utils.h"
+#include "Utils.h"
 
 #define THEWORLD_VIEWER_CHUNK_SIZE_SHIFT				5
 #define THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT		11	/* 10 */
@@ -183,7 +184,20 @@ namespace godot
 		}
 		void setStatus(enum class TheWorldStatus status)
 		{
+			bool statusChanged = false;
+			if (m_status != status)
+				statusChanged = true;
+
+			if (m_statusChangeClock.counterStarted() && statusChanged)
+			{
+				m_statusChangeClock.tock();
+				infoPrint((std::string("Status changed: ") + statusStr(m_status) + std::string(" ==> ") + statusStr(status) + std::string(" (") + std::to_string(m_statusChangeClock.duration().count()) + std::string(" ms)")).c_str());
+			}
+			
 			m_status = status;
+			
+			if (statusChanged)
+				m_statusChangeClock.tick();
 		}
 		int get_status(void)
 		{
@@ -192,6 +206,51 @@ namespace godot
 		void set_status(int status)
 		{
 			setStatus((enum class TheWorldStatus)status);
+		}
+
+		std::string statusStr(enum class TheWorldStatus status)
+		{
+			std::string s = "NotDefined";
+			switch (status)
+			{
+				case TheWorldStatus::error:
+				{
+					s = "error";
+				}
+				break;
+				case TheWorldStatus::uninitialized:
+				{
+					s = "uninitialized";
+				}
+				break;
+				case TheWorldStatus::initialized:
+				{
+					s = "initialized";
+				}
+				break;
+				case TheWorldStatus::connectedToServer:
+				{
+					s = "connectedToServer";
+				}
+				break;
+				case TheWorldStatus::sessionInitialized:
+				{
+					s = "sessionInitialized";
+				}
+				break;
+				case TheWorldStatus::worldDeployInProgress:
+				{
+					s = "worldDeployInProgress";
+				}
+				break;
+				case TheWorldStatus::worldDeployed:
+				{
+					s = "worldDeployed";
+				}
+				break;
+			}
+
+			return s;
 		}
 
 		//
@@ -397,6 +456,7 @@ namespace godot
 	private:
 		bool m_initialized;
 		enum class TheWorldStatus m_status;
+		TheWorld_Utils::TimerMs m_statusChangeClock;
 		bool m_isDebugEnabled;
 		int m_chunkSizeShift;
 		int m_heightmapResolutionShift;
