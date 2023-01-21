@@ -267,7 +267,7 @@ namespace TheWorld_ClientServer
 
 		MapClientServerExecution toCallCallback;
 
-		m_tp.Start(30);
+		m_tp.Start("ReceiverFromServer", 24);
 
 		while (true)
 		{
@@ -378,7 +378,7 @@ namespace TheWorld_ClientServer
 		s_staticServerInitializationMtx.lock();
 		if (!s_staticServerInitializationDone)
 		{
-			TheWorld_MapManager::MapManager::staticInit(nullptr, plog::info, plog::get(), true);
+			TheWorld_MapManager::MapManager::staticInit(nullptr, m_sev, plog::get(), true);
 			s_staticServerInitializationDone = true;
 		}
 		s_staticServerInitializationMtx.unlock();
@@ -389,8 +389,8 @@ namespace TheWorld_ClientServer
 		
 		//std::function<void(void)> threadInitFunction = std::bind(&ServerInterface::serverThreadInit, this);
 		//std::function<void(void)> threadDeinitFunction = std::bind(&ServerInterface::serverThreadDeinit, this);
-		m_tpSlowExecutions.Start(24, /*&threadInitFunction, &threadDeinitFunction,*/ this);
-		m_tp.Start(6, /*&threadInitFunction, &threadDeinitFunction,*/ this);
+		m_tpSlowExecutions.Start("SlowServerWorker", 24, /*&threadInitFunction, &threadDeinitFunction,*/ this);
+		m_tp.Start("ServerWorker", 6, /*&threadInitFunction, &threadDeinitFunction,*/ this);
 		
 		PLOG_INFO << "ServerInterface::onConnect - Server connected";
 		return THEWORLD_CLIENTSERVER_RC_OK;

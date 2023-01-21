@@ -188,54 +188,72 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_forward") /* && !m_altPressed*/)
 	{
-		m_numMoveStepForward--;
-		m_updateCameraRequired = true;
-		//m_forwardMovementOn = true;
+		if (Globals()->Viewer()->terrainShiftPermitted())
+		{
+			m_numMoveStepForward--;
+			m_updateCameraRequired = true;
+			//m_forwardMovementOn = true;
+		}
 	}
 	//else
 	//	m_forwardMovementOn = false;
 
 	if (input->is_action_pressed("ui_backward") /* && !m_altPressed*/)
 	{
-		m_numMoveStepForward++;
-		m_updateCameraRequired = true;
-		//m_backwardMovementOn = true;
+		if (Globals()->Viewer()->terrainShiftPermitted())
+		{
+			m_numMoveStepForward++;
+			m_updateCameraRequired = true;
+			//m_backwardMovementOn = true;
+		}
 	}
 	//else
 	//	m_backwardMovementOn = false;
 
 	if (input->is_action_pressed("ui_left") && !m_altPressed)
 	{
-		m_numMoveStepLeft++;
-		m_updateCameraRequired = true;
-		//m_leftMovementOn = true;
+		if (Globals()->Viewer()->terrainShiftPermitted())
+		{
+			m_numMoveStepLeft++;
+			m_updateCameraRequired = true;
+			//m_leftMovementOn = true;
+		}
 	}
 	//else
 	//	m_leftMovementOn = false;
 
 	if (input->is_action_pressed("ui_right") && !m_altPressed)
 	{
-		m_numMoveStepLeft--;
-		m_updateCameraRequired = true;
-		//m_rightMovementOn = true;
+		if (Globals()->Viewer()->terrainShiftPermitted())
+		{
+			m_numMoveStepLeft--;
+			m_updateCameraRequired = true;
+			//m_rightMovementOn = true;
+		}
 	}
 	//else
 	//	m_rightMovementOn = false;
 
 	if (input->is_action_pressed("ui_up") && !m_altPressed)
 	{
-		m_numMoveStepUp++;
-		m_updateCameraRequired = true;
-		//m_upwardMovementOn = true;
+		if (Globals()->Viewer()->terrainShiftPermitted())
+		{
+			m_numMoveStepUp++;
+			m_updateCameraRequired = true;
+			//m_upwardMovementOn = true;
+		}
 	}
 	//else
 	//	m_upwardMovementOn = false;
 
 	if (input->is_action_pressed("ui_down") && !m_altPressed)
 	{
-		m_numMoveStepUp--;
-		m_updateCameraRequired = true;
-		//m_downwardMovementOn = true;
+		if (Globals()->Viewer()->terrainShiftPermitted())
+		{
+			m_numMoveStepUp--;
+			m_updateCameraRequired = true;
+			//m_downwardMovementOn = true;
+		}
 	}
 	//else
 	//	m_downwardMovementOn = false;
@@ -280,14 +298,20 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 
 	if (event->is_action_pressed("ui_mouse_wheel_up"))
 	{
-		m_numMoveStepForward--;
-		m_updateCameraRequired = true;
+		if (Globals()->Viewer()->terrainShiftPermitted())
+		{
+			m_numMoveStepForward--;
+			m_updateCameraRequired = true;
+		}
 	}
 
 	if (event->is_action_pressed("ui_mouse_wheel_down"))
 	{
-		m_numMoveStepForward++;
-		m_updateCameraRequired = true;
+		if (Globals()->Viewer()->terrainShiftPermitted())
+		{
+			m_numMoveStepForward++;
+			m_updateCameraRequired = true;
+		}
 	}
 }
 

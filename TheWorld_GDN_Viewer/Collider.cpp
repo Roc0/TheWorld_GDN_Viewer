@@ -109,7 +109,7 @@ namespace godot
 		if (MOCK_COLLIDER)
 			return;
 
-		assert(m_initialized);
+		//assert(m_initialized);
 		if (!m_initialized)
 			return;
 

@@ -281,10 +281,15 @@ namespace godot
 	void GDN_TheWorld_Globals::init(void)
 	{
 		string logPath = getModuleLoadPath() + "\\TheWorld_Viewer_log.txt";
-		plog::init(PLOG_DEFAULT_LEVEL, logPath.c_str(), 1000000, 3);
-		PLOG_INFO << "***************";
-		PLOG_INFO << "Log initilized!";
-		PLOG_INFO << "***************";
+		plog::Severity sev = PLOG_DEFAULT_LEVEL;
+		if (m_isDebugEnabled)
+			sev = PLOG_DEBUG_LEVEL;
+		plog::init(sev, logPath.c_str(), 1000000, 3);
+		PLOG(plog::get()->getMaxSeverity()) << "***************";
+		PLOG(plog::get()->getMaxSeverity()) << "Log initilized!";
+		PLOG(plog::get()->getMaxSeverity()) << "***************";
+
+		TheWorld_Utils::Utils::plogInit(sev, plog::get());
 
 		PLOGI << "TheWorld Globals Initializing...";
 
@@ -312,9 +317,11 @@ namespace godot
 
 			PLOGI << "TheWorld Globals Deinitialized!";
 
-			PLOG_INFO << "*****************";
-			PLOG_INFO << "Log Terminated!";
-			PLOG_INFO << "*****************";
+			PLOG(plog::get()->getMaxSeverity()) << "*****************";
+			PLOG(plog::get()->getMaxSeverity()) << "Log Terminated!";
+			PLOG(plog::get()->getMaxSeverity()) << "*****************";
+
+			TheWorld_Utils::Utils::plogDenit();
 
 			m_initialized = false;
 			setStatus(TheWorldStatus::uninitialized);
@@ -341,7 +348,11 @@ namespace godot
 		if (m_client != nullptr)
 			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Connect to server failed: pointer to client is not null").c_str())));
 
-		m_client = new GDN_TheWorld_Globals_Client(this, PLOG_DEFAULT_LEVEL);
+		plog::Severity sev = PLOG_DEFAULT_LEVEL;
+		if (m_isDebugEnabled)
+			sev = PLOG_DEBUG_LEVEL;
+
+		m_client = new GDN_TheWorld_Globals_Client(this, sev);
 		int rc = m_client->connect();
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
 			throw(GDN_TheWorld_Exception(__FUNCTION__, "Connect to server failed with code " + rc));
@@ -350,9 +361,6 @@ namespace godot
 
 		infoPrint("GDN_TheWorld_Globals::connectToServer DONE!");
 
-		plog::Severity sev = PLOG_DEFAULT_LEVEL;
-		if (m_isDebugEnabled)
-			sev = PLOG_DEBUG_LEVEL;
 		m_client->ServerInitializeSession(sev);
 	}
 
@@ -437,17 +445,15 @@ namespace godot
 			return;
 		
 		m_isDebugEnabled = b;
-		
+
+		plog::Severity sev = PLOG_DEFAULT_LEVEL;
 		if (b)
-		{
-			plog::get()->setMaxSeverity(PLOG_DEBUG_LEVEL);
-			m_client->MapManagerSetLogMaxSeverity(PLOG_DEBUG_LEVEL);
-		}
-		else
-		{
-			plog::get()->setMaxSeverity(PLOG_DEFAULT_LEVEL);
-			m_client->MapManagerSetLogMaxSeverity(PLOG_DEFAULT_LEVEL);
-		}
+			sev = PLOG_DEBUG_LEVEL;
+
+		plog::get()->setMaxSeverity(sev);
+		PLOG(plog::get()->getMaxSeverity()) << "Log severity changed to: " << std::to_string(sev);
+		TheWorld_Utils::Utils::plogSetMaxSeverity(sev);
+		m_client->MapManagerSetLogMaxSeverity(sev);
 	}
 }
 

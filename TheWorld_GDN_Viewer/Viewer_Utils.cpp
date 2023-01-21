@@ -149,6 +149,7 @@ namespace TheWorld_Viewer_Utils
 
 			while (movingStreamBuffer < endOfBuffer)
 			{
+				Sleep(0);
 				if (idx >= vectSize)
 					throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str())); 
 
@@ -368,6 +369,7 @@ namespace TheWorld_Viewer_Utils
 			int idx = 0;
 			while (movingStreamBuffer < endOfBuffer)
 			{
+				Sleep(0);
 				if (idx >= vectSize)
 					throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Length of buffer inconsistent, idx=" + std::to_string(idx) + " vectSize=" + std::to_string(vectSize)).c_str()));
 

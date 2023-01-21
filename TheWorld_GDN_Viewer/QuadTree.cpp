@@ -639,13 +639,15 @@ void QuadTree::clearChunkUpdate(void)
 	m_vectChunkUpdate.clear();
 }
 
-void QuadTree::updateMaterialParams(void)
+bool  QuadTree::updateMaterialParams(void)
 {
+	bool update = false;
+
 	if (!isValid())
-		return;
+		return update;
 	
 	if (!isVisible())
-		return;
+		return update;
 
 	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
@@ -656,11 +658,17 @@ void QuadTree::updateMaterialParams(void)
 		getQuadrant()->getShaderTerrainData()->updateMaterialParams();
 		//clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
 		getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(false);
+
+		update = true;
 	}
+
+	return update;
 }
 
-void QuadTree::resetMaterialParams()
+bool QuadTree::resetMaterialParams()
 {
+	bool reset = false;
+
 	if (materialParamsNeedReset())
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 3 ") + __FUNCTION__, "itQuadTree->second->resetMaterialParams");
@@ -671,7 +679,11 @@ void QuadTree::resetMaterialParams()
 
 		getQuadrant()->getShaderTerrainData()->resetMaterialParams();
 		materialParamsNeedReset(false);
+		
+		reset = true;
 	}
+
+	return reset;
 }
 
 bool QuadTree::materialParamsNeedReset(void)
@@ -919,6 +931,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 			for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
 				for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
 				{
+					Sleep(0);
 					float h = gridVertices[z * _resolution + x].altitude();
 					m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
 					//if (h != 0)	// DEBUGRIC

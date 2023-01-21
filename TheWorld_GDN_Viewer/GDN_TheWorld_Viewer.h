@@ -32,7 +32,7 @@ namespace godot
 
 #define MIN_MAP_SCALE 0.01F
 #define TIME_INTERVAL_BETWEEN_DUMP 0			// secs, 0 = diasble periodic dump
-#define TIME_INTERVAL_BETWEEN_STATISTICS 500	// ms, 0 = diasble periodic dump
+#define TIME_INTERVAL_BETWEEN_STATISTICS 100	// ms, 0 = diasble periodic dump
 #define TIME_INTERVAL_BETWEEN_MOUSE_TRACK 250	// ms
 
 	// World Node Local Coordinate System is the same as MapManager coordinate system
@@ -128,6 +128,10 @@ namespace godot
 		QuadTree* getQuadTree(QuadrantPos pos);
 		Chunk* getActiveChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter);
 		Chunk* getActiveChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter);
+		bool terrainShiftPermitted(void)
+		{
+			return m_numinitializedQuadrant >= m_numQuadrant;
+		}
 		//Chunk* getTrackedChunk(void);
 		//String getTrackedChunkStr(void);
 		godot::Vector3 getMouseHit(void)
@@ -214,6 +218,7 @@ namespace godot
 		};
 		void printKeyboardMapping(void);
 		void streamer(void);
+		void streamingQuadrantStuff(void);
 
 	private:
 		bool m_initialized;
@@ -261,6 +266,7 @@ namespace godot
 		int m_numinitializedQuadrant;
 		int m_numVisibleQuadrant;
 		int m_numinitializedVisibleQuadrant;
+		TheWorld_Utils::TimerMs m_streamingTime;
 		// Statistics data
 
 		bool m_trackMouse;

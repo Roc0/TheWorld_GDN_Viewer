@@ -520,10 +520,10 @@ namespace godot
 		{
 			return m_worldQuadrant; 
 		}
-		void resetMaterialParams(void);
+		bool resetMaterialParams(void);
 		bool materialParamsNeedReset(void);
 		void materialParamsNeedReset(bool b);
-		void updateMaterialParams(void);
+		bool updateMaterialParams(void);
 		bool materialParamsNeedUpdate(void);
 		void materialParamsNeedUpdate(bool b);
 		bool statusInitialized(void)

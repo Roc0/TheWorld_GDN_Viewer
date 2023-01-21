@@ -322,7 +322,7 @@ namespace TheWorld_ClientServer
 		ClientInterface* m_client;
 		ServerInterface* m_server;
 		ClientCallback* m_clientCallback;
-		TheWorld_Viewer_Utils::MsTimePoint m_startExecution;
+		TheWorld_Utils::MsTimePoint m_startExecution;
 		size_t m_timeToLive;
 		bool m_eraseMe;
 		bool m_expiredTimeToLive;
