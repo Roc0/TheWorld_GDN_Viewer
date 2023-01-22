@@ -311,7 +311,7 @@ namespace godot
 		QuadTree* m_cameraQuadTree;
 		
 		// World Data
-		MapQuadTree m_mapQuadTree;
+		MapQuadTree m_mapQuadTree;	// Actually only 1 level is managed (to manage more levels we shold have a map for each level)
 		std::recursive_mutex m_mtxQuadTree;
 		QuadrantPos m_computedCameraQuadrantPos;
 		bool m_refreshMapQuadTree;
