@@ -70,6 +70,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
 	register_method("get_mouse_hit", &GDN_TheWorld_Viewer::getMouseHit);
 	register_method("get_mouse_quadrant_hit_name", &GDN_TheWorld_Viewer::_getMouseQuadrantHitName);
+	register_method("get_mouse_quadrant_hit_tag", &GDN_TheWorld_Viewer::_getMouseQuadrantHitTag);
 	register_method("get_mouse_quadrant_hit_pos", &GDN_TheWorld_Viewer::getMouseQuadrantHitPos);
 	register_method("get_mouse_quadrant_hit_size", &GDN_TheWorld_Viewer::getMouseQuadrantHitSize);
 	register_method("get_mouse_chunk_hit_name", &GDN_TheWorld_Viewer::getMouseChunkHitId);
@@ -771,8 +772,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
 			float quadrantSizeInWU = itQuadTree->second->getQuadrant()->getPos().getSizeInWU();
-			if (cameraPosGlobalCoord.x >= itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() && cameraPosGlobalCoord.x <= (itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() + quadrantSizeInWU)
-				&& cameraPosGlobalCoord.z >= itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() && cameraPosGlobalCoord.z <= (itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() + quadrantSizeInWU))
+			if (cameraPosGlobalCoord.x >= itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() && cameraPosGlobalCoord.x < (itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() + quadrantSizeInWU)
+				&& cameraPosGlobalCoord.z >= itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() && cameraPosGlobalCoord.z < (itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() + quadrantSizeInWU))
 			{
 				quadrantPosNeeded.push_back(itQuadTree->second->getQuadrant()->getPos());
 				quadrantPosNeeded[0].setTag("Camera");
@@ -979,6 +980,10 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 					godot::String s = collider->get_meta("QuadrantName", "");
 					char* str = s.alloc_c_string();
 					m_mouseQuadrantHitName = str;
+					godot::api->godot_free(str);
+					s = collider->get_meta("QuadrantTag", "");
+					str = s.alloc_c_string();
+					m_mouseQuadrantHitTag = str;
 					godot::api->godot_free(str);
 					m_mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
 					m_mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);

@@ -1113,7 +1113,7 @@ void ChunkDebug::applyDebugMesh()
 				mat->set_albedo(wiredMeshColor);
 				_mesh->surface_set_material(0, mat);
 				mesh = _mesh;
-				//m_viewer->set_meta(metaNameMesh.c_str(), mesh);
+				m_viewer->set_meta(metaNameMesh.c_str(), mesh);
 			}
 			else
 				mesh = m_viewer->get_meta(metaNameMesh.c_str());

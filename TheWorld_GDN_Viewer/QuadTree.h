@@ -172,7 +172,10 @@ namespace godot
 			return m_sizeInWU; 
 		};
 		_declspec(dllexport) QuadrantPos getQuadrantPos(enum class DirectionSlot dir, int numSlot = 1);
-		void setTag(std::string tag) { m_tag = tag; }
+		void setTag(std::string tag)
+		{
+			m_tag = tag;
+		}
 		std::string getTag(void)
 		{
 			return m_tag;
@@ -470,14 +473,16 @@ namespace godot
 		}
 		void ForAllChunk(Chunk::ChunkAction& chunkAction);
 		void dump(void);
-		int getNumSplits(void) {
+		int getNumSplits(void) 
+		{
 			if (!isValid())
 				return 0;
 			if (!isVisible())
 				return 0;
 			return m_numSplits;
 		}
-		int getNumJoins(void) { 
+		int getNumJoins(void)
+		{ 
 			if (!isValid())
 				return 0;
 			if (!isVisible())

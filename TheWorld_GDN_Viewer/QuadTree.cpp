@@ -931,7 +931,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 			for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
 				for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
 				{
-					Sleep(0);
+					//Sleep(0);
 					float h = gridVertices[z * _resolution + x].altitude();
 					m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
 					//if (h != 0)	// DEBUGRIC

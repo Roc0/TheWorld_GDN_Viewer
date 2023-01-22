@@ -482,7 +482,10 @@ namespace godot
 		}
 		virtual void releaseDebugMesh(void);
 		virtual void releaseMesh(void);
-		//Ref<Mesh> getMesh() { return m_mesh; };
+		//Ref<Mesh> getMesh()
+		//{
+		//	return m_mesh; 
+		//};
 		void getGlobalCoordAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
 		QuadTree* getQuadTree(void) 
 		{

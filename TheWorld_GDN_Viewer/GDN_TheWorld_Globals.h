@@ -353,17 +353,27 @@ namespace godot
 		float gridStepInWU(void);
 			
 		// Number of vertices of the side of the heightmap (-1) with the elevations which is fixed and is a multiple of the number of vertices of the side of a chunk (numVerticesPerChuckSide) and is for this a multiple of 2 too
-		int heightmapResolution(void) { return m_heightmapResolution; /* m_heightmapResolution = 1024 con THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10 */ }	// Resolution of the heightmap = num point of the heightmap -1;
+		int heightmapResolution(void)
+		{ 
+			return m_heightmapResolution; /* m_heightmapResolution = 1024 con THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10 */
+		}	// Resolution of the heightmap = num point of the heightmap -1;
 		// Size of the heightmap in WUs
-		float heightmapSizeInWUs(void) {
+		float heightmapSizeInWUs(void) 
+		{
 			return heightmapResolution() * gridStepInWU();
 		}
 
 		// Max value of the lod index (numLods - 1)
-		int lodMaxDepth(void) {	return m_lodMaxDepth; /* m_lodMaxDepth = 5 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 e THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10 */ }
+		int lodMaxDepth(void)
+		{	
+			return m_lodMaxDepth; /* m_lodMaxDepth = 5 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 e THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10 */
+		}
 
 		// Max number of quad split that can be done until the the granularity of the vertices is the same of the World Grid map and of the heightmap (lodMaxDepth + 1)
-		int numLods(void) { return m_numLods; /* m_numLods = 6 m_lodMaxDepth = 5 */ }
+		int numLods(void)
+		{ 
+			return m_numLods; /* m_numLods = 6 m_lodMaxDepth = 5 */
+		}
 
 		// The number of chunks required to cover every side of the heightmap at the specified lod value
 		int numChunksPerHeightmapSide(int lod)
@@ -375,7 +385,10 @@ namespace godot
 		}
 		
 		// The number of World Grid vertices (-1) or heightmap vertices (-1) which separate the vertices of the mesh at the specified lod value
-		int strideInWorldGrid(int lod) { return gridStepInHeightmap(lod); }
+		int strideInWorldGrid(int lod)
+		{
+			return gridStepInHeightmap(lod); 
+		}
 		int gridStepInHeightmap(int lod)
 		{
 			assert(!(lod < 0 || lod > lodMaxDepth()));
@@ -388,7 +401,10 @@ namespace godot
 		}
 
 		// The number of World Units which separate the vertices of the mesh at the specified lod value
-		float strideInWorldGridWUs(int lod) { return gridStepInHeightmapWUs(lod); }
+		float strideInWorldGridWUs(int lod) 
+		{
+			return gridStepInHeightmapWUs(lod);
+		}
 		float gridStepInHeightmapWUs(int lod)
 		{
 			assert(!(lod < 0 || lod > lodMaxDepth()));
@@ -397,9 +413,15 @@ namespace godot
 			return (gridStepInHeightmap(lod) * gridStepInWU());
 		}
 
-		float splitScale(void) { return c_splitScale; }
+		float splitScale(void)
+		{
+			return c_splitScale;
+		}
 
-		bool isDebugEnabled(void) { return m_isDebugEnabled; }
+		bool isDebugEnabled(void)
+		{ 
+			return m_isDebugEnabled;
+		}
 		void setDebugEnabled(bool b = true);
 
 		void setAppInError(int errorCode, String errorText)
@@ -434,7 +456,10 @@ namespace godot
 			_getAppInError(lastErrorCode, message);
 			return message.c_str();
 		}
-		bool _getAppInError(void) { return m_bAppInError; }
+		bool _getAppInError(void)
+		{ 
+			return m_bAppInError; 
+		}
 		bool _getAppInError(int& lastErrorCode, std::string& lastErrorText)
 		{
 			lastErrorCode = m_lastErrorCode;
@@ -443,7 +468,10 @@ namespace godot
 		}
 
 		GDN_TheWorld_Viewer* Viewer(bool useCache = true);
-		GDN_TheWorld_Globals_Client* Client(void) { return m_client; }
+		GDN_TheWorld_Globals_Client* Client(void)
+		{ 
+			return m_client; 
+		}
 
 		// DEBUG
 		//static size_t s_num;

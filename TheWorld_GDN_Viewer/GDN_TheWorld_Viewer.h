@@ -146,6 +146,14 @@ namespace godot
 		{
 			return m_mouseQuadrantHitName;
 		}
+		godot::String _getMouseQuadrantHitTag(void)
+		{
+			return getMouseQuadrantHitTag().c_str();
+		}
+		std::string getMouseQuadrantHitTag(void)
+		{
+			return m_mouseQuadrantHitTag;
+		}
 		godot::Vector3 getMouseQuadrantHitPos(void)
 		{
 			return m_mouseQuadrantHitPos;
@@ -273,6 +281,7 @@ namespace godot
 		int64_t m_timeElapsedFromLastMouseTrack;
 		godot::Vector3 m_mouseHit;
 		std::string m_mouseQuadrantHitName;
+		std::string m_mouseQuadrantHitTag;
 		float m_mouseQuadrantHitSize;
 		godot::Vector3 m_mouseQuadrantHitPos;
 		Chunk* m_mouseHitChunk;

@@ -285,7 +285,10 @@ namespace TheWorld_ClientServer
 		{
 			m_serverExecutionStatus = status;
 		}
-		//bool busyOnClient(void) { return m_busyOnClient; }
+		//bool busyOnClient(void)
+		//{
+		//	return m_busyOnClient; 
+		//}
 		bool toStartOnClient(void)
 		{
 			return m_clientExecutionStatus == ExecutionStatus::ToStart;

@@ -36,9 +36,18 @@ namespace godot {
 		void deactivateCamera(void);
 		GDN_TheWorld_Camera* getActiveCamera(void);
 		bool isActiveCamera(void);
-		bool isPlayerCamera() { return m_PlayerCamera; }
-		bool isOtherEntityCamera() { return m_OtherEntityCamera; }
-		bool isWorldCamera() { return m_WorldCamera; }
+		bool isPlayerCamera()
+		{
+			return m_PlayerCamera; 
+		}
+		bool isOtherEntityCamera() 
+		{
+			return m_OtherEntityCamera;
+		}
+		bool isWorldCamera()
+		{
+			return m_WorldCamera;
+		}
 		void notifyActiveCameraFlag(bool active);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		Ref<ArrayMesh> DrawViewFrustum(Color c = Color(1, 1, 1));
