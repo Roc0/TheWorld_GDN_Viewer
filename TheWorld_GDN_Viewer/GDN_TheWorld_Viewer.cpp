@@ -376,8 +376,6 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 						quadTree->getQuadrant()->refreshGridVertices(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer);
 					}
 					
-					std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices = quadTree->getQuadrant()->getGridVertices();
-
 					//clock.headerMsg("MapManager::getVertices - resetMaterialParams");
 					//clock.tick();
 					{
@@ -392,6 +390,8 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					if (setCamera)
 					{
 						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2.1.2 ") + __FUNCTION__, "setCamera");
+
+						std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices = quadTree->getQuadrant()->getGridVertices();
 
 						forceRefreshMapQuadTree();
 

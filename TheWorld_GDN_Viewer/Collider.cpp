@@ -125,7 +125,7 @@ namespace godot
 		if (!m_initialized)
 			return;
 
-		std::vector<TheWorld_Viewer_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
+		//std::vector<TheWorld_Viewer_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
 
 		int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
 		int areaSize = numVerticesPerSize * numVerticesPerSize;
