@@ -1,10 +1,10 @@
 #pragma once
 
-#ifdef _THEWORLD_CLIENT
-	#include <Godot.hpp>
-	#include <ImageTexture.hpp>
-	#include <PoolArrays.hpp>
-#endif
+//#ifdef _THEWORLD_CLIENT
+//	#include <Godot.hpp>
+//	#include <ImageTexture.hpp>
+//	#include <PoolArrays.hpp>
+//#endif
 
 #include "framework.h"
 #include <cfloat>
@@ -137,63 +137,63 @@ namespace TheWorld_Viewer_Utils
 #define TimerMs Timer<std::chrono::milliseconds, std::chrono::steady_clock>
 #define TimerMcs Timer<std::chrono::microseconds, std::chrono::steady_clock>
 
-	class GridVertex;
-
-	class MeshCacheBuffer
-	{
-	public:
-		MeshCacheBuffer(void);
-		MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
-		MeshCacheBuffer(const MeshCacheBuffer& c);
-		
-		void operator=(const MeshCacheBuffer& c);
-		
-		std::string getMeshIdFromMeshCache(void);
-		void refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
-		void readBufferFromMeshCache(std::string meshId, std::string& buffer, size_t& vectSizeFromCache);
-		void readVerticesFromMeshCache(std::string meshId, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
-		void writeBufferToMeshCache(std::string buffer);
-		void setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, std::string& buffer);
-		//std::string getCacheDir()
-		//{
-		//	return m_cacheDir;
-		//}
-
-		std::string getMeshId()
-		{
-			return m_meshId;
-		}
-
-#ifdef _THEWORLD_CLIENT
-		//void writeHeightmap(godot::Ref<godot::Image> heightMapImage);
-		//void writeNormalmap(godot::Ref<godot::Image> normalMapImage);
-		//godot::Ref<godot::Image> readHeigthmap(bool& ok);
-		//godot::Ref<godot::Image> readNormalmap(bool& ok);
-		enum class ImageType
-		{
-			heightmap = 0,
-			normalmap = 1
-		};
-
-		void writeImage(godot::Ref<godot::Image> image, enum class ImageType type);
-		godot::Ref<godot::Image> readImage(bool& ok, enum class ImageType type);
-#endif
-
-	private:
-		std::string m_meshFilePath;
-		std::string m_cacheDir;
-		std::string m_meshId;
-		float m_gridStepInWU;
-		size_t m_numVerticesPerSize;
-		int m_level;
-		float m_lowerXGridVertex;
-		float m_lowerZGridVertex;
-
-#ifdef _THEWORLD_CLIENT
-		std::string m_heightmapFilePath;
-		std::string m_normalmapFilePath;
-#endif
-	};
+//	class GridVertex;
+//
+//	class MeshCacheBuffer
+//	{
+//	public:
+//		MeshCacheBuffer(void);
+//		MeshCacheBuffer(std::string cacheDir, float gridStepInWU, size_t numVerticesPerSize, int level, float lowerXGridVertex, float lowerZGridVertex);
+//		MeshCacheBuffer(const MeshCacheBuffer& c);
+//		
+//		void operator=(const MeshCacheBuffer& c);
+//		
+//		std::string getMeshIdFromMeshCache(void);
+//		void refreshVerticesFromBuffer(std::string buffer, std::string& meshIdFromBuffer, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
+//		void readBufferFromMeshCache(std::string meshId, std::string& buffer, size_t& vectSizeFromCache);
+//		void readVerticesFromMeshCache(std::string meshId, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, void* heigths, float& minY, float& maxY);
+//		void writeBufferToMeshCache(std::string buffer);
+//		void setBufferForMeshCache(std::string meshId, size_t numVerticesPerSize, std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices, std::string& buffer);
+//		//std::string getCacheDir()
+//		//{
+//		//	return m_cacheDir;
+//		//}
+//
+//		std::string getMeshId()
+//		{
+//			return m_meshId;
+//		}
+//
+//#ifdef _THEWORLD_CLIENT
+//		//void writeHeightmap(godot::Ref<godot::Image> heightMapImage);
+//		//void writeNormalmap(godot::Ref<godot::Image> normalMapImage);
+//		//godot::Ref<godot::Image> readHeigthmap(bool& ok);
+//		//godot::Ref<godot::Image> readNormalmap(bool& ok);
+//		enum class ImageType
+//		{
+//			heightmap = 0,
+//			normalmap = 1
+//		};
+//
+//		void writeImage(godot::Ref<godot::Image> image, enum class ImageType type);
+//		godot::Ref<godot::Image> readImage(bool& ok, enum class ImageType type);
+//#endif
+//
+//	private:
+//		std::string m_meshFilePath;
+//		std::string m_cacheDir;
+//		std::string m_meshId;
+//		float m_gridStepInWU;
+//		size_t m_numVerticesPerSize;
+//		int m_level;
+//		float m_lowerXGridVertex;
+//		float m_lowerZGridVertex;
+//
+//#ifdef _THEWORLD_CLIENT
+//		std::string m_heightmapFilePath;
+//		std::string m_normalmapFilePath;
+//#endif
+//	};
 	
 	//class ThreadInitDeinit
 	//{

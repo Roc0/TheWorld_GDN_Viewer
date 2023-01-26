@@ -9,6 +9,7 @@
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Quadrant.h"
 #include "Profiler.h"
+#include "half.h"
 
 #include "assert.h"
 #include <filesystem>
@@ -641,17 +642,17 @@ void QuadTree::clearChunkUpdate(void)
 
 bool  QuadTree::updateMaterialParams(void)
 {
-	bool update = false;
+	bool updated = false;
 
 	if (!isValid())
-		return update;
+		return updated;
 	
 	if (!isVisible())
-		return update;
+		return updated;
 
 	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 4 ") + __FUNCTION__, "itQuadTree->second->updateMaterialParams");
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4 ") + __FUNCTION__, "itQuadTree->second->updateMaterialParams");
 
 		//TheWorld_Viewer_Utils::TimerMs clock;
 		//clock.tick();
@@ -659,10 +660,10 @@ bool  QuadTree::updateMaterialParams(void)
 		//clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
 		getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(false);
 
-		update = true;
+		updated = true;
 	}
 
-	return update;
+	return updated;
 }
 
 bool QuadTree::resetMaterialParams()
@@ -671,7 +672,7 @@ bool QuadTree::resetMaterialParams()
 
 	if (materialParamsNeedReset())
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 3 ") + __FUNCTION__, "itQuadTree->second->resetMaterialParams");
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3 ") + __FUNCTION__, "itQuadTree->second->resetMaterialParams");
 		m_worldQuadrant->getCollider()->deinit();
 		m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
 		m_worldQuadrant->getCollider()->enterWorld();
@@ -892,179 +893,214 @@ void ShaderTerrainData::resetMaterialParams(void)
 	
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
 
-	bool loadingHeighmapOK = false;
-	bool loadingNormalmapOK = false;
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 3.1 ") + __FUNCTION__, "Load images from FS");
-		m_heightMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingHeighmapOK, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::heightmap);
-		m_normalMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingNormalmapOK, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::normalmap);
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Image from heights buffer");
+
+		size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
+		godot::PoolByteArray data;
+		size_t heightmapBufferSizeInBytes = _resolution * _resolution * uint16_t_size;
+		data.resize((int)heightmapBufferSizeInBytes);
+		{
+			godot::PoolByteArray::Write w = data.write();
+			size_t heightsBufferSize = m_quadTree->getQuadrant()->getFloat16HeightsBuffer().len();
+			assert(heightmapBufferSizeInBytes == heightsBufferSize);
+			memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getFloat16HeightsBuffer().ptr(), heightsBufferSize);
+		}
+		godot::Ref<godot::Image> image = godot::Image::_new();
+		image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, data);
+		m_heightMapImage = image;
+	}
+	
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Image from normal buffer");
+
+		godot::PoolByteArray data;
+		size_t normalmapBufferSizeInBytes = _resolution * _resolution * sizeof(struct TheWorld_Utils::_RGB);
+		data.resize((int)normalmapBufferSizeInBytes);
+		{
+			godot::PoolByteArray::Write w = data.write();
+			size_t normalsBufferSize = m_quadTree->getQuadrant()->getNormalsBuffer().len();
+			assert(normalmapBufferSizeInBytes == normalsBufferSize);
+			memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getNormalsBuffer().ptr(), normalsBufferSize);
+		}
+		godot::Ref<godot::Image> image = godot::Image::_new();
+		image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
+		m_normalMapImage = image;
 	}
 
-	if (!loadingHeighmapOK || !loadingNormalmapOK)
+	//bool loadingHeighmapOK = false;
+	//bool loadingNormalmapOK = false;
+	//{
+	//	TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.1 ") + __FUNCTION__, "Load images from FS");
+	//	m_heightMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingHeighmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
+	//	m_normalMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingNormalmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
+	//}
+
+	//if (!loadingHeighmapOK || !loadingNormalmapOK)
+	//{
+	//	TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Images from Vertex Array");
+
+	//	// Creating Heightmap Map Texture
+	//	{
+	//		Ref<Image> image = Image::_new();
+	//		image->create(_resolution, _resolution, false, Image::FORMAT_RH);
+	//		m_heightMapImage = image;
+	//	}
+
+	//	// Creating Normal Map Texture
+	//	{
+	//		Ref<Image> image = Image::_new();
+	//		image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+	//		m_normalMapImage = image;
+	//	}
+
+	//	{
+	//		std::vector<TheWorld_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
+
+	//		// Filling Heightmap Map Texture , Normal Map Texture
+	//		assert(_resolution == m_heightMapImage->get_height());
+	//		assert(_resolution == m_heightMapImage->get_width());
+	//		assert(_resolution == m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize());
+	//		float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
+	//		m_heightMapImage->lock();
+	//		m_normalMapImage->lock();
+	//		for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
+	//			for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
+	//			{
+	//				//Sleep(0);
+	//				float h = gridVertices[z * _resolution + x].altitude();
+	//				m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
+	//				//if (h != 0)	// DEBUGRIC
+	//				//	m_viewer->Globals()->debugPrint("Altitude not null.X=" + String(std::to_string(x).c_str()) + " Z=" + std::to_string(z).c_str() + " H=" + std::to_string(h).c_str());
+
+	//				// h = height of the point for which we are computing the normal
+	//				// hr = height of the point on the rigth
+	//				// hl = height of the point on the left
+	//				// hf = height of the forward point (z growing)
+	//				// hb = height of the backward point (z lessening)
+	//				// step = step in WUs between points
+	//				// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
+	//				// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
+	//				Vector3 normal;
+	//				Vector3 P((float)x, h, (float)z);
+	//				if (x < _resolution - 1 && z < _resolution - 1)
+	//				{
+	//					float hr = gridVertices[z * _resolution + x + 1].altitude();
+	//					float hf = gridVertices[(z + 1) * _resolution + x].altitude();
+	//					normal = Vector3(h - hr, gridStepInWUs, h - hf).normalized();
+	//					//{		// Verify
+	//					//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
+	//					//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
+	//					//	Vector3 normal1 = (PF - P).cross(PR - P).normalized();
+	//					//	if (!equal(normal1, normal))	// DEBUGRIC
+	//					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+	//					//}
+	//				}
+	//				else
+	//				{
+	//					if (x == _resolution - 1 && z == 0)
+	//					{
+	//						float hf = gridVertices[(z + 1) * _resolution + x].altitude();
+	//						float hl = gridVertices[z * _resolution + x - 1].altitude();
+	//						normal = Vector3(hl - h, gridStepInWUs, h - hf).normalized();
+	//						//{		// Verify
+	//						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
+	//						//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
+	//						//	Vector3 normal1 = (PL - P).cross(PF - P).normalized();
+	//						//	if (!equal(normal1, normal))	// DEBUGRIC
+	//						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+	//						//}
+	//					}
+	//					else if (x == 0 && z == _resolution - 1)
+	//					{
+	//						float hr = gridVertices[z * _resolution + x + 1].altitude();
+	//						float hb = gridVertices[(z - 1) * _resolution + x].altitude();
+	//						normal = Vector3(h - hr, gridStepInWUs, hb - h).normalized();
+	//						//{		// Verify
+	//						//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
+	//						//	Vector3 PB((float)(x), hb, (float)(z - gridStepInWUs));
+	//						//	Vector3 normal1 = (PR - P).cross(PB - P).normalized();
+	//						//	if (!equal(normal1, normal))	// DEBUGRIC
+	//						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+	//						//}
+	//					}
+	//					else
+	//					{
+	//						float hl = gridVertices[z * _resolution + x - 1].altitude();
+	//						float hb = gridVertices[(z - 1) * _resolution + x].altitude();
+	//						normal = Vector3(hl - h, gridStepInWUs, hb - h).normalized();
+	//						//{		// Verify
+	//						//	Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));
+	//						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
+	//						//	Vector3 normal1 = (PB - P).cross(PL - P).normalized();
+	//						//	if (!equal(normal1, normal))	// DEBUGRIC
+	//						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
+	//						//}
+	//					}
+	//				}
+	//				Color c = encodeNormal(normal);
+	//				m_normalMapImage->set_pixel(x, z, c);
+	//			}
+	//		m_normalMapImage->unlock();
+	//		m_heightMapImage->unlock();
+
+	//		m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_heightMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
+	//		m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_normalMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
+
+	//		//{
+	//		//	
+	//		//	int64_t h1 = m_heightMapImage->get_height();
+	//		//	int64_t w1 = m_heightMapImage->get_width();
+	//		//	Image::Format f1 = m_heightMapImage->get_format();
+
+	//		//	PoolByteArray datas1 = m_heightMapImage->get_data();
+	//		//	File* file = File::_new();
+	//		//	Error err = file->open("C:\\Users\\Riccardo\\appdata\\Roaming\\Godot\\app_userdata\\Godot Proj\\TheWorld\\Cache\\ST-5.000000_SZ-1025\\L-0\\prova.res", File::WRITE);
+	//		//	int64_t i64 = datas1.size();
+	//		//	file->store_64(i64);
+	//		//	file->store_buffer(datas1);
+	//		//	file->close();
+	//		//	err = file->open("C:\\Users\\Riccardo\\appdata\\Roaming\\Godot\\app_userdata\\Godot Proj\\TheWorld\\Cache\\ST-5.000000_SZ-1025\\L-0\\prova.res", File::READ);
+	//		//	i64 = file->get_64();
+	//		//	PoolByteArray datas2 = file->get_buffer(i64);
+	//		//	file->close();
+	//		//	i64 = datas2.size();
+	//		//	m_heightMapImage->create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, datas2);
+
+	//		//	int64_t h2 = m_heightMapImage->get_height();
+	//		//	int64_t w2 = m_heightMapImage->get_width();
+	//		//	Image::Format f2 = m_heightMapImage->get_format();
+	//		//}
+	//		
+	//		
+	//		//{
+	//		//	int64_t h1 = m_heightMapImage->get_height();
+	//		//	int64_t w1 = m_heightMapImage->get_width();
+	//		//	Image::Format f1 = m_heightMapImage->get_format();
+	//		//	m_heightMapImage->convert(godot::Image::FORMAT_RGB8);
+	//		//	//m_heightMapImage = cache.readHeigthmap(loadingHeighmapOK);
+	//		//	m_heightMapImage->convert(Image::FORMAT_RH);
+	//		//	//m_normalMapImage = cache.readNormalmap(loadingNormalmapOK);
+	//		//	//m_normalMapImage->convert(Image::FORMAT_RGB8);
+	//		//	int64_t h = m_heightMapImage->get_height();
+	//		//	int64_t w = m_heightMapImage->get_width();
+	//		//	Image::Format f = m_heightMapImage->get_format();
+	//		//	m_heightMapImage->lock();
+	//		//	m_normalMapImage->lock();
+	//		//	for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
+	//		//		for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
+	//		//		{
+	//		//			Color c = m_heightMapImage->get_pixel(x, z);
+	//		//			c = m_normalMapImage->get_pixel(x, z);
+	//		//		}
+	//		//	m_normalMapImage->unlock();
+	//		//	m_heightMapImage->unlock();
+	//		//}
+	//	}
+	//}
+
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 3.2 ") + __FUNCTION__, "Create Images from Vertex Array");
-
-		// Creating Heightmap Map Texture
-		{
-			Ref<Image> image = Image::_new();
-			image->create(_resolution, _resolution, false, Image::FORMAT_RH);
-			m_heightMapImage = image;
-		}
-
-		// Creating Normal Map Texture
-		{
-			Ref<Image> image = Image::_new();
-			image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
-			m_normalMapImage = image;
-		}
-
-		{
-			std::vector<TheWorld_Viewer_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
-
-			// Filling Heightmap Map Texture , Normal Map Texture
-			assert(_resolution == m_heightMapImage->get_height());
-			assert(_resolution == m_heightMapImage->get_width());
-			assert(_resolution == m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize());
-			float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
-			m_heightMapImage->lock();
-			m_normalMapImage->lock();
-			for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
-				for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
-				{
-					//Sleep(0);
-					float h = gridVertices[z * _resolution + x].altitude();
-					m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
-					//if (h != 0)	// DEBUGRIC
-					//	m_viewer->Globals()->debugPrint("Altitude not null.X=" + String(std::to_string(x).c_str()) + " Z=" + std::to_string(z).c_str() + " H=" + std::to_string(h).c_str());
-
-					// h = height of the point for which we are computing the normal
-					// hr = height of the point on the rigth
-					// hl = height of the point on the left
-					// hf = height of the forward point (z growing)
-					// hb = height of the backward point (z lessening)
-					// step = step in WUs between points
-					// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
-					// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
-					Vector3 normal;
-					Vector3 P((float)x, h, (float)z);
-					if (x < _resolution - 1 && z < _resolution - 1)
-					{
-						float hr = gridVertices[z * _resolution + x + 1].altitude();
-						float hf = gridVertices[(z + 1) * _resolution + x].altitude();
-						normal = Vector3(h - hr, gridStepInWUs, h - hf).normalized();
-						//{		// Verify
-						//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-						//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-						//	Vector3 normal1 = (PF - P).cross(PR - P).normalized();
-						//	if (!equal(normal1, normal))	// DEBUGRIC
-						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-						//}
-					}
-					else
-					{
-						if (x == _resolution - 1 && z == 0)
-						{
-							float hf = gridVertices[(z + 1) * _resolution + x].altitude();
-							float hl = gridVertices[z * _resolution + x - 1].altitude();
-							normal = Vector3(hl - h, gridStepInWUs, h - hf).normalized();
-							//{		// Verify
-							//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-							//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-							//	Vector3 normal1 = (PL - P).cross(PF - P).normalized();
-							//	if (!equal(normal1, normal))	// DEBUGRIC
-							//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-							//}
-						}
-						else if (x == 0 && z == _resolution - 1)
-						{
-							float hr = gridVertices[z * _resolution + x + 1].altitude();
-							float hb = gridVertices[(z - 1) * _resolution + x].altitude();
-							normal = Vector3(h - hr, gridStepInWUs, hb - h).normalized();
-							//{		// Verify
-							//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-							//	Vector3 PB((float)(x), hb, (float)(z - gridStepInWUs));
-							//	Vector3 normal1 = (PR - P).cross(PB - P).normalized();
-							//	if (!equal(normal1, normal))	// DEBUGRIC
-							//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-							//}
-						}
-						else
-						{
-							float hl = gridVertices[z * _resolution + x - 1].altitude();
-							float hb = gridVertices[(z - 1) * _resolution + x].altitude();
-							normal = Vector3(hl - h, gridStepInWUs, hb - h).normalized();
-							//{		// Verify
-							//	Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));
-							//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-							//	Vector3 normal1 = (PB - P).cross(PL - P).normalized();
-							//	if (!equal(normal1, normal))	// DEBUGRIC
-							//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-							//}
-						}
-					}
-					Color c = encodeNormal(normal);
-					m_normalMapImage->set_pixel(x, z, c);
-				}
-			m_normalMapImage->unlock();
-			m_heightMapImage->unlock();
-
-			m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_heightMapImage, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::heightmap);
-			m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_normalMapImage, TheWorld_Viewer_Utils::MeshCacheBuffer::ImageType::normalmap);
-
-			//{
-			//	
-			//	int64_t h1 = m_heightMapImage->get_height();
-			//	int64_t w1 = m_heightMapImage->get_width();
-			//	Image::Format f1 = m_heightMapImage->get_format();
-
-			//	PoolByteArray datas1 = m_heightMapImage->get_data();
-			//	File* file = File::_new();
-			//	Error err = file->open("C:\\Users\\Riccardo\\appdata\\Roaming\\Godot\\app_userdata\\Godot Proj\\TheWorld\\Cache\\ST-5.000000_SZ-1025\\L-0\\prova.res", File::WRITE);
-			//	int64_t i64 = datas1.size();
-			//	file->store_64(i64);
-			//	file->store_buffer(datas1);
-			//	file->close();
-			//	err = file->open("C:\\Users\\Riccardo\\appdata\\Roaming\\Godot\\app_userdata\\Godot Proj\\TheWorld\\Cache\\ST-5.000000_SZ-1025\\L-0\\prova.res", File::READ);
-			//	i64 = file->get_64();
-			//	PoolByteArray datas2 = file->get_buffer(i64);
-			//	file->close();
-			//	i64 = datas2.size();
-			//	m_heightMapImage->create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, datas2);
-
-			//	int64_t h2 = m_heightMapImage->get_height();
-			//	int64_t w2 = m_heightMapImage->get_width();
-			//	Image::Format f2 = m_heightMapImage->get_format();
-			//}
-			
-			
-			//{
-			//	int64_t h1 = m_heightMapImage->get_height();
-			//	int64_t w1 = m_heightMapImage->get_width();
-			//	Image::Format f1 = m_heightMapImage->get_format();
-			//	m_heightMapImage->convert(godot::Image::FORMAT_RGB8);
-			//	//m_heightMapImage = cache.readHeigthmap(loadingHeighmapOK);
-			//	m_heightMapImage->convert(Image::FORMAT_RH);
-			//	//m_normalMapImage = cache.readNormalmap(loadingNormalmapOK);
-			//	//m_normalMapImage->convert(Image::FORMAT_RGB8);
-			//	int64_t h = m_heightMapImage->get_height();
-			//	int64_t w = m_heightMapImage->get_width();
-			//	Image::Format f = m_heightMapImage->get_format();
-			//	m_heightMapImage->lock();
-			//	m_normalMapImage->lock();
-			//	for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
-			//		for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
-			//		{
-			//			Color c = m_heightMapImage->get_pixel(x, z);
-			//			c = m_normalMapImage->get_pixel(x, z);
-			//		}
-			//	m_normalMapImage->unlock();
-			//	m_heightMapImage->unlock();
-			//}
-		}
-	}
-
-	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 3.3 ") + __FUNCTION__, "Create Texture from images");
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Texture from images");
 
 		{
 			Ref<ImageTexture> tex = ImageTexture::_new();
@@ -1122,11 +1158,11 @@ void ShaderTerrainData::resetMaterialParams(void)
 	materialParamsNeedUpdate(true);
 }
 
-Color ShaderTerrainData::encodeNormal(Vector3 normal)
-{
-	normal = 0.5 * (normal + Vector3::ONE);
-	return Color(normal.x, normal.z, normal.y);
-}
+//Color ShaderTerrainData::encodeNormal(Vector3 normal)
+//{
+//	normal = 0.5 * (normal + Vector3::ONE);
+//	return Color(normal.x, normal.z, normal.y);
+//}
 
 void ShaderTerrainData::updateMaterialParams(void)
 {
@@ -1257,9 +1293,40 @@ size_t QuadrantPos::distanceInPerimeter(QuadrantPos& q)
 		return distanceOnZ;
 }
 
-TheWorld_Viewer_Utils::MeshCacheBuffer& Quadrant::getMeshCacheBuffer(void)
+TheWorld_Utils::MeshCacheBuffer& Quadrant::getMeshCacheBuffer(void)
 {
 	return m_cache;
+}
+
+size_t Quadrant::getIndexFromHeighmap(float posX, float posZ, size_t level)
+{
+	if (posX < m_quadrantPos.getLowerXGridVertex() || posX > m_quadrantPos.getLowerXGridVertex() + m_quadrantPos.getSizeInWU()
+		|| posZ < m_quadrantPos.getLowerZGridVertex() || posZ > m_quadrantPos.getLowerZGridVertex() + m_quadrantPos.getSizeInWU())
+		return -1;
+
+	size_t numStepsXAxis = size_t((posX - m_quadrantPos.getLowerXGridVertex()) / m_quadrantPos.getGridStepInWU());
+	size_t numStepsZAxis = size_t((posZ - m_quadrantPos.getLowerZGridVertex()) / m_quadrantPos.getGridStepInWU());
+
+	return numStepsZAxis * m_quadrantPos.getNumVerticesPerSize() + numStepsXAxis;
+}
+
+float Quadrant::getAltitudeFromHeigthmap(size_t index)
+{
+	//float* p = (float*)m_float32HeigthsBuffer.c_str();
+	float* p = (float*)m_float32HeigthsBuffer.ptr();
+	return *(p + index);
+}
+
+float Quadrant::getPosXFromHeigthmap(size_t index)
+{
+	size_t numStepsXAxis = index - (index / m_quadrantPos.getNumVerticesPerSize()) * m_quadrantPos.getNumVerticesPerSize();
+	return m_quadrantPos.getLowerXGridVertex() + numStepsXAxis * m_quadrantPos.getGridStepInWU();
+}
+
+float Quadrant::getPosZFromHeigthmap(size_t index)
+{
+	size_t numStepsZAxis = size_t(index / m_quadrantPos.getNumVerticesPerSize());
+	return m_quadrantPos.getLowerZGridVertex() + numStepsZAxis * m_quadrantPos.getGridStepInWU();
 }
 
 void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
@@ -1278,7 +1345,7 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	//}
 
 	size_t serializedVertexSize = 0;
-	TheWorld_Viewer_Utils::GridVertex v;
+	TheWorld_Utils::GridVertex v;
 	// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
 	v.serialize(shortBuffer, serializedVertexSize);
 
@@ -1290,7 +1357,7 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	std::string buffGridVertices;
 
 	// look for cache in file system
-	TheWorld_Viewer_Utils::MeshCacheBuffer cache = getMeshCacheBuffer();
+	TheWorld_Utils::MeshCacheBuffer cache = getMeshCacheBuffer();
 	std::string meshId = cache.getMeshIdFromMeshCache();
 
 	if (meshId.length() > 0)
@@ -1319,22 +1386,48 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 
 void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::string& meshIdFromBuffer)
 {
-	float minY = 0, maxY = 0;
-	m_cache.refreshVerticesFromBuffer(buffer, meshIdFromBuffer, m_vectGridVertices, (void*)&m_heigths, minY, maxY);
+	float minAltitude = 0, maxAltitude = 0;
+	
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.1 ") + __FUNCTION__, "m_cache.refreshMapsFromBuffer");
+		m_cache.refreshMapsFromBuffer(buffer, meshIdFromBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+	}
 
 	if (meshIdFromBuffer != meshId)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshId from server").c_str()));
 
-	if (m_vectGridVertices.size() == 0)
-		m_cache.readVerticesFromMeshCache(meshId, m_vectGridVertices, (void*)&m_heigths, minY, maxY);
+	if (m_float16HeigthsBuffer.empty())
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
+		m_cache.readMapsFromMeshCache(meshId, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+	}
 
 	int areaSize = (m_viewer->Globals()->heightmapResolution() + 1) * (m_viewer->Globals()->heightmapResolution() + 1);
 
-	if (m_vectGridVertices.size() != areaSize)
+	//BYTE shortBuffer[256 + 1];
+	size_t uint16_t_size = sizeof(uint16_t);	// the size of an half ==> float_16
+	//TheWorld_Utils::serializeToByteStream<uint16_t>(0, shortBuffer, uint16_t_size);
+	size_t float_size = sizeof(float);	// the size of a float
+	//TheWorld_Utils::serializeToByteStream<float>(0, shortBuffer, float_size);
+
+	size_t numFloat16Heights = m_float16HeigthsBuffer.len() / uint16_t_size;
+	size_t numFloat32Heights = m_float32HeigthsBuffer.len() / float_size;
+	size_t numNormals = m_normalsBuffer.len() / sizeof(struct TheWorld_Utils::_RGB);
+
+	assert(numFloat16Heights == numFloat32Heights);
+	assert(numFloat16Heights == numNormals);
+	assert(numFloat16Heights == areaSize);
+	if (numFloat16Heights != numFloat32Heights || numFloat16Heights != numNormals || numFloat16Heights != areaSize)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Grid Vertices not of the correct size").c_str()));
 
-	Vector3 startPosition(m_quadrantPos.getLowerXGridVertex(), minY, m_quadrantPos.getLowerZGridVertex());
-	Vector3 endPosition(startPosition.x + m_quadrantPos.getSizeInWU(), maxY, startPosition.z + m_quadrantPos.getSizeInWU());
+	{
+		m_heigths.resize((int)numFloat32Heights);
+		godot::PoolRealArray::Write w = m_heigths.write();
+		memcpy((char*)w.ptr(), m_float32HeigthsBuffer.ptr(), m_float32HeigthsBuffer.len());
+	}
+
+	Vector3 startPosition(m_quadrantPos.getLowerXGridVertex(), minAltitude, m_quadrantPos.getLowerZGridVertex());
+	Vector3 endPosition(startPosition.x + m_quadrantPos.getSizeInWU(), maxAltitude, startPosition.z + m_quadrantPos.getSizeInWU());
 	Vector3 size = endPosition - startPosition;
 
 	m_globalCoordAABB.set_position(startPosition);

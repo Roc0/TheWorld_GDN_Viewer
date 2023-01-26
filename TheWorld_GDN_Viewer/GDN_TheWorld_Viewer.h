@@ -130,6 +130,7 @@ namespace godot
 		Chunk* getActiveChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter);
 		bool terrainShiftPermitted(void)
 		{
+			return true;
 			return m_numinitializedQuadrant >= m_numQuadrant;
 		}
 		//Chunk* getTrackedChunk(void);

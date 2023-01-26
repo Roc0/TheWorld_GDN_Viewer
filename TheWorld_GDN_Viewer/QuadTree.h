@@ -225,7 +225,7 @@ namespace godot
 			m_viewer = viewer;
 			m_quadTree = quadTree;
 			std::string dir = GDN_TheWorld_Globals::getClientDataDir();
-			m_cache = TheWorld_Viewer_Utils::MeshCacheBuffer(dir, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
+			m_cache = TheWorld_Utils::MeshCacheBuffer(dir, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
 			m_shaderTerrainData = make_unique<ShaderTerrainData>(viewer, quadTree);
 			m_collider = make_unique<Collider>(quadTree);
 		}
@@ -234,17 +234,11 @@ namespace godot
 		{
 			//TheWorld_Viewer_Utils::TimerMs clock;
 			//clock.tick();
-			m_vectGridVertices.clear();
 			//clock.tock();
 			//godot::GDN_TheWorld_Globals::s_elapsed1 += clock.duration().count();
 		}
 
 		_declspec(dllexport) void populateGridVertices(float initialViewerPosX, float initialViewerPosZ, bool setCamera, float cameraDistanceFromTerrain);
-
-		std::vector<TheWorld_Viewer_Utils::GridVertex>& getGridVertices(void)
-		{
-			return m_vectGridVertices;
-		}
 
 		PoolRealArray& getHeights(void)
 		{
@@ -278,18 +272,35 @@ namespace godot
 			return m_collider.get();
 		}
 
+		size_t getIndexFromHeighmap(float posX, float posZ, size_t level);
+		float getAltitudeFromHeigthmap(size_t index);
+		float getPosXFromHeigthmap(size_t index);
+		float getPosZFromHeigthmap(size_t index);
+
+		TheWorld_Utils::MemoryBuffer& getFloat16HeightsBuffer(void)
+		{
+			return m_float16HeigthsBuffer;
+		}
+
+		TheWorld_Utils::MemoryBuffer& getNormalsBuffer(void)
+		{
+			return m_normalsBuffer;
+		}
+
 	private:
-		TheWorld_Viewer_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
+		TheWorld_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
 
 	private:
 		QuadrantPos m_quadrantPos;
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
-		std::vector<TheWorld_Viewer_Utils::GridVertex> m_vectGridVertices;
-		PoolRealArray m_heigths;
+		TheWorld_Utils::MemoryBuffer m_float16HeigthsBuffer;	// each height is expressed as a 16-bit float (image with FORMAT_RH) and are serialized line by line (each line from x=0 to x=numVertexPerQuadrant, first line ==> z=0, last line z=numVertexPerQuadrant)
+		TheWorld_Utils::MemoryBuffer m_float32HeigthsBuffer;	// each height is expressed as a 32-bit and are serialized as above
+		TheWorld_Utils::MemoryBuffer m_normalsBuffer;	// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heigths
+		godot::PoolRealArray m_heigths;
 		std::string m_meshId;
-		TheWorld_Viewer_Utils::MeshCacheBuffer m_cache;
-		AABB m_globalCoordAABB;
+		TheWorld_Utils::MeshCacheBuffer m_cache;
+		godot::AABB m_globalCoordAABB;
 		std::unique_ptr<Collider> m_collider;
 		std::unique_ptr<ShaderTerrainData> m_shaderTerrainData;
 	};

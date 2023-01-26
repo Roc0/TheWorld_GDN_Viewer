@@ -233,9 +233,9 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 	{
 		if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
 		{
-			TheWorld_Utils::Profiler::addElapsedMs(std::string("WorldDeply 1 ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES, reply.duration());
+			TheWorld_Utils::Profiler::addElapsedMs(std::string("WorldDeploy 1 ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES, reply.duration());
 			
-			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2 ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2 ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);
 
 			//TheWorld_Viewer_Utils::TimerMs clock("GDN_TheWorld_Viewer::replyFromServer", "CLIENT SIDE", false, true);
 			
@@ -357,7 +357,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			//clock.tock();
 			if (m_mapQuadTree.contains(quadrantPos))
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2.1 ") + __FUNCTION__, "Elab. quadrant");
+				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1 ") + __FUNCTION__, "Elab. quadrant");
 				QuadTree* quadTree = m_mapQuadTree[quadrantPos].get();
 				m_mtxQuadTree.unlock();
 				if (quadTree->status() == QuadrantStatus::getVerticesInProgress)
@@ -372,7 +372,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					{
 						// ATTENZIONE
 						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
-						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2.1.1 ") + __FUNCTION__,"quadTree->getQuadrant()->refreshGridVertices");
+						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1 ") + __FUNCTION__,"quadTree->getQuadrant()->refreshGridVertices");
 						quadTree->getQuadrant()->refreshGridVertices(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer);
 					}
 					
@@ -389,32 +389,20 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 					if (setCamera)
 					{
-						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 2.1.2 ") + __FUNCTION__, "setCamera");
-
-						std::vector<TheWorld_Viewer_Utils::GridVertex>& vectGridVertices = quadTree->getQuadrant()->getGridVertices();
+						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.2 ") + __FUNCTION__, "setCamera");
 
 						forceRefreshMapQuadTree();
 
 						quadTree->setVisible(true);
 
-						TheWorld_Viewer_Utils::GridVertex viewerPos(viewerPosX, 0, viewerPosZ, level);
-						std::vector<TheWorld_Viewer_Utils::GridVertex>::iterator it = std::find(vectGridVertices.begin(), vectGridVertices.end(), viewerPos);
-						if (it == vectGridVertices.end())
-						{
-							bool found = false;
-							for (it = vectGridVertices.begin(); it != vectGridVertices.end(); it++)
-							{
-								if (it->equalApartFromAltitude(viewerPos))
-								{
-									found = true;
-									break;
-								}
-							}
-							if (!found)
-								throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Not found WorldViewer Pos").c_str()));
-						}
-						Vector3 cameraPos(viewerPosX, it->altitude() + cameraDistanceFromTerrain, viewerPosZ);		// MapManager coordinates are local coordinates of WorldNode
-						Vector3 lookAt(viewerPosX + cameraDistanceFromTerrain, it->altitude(), viewerPosZ + cameraDistanceFromTerrain);
+						size_t cameraInGridIndex = quadTree->getQuadrant()->getIndexFromHeighmap(viewerPosX, viewerPosZ, level);
+						if (cameraInGridIndex == -1)
+							throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Not found WorldViewer Pos").c_str()));
+
+						float cameraHeight = quadTree->getQuadrant()->getAltitudeFromHeigthmap(cameraInGridIndex);
+
+						Vector3 cameraPos(viewerPosX, cameraHeight + cameraDistanceFromTerrain, viewerPosZ);		// MapManager coordinates are local coordinates of WorldNode
+						Vector3 lookAt(viewerPosX + cameraDistanceFromTerrain, cameraHeight, viewerPosZ + cameraDistanceFromTerrain);
 
 						// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
 						//Transform t = get_transform();
@@ -816,27 +804,29 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			m_refreshMapQuadTree = false;
 			m_computedCameraQuadrantPos = quadrantPosNeeded[0];
 
-			// calculate minimum distance of camera from quad tree borders
-			float minimunDistanceOfCameraFromBordersOfQuadrant = cameraPosGlobalCoord.x - quadrantPosNeeded[0].getLowerXGridVertex();
-			float f = (quadrantPosNeeded[0].getLowerXGridVertex() + quadrantPosNeeded[0].getSizeInWU()) - cameraPosGlobalCoord.x;
-			if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
-				minimunDistanceOfCameraFromBordersOfQuadrant = f;
-			f = cameraPosGlobalCoord.z - quadrantPosNeeded[0].getLowerZGridVertex();
-			if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
-				minimunDistanceOfCameraFromBordersOfQuadrant = f;
-			f = (quadrantPosNeeded[0].getLowerZGridVertex() + quadrantPosNeeded[0].getSizeInWU()) - cameraPosGlobalCoord.z;
-			if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
-				minimunDistanceOfCameraFromBordersOfQuadrant = f;
+			//{
+			//	// calculate minimum distance of camera from quad tree borders
+			//	float minimunDistanceOfCameraFromBordersOfQuadrant = cameraPosGlobalCoord.x - quadrantPosNeeded[0].getLowerXGridVertex();
+			//	float f = (quadrantPosNeeded[0].getLowerXGridVertex() + quadrantPosNeeded[0].getSizeInWU()) - cameraPosGlobalCoord.x;
+			//	if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
+			//		minimunDistanceOfCameraFromBordersOfQuadrant = f;
+			//	f = cameraPosGlobalCoord.z - quadrantPosNeeded[0].getLowerZGridVertex();
+			//	if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
+			//		minimunDistanceOfCameraFromBordersOfQuadrant = f;
+			//	f = (quadrantPosNeeded[0].getLowerZGridVertex() + quadrantPosNeeded[0].getSizeInWU()) - cameraPosGlobalCoord.z;
+			//	if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
+			//		minimunDistanceOfCameraFromBordersOfQuadrant = f;
 
-			// calculate num of quad needed surrounding camera-quad-tree according to desidered farHorizon
-			m_numVisibleQuadrantOnPerimeter = 0;
-			if (farHorizon > minimunDistanceOfCameraFromBordersOfQuadrant)
-			{
-				m_numVisibleQuadrantOnPerimeter = (size_t)floor((farHorizon - minimunDistanceOfCameraFromBordersOfQuadrant) / quadrantPosNeeded[0].getSizeInWU()) + 1;
-				if (m_numVisibleQuadrantOnPerimeter > 3)
-					m_numVisibleQuadrantOnPerimeter = 3;
-			}
-
+			//	// calculate num of quad needed surrounding camera-quad-tree according to desidered farHorizon
+			//	m_numVisibleQuadrantOnPerimeter = 0;
+			//	if (farHorizon > minimunDistanceOfCameraFromBordersOfQuadrant)
+			//	{
+			//		m_numVisibleQuadrantOnPerimeter = (size_t)floor((farHorizon - minimunDistanceOfCameraFromBordersOfQuadrant) / quadrantPosNeeded[0].getSizeInWU()) + 1;
+			//		if (m_numVisibleQuadrantOnPerimeter > 3)
+			//			m_numVisibleQuadrantOnPerimeter = 3;
+			//	}
+			//}
+			m_numVisibleQuadrantOnPerimeter = 3;
 			m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter * 2;
 
 			{
@@ -1585,11 +1575,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
-				bool reset = itQuadTree->second->resetMaterialParams();
-				bool update = itQuadTree->second->updateMaterialParams();
+			bool reset = false;
+			reset = itQuadTree->second->resetMaterialParams();
+			bool updated = itQuadTree->second->updateMaterialParams();
 				
-				if (reset)
-					break;
+			if (reset || updated)
+				break;
 		}
 	}
 

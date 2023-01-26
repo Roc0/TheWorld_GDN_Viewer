@@ -473,7 +473,7 @@ namespace TheWorld_ClientServer
 			//}
 			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeply 1a ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);
+				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 1a ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);
 
 				float* viewerPosX = std::get_if<float>(&reply->m_inputParams[0]);
 				if (viewerPosX == nullptr)

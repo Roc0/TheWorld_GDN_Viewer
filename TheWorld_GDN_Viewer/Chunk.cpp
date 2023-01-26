@@ -604,20 +604,20 @@ void Chunk::getGlobalCoordAABB(AABB& aabb, int firstWorldVertCol, int lastWorldV
 		{
 			if (firstTime)
 			{
-				minHeigth = maxHeigth = m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude();
+				minHeigth = maxHeigth = m_quadTree->getQuadrant()->getAltitudeFromHeigthmap(idxVert);
 				firstTime = false;
 			}
 			else
 			{
-				minHeigth = TheWorld_Viewer_Utils::Utils::min2(minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
-				maxHeigth = TheWorld_Viewer_Utils::Utils::max2(maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxVert].altitude());
+				minHeigth = TheWorld_Viewer_Utils::Utils::min2(minHeigth, m_quadTree->getQuadrant()->getAltitudeFromHeigthmap(idxVert));
+				maxHeigth = TheWorld_Viewer_Utils::Utils::max2(maxHeigth, m_quadTree->getQuadrant()->getAltitudeFromHeigthmap(idxVert));
 			}
 		}
 	}
 
-	Vector3 startPosition(m_quadTree->getQuadrant()->getGridVertices()[idxFirstColFirstRowWorldVert].posX(), minHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxFirstColFirstRowWorldVert].posZ());
+	Vector3 startPosition(m_quadTree->getQuadrant()->getPosXFromHeigthmap(idxFirstColFirstRowWorldVert), minHeigth, m_quadTree->getQuadrant()->getPosZFromHeigthmap(idxFirstColFirstRowWorldVert));
 	//Vector3 endPosition(m_worldVertices[idxLastColLastRowWorldVert].posX() - m_worldVertices[idxFirstColFirstRowWorldVert].posX(), maxHeigth, m_worldVertices[idxLastColLastRowWorldVert].posZ() - m_worldVertices[idxFirstColFirstRowWorldVert].posZ());
-	Vector3 endPosition(m_quadTree->getQuadrant()->getGridVertices()[idxLastColLastRowWorldVert].posX(), maxHeigth, m_quadTree->getQuadrant()->getGridVertices()[idxLastColLastRowWorldVert].posZ());
+	Vector3 endPosition(m_quadTree->getQuadrant()->getPosXFromHeigthmap(idxLastColLastRowWorldVert), maxHeigth, m_quadTree->getQuadrant()->getPosZFromHeigthmap(idxLastColLastRowWorldVert));
 	Vector3 size = endPosition - startPosition;
 
 	aabb.set_position(startPosition);
