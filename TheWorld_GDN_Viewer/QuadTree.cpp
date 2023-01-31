@@ -103,8 +103,6 @@ void Quad::assignChunk(void)
 
 	if (m_chunk == nullptr)
 	{
-		// TODORIC Material stuff
-
 		// create chunk for current quad because this is the first time that is needed for current lod and pos
 		Ref<Material> mat = m_quadTree->getQuadrant()->getShaderTerrainData()->getMaterial();
 		if (_DEBUG_AAB)
@@ -145,6 +143,7 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantPos)
 	m_GDN_Quadrant = nullptr;
 	m_tag = quadrantPos.getTag();
 	int ret = timespec_get(&m_refreshTime, TIME_UTC);
+	m_editModeSel = false;
 }
 
 void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
@@ -865,7 +864,7 @@ ShaderTerrainData::ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quad
 	m_heightMapTexModified = false;
 	m_normalMapTexModified = false;
 	//m_splat1MapTexModified = false;
-	//m_colorMapTexModified = false;
+	m_colorMapTexModified = false;
 }
 
 ShaderTerrainData::~ShaderTerrainData()
@@ -886,13 +885,14 @@ void ShaderTerrainData::init(void)
 
 // it is expected that globals and World Datas are loaded
 // TODORIC: maybe usefull for performance reasons specify which texture need update and which rect of the texture 
-void ShaderTerrainData::resetMaterialParams(void)
+void ShaderTerrainData::resetMaterialParams(bool onlyColorMap)
 {
 	std::recursive_mutex& quadrantMutex = m_quadTree->getQuadrantMutex();
 	std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
 	
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
 
+	if (!onlyColorMap)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Image from heights buffer");
 
@@ -911,6 +911,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 		m_heightMapImage = image;
 	}
 	
+	if (!onlyColorMap)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Image from normal buffer");
 
@@ -931,6 +932,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Texture from images");
 
+		if (!onlyColorMap)
 		{
 			Ref<ImageTexture> tex = ImageTexture::_new();
 			tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
@@ -939,6 +941,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
 		}
 
+		if (!onlyColorMap)
 		{
 			Ref<ImageTexture> tex = ImageTexture::_new();
 			tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
@@ -964,20 +967,24 @@ void ShaderTerrainData::resetMaterialParams(void)
 		//}
 
 		// Creating Color Map Texture
-		//{
-		//	Ref<Image> image = Image::_new();
-		//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-		//	image->fill(Color(1, 1, 1, 1));
-		//	m_colorMapImage = image;
-		//}
+		{
+			Ref<Image> image = Image::_new();
+			image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+			//image->fill(Color(1, 1, 1, 1));
+			if (m_quadTree->editModeSel())
+				image->fill(godot::GDN_TheWorld_Globals::g_color_yellow_amber);
+			else
+				image->fill(godot::GDN_TheWorld_Globals::g_color_white);
+			m_colorMapImage = image;
+		}
 
 		// Filling Color Map Texture
-		//{
-		//	Ref<ImageTexture> tex = ImageTexture::_new();
-		//	tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
-		//	m_colorMapTexture = tex;
-		//	m_colorMapImageModified = true;
-		//}
+		{
+			Ref<ImageTexture> tex = ImageTexture::_new();
+			tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
+			m_colorMapTexture = tex;
+			m_colorMapTexModified = true;
+		}
 	}
 	// _update_all_vertical_bounds ???	// TODORIC
 	//	# RGF image where R is min heightand G is max height
@@ -1027,6 +1034,13 @@ void ShaderTerrainData::updateMaterialParams(void)
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));	// DEBUGRIC
 			m_material->set_shader_param(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
 			m_normalMapTexModified = false;
+		}
+
+		if (m_colorMapTexModified)
+		{
+			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_COLORMAP));	// DEBUGRIC
+			m_material->set_shader_param(SHADER_PARAM_TERRAIN_COLORMAP, m_colorMapTexture);
+			m_colorMapTexModified = false;
 		}
 
 		//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos

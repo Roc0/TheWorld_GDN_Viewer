@@ -43,6 +43,8 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_mouseHitLabel = nullptr;
 	m_mouseQuadHitLabel = nullptr;
 	m_mouseQuadHitPosLabel = nullptr;
+	m_mouseQuadSelLabel = nullptr;
+	m_mouseQuadSelPosLabel = nullptr;
 }
 
 GDN_TheWorld_Edit::~GDN_TheWorld_Edit()
@@ -211,7 +213,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				marginContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
-					label->set_text("Quad");
+					label->set_text("Quad Hit");
 					label->set_align(godot::Label::Align::ALIGN_LEFT);
 					m_mouseQuadHitLabel = godot::Label::_new();
 					hBoxContainer->add_child(m_mouseQuadHitLabel);
@@ -223,11 +225,35 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				marginContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
-					label->set_text("Pos");
+					label->set_text("Pos Hit");
 					label->set_align(godot::Label::Align::ALIGN_LEFT);
 					m_mouseQuadHitPosLabel = godot::Label::_new();
 					hBoxContainer->add_child(m_mouseQuadHitPosLabel);
 					m_mouseQuadHitPosLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+
+			marginContainer = godot::MarginContainer::_new();
+			mainVBoxContainer->add_child(marginContainer);
+				hBoxContainer = godot::HBoxContainer::_new();
+				marginContainer->add_child(hBoxContainer);
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Quad Sel");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					m_mouseQuadSelLabel = godot::Label::_new();
+					hBoxContainer->add_child(m_mouseQuadSelLabel);
+					m_mouseQuadSelLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+
+			marginContainer = godot::MarginContainer::_new();
+			mainVBoxContainer->add_child(marginContainer);
+				hBoxContainer = godot::HBoxContainer::_new();
+				marginContainer->add_child(hBoxContainer);
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Pos Sel");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					m_mouseQuadSelPosLabel = godot::Label::_new();
+					hBoxContainer->add_child(m_mouseQuadSelPosLabel);
+					m_mouseQuadSelPosLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
 }
 
 void GDN_TheWorld_Edit::resizeUI(void)
@@ -350,6 +376,16 @@ void GDN_TheWorld_Edit::setMouseQuadHitLabelText(std::string text)
 void GDN_TheWorld_Edit::setMouseQuadHitPosLabelText(std::string text)
 {
 	m_mouseQuadHitPosLabel->set_text(text.c_str());
+}
+
+void GDN_TheWorld_Edit::setMouseQuadSelLabelText(std::string text)
+{
+	m_mouseQuadSelLabel->set_text(text.c_str());
+}
+
+void GDN_TheWorld_Edit::setMouseQuadSelPosLabelText(std::string text)
+{
+	m_mouseQuadSelPosLabel->set_text(text.c_str());
 }
 
 void GDN_TheWorld_Edit::deinit(void)

@@ -357,7 +357,7 @@ namespace godot
 		{
 			m_materialParamsNeedReset = b;
 		}
-		void resetMaterialParams(void);
+		void resetMaterialParams(bool onlyColorMap = false);
 		bool materialParamsNeedUpdate(void)
 		{
 			return m_materialParamsNeedUpdate;
@@ -374,7 +374,7 @@ namespace godot
 
 	private:
 		void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
-		Color encodeNormal(Vector3 normal);
+		//Color encodeNormal(Vector3 normal);
 
 	private:
 		GDN_TheWorld_Viewer* m_viewer;
@@ -395,9 +395,9 @@ namespace godot
 		//Ref<Texture> m_splat1MapTexture;
 		//bool m_splat1MapTexModified;
 
-		//Ref<Image> m_colorMapImage;
-		//Ref<Texture> m_colorMapTexture;
-		//bool m_colorMapTexModified;
+		Ref<Image> m_colorMapImage;
+		Ref<Texture> m_colorMapTexture;
+		bool m_colorMapTexModified;
 	};
 	
 	class Quad
@@ -651,6 +651,15 @@ namespace godot
 			return m_mapChunk;
 		}
 
+		void setEditModeSel(bool b)
+		{
+			m_editModeSel = b;
+		}
+		bool editModeSel(void)
+		{
+			return m_editModeSel;
+		}
+
 	private:
 		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode, enum class UpdateStage updateStage, int& numSplitRequired);
 
@@ -667,6 +676,7 @@ namespace godot
 		Quadrant* m_worldQuadrant;
 		std::timespec m_refreshTime;
 		GDN_TheWorld_Quadrant* m_GDN_Quadrant;
+		bool m_editModeSel;
 
 		// Statistics
 		int m_numSplits;

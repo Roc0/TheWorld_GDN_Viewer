@@ -338,7 +338,7 @@ namespace godot
 		float m_mouseQuadrantHitSize;
 		godot::Vector3 m_mouseQuadrantHitPos;
 		QuadrantPos m_quadrantHitPos;
-		QuadrantPos m_quadrantSel;
+		QuadrantPos m_quadrantSelPos;
 		Chunk* m_mouseHitChunk;
 		QuadTree* m_mouseHitQuadTree;
 

@@ -68,6 +68,8 @@ namespace godot
 		void setMouseHitLabelText(std::string text);
 		void setMouseQuadHitLabelText(std::string text);
 		void setMouseQuadHitPosLabelText(std::string text);
+		void setMouseQuadSelLabelText(std::string text);
+		void setMouseQuadSelPosLabelText(std::string text);
 
 		std::map<QuadrantPos, bool>& getMapQUadToSave(void)
 		{
@@ -89,6 +91,8 @@ namespace godot
 		godot::Label* m_mouseHitLabel;
 		godot::Label* m_mouseQuadHitLabel;
 		godot::Label* m_mouseQuadHitPosLabel;
+		godot::Label* m_mouseQuadSelLabel;
+		godot::Label* m_mouseQuadSelPosLabel;
 
 		std::map<QuadrantPos, bool> m_quadToSave;
 	};

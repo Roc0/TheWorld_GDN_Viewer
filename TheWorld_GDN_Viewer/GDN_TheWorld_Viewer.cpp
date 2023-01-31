@@ -541,7 +541,56 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 	if (event->is_action_pressed("ui_select"))
 	{
 		if (m_trackMouse)
+		{
 			m_mouseQuadrantHitName = "";
+
+			if (m_quadrantSelPos.empty())
+			{
+				if (!m_quadrantHitPos.empty())
+				{
+					m_quadrantSelPos = m_quadrantHitPos;
+
+					{
+						std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+						MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
+						if (it != m_mapQuadTree.end())
+						{
+							it->second->setEditModeSel(true);
+							it->second->materialParamsNeedReset(true);
+						}
+					}
+				}
+			}
+			else
+			{
+				{
+					std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+					MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
+					if (it != m_mapQuadTree.end())
+					{
+						it->second->setEditModeSel(false);
+						it->second->materialParamsNeedReset(true);
+					}
+				}
+
+				m_quadrantSelPos.reset();
+			}
+
+			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+			if (editModeUIControl != nullptr && m_editMode)
+			{
+				if (m_quadrantSelPos.empty())
+				{
+					editModeUIControl->setMouseQuadSelLabelText("");
+					editModeUIControl->setMouseQuadSelPosLabelText("");
+				}
+				else
+				{
+					editModeUIControl->setMouseQuadSelLabelText(m_quadrantSelPos.getName() + " " + m_quadrantSelPos.getTag());
+					editModeUIControl->setMouseQuadSelPosLabelText(std::string("X=") + std::to_string(m_quadrantSelPos.getLowerXGridVertex()) + " Z=" + std::to_string(m_quadrantSelPos.getLowerZGridVertex()) + " " + std::to_string(m_quadrantSelPos.getSizeInWU()));
+				}
+			}
+		}
 	}
 
 	if (event->is_action_pressed("ui_toggle_track_mouse"))
@@ -1087,12 +1136,13 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 						int level = collider->get_meta("QuadrantLevel");
 						int numVerticesPerSize = collider->get_meta("QuadrantNumVert");
 						QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
+						quadrantHitPos.setTag(mouseQuadrantHitTag);
 
 						if (editModeUIControl != nullptr && m_editMode)
 						{
 							editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
 							editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
-						
+
 							// Get TerrainEdit Data from hit quadrant
 							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
 							if (it != m_mapQuadTree.end())
@@ -1842,6 +1892,8 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 
 QuadTree* GDN_TheWorld_Viewer::getQuadTree(QuadrantPos pos)
 {
+	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+
 	auto iter = m_mapQuadTree.find(pos);
 	if (iter == m_mapQuadTree.end())
 		return nullptr;
@@ -2327,11 +2379,17 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 	if (editModeUIControl == nullptr || !m_editMode)
 		return;
 
-	MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
-	if (it == m_mapQuadTree.end())
-		return;
+	QuadTree* quadTreeSel = nullptr;
+	{
+		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+		MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
+		if (it == m_mapQuadTree.end())
+			return;
+		else
+			quadTreeSel = it->second.get();
+	}
 	
-	TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
+	TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
 	terrainEdit->noiseSeed = editModeUIControl->seed();
 	terrainEdit->frequency = editModeUIControl->frequency();
 	terrainEdit->fractalOctaves = editModeUIControl->octaves();
@@ -2379,10 +2437,10 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
 	//}
 
-	size_t numVerticesPerSize = m_quadrantHitPos.getNumVerticesPerSize();
-	float gridStepInWU = m_quadrantHitPos.getGridStepInWU();
-	float lowerXGridVertex = m_quadrantHitPos.getLowerXGridVertex();
-	float lowerZGridVertex = m_quadrantHitPos.getLowerZGridVertex();
+	size_t numVerticesPerSize = m_quadrantSelPos.getNumVerticesPerSize();
+	float gridStepInWU = m_quadrantSelPos.getGridStepInWU();
+	float lowerXGridVertex = m_quadrantSelPos.getLowerXGridVertex();
+	float lowerZGridVertex = m_quadrantSelPos.getLowerZGridVertex();
 	std::vector<float> vectGridHeights(numVerticesPerSize * numVerticesPerSize);
 
 	{
@@ -2403,16 +2461,16 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 	std::string meshId;
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("2. EditMode ") + __FUNCTION__, "Quadrant reverse array to buffer");
-		TheWorld_Utils::MeshCacheBuffer& cache = it->second->getQuadrant()->getMeshCacheBuffer();
+		TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
 		meshId = cache.getMeshId();
 		cache.setBufferForMeshCache(meshId, numVerticesPerSize, gridStepInWU, vectGridHeights, meshBuffer);
-		editModeUIControl->getMapQUadToSave()[m_quadrantHitPos] = true;
+		editModeUIControl->getMapQUadToSave()[m_quadrantSelPos] = true;
 	}
 
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("3. EditMode ") + __FUNCTION__, "Quadrant refreshGridVertices");
-		it->second->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
-		it->second->materialParamsNeedReset();
+		quadTreeSel->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
+		quadTreeSel->materialParamsNeedReset();
 	}
 
 }

@@ -63,6 +63,7 @@ namespace godot
 		PoolVector3Array positions;
 		PoolColorArray colors;
 		Color initialVertexColor = GDN_TheWorld_Globals::g_color_white;
+		//Color initialVertexColor = GDN_TheWorld_Globals::g_color_pink_amaranth;
 		//strideInWUs = (numVerticesPerChuckSide * strideInWUs) / 4;	// DEBUGRIC
 		//numVerticesPerChuckSide = 4;								// DEBUGRIC
 		positions.resize((int)pow(numVerticesPerChuckSide + 1, 2));
