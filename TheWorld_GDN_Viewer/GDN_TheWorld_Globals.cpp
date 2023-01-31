@@ -59,32 +59,6 @@ namespace godot
 		m_globals = globals;
 	}
 
-	//float GDN_TheWorld_Globals_Client::MapManagerGridStepInWU()
-	//{
-	//	std::vector<ClientServerVariant> replyParams;
-	//	std::vector<ClientServerVariant> inputParams;
-	//	int rc = execMethodSync("MapManager::gridStepInWU", inputParams, replyParams);
-	//	if (rc != THEWORLD_CLIENTSERVER_RC_OK)
-	//	{
-	//		std::string m = std::string("execMethodSync ==> MapManager::gridStepInWU error ") + std::to_string(rc);
-	//		throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
-	//	}
-	//	if (replyParams.size() == 0)
-	//	{
-	//		std::string m = std::string("execMethodSync ==> MapManager::gridStepInWU error ") + std::to_string(rc);
-	//		throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "No param replied", rc));
-	//	}
-
-	//	const auto ptr(std::get_if<float>(&replyParams[0]));
-	//	if (ptr == NULL)
-	//	{
-	//		std::string m = std::string("execMethodSync ==> MapManager::gridStepInWU did not return a float");
-	//		throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-	//	}
-	//	
-	//	return *ptr;
-	//}
-
 	void GDN_TheWorld_Globals_Client::MapManagerSetLogMaxSeverity(plog::Severity sev)
 	{
 		std::vector<ClientServerVariant> replyParams;
@@ -112,36 +86,6 @@ namespace godot
 			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
 		}
 	}
-
-	//void GDN_TheWorld_Globals_Client::MapManagerCalcNextCoordOnTheGridInWUs(std::vector<float>& inCoords, std::vector<float>& outCoords)
-	//{
-	//	std::vector<ClientServerVariant> replyParams;
-	//	std::vector<ClientServerVariant> inputParams;
-	//	for (size_t idx = 0; idx < inCoords.size(); idx++)
-	//		inputParams.push_back(inCoords[idx]);
-	//	int rc = execMethodSync(THEWORLD_CLIENTSERVER_METHOD_MAPM_CALCNEXTCOORDGETVERTICES, inputParams, replyParams);
-	//	if (rc != THEWORLD_CLIENTSERVER_RC_OK)
-	//	{
-	//		std::string m = std::string("ClientInterface::execMethodSync ==> MapManager::calcNextCoordOnTheGridInWUs error ") + std::to_string(rc);
-	//		throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
-	//	}
-	//	if (replyParams.size() != inCoords.size())
-	//	{
-	//		std::string m = std::string("execMethodSync ==> MapManager::calcNextCoordOnTheGridInWUs error (not enough params replied)") + std::to_string(rc);
-	//		throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-	//	}
-
-	//	for (size_t idx = 0; idx < inCoords.size(); idx++)
-	//	{
-	//		const auto ptr(std::get_if<float>(&replyParams[idx]));
-	//		if (ptr == NULL)
-	//		{
-	//			std::string m = std::string("execMethodSync ==> MapManager::calcNextCoordOnTheGridInWUs did not return a float");
-	//			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-	//		}
-	//		outCoords.push_back(*ptr);
-	//	}
-	//}
 
 	void GDN_TheWorld_Globals_Client::MapManagerGetVertices(float viewerPosX, float viewerPosZ, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, bool setCamera, float cameraDistanceFromTerrain, std::string meshId)
 	{

@@ -928,177 +928,6 @@ void ShaderTerrainData::resetMaterialParams(void)
 		m_normalMapImage = image;
 	}
 
-	//bool loadingHeighmapOK = false;
-	//bool loadingNormalmapOK = false;
-	//{
-	//	TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.1 ") + __FUNCTION__, "Load images from FS");
-	//	m_heightMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingHeighmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
-	//	m_normalMapImage = m_quadTree->getQuadrant()->getMeshCacheBuffer().readImage(loadingNormalmapOK, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
-	//}
-
-	//if (!loadingHeighmapOK || !loadingNormalmapOK)
-	//{
-	//	TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Images from Vertex Array");
-
-	//	// Creating Heightmap Map Texture
-	//	{
-	//		Ref<Image> image = Image::_new();
-	//		image->create(_resolution, _resolution, false, Image::FORMAT_RH);
-	//		m_heightMapImage = image;
-	//	}
-
-	//	// Creating Normal Map Texture
-	//	{
-	//		Ref<Image> image = Image::_new();
-	//		image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
-	//		m_normalMapImage = image;
-	//	}
-
-	//	{
-	//		std::vector<TheWorld_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
-
-	//		// Filling Heightmap Map Texture , Normal Map Texture
-	//		assert(_resolution == m_heightMapImage->get_height());
-	//		assert(_resolution == m_heightMapImage->get_width());
-	//		assert(_resolution == m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize());
-	//		float gridStepInWUs = m_viewer->Globals()->gridStepInWU();
-	//		m_heightMapImage->lock();
-	//		m_normalMapImage->lock();
-	//		for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
-	//			for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
-	//			{
-	//				//Sleep(0);
-	//				float h = gridVertices[z * _resolution + x].altitude();
-	//				m_heightMapImage->set_pixel(x, z, Color(h, 0, 0));
-	//				//if (h != 0)	// DEBUGRIC
-	//				//	m_viewer->Globals()->debugPrint("Altitude not null.X=" + String(std::to_string(x).c_str()) + " Z=" + std::to_string(z).c_str() + " H=" + std::to_string(h).c_str());
-
-	//				// h = height of the point for which we are computing the normal
-	//				// hr = height of the point on the rigth
-	//				// hl = height of the point on the left
-	//				// hf = height of the forward point (z growing)
-	//				// hb = height of the backward point (z lessening)
-	//				// step = step in WUs between points
-	//				// we compute normal normalizing the vector (h - hr, step, h - hf) or (hl - h, step, hb - h)
-	//				// according to https://hterrain-plugin.readthedocs.io/en/latest/ section "Procedural generation" it should be (h - hr, step, hf - h)
-	//				Vector3 normal;
-	//				Vector3 P((float)x, h, (float)z);
-	//				if (x < _resolution - 1 && z < _resolution - 1)
-	//				{
-	//					float hr = gridVertices[z * _resolution + x + 1].altitude();
-	//					float hf = gridVertices[(z + 1) * _resolution + x].altitude();
-	//					normal = Vector3(h - hr, gridStepInWUs, h - hf).normalized();
-	//					//{		// Verify
-	//					//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-	//					//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-	//					//	Vector3 normal1 = (PF - P).cross(PR - P).normalized();
-	//					//	if (!equal(normal1, normal))	// DEBUGRIC
-	//					//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-	//					//}
-	//				}
-	//				else
-	//				{
-	//					if (x == _resolution - 1 && z == 0)
-	//					{
-	//						float hf = gridVertices[(z + 1) * _resolution + x].altitude();
-	//						float hl = gridVertices[z * _resolution + x - 1].altitude();
-	//						normal = Vector3(hl - h, gridStepInWUs, h - hf).normalized();
-	//						//{		// Verify
-	//						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-	//						//	Vector3 PF((float)x, hf, (float)(z + gridStepInWUs));
-	//						//	Vector3 normal1 = (PL - P).cross(PF - P).normalized();
-	//						//	if (!equal(normal1, normal))	// DEBUGRIC
-	//						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-	//						//}
-	//					}
-	//					else if (x == 0 && z == _resolution - 1)
-	//					{
-	//						float hr = gridVertices[z * _resolution + x + 1].altitude();
-	//						float hb = gridVertices[(z - 1) * _resolution + x].altitude();
-	//						normal = Vector3(h - hr, gridStepInWUs, hb - h).normalized();
-	//						//{		// Verify
-	//						//	Vector3 PR((float)(x + gridStepInWUs), hr, (float)z);
-	//						//	Vector3 PB((float)(x), hb, (float)(z - gridStepInWUs));
-	//						//	Vector3 normal1 = (PR - P).cross(PB - P).normalized();
-	//						//	if (!equal(normal1, normal))	// DEBUGRIC
-	//						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-	//						//}
-	//					}
-	//					else
-	//					{
-	//						float hl = gridVertices[z * _resolution + x - 1].altitude();
-	//						float hb = gridVertices[(z - 1) * _resolution + x].altitude();
-	//						normal = Vector3(hl - h, gridStepInWUs, hb - h).normalized();
-	//						//{		// Verify
-	//						//	Vector3 PB((float)x, hb, (float)(z - gridStepInWUs));
-	//						//	Vector3 PL((float)(x - gridStepInWUs), hl, (float)z);
-	//						//	Vector3 normal1 = (PB - P).cross(PL - P).normalized();
-	//						//	if (!equal(normal1, normal))	// DEBUGRIC
-	//						//		m_viewer->Globals()->debugPrint("Normal=" + String(normal) + " - Normal1= " + String(normal1));
-	//						//}
-	//					}
-	//				}
-	//				Color c = encodeNormal(normal);
-	//				m_normalMapImage->set_pixel(x, z, c);
-	//			}
-	//		m_normalMapImage->unlock();
-	//		m_heightMapImage->unlock();
-
-	//		m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_heightMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::heightmap);
-	//		m_quadTree->getQuadrant()->getMeshCacheBuffer().writeImage(m_normalMapImage, TheWorld_Utils::MeshCacheBuffer::ImageType::normalmap);
-
-	//		//{
-	//		//	
-	//		//	int64_t h1 = m_heightMapImage->get_height();
-	//		//	int64_t w1 = m_heightMapImage->get_width();
-	//		//	Image::Format f1 = m_heightMapImage->get_format();
-
-	//		//	PoolByteArray datas1 = m_heightMapImage->get_data();
-	//		//	File* file = File::_new();
-	//		//	Error err = file->open("C:\\Users\\Riccardo\\appdata\\Roaming\\Godot\\app_userdata\\Godot Proj\\TheWorld\\Cache\\ST-5.000000_SZ-1025\\L-0\\prova.res", File::WRITE);
-	//		//	int64_t i64 = datas1.size();
-	//		//	file->store_64(i64);
-	//		//	file->store_buffer(datas1);
-	//		//	file->close();
-	//		//	err = file->open("C:\\Users\\Riccardo\\appdata\\Roaming\\Godot\\app_userdata\\Godot Proj\\TheWorld\\Cache\\ST-5.000000_SZ-1025\\L-0\\prova.res", File::READ);
-	//		//	i64 = file->get_64();
-	//		//	PoolByteArray datas2 = file->get_buffer(i64);
-	//		//	file->close();
-	//		//	i64 = datas2.size();
-	//		//	m_heightMapImage->create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, datas2);
-
-	//		//	int64_t h2 = m_heightMapImage->get_height();
-	//		//	int64_t w2 = m_heightMapImage->get_width();
-	//		//	Image::Format f2 = m_heightMapImage->get_format();
-	//		//}
-	//		
-	//		
-	//		//{
-	//		//	int64_t h1 = m_heightMapImage->get_height();
-	//		//	int64_t w1 = m_heightMapImage->get_width();
-	//		//	Image::Format f1 = m_heightMapImage->get_format();
-	//		//	m_heightMapImage->convert(godot::Image::FORMAT_RGB8);
-	//		//	//m_heightMapImage = cache.readHeigthmap(loadingHeighmapOK);
-	//		//	m_heightMapImage->convert(Image::FORMAT_RH);
-	//		//	//m_normalMapImage = cache.readNormalmap(loadingNormalmapOK);
-	//		//	//m_normalMapImage->convert(Image::FORMAT_RGB8);
-	//		//	int64_t h = m_heightMapImage->get_height();
-	//		//	int64_t w = m_heightMapImage->get_width();
-	//		//	Image::Format f = m_heightMapImage->get_format();
-	//		//	m_heightMapImage->lock();
-	//		//	m_normalMapImage->lock();
-	//		//	for (int z = 0; z < _resolution; z++)			// m_heightMapImage->get_height()
-	//		//		for (int x = 0; x < _resolution; x++)		// m_heightMapImage->get_width()
-	//		//		{
-	//		//			Color c = m_heightMapImage->get_pixel(x, z);
-	//		//			c = m_normalMapImage->get_pixel(x, z);
-	//		//		}
-	//		//	m_normalMapImage->unlock();
-	//		//	m_heightMapImage->unlock();
-	//		//}
-	//	}
-	//}
-
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Texture from images");
 
@@ -1331,7 +1160,7 @@ float Quadrant::getPosZFromHeigthmap(size_t index)
 
 void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
 {
-	BYTE shortBuffer[256 + 1];
+	//BYTE shortBuffer[256 + 1];
 	//TheWorld_Viewer_Utils::TimerMs clock;
 
 	//{
@@ -1344,10 +1173,10 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	//	assert(v.lvl() == v1.lvl());
 	//}
 
-	size_t serializedVertexSize = 0;
-	TheWorld_Utils::GridVertex v;
+	//size_t serializedVertexSize = 0;
+	//TheWorld_Utils::GridVertex v;
 	// Serialize an empty GridVertex only to obtain the size of a serialized GridVertex
-	v.serialize(shortBuffer, serializedVertexSize);
+	//v.serialize(shortBuffer, serializedVertexSize);
 
 	float lowerXGridVertex = m_quadrantPos.getLowerXGridVertex();
 	float lowerZGridVertex = m_quadrantPos.getLowerZGridVertex();
@@ -1384,13 +1213,13 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	return;
 }
 
-void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::string& meshIdFromBuffer)
+void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache)
 {
 	float minAltitude = 0, maxAltitude = 0;
 	
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.1 ") + __FUNCTION__, "m_cache.refreshMapsFromBuffer");
-		m_cache.refreshMapsFromBuffer(buffer, meshIdFromBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+		m_cache.refreshMapsFromBuffer(buffer, meshIdFromBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, updateCache);
 	}
 
 	if (meshIdFromBuffer != meshId)

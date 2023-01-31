@@ -60,6 +60,12 @@
     <ClInclude Include="GDN_TheWorld_Quadrant.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="FastNoiseLite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GDN_TheWorld_Edit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
@@ -108,6 +114,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GDN_TheWorld_Quadrant.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="GDN_TheWorld_Edit.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

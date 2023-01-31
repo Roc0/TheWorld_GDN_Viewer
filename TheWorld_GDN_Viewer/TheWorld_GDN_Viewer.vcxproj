@@ -167,9 +167,11 @@
     <ClInclude Include="Chunk.h" />
     <ClInclude Include="ClientServer.h" />
     <ClInclude Include="Collider.h" />
+    <ClInclude Include="FastNoiseLite.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="GDN_Template.h" />
     <ClInclude Include="GDN_TheWorld_Camera.h" />
+    <ClInclude Include="GDN_TheWorld_Edit.h" />
     <ClInclude Include="GDN_TheWorld_Exception.h" />
     <ClInclude Include="GDN_TheWorld_Globals.h" />
     <ClInclude Include="GDN_TheWorld_MainNode.h" />
@@ -206,6 +208,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="GDN_TheWorld_Camera.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="GDN_TheWorld_Edit.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>

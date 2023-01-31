@@ -456,21 +456,6 @@ namespace TheWorld_ClientServer
 				reply->replyParam(f);
 				reply->replyComplete();
 			}
-			//else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_CALCNEXTCOORDGETVERTICES)
-			//{
-			//	for (size_t i = 0; i < reply->m_inputParams.size(); i++)
-			//	{
-			//		float* coord = std::get_if<float>(&reply->m_inputParams[i]);
-			//		if (coord == nullptr)
-			//		{
-			//			reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be a FLOAT");
-			//			return;
-			//		}
-			//		float f = m_mapManager->calcNextCoordOnTheGridInWUs(*coord);
-			//		reply->replyParam(f);
-			//	}
-			//	reply->replyComplete();
-			//}
 			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 1a ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);

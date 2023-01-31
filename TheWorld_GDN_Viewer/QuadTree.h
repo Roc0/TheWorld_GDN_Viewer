@@ -16,6 +16,7 @@
 
 #include "Chunk.h"
 #include "Collider.h"
+//#include <Utils.h>
 
 #define _DEBUG_AAB	1
 
@@ -24,6 +25,7 @@ namespace godot
 	class GDN_TheWorld_Viewer;
 	class GDN_TheWorld_Quadrant;
 	class QuadTree;
+	class TerrainEdit;
 
 	class QuadrantPos
 	{
@@ -56,23 +58,40 @@ namespace godot
 
 		QuadrantPos()
 		{
+			reset();
+			//m_lowerXGridVertex = m_lowerZGridVertex = m_gridStepInWU = 0;
+			//m_numVerticesPerSize = m_level = 0;
+			//m_sizeInWU = 0;
+			//m_initialized = false;
+		}
+
+		void reset(void)
+		{
 			m_lowerXGridVertex = m_lowerZGridVertex = m_gridStepInWU = 0;
 			m_numVerticesPerSize = m_level = 0;
 			m_sizeInWU = 0;
+			m_tag.clear();
+			m_name.clear();
 			m_initialized = false;
+		}
+
+		bool empty(void)
+		{
+			return m_initialized == false;
 		}
 
 		QuadrantPos(const QuadrantPos& quadrantPos)
 		{
-			m_lowerXGridVertex = quadrantPos.m_lowerXGridVertex;
-			m_lowerZGridVertex = quadrantPos.m_lowerZGridVertex;
-			m_numVerticesPerSize = quadrantPos.m_numVerticesPerSize;
-			m_level = quadrantPos.m_level;
-			m_gridStepInWU = quadrantPos.m_gridStepInWU;
-			m_sizeInWU = quadrantPos.m_sizeInWU;
-			m_tag = quadrantPos.m_tag;
-			m_name = quadrantPos.m_name;
-			m_initialized = true;
+			*this = quadrantPos;
+			//m_lowerXGridVertex = quadrantPos.m_lowerXGridVertex;
+			//m_lowerZGridVertex = quadrantPos.m_lowerZGridVertex;
+			//m_numVerticesPerSize = quadrantPos.m_numVerticesPerSize;
+			//m_level = quadrantPos.m_level;
+			//m_gridStepInWU = quadrantPos.m_gridStepInWU;
+			//m_sizeInWU = quadrantPos.m_sizeInWU;
+			//m_tag = quadrantPos.m_tag;
+			//m_name = quadrantPos.m_name;
+			//m_initialized = true;
 		}
 
 		QuadrantPos(float x, float z, int level, int numVerticesPerSize, float gridStepInWU)
@@ -128,7 +147,7 @@ namespace godot
 				return false;
 		}
 
-		QuadrantPos operator=(const QuadrantPos& quadrantPos)
+		void operator=(const QuadrantPos& quadrantPos)
 		{
 			m_lowerXGridVertex = quadrantPos.m_lowerXGridVertex;
 			m_lowerZGridVertex = quadrantPos.m_lowerZGridVertex;
@@ -138,8 +157,9 @@ namespace godot
 			m_sizeInWU = quadrantPos.m_sizeInWU;
 			m_tag = quadrantPos.m_tag;
 			m_name = quadrantPos.m_name;
-			m_initialized = true;
-			return *this;
+			//m_initialized = true;
+			m_initialized = quadrantPos.m_initialized;
+			//return *this;
 		}
 
 		std::string getIdStr(void)
@@ -217,6 +237,7 @@ namespace godot
 	class Quadrant
 	{
 		friend class ShaderTerrainData;
+		friend class GDN_TheWorld_Viewer;
 
 	public:
 		Quadrant(QuadrantPos& quadrantPos, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
@@ -255,7 +276,7 @@ namespace godot
 			m_meshId = meshId;
 		}
 
-		void refreshGridVertices(std::string buffer, std::string meshId, std::string& meshIdFromBuffer);
+		void refreshGridVertices(std::string buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache);
 
 		AABB& getGlobalCoordAABB(void)
 		{
@@ -287,6 +308,13 @@ namespace godot
 			return m_normalsBuffer;
 		}
 
+		TerrainEdit* getTerrainEdit()
+		{
+			if (m_terrainEdit == nullptr)
+				m_terrainEdit = make_unique<TerrainEdit>();
+			return m_terrainEdit.get();
+		}
+
 	private:
 		TheWorld_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
 
@@ -297,6 +325,7 @@ namespace godot
 		TheWorld_Utils::MemoryBuffer m_float16HeigthsBuffer;	// each height is expressed as a 16-bit float (image with FORMAT_RH) and are serialized line by line (each line from x=0 to x=numVertexPerQuadrant, first line ==> z=0, last line z=numVertexPerQuadrant)
 		TheWorld_Utils::MemoryBuffer m_float32HeigthsBuffer;	// each height is expressed as a 32-bit and are serialized as above
 		TheWorld_Utils::MemoryBuffer m_normalsBuffer;	// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heigths
+		std::unique_ptr<TerrainEdit> m_terrainEdit;
 		godot::PoolRealArray m_heigths;
 		std::string m_meshId;
 		TheWorld_Utils::MeshCacheBuffer m_cache;

@@ -204,19 +204,6 @@ namespace godot
 		//Vector3 centerOfQuadrant = igt.origin + 0.5 * Vector3(sizeInWU, 0, sizeInWU);
 		//Vector3 centerOfQuadrantDistFromCamera = cam->get_global_transform().origin - centerOfQuadrant;
 
-		//Transform t1;
-		//Transform bodyTranform1;
-		//t1 = Transform(Basis().scaled(Vector3(axisScaleFactr, 1.0, axisScaleFactr)));
-		//bodyTranform1 = igt * t1;
-		//bodyTranform1.origin = bodyTranform1.origin + Vector3((float)0.5 * sizeInWU, (float)0.0, (float)0.64 * sizeInWU);
-
-		//Transform t(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)), Vector3((float)0.5 * sizeInWU, (float)0.0, (float)0.64 * sizeInWU));
-		//Transform bodyTranform;
-		//bodyTranform = igt * t;
-
-		// le proporzioni sembrano corrette e z corta di un decimo per entrambi i quad. x corretta per Camera, eccessiva di quasi la metà del size per x
-		//Transform t(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)), Vector3((float)0.5 * sizeInWU, (float)0.0, (float)0.5 * sizeInWU));
-		
 		// set body to the center of the quadrant
 		Transform tTranslate(Basis(), Vector3((float)0.5 * sizeInWU, (float)colliderAltitude, (float)0.5 * sizeInWU));
 		Transform tScale(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)), Vector3(0, 0, 0));

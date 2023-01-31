@@ -33,6 +33,9 @@ namespace godot
 		set_meta("QuadrantName", m_quadTree->getQuadrant()->getPos().getName().c_str());
 		set_meta("QuadrantTag", m_quadTree->getQuadrant()->getPos().getTag().c_str());
 		set_meta("QuadrantOrig", Vector3(m_quadTree->getQuadrant()->getPos().getLowerXGridVertex(), 0, m_quadTree->getQuadrant()->getPos().getLowerZGridVertex()));
+		set_meta("QuadrantStep", m_quadTree->getQuadrant()->getPos().getGridStepInWU());
+		set_meta("QuadrantLevel", m_quadTree->getQuadrant()->getPos().getLevel());
+		set_meta("QuadrantNumVert", m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize());
 		set_meta("QuadrantSize", m_quadTree->getQuadrant()->getPos().getSizeInWU());
 		m_initialized = true;
 	}

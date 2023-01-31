@@ -26,8 +26,9 @@
 #define VISUAL_SERVER_WIREFRAME_MODE	true
 #define DEFAULT_DEBUG_ENABLED			true
 
-#define THEWORLD_GLOBALS_NODE_NAME	"GDN_TheWorld_Globals"
-#define THEWORLD_VIEWER_NODE_NAME	"GDN_TheWorld_Viewer"
+#define THEWORLD_EDIT_MODE_UI_CONTROL_NAME	"EditModeUI"
+#define THEWORLD_GLOBALS_NODE_NAME			"GDN_TheWorld_Globals"
+#define THEWORLD_VIEWER_NODE_NAME			"GDN_TheWorld_Viewer"
 
 namespace godot
 {
@@ -58,10 +59,8 @@ namespace godot
 	public:
 		GDN_TheWorld_Globals_Client(GDN_TheWorld_Globals* globals, plog::Severity sev);
 
-		//float MapManagerGridStepInWU(void);
 		void MapManagerSetLogMaxSeverity(plog::Severity sev);
 		void ServerInitializeSession(plog::Severity sev);
-		//void MapManagerCalcNextCoordOnTheGridInWUs(std::vector<float>& inCoords, std::vector<float>& outCoords);
 		void MapManagerGetVertices(float viewerPosX, float viewerPosZ, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, bool setCamera, float cameraDistanceFromTerrain, std::string meshId);
 	
 	private:

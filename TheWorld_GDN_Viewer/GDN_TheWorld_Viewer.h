@@ -24,6 +24,7 @@ namespace godot
 	class Chunk;
 	class GDN_TheWorld_Globals;
 	class GDN_TheWorld_Camera;
+	class GDN_TheWorld_Edit;
 
 	typedef std::map<QuadrantPos, std::unique_ptr<QuadTree>> MapQuadTree;
 
@@ -35,12 +36,54 @@ namespace godot
 #define TIME_INTERVAL_BETWEEN_STATISTICS 100	// ms, 0 = diasble periodic dump
 #define TIME_INTERVAL_BETWEEN_MOUSE_TRACK 250	// ms
 
+	class TerrainEdit
+	{
+	public:
+		bool needUploadToServer;
+
+		int noiseType;
+		int rotationType3D;
+		int noiseSeed;
+		float frequency;
+		int fractalType;
+		int fractalOctaves;
+		float fractalLacunarity;
+		float fractalGain;
+		float fractalWeightedStrength;
+		float fractalPingPongStrength;
+
+		int cellularDistanceFunction;
+		int cellularReturnType;
+		float cellularJitter;
+
+		int warpNoiseDomainWarpType;
+		int warpNoiseRotationType3D;
+		int warpNoiseSeed;
+		float warpNoiseDomainWarpAmp;
+		float warpNoiseFrequency;
+		int warpNoieseFractalType;
+		int warpNoiseFractalOctaves;
+		float warpNoiseFractalLacunarity;
+		float warpNoiseFractalGain;
+
+		TerrainEdit(void);
+		void serialize(TheWorld_Utils::MemoryBuffer& buffer);
+		void deserialize(TheWorld_Utils::MemoryBuffer& buffer);
+	};
+
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 	// Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 	class GDN_TheWorld_Viewer : public Spatial, public TheWorld_ClientServer::ClientCallback
 	{
 		GODOT_CLASS(GDN_TheWorld_Viewer, Spatial)
+
+		enum Margin {
+			MARGIN_LEFT,
+			MARGIN_TOP,
+			MARGIN_RIGHT,
+			MARGIN_BOTTOM
+		};
 
 	public:
 		GDN_TheWorld_Viewer();
@@ -65,6 +108,8 @@ namespace godot
 		void _notification(int p_what);
 
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
+		godot::GDN_TheWorld_Edit* EditModeUIControl(bool useCache = true);
+		void createEditModeUI(void);
 		void resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift);
 		bool initialWordlViewerPosSet(void)
 		{
@@ -133,8 +178,6 @@ namespace godot
 			return true;
 			return m_numinitializedQuadrant >= m_numQuadrant;
 		}
-		//Chunk* getTrackedChunk(void);
-		//String getTrackedChunkStr(void);
 		godot::Vector3 getMouseHit(void)
 		{
 			return m_mouseHit;
@@ -215,6 +258,13 @@ namespace godot
 			m_mouseHitQuadTree = quadTree;
 		}
 
+		bool editMode(void)
+		{
+			return m_editMode;
+		}
+
+		void GenerateHeigths(void);
+
 	private:
 		void onTransformChanged(void);
 		GDN_TheWorld_Camera* WorldCamera(bool useCache = true)
@@ -279,12 +329,16 @@ namespace godot
 		// Statistics data
 
 		bool m_trackMouse;
+		bool m_editMode;
+		bool m_editModeHudVisible;
 		int64_t m_timeElapsedFromLastMouseTrack;
 		godot::Vector3 m_mouseHit;
 		std::string m_mouseQuadrantHitName;
 		std::string m_mouseQuadrantHitTag;
 		float m_mouseQuadrantHitSize;
 		godot::Vector3 m_mouseQuadrantHitPos;
+		QuadrantPos m_quadrantHitPos;
+		QuadrantPos m_quadrantSel;
 		Chunk* m_mouseHitChunk;
 		QuadTree* m_mouseHitQuadTree;
 
@@ -322,6 +376,7 @@ namespace godot
 		size_t m_numCacheQuadrantOnPerimeter;
 		// Node cache
 		GDN_TheWorld_Globals* m_globals;
+		GDN_TheWorld_Edit* m_editModeUIControl;
 
 		// streamer thread
 		std::thread m_streamerThread;
@@ -338,3 +393,4 @@ namespace godot
 //			/TheWorld_Main							created in Godot editor
 //				/GDN_TheWorld_Viewer
 //				/GDN_TheWorld_Camera
+//				/EditModeUI

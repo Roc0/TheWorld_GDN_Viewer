@@ -2,6 +2,7 @@
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Camera.h"
+#include "GDN_TheWorld_Edit.h"
 #include <SceneTree.hpp>
 #include <Viewport.hpp>
 #include <Engine.hpp>
@@ -19,6 +20,7 @@
 #include "MeshCache.h"
 #include "QuadTree.h"
 #include "Profiler.h"
+#include "FastNoiseLite.h"
 
 #include <algorithm>
 
@@ -30,6 +32,48 @@ namespace fs = std::filesystem;
 // World Node Local Coordinate System is the same as MapManager coordinate system
 // Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 // Chunk and QuadTree coordinates are in Viewer Node local coordinate System
+
+TerrainEdit::TerrainEdit(void)
+{
+	needUploadToServer = false;
+
+	noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
+	rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+	noiseSeed = 1337;
+	frequency = 0.01f;
+	fractalType = FastNoiseLite::FractalType::FractalType_FBm;
+	fractalOctaves = 5;
+	fractalLacunarity = 2.0f;
+	fractalGain = 0.5f;
+	fractalWeightedStrength = 0.0f;
+	fractalPingPongStrength = 2.0f;
+
+	cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
+	cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
+	cellularJitter = 1.0f;
+
+	warpNoiseDomainWarpType = -1;
+	warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+	warpNoiseSeed = 1337;
+	warpNoiseDomainWarpAmp = 30.0f;
+	warpNoiseFrequency = 0.005f;
+	warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
+	warpNoiseFractalOctaves = 5;
+	warpNoiseFractalLacunarity = 2.0f;
+	warpNoiseFractalGain = 0.5f;
+}
+
+void TerrainEdit::serialize(TheWorld_Utils::MemoryBuffer& buffer)
+{
+	buffer.reserve(sizeof(TerrainEdit));
+	buffer.set((BYTE*)this, sizeof(TerrainEdit));
+}
+
+void TerrainEdit::deserialize(TheWorld_Utils::MemoryBuffer& buffer)
+{
+	assert(buffer.len() == sizeof(TerrainEdit));
+	memcpy(this, buffer.ptr(), sizeof(TerrainEdit));
+}
 
 void GDN_TheWorld_Viewer::_register_methods()
 {
@@ -94,6 +138,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_cameraQuadTree = nullptr;
 	m_refreshMapQuadTree = false;
 	m_globals = nullptr;
+	m_editModeUIControl = nullptr;
 	m_timeElapsedFromLastDump = 0;
 	m_timeElapsedFromLastStatistic = 0;
 	m_processDuration = 0;
@@ -131,6 +176,8 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numinitializedVisibleQuadrant = 0;
 	m_debugContentVisibility = true;
 	m_trackMouse = false;
+	m_editMode = false;
+	m_editModeHudVisible = false;
 	m_timeElapsedFromLastMouseTrack = 0;
 	m_mouseQuadrantHitSize = 0;
 	m_mouseHitChunk = nullptr;
@@ -210,6 +257,13 @@ void GDN_TheWorld_Viewer::deinit(void)
 		//	size_t el = godot::GDN_TheWorld_Globals::s_elapsed1 / godot::GDN_TheWorld_Globals::s_num;
 		//}
 		m_meshCache.reset();
+
+		GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+		if (editModeUIControl != nullptr)
+		{
+			editModeUIControl->deinit();
+			editModeUIControl->queue_free();
+		}
 
 		m_initialized = false;
 		PLOGI << "TheWorld Viewer Deinitialized!";
@@ -373,7 +427,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 						// ATTENZIONE
 						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
 						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1 ") + __FUNCTION__,"quadTree->getQuadrant()->refreshGridVertices");
-						quadTree->getQuadrant()->refreshGridVertices(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer);
+						quadTree->getQuadrant()->refreshGridVertices(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer, true);
 					}
 					
 					//clock.headerMsg("MapManager::getVertices - resetMaterialParams");
@@ -460,6 +514,8 @@ void GDN_TheWorld_Viewer::_ready(void)
 
 	globals->debugPrint("GDN_TheWorld_Viewer::_ready");
 
+	//get_tree()->get_root()->connect("size_changed", this, "viewport_resizing");
+	
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 
 	// Camera stuff
@@ -482,9 +538,27 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
+	if (event->is_action_pressed("ui_select"))
+	{
+		if (m_trackMouse)
+			m_mouseQuadrantHitName = "";
+	}
+
 	if (event->is_action_pressed("ui_toggle_track_mouse"))
 	{
-		m_trackMouse = !m_trackMouse;
+		if (!m_editMode)
+			m_trackMouse = !m_trackMouse;
+		if (m_trackMouse)
+			m_mouseQuadrantHitName = "";
+	}
+
+	if (event->is_action_pressed("ui_toggle_edit_mode"))
+	{
+		m_editMode = !m_editMode;
+		if (m_editMode)
+			m_trackMouse = true;
+		else
+			m_trackMouse = false;
 	}
 
 	if (event->is_action_pressed("ui_toggle_debug_visibility"))
@@ -742,6 +816,28 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 		m_firstProcess = false;
 	}
+
+	if (m_editMode)
+	{
+		if (!m_editModeHudVisible)
+		{
+			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+			if (editModeUIControl == nullptr)
+			{
+				createEditModeUI();
+				editModeUIControl = EditModeUIControl();
+			}
+			editModeUIControl->set_visible(true);
+			m_editModeHudVisible = true;
+		}
+	}
+	else
+		if (m_editModeHudVisible)
+		{
+			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+			editModeUIControl->set_visible(false);
+			m_editModeHudVisible = false;
+		}
 	
 	Vector3 cameraPosGlobalCoord = activeCamera->get_global_transform().get_origin();
 	//Transform globalTransform = internalTransformGlobalCoord();
@@ -960,8 +1056,16 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 			godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
 			godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
 			godot::Dictionary rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
+
+			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+
 			if (rayArray.has("position"))
+			{
 				m_mouseHit = rayArray["position"];
+				if (editModeUIControl && m_editMode)
+					editModeUIControl->setMouseHitLabelText(std::string("X=") + std::to_string(m_mouseHit.x) + " Y=" + std::to_string(m_mouseHit.y) + " Z=" + std::to_string(m_mouseHit.z));
+			}
+
 			if (rayArray.has("collider"))
 			{
 				collider = rayArray["collider"];
@@ -969,14 +1073,47 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				{
 					godot::String s = collider->get_meta("QuadrantName", "");
 					char* str = s.alloc_c_string();
-					m_mouseQuadrantHitName = str;
+					std::string mouseQuadrantHitName = str;
 					godot::api->godot_free(str);
-					s = collider->get_meta("QuadrantTag", "");
-					str = s.alloc_c_string();
-					m_mouseQuadrantHitTag = str;
-					godot::api->godot_free(str);
-					m_mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
-					m_mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
+					if (mouseQuadrantHitName != m_mouseQuadrantHitName)
+					{
+						s = collider->get_meta("QuadrantTag", "");
+						str = s.alloc_c_string();
+						std::string mouseQuadrantHitTag = str;
+						godot::api->godot_free(str);
+						godot::Vector3 mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
+						float mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
+						float gridStepInWu = collider->get_meta("QuadrantStep");
+						int level = collider->get_meta("QuadrantLevel");
+						int numVerticesPerSize = collider->get_meta("QuadrantNumVert");
+						QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
+
+						if (editModeUIControl != nullptr && m_editMode)
+						{
+							editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
+							editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
+						
+							// Get TerrainEdit Data from hit quadrant
+							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
+							if (it != m_mapQuadTree.end())
+							{
+								TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
+								editModeUIControl->setSeed(terrainEdit->noiseSeed);
+								editModeUIControl->setFrequency(terrainEdit->frequency);
+								editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
+								editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
+								editModeUIControl->setGain(terrainEdit->fractalGain);
+								editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
+								editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
+							}
+						}
+
+						m_mouseQuadrantHitName = mouseQuadrantHitName;
+						m_mouseQuadrantHitTag = mouseQuadrantHitTag;
+						m_mouseQuadrantHitPos = mouseQuadrantHitPos;
+						m_mouseQuadrantHitSize = mouseQuadrantHitSize;
+						m_quadrantHitPos = quadrantHitPos;
+					}
 				}
 				//godot::PoolStringArray metas = collider->get_meta_list();
 				//for (int i = 0; i < metas.size(); i++)
@@ -1712,83 +1849,6 @@ QuadTree* GDN_TheWorld_Viewer::getQuadTree(QuadrantPos pos)
 	return iter->second.get();
 }
 
-//String GDN_TheWorld_Viewer::getTrackedChunkStr(void)
-//{
-//	std::string strTrackedChunk;
-//
-//	Chunk* trackedChunk = getTrackedChunk();
-//	if (trackedChunk != nullptr)
-//		strTrackedChunk = trackedChunk->getQuadTree()->getQuadrant()->getPos().getName() + "-" + trackedChunk->getPos().getIdStr();
-//
-//	return strTrackedChunk.c_str();
-//}
-
-//Chunk* GDN_TheWorld_Viewer::getTrackedChunk(void)
-//{
-//	GDN_TheWorld_Camera* activeCamera = WorldCamera()->getActiveCamera();
-//	if (!activeCamera)
-//		return nullptr;
-//
-//	Vector2 mousePos = get_viewport()->get_mouse_position();
-//
-//	Chunk* chunk = nullptr;
-//
-//	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
-//	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-//	{
-//		if (!itQuadTree->second->isValid())
-//			continue;
-//
-//		if (!itQuadTree->second->isVisible())
-//			continue;
-//
-//		std::vector<TheWorld_Viewer_Utils::GridVertex>& vertices = itQuadTree->second->getQuadrant()->getGridVertices();
-//
-//		Point2 p1 = activeCamera->unproject_position(Vector3(vertices[0].posX(), vertices[0].altitude(), vertices[0].posZ()));
-//		Point2 p2 = activeCamera->unproject_position(Vector3(vertices[vertices.size() - 1].posX(), vertices[vertices.size() - 1].altitude(), vertices[vertices.size() - 1].posZ()));
-//		
-//		//Rect2 rect(p1, p2 - p1);
-//		//if (rect.has_point(mousePos))
-//		float greaterX = (p1.x > p2.x ? p1.x : p2.x);
-//		float greaterY = (p1.y > p2.y ? p1.y : p2.y);
-//		float lowerX = (p1.x < p2.x ? p1.x : p2.x);
-//		float lowerY = (p1.y < p2.y ? p1.y : p2.y);
-//		if (mousePos.x >= lowerX && mousePos.x < greaterX && mousePos.y >= lowerY && mousePos.y < greaterY)
-//		{
-//			Chunk::MapChunk& mapChunk = itQuadTree->second->getMapChunk();
-//
-//			Chunk::MapChunk::iterator itMapChunk;
-//			for (Chunk::MapChunk::iterator itMapChunk = mapChunk.begin(); itMapChunk != mapChunk.end(); itMapChunk++)
-//				for (Chunk::MapChunkPerLod::iterator itMapChunkPerLod = itMapChunk->second.begin(); itMapChunkPerLod != itMapChunk->second.end(); itMapChunkPerLod++)
-//					if (itMapChunkPerLod->second->isActive())
-//					{
-//						int numWorldVerticesPerSize = itQuadTree->second->getQuadrant()->getPos().getNumVerticesPerSize();
-//
-//						size_t idxFirstVertexOfChunk = itMapChunkPerLod->second->getFirstWorldVertRow() * numWorldVerticesPerSize + itMapChunkPerLod->second->getFirstWorldVertCol();
-//						Point2 p1 = activeCamera->unproject_position(Vector3(vertices[idxFirstVertexOfChunk].posX(), vertices[idxFirstVertexOfChunk].altitude(), vertices[idxFirstVertexOfChunk].posZ()));
-//						size_t idxLastVertexOfChunk = itMapChunkPerLod->second->getLastWorldVertRow() * numWorldVerticesPerSize + itMapChunkPerLod->second->getLastWorldVertCol();
-//						Point2 p2 = activeCamera->unproject_position(Vector3(vertices[idxLastVertexOfChunk].posX(), vertices[idxLastVertexOfChunk].altitude(), vertices[idxLastVertexOfChunk].posZ()));
-//
-//						//Rect2 rect(p1, p2 - p1);
-//						//if (rect.has_point(mousePos))
-//						greaterX = (p1.x > p2.x ? p1.x : p2.x);
-//						greaterY = (p1.y > p2.y ? p1.y : p2.y);
-//						lowerX = (p1.x < p2.x ? p1.x : p2.x);
-//						lowerY = (p1.y < p2.y ? p1.y : p2.y);
-//						if (mousePos.x >= lowerX && mousePos.x < greaterX && mousePos.y >= lowerY && mousePos.y < greaterY)
-//						{
-//							chunk = itMapChunkPerLod->second;
-//							break;
-//						}
-//					}
-//
-//			break;
-//		}
-//	}
-//
-//	return chunk;
-//}
-
 Chunk* GDN_TheWorld_Viewer::getActiveChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter)
 {
 	QuadTree* quadTree = getQuadTree(pos);
@@ -2240,6 +2300,137 @@ Chunk* GDN_TheWorld_Viewer::getActiveChunkAt(Chunk* chunk, enum class Chunk::Dir
 	}
 
 	return retChunk;
+}
+
+void GDN_TheWorld_Viewer::createEditModeUI(void)
+{
+	GDN_TheWorld_Edit* _editModeUIControl = EditModeUIControl();
+	if (_editModeUIControl != nullptr)
+		return;
+
+	GDN_TheWorld_Edit* editModeUIControl = GDN_TheWorld_Edit::_new();
+	if (editModeUIControl == nullptr)
+		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Create Control error!").c_str()));
+	editModeUIControl->init(this);
+}
+
+void GDN_TheWorld_Viewer::GenerateHeigths(void)
+{
+	TheWorld_Utils::GuardProfiler profiler(std::string("0. EditMode ") + __FUNCTION__, "ALL");
+
+	// TODORIC0: find quadrant hit and set terrainData
+	// generate heigths
+	// pass to cache
+	// refresh
+
+	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+	if (editModeUIControl == nullptr || !m_editMode)
+		return;
+
+	MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
+	if (it == m_mapQuadTree.end())
+		return;
+	
+	TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
+	terrainEdit->noiseSeed = editModeUIControl->seed();
+	terrainEdit->frequency = editModeUIControl->frequency();
+	terrainEdit->fractalOctaves = editModeUIControl->octaves();
+	terrainEdit->fractalLacunarity = editModeUIControl->lacunarity();
+	terrainEdit->fractalGain = editModeUIControl->gain();
+	terrainEdit->fractalWeightedStrength = editModeUIControl->weightedStrength();
+	terrainEdit->fractalPingPongStrength = editModeUIControl->pingPongStrength();
+	terrainEdit->needUploadToServer = true;
+
+	FastNoiseLite noise(terrainEdit->noiseSeed);
+	noise.SetNoiseType(FastNoiseLite::NoiseType::NoiseType_Perlin);
+	//noise.SetRotationType3D();
+	noise.SetFrequency(terrainEdit->frequency);
+	noise.SetFractalType(FastNoiseLite::FractalType::FractalType_FBm);
+	noise.SetFractalOctaves(terrainEdit->fractalOctaves);
+	noise.SetFractalLacunarity(terrainEdit->fractalLacunarity);
+	noise.SetFractalGain(terrainEdit->fractalGain);
+	noise.SetFractalWeightedStrength(terrainEdit->fractalWeightedStrength);
+	noise.SetFractalPingPongStrength(terrainEdit->fractalPingPongStrength);
+	//noise.SetCellularDistanceFunction();
+	//noise.SetCellularReturnType();
+	//noise.SetCellularJitter()
+
+	//{
+	//	float f = 0.0f, x= 0.0f, y= 0.0f;
+
+	//	x = 1.0f;	y = 1.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+
+	//	x = 1.0f;	y = -1.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+
+	//	x = -1.0f;	y = 1.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+
+	//	x = -1.0f;	y = -1.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+
+	//	x = 2.0f;	y = 2.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+	//}
+
+	size_t numVerticesPerSize = m_quadrantHitPos.getNumVerticesPerSize();
+	float gridStepInWU = m_quadrantHitPos.getGridStepInWU();
+	float lowerXGridVertex = m_quadrantHitPos.getLowerXGridVertex();
+	float lowerZGridVertex = m_quadrantHitPos.getLowerZGridVertex();
+	std::vector<float> vectGridHeights(numVerticesPerSize * numVerticesPerSize);
+
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("1. EditMode ") + __FUNCTION__, "Generate Heights");
+
+		size_t idx = 0;
+		for (int z = 0; z < numVerticesPerSize; z++)
+			for (int x = 0; x < numVerticesPerSize; x++)
+			{
+				float xf = lowerXGridVertex + (x * gridStepInWU);
+				float zf = lowerZGridVertex + (z * gridStepInWU);
+				vectGridHeights[idx] = noise.GetNoise(xf, zf);
+				idx++;
+			}
+	}
+
+	std::string meshBuffer;
+	std::string meshId;
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("2. EditMode ") + __FUNCTION__, "Quadrant reverse array to buffer");
+		TheWorld_Utils::MeshCacheBuffer& cache = it->second->getQuadrant()->getMeshCacheBuffer();
+		meshId = cache.getMeshId();
+		cache.setBufferForMeshCache(meshId, numVerticesPerSize, gridStepInWU, vectGridHeights, meshBuffer);
+		editModeUIControl->getMapQUadToSave()[m_quadrantHitPos] = true;
+	}
+
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("3. EditMode ") + __FUNCTION__, "Quadrant refreshGridVertices");
+		it->second->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
+		it->second->materialParamsNeedReset();
+	}
+
+}
+
+godot::GDN_TheWorld_Edit* GDN_TheWorld_Viewer::EditModeUIControl(bool useCache)
+{
+	if (m_editModeUIControl == nullptr || !useCache)
+	{
+		SceneTree* scene = get_tree();
+		if (!scene)
+			return NULL;
+		Viewport* root = scene->get_root();
+		if (!root)
+			return NULL;
+		m_editModeUIControl = Object::cast_to<GDN_TheWorld_Edit>(root->find_node(THEWORLD_EDIT_MODE_UI_CONTROL_NAME, true, false));
+	}
+
+	return m_editModeUIControl;
 }
 
 GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
