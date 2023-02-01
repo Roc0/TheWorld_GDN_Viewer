@@ -115,6 +115,7 @@ namespace godot
 		{
 			return m_initialWordlViewerPosSet;
 		}
+		void recalcQuadrantsInView(void);
 		Spatial* getWorldNode(void);
 		MeshCache* getMeshCache(void)
 		{
@@ -369,6 +370,7 @@ namespace godot
 		MapQuadTree m_mapQuadTree;	// Actually only 1 level is managed (to manage more levels we shold have a map for each level)
 		std::recursive_mutex m_mtxQuadTree;
 		QuadrantPos m_computedCameraQuadrantPos;
+		bool m_recalcQuadrantsInViewNeeded;
 		bool m_refreshMapQuadTree;
 		int m_numWorldVerticesPerSize;
 		int m_worldViewerLevel;		// actually world viewer manage one level at the time, otherwise we should have multiple quadtrees

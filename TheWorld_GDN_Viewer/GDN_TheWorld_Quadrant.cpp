@@ -118,11 +118,14 @@ namespace godot
 
 	void GDN_TheWorld_Quadrant::_process(float _delta)
 	{
-		Transform cameraTransform = m_quadTree->Viewer()->get_tree()->get_root()->get_camera()->get_global_transform();
-		if (cameraTransform != m_lastCameraTransform)
+		if (m_quadTree != nullptr)
 		{
-			m_lastCameraTransform = cameraTransform;
-			m_quadTree->getQuadrant()->getCollider()->onCameraTransformChanged();
+			Transform cameraTransform = m_quadTree->Viewer()->get_tree()->get_root()->get_camera()->get_global_transform();
+			if (cameraTransform != m_lastCameraTransform)
+			{
+				m_lastCameraTransform = cameraTransform;
+				m_quadTree->getQuadrant()->getCollider()->onCameraTransformChanged();
+			}
 		}
 	}
 

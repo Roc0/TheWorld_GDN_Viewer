@@ -503,7 +503,8 @@ namespace godot
 	{
 		uninitialized = 0,
 		getVerticesInProgress = 1,
-		initialized = 2
+		initialized = 2,
+		toErase = 3
 	};
 
 	class QuadTree
@@ -604,6 +605,10 @@ namespace godot
 		{
 			return status() == QuadrantStatus::uninitialized;
 		}
+		bool statusToErase(void)
+		{
+			return status() == QuadrantStatus::toErase;
+		}
 		enum class QuadrantStatus currentStatus(void)
 		{
 			return m_status;
@@ -630,6 +635,9 @@ namespace godot
 		}
 		bool isVisible(void)
 		{
+			if (statusToErase())
+				return false;
+
 			return m_isVisible; 
 		}
 		void setVisible(bool b)

@@ -193,6 +193,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_streamerThreadRunning = false;
 	m_numVisibleQuadrantOnPerimeter = 0;
 	m_numCacheQuadrantOnPerimeter = 0;
+	m_recalcQuadrantsInViewNeeded = false;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -409,7 +410,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 			m_mtxQuadTree.lock();
 			//clock.tock();
-			if (m_mapQuadTree.contains(quadrantPos))
+			if (m_mapQuadTree.contains(quadrantPos) && !m_mapQuadTree[quadrantPos]->statusToErase())
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1 ") + __FUNCTION__, "Elab. quadrant");
 				QuadTree* quadTree = m_mapQuadTree[quadrantPos].get();
@@ -436,7 +437,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 						// ATTENZIONE
 						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 						quadTree->materialParamsNeedReset(true);
-						//quadTree->resetMaterialParams();
+						quadTree->resetMaterialParams();
 					}
 					//clock.tock();
 					//Globals()->debugPrint(String("ELAPSED - QUADRANT ") + quadTree->getQuadrant()->getPos().getId().c_str() + " TAG=" + quadTree->getQuadrant()->getPos().getTag().c_str() + " - GDN_TheWorld_Viewer::replyFromServer MapManager::getVertices (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
@@ -553,7 +554,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 					{
 						std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 						MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
-						if (it != m_mapQuadTree.end())
+						if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 						{
 							it->second->setEditModeSel(true);
 							it->second->getQuadrant()->setColorsUpdated(true);
@@ -567,7 +568,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 				{
 					std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 					MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
-					if (it != m_mapQuadTree.end())
+					if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 					{
 						it->second->setEditModeSel(false);
 						it->second->getQuadrant()->setColorsUpdated(true);
@@ -809,6 +810,188 @@ String GDN_TheWorld_Viewer::getChunkDebugModeStr(void)
 		return "";
 }
 
+void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
+{
+	TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
+
+	QuadrantPos cameraQuadrant = m_computedCameraQuadrantPos;
+	
+	vector<QuadrantPos> quadrantPosNeeded;
+	quadrantPosNeeded.push_back(cameraQuadrant);
+
+	//{
+	//	// calculate minimum distance of camera from quad tree borders
+	//	float minimunDistanceOfCameraFromBordersOfQuadrant = cameraPosGlobalCoord.x - cameraQuadrant.getLowerXGridVertex();
+	//	float f = (cameraQuadrant.getLowerXGridVertex() + cameraQuadrant.getSizeInWU()) - cameraPosGlobalCoord.x;
+	//	if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
+	//		minimunDistanceOfCameraFromBordersOfQuadrant = f;
+	//	f = cameraPosGlobalCoord.z - cameraQuadrant.getLowerZGridVertex();
+	//	if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
+	//		minimunDistanceOfCameraFromBordersOfQuadrant = f;
+	//	f = (cameraQuadrant.getLowerZGridVertex() + cameraQuadrant.getSizeInWU()) - cameraPosGlobalCoord.z;
+	//	if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
+	//		minimunDistanceOfCameraFromBordersOfQuadrant = f;
+
+	//	// calculate num of quad needed surrounding camera-quad-tree according to desidered farHorizon
+	//	m_numVisibleQuadrantOnPerimeter = 0;
+	//	if (farHorizon > minimunDistanceOfCameraFromBordersOfQuadrant)
+	//	{
+	//		m_numVisibleQuadrantOnPerimeter = (size_t)floor((farHorizon - minimunDistanceOfCameraFromBordersOfQuadrant) / cameraQuadrant.getSizeInWU()) + 1;
+	//		if (m_numVisibleQuadrantOnPerimeter > 3)
+	//			m_numVisibleQuadrantOnPerimeter = 3;
+	//	}
+	//}
+	m_numVisibleQuadrantOnPerimeter = 3;
+	m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter * 2;
+
+	{
+		//m_numVisibleQuadrantOnPerimeter = 0;	// SUPERDEBUGRIC only camera quadrant
+		//m_numCacheQuadrantOnPerimeter = 0;		// SUPERDEBUGRIC only camera quadrant
+
+		//m_numVisibleQuadrantOnPerimeter = 1;	// SUPERDEBUGRIC only camera quadrant & 1 surrounding
+		//m_numCacheQuadrantOnPerimeter = 1;		// SUPERDEBUGRIC only camera quadrant & 1 surrounding
+	}
+
+	// add horizontal (X axis) quadrants on the left and on the right
+	for (int i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
+	{
+		QuadrantPos q = cameraQuadrant.getQuadrantPos(QuadrantPos::DirectionSlot::XPlus, 1 + i);
+		q.setTag(cameraQuadrant.getTag() + " X+" + std::to_string(1 + i));
+		quadrantPosNeeded.push_back(q);
+		//break;	// SUPERDEBUGRIC only X+1 quadrant
+		q = cameraQuadrant.getQuadrantPos(QuadrantPos::DirectionSlot::XMinus, 1 + i);
+		q.setTag(cameraQuadrant.getTag() + " X-" + std::to_string(1 + i));
+		quadrantPosNeeded.push_back(q);
+	}
+
+	// for each horizontal quadrant ...
+	size_t size = quadrantPosNeeded.size();
+	for (size_t idx = 0; idx < size; idx++)
+	{
+		// ... add vertical (Z axis) quadrants up and down
+		for (size_t i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
+		{
+			//break;	// SUPERDEBUGRIC only X+1 quadrant
+			QuadrantPos q = quadrantPosNeeded[idx].getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus, 1 + int(i));
+			q.setTag(quadrantPosNeeded[idx].getTag() + " Z+" + std::to_string(1 + i));
+			quadrantPosNeeded.push_back(q);
+			q = quadrantPosNeeded[idx].getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus, 1 + int(i));
+			q.setTag(quadrantPosNeeded[idx].getTag() + " Z-" + std::to_string(1 + i));
+			quadrantPosNeeded.push_back(q);
+		}
+	}
+
+	vector<QuadrantPos> quadrantToDelete;
+
+	{
+		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+
+		//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (map stuff)");
+		// insert needed quadrants not present in map and refresh the ones which are already in it
+		//vector<QuadrantPos> quadrantToAdd;
+		std::timespec refreshTime;
+
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.0 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (get time)");
+
+			int ret = timespec_get(&refreshTime, TIME_UTC);
+		}
+		
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (create/refresh)");
+
+			size = quadrantPosNeeded.size();
+			for (int idx = 0; idx < size; idx++)
+			{
+				MapQuadTree::iterator it = m_mapQuadTree.find(quadrantPosNeeded[idx]);
+				if (it == m_mapQuadTree.end() || it->second->statusToErase())
+				{
+					//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.1.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (create new quads)");
+
+					if (it != m_mapQuadTree.end() && it->second->statusToErase())
+						m_mapQuadTree.erase(it->first);
+
+					m_mapQuadTree[quadrantPosNeeded[idx]] = make_unique<QuadTree>(this, quadrantPosNeeded[idx]);
+					m_mapQuadTree[quadrantPosNeeded[idx]]->refreshTime(refreshTime);
+					if (!m_streamingTime.counterStarted())
+						m_streamingTime.tick();
+					//return;	// ???
+				}
+				else
+				{
+					//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.1.2 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (refresh old quads)");
+
+					it->second->refreshTime(refreshTime);
+				}
+			}
+		}
+
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.2 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (second loop)");
+
+			// look for the quadrant to delete (the ones not refreshed)
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				if (itQuadTree->second->getRefreshTime().tv_nsec == refreshTime.tv_nsec && itQuadTree->second->getRefreshTime().tv_sec == refreshTime.tv_sec)
+				{
+					bool visibilityChanged = false;
+					if (itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(cameraQuadrant) > m_numVisibleQuadrantOnPerimeter)
+					{
+						if (itQuadTree->second->isVisible())
+						{
+							visibilityChanged = true;
+							itQuadTree->second->setVisible(false);
+						}
+					}
+					else
+					{
+						if (!itQuadTree->second->isVisible())
+						{
+							visibilityChanged = true;
+							itQuadTree->second->setVisible(true);
+						}
+					}
+
+					if (visibilityChanged)
+					{
+						//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.3 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (ForAllChunk)");
+						Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
+						itQuadTree->second->ForAllChunk(action);
+					}
+				}
+				else
+				{
+					// Quadrant too far from camera: need to be deleted
+					if (itQuadTree->second->currentStatus() == QuadrantStatus::initialized || itQuadTree->second->currentStatus() == QuadrantStatus::uninitialized)
+					{
+						itQuadTree->second->setVisible(false);
+						quadrantToDelete.push_back(itQuadTree->first);
+					}
+					if (m_cameraQuadTree != nullptr /* && m_cameraQuadTree->isValid()*/ && itQuadTree->first == m_cameraQuadTree->getQuadrant()->getPos())
+					{
+						// if we delete the ones containing old camera chunk we invalidate it
+						m_cameraChunk = nullptr;
+						m_cameraQuadTree = nullptr;
+					}
+				}
+			}
+		}
+		
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.3 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (erase all quads)");
+
+			for (int idx = 0; idx < quadrantToDelete.size(); idx++)
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.3.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (erase quad)");
+				m_mapQuadTree[quadrantToDelete[idx]]->setStatus(QuadrantStatus::toErase);
+				//m_mapQuadTree.erase(quadrantToDelete[idx]);
+			}
+		}
+	}
+	
+	quadrantToDelete.clear();
+}
+
 void GDN_TheWorld_Viewer::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
@@ -828,7 +1011,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (!activeCamera)
 		return;
 
-	TheWorld_Utils::GuardProfiler profiler(std::string("_process 0. ") + __FUNCTION__, "ALL");
+	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1 ") + __FUNCTION__, "ALL");
 	
 	//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
@@ -896,34 +1079,38 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - START
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1. ") + __FUNCTION__, "Adjust Quadtrees");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.1 ") + __FUNCTION__, "Adjust Quadtrees");
 
 		float farHorizon = cameraPosGlobalCoord.y * FAR_HORIZON_MULTIPLIER;
 		if (globals->heightmapSizeInWUs() > farHorizon)
 			farHorizon = globals->heightmapSizeInWUs();
 
+		QuadrantPos cameraQuadrant;
+
 		// Look for Camera QuadTree: put it as first element of quadrantPosNeeded
-		vector<QuadrantPos> quadrantPosNeeded;
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
+			if (itQuadTree->second->statusToErase())
+				continue;
+
 			float quadrantSizeInWU = itQuadTree->second->getQuadrant()->getPos().getSizeInWU();
 			if (cameraPosGlobalCoord.x >= itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() && cameraPosGlobalCoord.x < (itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() + quadrantSizeInWU)
 				&& cameraPosGlobalCoord.z >= itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() && cameraPosGlobalCoord.z < (itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() + quadrantSizeInWU))
 			{
-				quadrantPosNeeded.push_back(itQuadTree->second->getQuadrant()->getPos());
-				quadrantPosNeeded[0].setTag("Camera");
+				cameraQuadrant = itQuadTree->second->getQuadrant()->getPos();
+				cameraQuadrant.setTag("Camera");
 				break;
 			}
 		}
 
-		if (quadrantPosNeeded.size() == 0)	// boh not found camera-quad-tree (it seems impossible) ...
+		if (cameraQuadrant.empty())	// boh not found camera-quad-tree (it seems impossible) ...
 		{
 			// ... btw we create new quad tree containing camera
 			float x = cameraPosGlobalCoord.x, z = cameraPosGlobalCoord.z;
 			float _gridStepInWU = globals->gridStepInWU();
 			QuadrantPos q(x, z, m_worldViewerLevel, m_numWorldVerticesPerSize, _gridStepInWU);
-			quadrantPosNeeded.push_back(q);
-			quadrantPosNeeded[0].setTag("Camera");
+			cameraQuadrant = q;
+			cameraQuadrant.setTag("Camera");
 		}
 
 		//
@@ -931,9 +1118,10 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		//
 
 		// if forced or the camera has changed quadrant the cache is repopulated
-		if (m_refreshMapQuadTree || m_computedCameraQuadrantPos != quadrantPosNeeded[0])
+		//m_computedCameraQuadrantPos = quadrantPosNeeded[0];	// DEBUG
+		if (m_refreshMapQuadTree || m_computedCameraQuadrantPos != cameraQuadrant)
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
+			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.1.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
 
 			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, false);
 			clock1.tick();
@@ -943,150 +1131,19 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 				this->m_RefreshMapQuadDuration += clock1.duration().count();
 				});
 
-			// Da Rimuovere (???)
-			//Transform t = get_global_transform();
-			//t.origin = Vector3(quadrantPosNeeded[0].getLowerXGridVertex(), 0, quadrantPosNeeded[0].getLowerZGridVertex());
-			//set_global_transform(t);
-
 			m_refreshMapQuadTree = false;
-			m_computedCameraQuadrantPos = quadrantPosNeeded[0];
+			m_computedCameraQuadrantPos = cameraQuadrant;
 
-			//{
-			//	// calculate minimum distance of camera from quad tree borders
-			//	float minimunDistanceOfCameraFromBordersOfQuadrant = cameraPosGlobalCoord.x - quadrantPosNeeded[0].getLowerXGridVertex();
-			//	float f = (quadrantPosNeeded[0].getLowerXGridVertex() + quadrantPosNeeded[0].getSizeInWU()) - cameraPosGlobalCoord.x;
-			//	if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
-			//		minimunDistanceOfCameraFromBordersOfQuadrant = f;
-			//	f = cameraPosGlobalCoord.z - quadrantPosNeeded[0].getLowerZGridVertex();
-			//	if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
-			//		minimunDistanceOfCameraFromBordersOfQuadrant = f;
-			//	f = (quadrantPosNeeded[0].getLowerZGridVertex() + quadrantPosNeeded[0].getSizeInWU()) - cameraPosGlobalCoord.z;
-			//	if (f < minimunDistanceOfCameraFromBordersOfQuadrant)
-			//		minimunDistanceOfCameraFromBordersOfQuadrant = f;
-
-			//	// calculate num of quad needed surrounding camera-quad-tree according to desidered farHorizon
-			//	m_numVisibleQuadrantOnPerimeter = 0;
-			//	if (farHorizon > minimunDistanceOfCameraFromBordersOfQuadrant)
-			//	{
-			//		m_numVisibleQuadrantOnPerimeter = (size_t)floor((farHorizon - minimunDistanceOfCameraFromBordersOfQuadrant) / quadrantPosNeeded[0].getSizeInWU()) + 1;
-			//		if (m_numVisibleQuadrantOnPerimeter > 3)
-			//			m_numVisibleQuadrantOnPerimeter = 3;
-			//	}
-			//}
-			m_numVisibleQuadrantOnPerimeter = 3;
-			m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter * 2;
-
-			{
-				//m_numVisibleQuadrantOnPerimeter = 0;	// SUPERDEBUGRIC only camera quadrant
-				//m_numCacheQuadrantOnPerimeter = 0;		// SUPERDEBUGRIC only camera quadrant
-
-				//m_numVisibleQuadrantOnPerimeter = 1;	// SUPERDEBUGRIC only camera quadrant & 1 surrounding
-				//m_numCacheQuadrantOnPerimeter = 1;		// SUPERDEBUGRIC only camera quadrant & 1 surrounding
-			}
-
-			// add horizontal (X axis) quadrants on the left and on the right
-			for (int i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
-			{
-				QuadrantPos q = quadrantPosNeeded[0].getQuadrantPos(QuadrantPos::DirectionSlot::XPlus, 1 + i);
-				q.setTag(quadrantPosNeeded[0].getTag() + " X+" + std::to_string(1 + i));
-				quadrantPosNeeded.push_back(q);
-				//break;	// SUPERDEBUGRIC only X+1 quadrant
-				q = quadrantPosNeeded[0].getQuadrantPos(QuadrantPos::DirectionSlot::XMinus, 1 + i);
-				q.setTag(quadrantPosNeeded[0].getTag() + " X-" + std::to_string(1 + i));
-				quadrantPosNeeded.push_back(q);
-			}
-
-			// for each horizontal quadrant ...
-			size_t size = quadrantPosNeeded.size();
-			for (size_t idx = 0; idx < size; idx++)
-			{
-				// ... add vertical (Z axis) quadrants up and down
-				for (size_t i = 0; i < m_numCacheQuadrantOnPerimeter; i++)
-				{
-					//break;	// SUPERDEBUGRIC only X+1 quadrant
-					QuadrantPos q = quadrantPosNeeded[idx].getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus, 1 + int(i));
-					q.setTag(quadrantPosNeeded[idx].getTag() + " Z+" + std::to_string(1 + i));
-					quadrantPosNeeded.push_back(q);
-					q = quadrantPosNeeded[idx].getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus, 1 + int(i));
-					q.setTag(quadrantPosNeeded[idx].getTag() + " Z-" + std::to_string(1 + i));
-					quadrantPosNeeded.push_back(q);
-				}
-			}
-
-			// insert needed quadrants not present in map and refresh the ones which are already in it
-			//vector<QuadrantPos> quadrantToAdd;
-			std::timespec refreshTime;
-			int ret = timespec_get(&refreshTime, TIME_UTC);
-			size = quadrantPosNeeded.size();
-			for (int idx = 0; idx < size; idx++)
-			{
-				MapQuadTree::iterator it = m_mapQuadTree.find(quadrantPosNeeded[idx]);
-				if (it == m_mapQuadTree.end())
-				{
-					m_mapQuadTree[quadrantPosNeeded[idx]] = make_unique<QuadTree>(this, quadrantPosNeeded[idx]);
-					m_mapQuadTree[quadrantPosNeeded[idx]]->refreshTime(refreshTime);
-					if (!m_streamingTime.counterStarted())
-						m_streamingTime.tick();
-				}
-				else
-					it->second->refreshTime(refreshTime);
-			}
-
-			// look for the quadrant to delete (the ones not refreshed)
-			vector<QuadrantPos> quadrantToDelete;
-			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-			{
-				if (itQuadTree->second->getRefreshTime().tv_nsec == refreshTime.tv_nsec && itQuadTree->second->getRefreshTime().tv_sec == refreshTime.tv_sec)
-				{
-					// 
-					bool visibilityChanged = false;
-					if (itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(quadrantPosNeeded[0]) > m_numVisibleQuadrantOnPerimeter)
-					{
-						if (itQuadTree->second->isVisible())
-						{
-							visibilityChanged = true;
-							itQuadTree->second->setVisible(false);
-						}
-					}
-					else
-					{
-						if (!itQuadTree->second->isVisible())
-						{
-							visibilityChanged = true;
-							itQuadTree->second->setVisible(true);
-						}
-					}
-
-					if (visibilityChanged)
-					{
-						Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
-						itQuadTree->second->ForAllChunk(action);
-					}
-				}
-				else
-				{
-					// Quadrant too far from camera: need to be deleted
-					if (itQuadTree->second->currentStatus() == QuadrantStatus::initialized || itQuadTree->second->currentStatus() == QuadrantStatus::uninitialized)
-					{
-						itQuadTree->second->setVisible(false);
-						quadrantToDelete.push_back(itQuadTree->first);
-					}
-					if (m_cameraQuadTree != nullptr /* && m_cameraQuadTree->isValid()*/ && itQuadTree->first == m_cameraQuadTree->getQuadrant()->getPos())
-					{
-						// if we delete the ones containing old camera chunk we invalidate it
-						m_cameraChunk = nullptr;
-						m_cameraQuadTree = nullptr;
-					}
-				}
-			}
-			for (int idx = 0; idx < quadrantToDelete.size(); idx++)
-				m_mapQuadTree.erase(quadrantToDelete[idx]);
-			quadrantToDelete.clear();
+			m_recalcQuadrantsInViewNeeded = true;
+			//recalcQuadrantsInView();
 		}
 	}
 	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - END
 
-	streamingQuadrantStuff();
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.2 ") + __FUNCTION__, "Init new quadrants");
+		streamingQuadrantStuff();
+	}
 
 	godot::Node* collider = nullptr;
 	if (m_trackMouse)
@@ -1147,7 +1204,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 							// Get TerrainEdit Data from hit quadrant
 							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
-							if (it != m_mapQuadTree.end())
+							if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 							{
 								TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
 								editModeUIControl->setSeed(terrainEdit->noiseSeed);
@@ -1184,7 +1241,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	
 	// UPDATE QUADS - Stage 1
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 2. ") + __FUNCTION__, "Update Quads Stage 1");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.3 ") + __FUNCTION__, "Update Quads Stage 1");
 
 		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 1", false, false);
 		clock1.tick();
@@ -1207,7 +1264,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 		// UPDATE QUADS - Stage 2
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("_process 3. ") + __FUNCTION__, "Update Quads Stage 2");
+			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.4 ") + __FUNCTION__, "Update Quads Stage 2");
 
 			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 2", false, false);
 			clock1.tick();
@@ -1229,7 +1286,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		else
 		{
 			// UPDATE QUADS - Stage 3
-			TheWorld_Utils::GuardProfiler profiler(std::string("_process 4. ") + __FUNCTION__, "Update Quads Stage 3");
+			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.5 ") + __FUNCTION__, "Update Quads Stage 3");
 
 			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 3", false, false);
 			clock1.tick();
@@ -1259,7 +1316,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	// UPDATE CHUNKS
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 5. ") + __FUNCTION__, "Update Chunks");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.6 ") + __FUNCTION__, "Update Chunks");
 
 		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Chunks", false, false);
 		clock1.tick();
@@ -1461,7 +1518,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 					{
 						// take the adjacent quadrant if it exists
 						auto iter = m_mapQuadTree.find(XMinusQuadrantPos);
-						if (iter != m_mapQuadTree.end())
+						if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
 						{
 							QuadTree* quadTreeXMinus = iter->second.get();
 							if (quadTreeXMinus->isValid())
@@ -1520,7 +1577,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 					{
 						// take the adjacent quadrant if it exists
 						auto iter = m_mapQuadTree.find(XPlusQuadrantPos);
-						if (iter != m_mapQuadTree.end())
+						if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
 						{
 							QuadTree* quadTreeXPlus = iter->second.get();
 							if (quadTreeXPlus->isValid())
@@ -1579,7 +1636,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 					{
 						// take the adjacent quadrant if it exists
 						auto iter = m_mapQuadTree.find(ZMinusQuadrantPos);
-						if (iter != m_mapQuadTree.end())
+						if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
 						{
 							QuadTree* quadTreeZMinus = iter->second.get();
 							if (quadTreeZMinus->isValid())
@@ -1643,7 +1700,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 					{
 						// take the adjacent quadrant if it exists
 						auto iter = m_mapQuadTree.find(ZPlusQuadrantPos);
-						if (iter != m_mapQuadTree.end())
+						if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
 						{
 							QuadTree* quadTreeZPlus = iter->second.get();
 							if (quadTreeZPlus->isValid())
@@ -1752,7 +1809,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	}
 
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 6. ") + __FUNCTION__, "Material params stuff");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.7 ") + __FUNCTION__, "Material params stuff");
 
 		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Material Params", false, false);
 		clock1.tick();
@@ -1765,7 +1822,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
 			bool reset = false;
-			reset = itQuadTree->second->resetMaterialParams();
+			//reset = itQuadTree->second->resetMaterialParams();
 			bool updated = itQuadTree->second->updateMaterialParams();
 				
 			if (reset || updated)
@@ -1792,12 +1849,12 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	// Check for Statistics
 	if (TIME_INTERVAL_BETWEEN_STATISTICS != 0)
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 7. ") + __FUNCTION__, "Refresh statistics");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.8 ") + __FUNCTION__, "Refresh statistics");
 
 		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastStatistic > TIME_INTERVAL_BETWEEN_STATISTICS)
 		{
-			m_numProcessNotOwnsLock = 0;
+			//m_numProcessNotOwnsLock = 0;
 			
 			refreshQuadTreeStatistics();
 			
@@ -1897,7 +1954,7 @@ QuadTree* GDN_TheWorld_Viewer::getQuadTree(QuadrantPos pos)
 	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 
 	auto iter = m_mapQuadTree.find(pos);
-	if (iter == m_mapQuadTree.end())
+	if (iter == m_mapQuadTree.end() || iter->second->statusToErase())
 		return nullptr;
 
 	return iter->second.get();
@@ -2370,7 +2427,7 @@ void GDN_TheWorld_Viewer::createEditModeUI(void)
 
 void GDN_TheWorld_Viewer::GenerateHeigths(void)
 {
-	TheWorld_Utils::GuardProfiler profiler(std::string("0. EditMode ") + __FUNCTION__, "ALL");
+	TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1 ") + __FUNCTION__, "ALL");
 
 	// TODORIC0: find quadrant hit and set terrainData
 	// generate heigths
@@ -2385,7 +2442,7 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 		MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
-		if (it == m_mapQuadTree.end())
+		if (it == m_mapQuadTree.end() || it->second->statusToErase())
 			return;
 		else
 			quadTreeSel = it->second.get();
@@ -2446,7 +2503,7 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 	std::vector<float> vectGridHeights(numVerticesPerSize * numVerticesPerSize);
 
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("1. EditMode ") + __FUNCTION__, "Generate Heights");
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.1 ") + __FUNCTION__, "Generate Heights");
 
 		size_t idx = 0;
 		for (int z = 0; z < numVerticesPerSize; z++)
@@ -2462,7 +2519,7 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 	std::string meshBuffer;
 	std::string meshId;
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("2. EditMode ") + __FUNCTION__, "Quadrant reverse array to buffer");
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.2 ") + __FUNCTION__, "Quadrant reverse array to buffer");
 		TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
 		meshId = cache.getMeshId();
 		cache.setBufferForMeshCache(meshId, numVerticesPerSize, gridStepInWU, vectGridHeights, meshBuffer);
@@ -2470,7 +2527,7 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 	}
 
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("3. EditMode ") + __FUNCTION__, "Quadrant refreshGridVertices");
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.3 ") + __FUNCTION__, "Quadrant refreshGridVertices");
 		quadTreeSel->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
 		quadTreeSel->materialParamsNeedReset();
 	}
@@ -2623,7 +2680,7 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 	{
-		if (itQuadTree->second->status() != QuadrantStatus::uninitialized)
+		if (itQuadTree->second->status() != QuadrantStatus::uninitialized && itQuadTree->second->status() != QuadrantStatus::toErase)
 			itQuadTree->second->onGlobalTransformChanged();
 
 		if (!itQuadTree->second->isValid())
@@ -2874,7 +2931,7 @@ void GDN_TheWorld_Viewer::dump()
 			size_t maxElapsed = TheWorld_Utils::Profiler::maxElapsedMs("", name);
 			if (num > 0)
 			{
-				Globals()->debugPrint(String(name.c_str()) + " num=" + std::to_string(num).c_str() + " Elapsed=" + std::to_string(elapsed).c_str() + " Min elapsed=" + std::to_string(minElapsed).c_str() + " Max elapsed=" + std::to_string(maxElapsed).c_str() + " Avg elapsed=" + std::to_string(avgElapsed).c_str());
+				Globals()->debugPrint(String(name.c_str()) + " num=" + std::to_string(num).c_str() + " Elapsed=" + std::to_string(elapsed).c_str() + " MinElapsed=" + std::to_string(minElapsed).c_str() + " MaxElapsed=" + std::to_string(maxElapsed).c_str() + " AvgElapsed=" + std::to_string(avgElapsed).c_str());
 				TheWorld_Utils::Profiler::reset("", name);
 			}
 		}
@@ -2917,15 +2974,38 @@ void GDN_TheWorld_Viewer::streamer(void)
 	{
 		try
 		{
-			//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
-			std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
-			if (lock.owns_lock())
-			{
+			////std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+			//std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
+			//if (lock.owns_lock())
+			//{
 				try
 				{
-					if (m_computedCameraQuadrantPos.isInitialized())
 					{
-						//streamingQuadrantStuff();
+						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+						std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
+						if (lock.owns_lock())
+						{
+							if (m_computedCameraQuadrantPos.isInitialized())
+							{
+								//streamingQuadrantStuff();
+							}
+
+							for (MapQuadTree::iterator it = m_mapQuadTree.begin(); it != m_mapQuadTree.end(); it++)
+							{
+								if (it->second->statusToErase())
+								{
+									m_mapQuadTree.erase(it->first);
+									break;
+								}
+							}
+							lock.unlock();
+						}
+					}
+
+					if (m_recalcQuadrantsInViewNeeded)
+					{
+						recalcQuadrantsInView();
+						m_recalcQuadrantsInViewNeeded = false;
 					}
 				}
 				catch (std::exception& e)
@@ -2938,7 +3018,7 @@ void GDN_TheWorld_Viewer::streamer(void)
 					Globals()->errorPrint("GDN_TheWorld_Viewer::streamer - Exception caught");
 					throw(new exception("exception caught"));
 				}
-			}
+			//}
 		}
 		catch (std::exception& e)
 		{
@@ -2964,7 +3044,9 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 	{
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
-			if (itQuadTree->second->status() != QuadrantStatus::initialized)
+			//if (itQuadTree->second->status() != QuadrantStatus::initialized)
+			//if (itQuadTree->second->status() != QuadrantStatus::initialized && itQuadTree->second->status() != QuadrantStatus::toErase)
+			if (itQuadTree->second->status() < QuadrantStatus::initialized)
 				allQuadrantInitialized = false;
 
 			if (itQuadTree->second->status() == QuadrantStatus::uninitialized)
@@ -2986,7 +3068,7 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 
 	if (allQuadrantInitialized)
 	{
-		if (Globals()->status() == TheWorldStatus::worldDeployInProgress)
+		if (Globals()->status() == TheWorldStatus::worldDeployInProgress && m_mapQuadTree.size() > 1)
 			Globals()->setStatus(TheWorldStatus::worldDeployed);
 
 		if (m_streamingTime.counterStarted())
