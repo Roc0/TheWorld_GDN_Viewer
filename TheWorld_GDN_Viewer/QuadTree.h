@@ -249,6 +249,8 @@ namespace godot
 			m_cache = TheWorld_Utils::MeshCacheBuffer(dir, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
 			m_shaderTerrainData = make_unique<ShaderTerrainData>(viewer, quadTree);
 			m_collider = make_unique<Collider>(quadTree);
+			m_heigthsUpdated = false;
+			m_colorsUpdated = false;
 		}
 
 		~Quadrant()
@@ -315,6 +317,23 @@ namespace godot
 			return m_terrainEdit.get();
 		}
 
+		void setHeightsUpdated(bool b)
+		{
+			m_heigthsUpdated = b;
+		}
+		bool heightsUpdated(void)
+		{
+			return m_heigthsUpdated;
+		}
+		void setColorsUpdated(bool b)
+		{
+			m_colorsUpdated = b;
+		}
+		bool colorsUpdated(void)
+		{
+			return m_colorsUpdated;
+		}
+
 	private:
 		TheWorld_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
 
@@ -325,6 +344,8 @@ namespace godot
 		TheWorld_Utils::MemoryBuffer m_float16HeigthsBuffer;	// each height is expressed as a 16-bit float (image with FORMAT_RH) and are serialized line by line (each line from x=0 to x=numVertexPerQuadrant, first line ==> z=0, last line z=numVertexPerQuadrant)
 		TheWorld_Utils::MemoryBuffer m_float32HeigthsBuffer;	// each height is expressed as a 32-bit and are serialized as above
 		TheWorld_Utils::MemoryBuffer m_normalsBuffer;	// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heigths
+		bool m_heigthsUpdated;
+		bool m_colorsUpdated;
 		std::unique_ptr<TerrainEdit> m_terrainEdit;
 		godot::PoolRealArray m_heigths;
 		std::string m_meshId;
@@ -357,7 +378,7 @@ namespace godot
 		{
 			m_materialParamsNeedReset = b;
 		}
-		void resetMaterialParams(bool onlyColorMap = false);
+		void resetMaterialParams(void);
 		bool materialParamsNeedUpdate(void)
 		{
 			return m_materialParamsNeedUpdate;

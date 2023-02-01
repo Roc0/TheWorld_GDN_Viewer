@@ -885,14 +885,14 @@ void ShaderTerrainData::init(void)
 
 // it is expected that globals and World Datas are loaded
 // TODORIC: maybe usefull for performance reasons specify which texture need update and which rect of the texture 
-void ShaderTerrainData::resetMaterialParams(bool onlyColorMap)
+void ShaderTerrainData::resetMaterialParams(void)
 {
 	std::recursive_mutex& quadrantMutex = m_quadTree->getQuadrantMutex();
 	std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
 	
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
 
-	if (!onlyColorMap)
+	if (m_quadTree->getQuadrant()->heightsUpdated())
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Image from heights buffer");
 
@@ -911,7 +911,7 @@ void ShaderTerrainData::resetMaterialParams(bool onlyColorMap)
 		m_heightMapImage = image;
 	}
 	
-	if (!onlyColorMap)
+	if (m_quadTree->getQuadrant()->heightsUpdated())
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Image from normal buffer");
 
@@ -932,7 +932,7 @@ void ShaderTerrainData::resetMaterialParams(bool onlyColorMap)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Texture from images");
 
-		if (!onlyColorMap)
+		if (m_quadTree->getQuadrant()->heightsUpdated())
 		{
 			Ref<ImageTexture> tex = ImageTexture::_new();
 			tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
@@ -941,7 +941,7 @@ void ShaderTerrainData::resetMaterialParams(bool onlyColorMap)
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
 		}
 
-		if (!onlyColorMap)
+		if (m_quadTree->getQuadrant()->heightsUpdated())
 		{
 			Ref<ImageTexture> tex = ImageTexture::_new();
 			tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
@@ -967,6 +967,7 @@ void ShaderTerrainData::resetMaterialParams(bool onlyColorMap)
 		//}
 
 		// Creating Color Map Texture
+		if (m_quadTree->getQuadrant()->colorsUpdated())
 		{
 			Ref<Image> image = Image::_new();
 			image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
@@ -979,12 +980,16 @@ void ShaderTerrainData::resetMaterialParams(bool onlyColorMap)
 		}
 
 		// Filling Color Map Texture
+		if (m_quadTree->getQuadrant()->colorsUpdated())
 		{
 			Ref<ImageTexture> tex = ImageTexture::_new();
 			tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
 			m_colorMapTexture = tex;
 			m_colorMapTexModified = true;
 		}
+
+		m_quadTree->getQuadrant()->setHeightsUpdated(false);
+		m_quadTree->getQuadrant()->setColorsUpdated(false);
 	}
 	// _update_all_vertical_bounds ???	// TODORIC
 	//	# RGF image where R is min heightand G is max height
@@ -1244,6 +1249,9 @@ void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
 		m_cache.readMapsFromMeshCache(meshId, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
 	}
+
+	setHeightsUpdated(true);
+	setColorsUpdated(true);
 
 	int areaSize = (m_viewer->Globals()->heightmapResolution() + 1) * (m_viewer->Globals()->heightmapResolution() + 1);
 

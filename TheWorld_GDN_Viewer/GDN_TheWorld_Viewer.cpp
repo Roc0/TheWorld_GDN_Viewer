@@ -556,6 +556,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 						if (it != m_mapQuadTree.end())
 						{
 							it->second->setEditModeSel(true);
+							it->second->getQuadrant()->setColorsUpdated(true);
 							it->second->materialParamsNeedReset(true);
 						}
 					}
@@ -569,6 +570,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 					if (it != m_mapQuadTree.end())
 					{
 						it->second->setEditModeSel(false);
+						it->second->getQuadrant()->setColorsUpdated(true);
 						it->second->materialParamsNeedReset(true);
 					}
 				}
