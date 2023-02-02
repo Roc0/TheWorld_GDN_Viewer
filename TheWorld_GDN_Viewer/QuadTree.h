@@ -587,7 +587,7 @@ namespace godot
 		{
 			return m_worldQuadrant; 
 		}
-		bool resetMaterialParams(void);
+		bool resetMaterialParams(bool force = false);
 		bool materialParamsNeedReset(void);
 		void materialParamsNeedReset(bool b);
 		bool updateMaterialParams(void);

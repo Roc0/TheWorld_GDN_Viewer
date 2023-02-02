@@ -106,6 +106,8 @@ namespace godot
 		void _physics_process(float _delta);
 		void _input(const Ref<InputEvent> event);
 		void _notification(int p_what);
+		void _process_impl(float _delta, GDN_TheWorld_Camera* activeCamera);
+
 
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		godot::GDN_TheWorld_Edit* EditModeUIControl(bool useCache = true);

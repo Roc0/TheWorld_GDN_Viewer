@@ -677,22 +677,22 @@ bool  QuadTree::updateMaterialParams(void)
 	return updated;
 }
 
-bool QuadTree::resetMaterialParams()
+bool QuadTree::resetMaterialParams(bool force)
 {
 	bool reset = false;
 
-	if (materialParamsNeedReset())
+	if (force)
 	{
-		//m_worldQuadrant->getCollider()->deinit();
-		//m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
-		//m_worldQuadrant->getCollider()->enterWorld();
-		//m_worldQuadrant->getCollider()->setData();
-
 		getQuadrant()->getShaderTerrainData()->resetMaterialParams();
-		materialParamsNeedReset(false);
-		
 		reset = true;
 	}
+	else if (materialParamsNeedReset())
+	{
+		getQuadrant()->getShaderTerrainData()->resetMaterialParams();
+		reset = true;
+	}
+
+	materialParamsNeedReset(false);
 
 	return reset;
 }

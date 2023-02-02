@@ -436,8 +436,8 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					{
 						// ATTENZIONE
 						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
-						quadTree->materialParamsNeedReset(true);
-						quadTree->resetMaterialParams();
+						//quadTree->materialParamsNeedReset(true);
+						quadTree->resetMaterialParams(true);
 					}
 					//clock.tock();
 					//Globals()->debugPrint(String("ELAPSED - QUADRANT ") + quadTree->getQuadrant()->getPos().getId().c_str() + " TAG=" + quadTree->getQuadrant()->getPos().getTag().c_str() + " - GDN_TheWorld_Viewer::replyFromServer MapManager::getVertices (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
@@ -528,6 +528,32 @@ void GDN_TheWorld_Viewer::_ready(void)
 	assignWorldCamera(GDN_TheWorld_Camera::_new());
 	//getWorldNode()->add_child(WorldCamera());		// Viewer and WorldCamera are at the same level : both child of WorldNode
 	getWorldNode()->call_deferred("add_child", WorldCamera());
+
+	//{
+	//	// Test performance memcpy
+	//	int size = 2049 * 2049 * 4;
+	//	char* buffer = (char*)calloc(1, size);
+	//	memset(buffer, (int)'A', size);
+
+	//	for (int i = 0; i < 100; i++)
+	//	{
+	//		char* p = nullptr;
+	//		{
+	//			TheWorld_Utils::GuardProfiler profiler(std::string("TestReady 1 ") + std::to_string(size) + " " + __FUNCTION__, "calloc");
+	//			p = (char*)calloc(1, size);
+	//		}
+	//		{
+	//			TheWorld_Utils::GuardProfiler profiler(std::string("TestReady 2 ") + std::to_string(size) + " " + __FUNCTION__, "memcpy");
+	//			memcpy(p, buffer, size);
+	//		}
+	//		{
+	//			TheWorld_Utils::GuardProfiler profiler(std::string("TestReady 3 ") + std::to_string(size) + " " + __FUNCTION__, "free");
+	//			::free(p);
+	//		}
+	//	}
+
+	//	::free(buffer);
+	//}
 }
 
 void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
@@ -978,11 +1004,11 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 		}
 		
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.3 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (erase all quads)");
+			//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.3 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (erase all quads)");
 
 			for (int idx = 0; idx < quadrantToDelete.size(); idx++)
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.3.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (erase quad)");
+				//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.3.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (erase quad)");
 				m_mapQuadTree[quadrantToDelete[idx]]->setStatus(QuadrantStatus::toErase);
 				//m_mapQuadTree.erase(quadrantToDelete[idx]);
 			}
@@ -996,6 +1022,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Godot::print("GDN_TheWorld_Viewer::_process");
+
+	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1 ") + __FUNCTION__, "ALL");
 
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
@@ -1011,8 +1039,6 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (!activeCamera)
 		return;
 
-	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1 ") + __FUNCTION__, "ALL");
-	
 	//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
 	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
 	if (!lock.owns_lock())
@@ -1020,6 +1046,17 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		m_numProcessNotOwnsLock++;
 		return;
 	}
+
+	_process_impl(_delta, activeCamera);
+}
+
+void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activeCamera)
+{
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return;
+
+	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.1 ") + __FUNCTION__, "Lock owned");
 
 	TheWorld_Viewer_Utils::TimerMcs clock;
 	clock.tick();
@@ -1079,7 +1116,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - START
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.1 ") + __FUNCTION__, "Adjust Quadtrees");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.2 ") + __FUNCTION__, "Adjust Quadtrees");
 
 		float farHorizon = cameraPosGlobalCoord.y * FAR_HORIZON_MULTIPLIER;
 		if (globals->heightmapSizeInWUs() > farHorizon)
@@ -1121,7 +1158,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		//m_computedCameraQuadrantPos = quadrantPosNeeded[0];	// DEBUG
 		if (m_refreshMapQuadTree || m_computedCameraQuadrantPos != cameraQuadrant)
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.1.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
+			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.2.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
 
 			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, false);
 			clock1.tick();
@@ -1141,107 +1178,111 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - END
 
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.2 ") + __FUNCTION__, "Init new quadrants");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.3 ") + __FUNCTION__, "Init new quadrants");
 		streamingQuadrantStuff();
 	}
 
-	godot::Node* collider = nullptr;
-	if (m_trackMouse)
 	{
-		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
-		if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.4 ") + __FUNCTION__, "Track mouse");
+
+		godot::Node* collider = nullptr;
+		if (m_trackMouse)
 		{
-			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Track Mouse Chunk", false, false);
-			clock1.tick();
-			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
-				clock1.tock();
+			int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
+			if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
+			{
+				TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Track Mouse Chunk", false, false);
+				clock1.tick();
+				auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
+					clock1.tock();
 				this->m_numMouseTrackHit++;
 				this->m_mouseTrackHitDuration += clock1.duration().count();
-				});
+					});
 
-			godot::PhysicsDirectSpaceState* spaceState = get_world()->get_direct_space_state();
-			godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
-			godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
-			godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
-			godot::Dictionary rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
+				godot::PhysicsDirectSpaceState* spaceState = get_world()->get_direct_space_state();
+				godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
+				godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
+				godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
+				godot::Dictionary rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
 
-			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+				GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
 
-			if (rayArray.has("position"))
-			{
-				m_mouseHit = rayArray["position"];
-				if (editModeUIControl && m_editMode)
-					editModeUIControl->setMouseHitLabelText(std::string("X=") + std::to_string(m_mouseHit.x) + " Y=" + std::to_string(m_mouseHit.y) + " Z=" + std::to_string(m_mouseHit.z));
-			}
-
-			if (rayArray.has("collider"))
-			{
-				collider = rayArray["collider"];
-				if (collider->has_meta("QuadrantName"))
+				if (rayArray.has("position"))
 				{
-					godot::String s = collider->get_meta("QuadrantName", "");
-					char* str = s.alloc_c_string();
-					std::string mouseQuadrantHitName = str;
-					godot::api->godot_free(str);
-					if (mouseQuadrantHitName != m_mouseQuadrantHitName)
-					{
-						s = collider->get_meta("QuadrantTag", "");
-						str = s.alloc_c_string();
-						std::string mouseQuadrantHitTag = str;
-						godot::api->godot_free(str);
-						godot::Vector3 mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
-						float mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
-						float gridStepInWu = collider->get_meta("QuadrantStep");
-						int level = collider->get_meta("QuadrantLevel");
-						int numVerticesPerSize = collider->get_meta("QuadrantNumVert");
-						QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
-						quadrantHitPos.setTag(mouseQuadrantHitTag);
-
-						if (editModeUIControl != nullptr && m_editMode)
-						{
-							editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
-							editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
-
-							// Get TerrainEdit Data from hit quadrant
-							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
-							if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-							{
-								TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
-								editModeUIControl->setSeed(terrainEdit->noiseSeed);
-								editModeUIControl->setFrequency(terrainEdit->frequency);
-								editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
-								editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
-								editModeUIControl->setGain(terrainEdit->fractalGain);
-								editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
-								editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
-							}
-						}
-
-						m_mouseQuadrantHitName = mouseQuadrantHitName;
-						m_mouseQuadrantHitTag = mouseQuadrantHitTag;
-						m_mouseQuadrantHitPos = mouseQuadrantHitPos;
-						m_mouseQuadrantHitSize = mouseQuadrantHitSize;
-						m_quadrantHitPos = quadrantHitPos;
-					}
+					m_mouseHit = rayArray["position"];
+					if (editModeUIControl && m_editMode)
+						editModeUIControl->setMouseHitLabelText(std::string("X=") + std::to_string(m_mouseHit.x) + " Y=" + std::to_string(m_mouseHit.y) + " Z=" + std::to_string(m_mouseHit.z));
 				}
-				//godot::PoolStringArray metas = collider->get_meta_list();
-				//for (int i = 0; i < metas.size(); i++)
-				//{
-				//	godot::String s = metas[i];
-				//	char* str = s.alloc_c_string();
-				//	std::string ss = str;
-				//	godot::api->godot_free(str);
-				//	godot::Variant v = collider->get_meta(s);
-				//}
-				//godot::String s = collider->get_meta("QuadrantName");
+
+				if (rayArray.has("collider"))
+				{
+					collider = rayArray["collider"];
+					if (collider->has_meta("QuadrantName"))
+					{
+						godot::String s = collider->get_meta("QuadrantName", "");
+						char* str = s.alloc_c_string();
+						std::string mouseQuadrantHitName = str;
+						godot::api->godot_free(str);
+						if (mouseQuadrantHitName != m_mouseQuadrantHitName)
+						{
+							s = collider->get_meta("QuadrantTag", "");
+							str = s.alloc_c_string();
+							std::string mouseQuadrantHitTag = str;
+							godot::api->godot_free(str);
+							godot::Vector3 mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
+							float mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
+							float gridStepInWu = collider->get_meta("QuadrantStep");
+							int level = collider->get_meta("QuadrantLevel");
+							int numVerticesPerSize = collider->get_meta("QuadrantNumVert");
+							QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
+							quadrantHitPos.setTag(mouseQuadrantHitTag);
+
+							if (editModeUIControl != nullptr && m_editMode)
+							{
+								editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
+								editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
+
+								// Get TerrainEdit Data from hit quadrant
+								MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
+								if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+								{
+									TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
+									editModeUIControl->setSeed(terrainEdit->noiseSeed);
+									editModeUIControl->setFrequency(terrainEdit->frequency);
+									editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
+									editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
+									editModeUIControl->setGain(terrainEdit->fractalGain);
+									editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
+									editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
+								}
+							}
+
+							m_mouseQuadrantHitName = mouseQuadrantHitName;
+							m_mouseQuadrantHitTag = mouseQuadrantHitTag;
+							m_mouseQuadrantHitPos = mouseQuadrantHitPos;
+							m_mouseQuadrantHitSize = mouseQuadrantHitSize;
+							m_quadrantHitPos = quadrantHitPos;
+						}
+					}
+					//godot::PoolStringArray metas = collider->get_meta_list();
+					//for (int i = 0; i < metas.size(); i++)
+					//{
+					//	godot::String s = metas[i];
+					//	char* str = s.alloc_c_string();
+					//	std::string ss = str;
+					//	godot::api->godot_free(str);
+					//	godot::Variant v = collider->get_meta(s);
+					//}
+					//godot::String s = collider->get_meta("QuadrantName");
+				}
+				m_timeElapsedFromLastMouseTrack = timeElapsed;
 			}
-			m_timeElapsedFromLastMouseTrack = timeElapsed;
 		}
 	}
 	
 	// UPDATE QUADS - Stage 1
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.3 ") + __FUNCTION__, "Update Quads Stage 1");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.5 ") + __FUNCTION__, "Update Quads Stage 1");
 
 		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 1", false, false);
 		clock1.tick();
@@ -1264,7 +1305,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 		// UPDATE QUADS - Stage 2
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.4 ") + __FUNCTION__, "Update Quads Stage 2");
+			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.6 ") + __FUNCTION__, "Update Quads Stage 2");
 
 			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 2", false, false);
 			clock1.tick();
@@ -1286,7 +1327,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		else
 		{
 			// UPDATE QUADS - Stage 3
-			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.5 ") + __FUNCTION__, "Update Quads Stage 3");
+			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.7 ") + __FUNCTION__, "Update Quads Stage 3");
 
 			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 3", false, false);
 			clock1.tick();
@@ -1306,6 +1347,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	if (m_refreshRequired)
 	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.8 ") + __FUNCTION__, "Refresh required");
+
 		Chunk::RefreshChunkAction action(is_visible_in_tree());
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
@@ -1316,7 +1359,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 
 	// UPDATE CHUNKS
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.6 ") + __FUNCTION__, "Update Chunks");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.9 ") + __FUNCTION__, "Update Chunks");
 
 		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Chunks", false, false);
 		clock1.tick();
@@ -1777,39 +1820,43 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		}
 	}
 
-	if (m_updateTerrainVisibilityRequired)
 	{
-		if (m_initialWordlViewerPosSet)
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.10 ") + __FUNCTION__, "Other stuff");
+
+		if (m_updateTerrainVisibilityRequired)
 		{
-			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			if (m_initialWordlViewerPosSet)
 			{
-				if (!itQuadTree->second->isValid())
-					continue;
-				//if (!itQuadTree->second->isVisible())
-				//	continue;
-				Chunk::DebugVisibilityChangedChunkAction action(m_debugContentVisibility);
-				itQuadTree->second->ForAllChunk(action);
+				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+				{
+					if (!itQuadTree->second->isValid())
+						continue;
+					//if (!itQuadTree->second->isVisible())
+					//	continue;
+					Chunk::DebugVisibilityChangedChunkAction action(m_debugContentVisibility);
+					itQuadTree->second->ForAllChunk(action);
+				}
 			}
+			m_updateTerrainVisibilityRequired = false;
 		}
-		m_updateTerrainVisibilityRequired = false;
+
+		if (m_updateDebugModeRequired)
+		{
+			if (m_initialWordlViewerPosSet)
+			{
+				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+				{
+					Chunk::SwitchDebugModeAction action(m_requiredChunkDebugMode);
+					itQuadTree->second->ForAllChunk(action);
+				}
+				m_currentChunkDebugMode = m_requiredChunkDebugMode;
+			}
+			m_updateDebugModeRequired = false;
+		}
 	}
 
-	if (m_updateDebugModeRequired)
 	{
-		if (m_initialWordlViewerPosSet)
-		{
-			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-			{
-				Chunk::SwitchDebugModeAction action(m_requiredChunkDebugMode);
-				itQuadTree->second->ForAllChunk(action);
-			}
-			m_currentChunkDebugMode = m_requiredChunkDebugMode;
-		}
-		m_updateDebugModeRequired = false;
-	}
-
-	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.7 ") + __FUNCTION__, "Material params stuff");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.11 ") + __FUNCTION__, "Material params stuff");
 
 		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Material Params", false, false);
 		clock1.tick();
@@ -1822,7 +1869,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
 			bool reset = false;
-			//reset = itQuadTree->second->resetMaterialParams();
+			reset = itQuadTree->second->resetMaterialParams();
 			bool updated = itQuadTree->second->updateMaterialParams();
 				
 			if (reset || updated)
@@ -1830,26 +1877,32 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		}
 	}
 
-	// Check for Dump
-	if (TIME_INTERVAL_BETWEEN_DUMP != 0 && globals->isDebugEnabled())
 	{
-		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
-		if (timeElapsed - m_timeElapsedFromLastDump > TIME_INTERVAL_BETWEEN_DUMP * 1000)
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.12 ") + __FUNCTION__, "Dump stuff");
+
+		// Check for Dump
+		if (TIME_INTERVAL_BETWEEN_DUMP != 0 && globals->isDebugEnabled())
 		{
-			m_dumpRequired = true;
-			m_timeElapsedFromLastDump = timeElapsed;
+			int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
+			if (timeElapsed - m_timeElapsedFromLastDump > TIME_INTERVAL_BETWEEN_DUMP * 1000)
+			{
+				m_dumpRequired = true;
+				m_timeElapsedFromLastDump = timeElapsed;
+			}
 		}
-	}
-	if (m_dumpRequired)
-	{
-		m_dumpRequired = false;
-		dump();
+		//if (m_dumpRequired)
+		//{
+		//	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.12.1 ") + __FUNCTION__, "Dump stuff");
+
+		//	m_dumpRequired = false;
+		//	dump();
+		//}
 	}
 
 	// Check for Statistics
 	if (TIME_INTERVAL_BETWEEN_STATISTICS != 0)
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.8 ") + __FUNCTION__, "Refresh statistics");
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.13 ") + __FUNCTION__, "Refresh statistics");
 
 		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastStatistic > TIME_INTERVAL_BETWEEN_STATISTICS)
@@ -3007,6 +3060,14 @@ void GDN_TheWorld_Viewer::streamer(void)
 						recalcQuadrantsInView();
 						m_recalcQuadrantsInViewNeeded = false;
 					}
+					if (m_dumpRequired)
+					{
+						TheWorld_Utils::GuardProfiler profiler(std::string("streamer 1 ") + __FUNCTION__, "Dump stuff");
+
+						m_dumpRequired = false;
+						dump();
+					}
+
 				}
 				catch (std::exception& e)
 				{
