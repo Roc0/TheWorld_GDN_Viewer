@@ -66,6 +66,8 @@ namespace godot
 		float warpNoiseFractalLacunarity;
 		float warpNoiseFractalGain;
 
+		float amplitude;
+
 		TerrainEdit(void);
 		void serialize(TheWorld_Utils::MemoryBuffer& buffer);
 		void deserialize(TheWorld_Utils::MemoryBuffer& buffer);

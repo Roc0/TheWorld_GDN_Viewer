@@ -286,8 +286,8 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum cla
 		Transform t = gt * Transform(Basis(), quadCenterGlobal);
 		quadCenterGlobal = t.origin;
 
-
 		real_t splitDistance = chunkSizeInWUs * globals->splitScale();
+		//real_t splitDistance = m_worldQuadrant->getPos().getSizeInWU() * globals->splitScale();
 		if (quad->isLeaf())
 		{
 			bool trackChunk = false;

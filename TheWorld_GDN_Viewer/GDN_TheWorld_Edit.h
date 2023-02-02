@@ -64,6 +64,8 @@ namespace godot
 		float weightedStrength(void);
 		void setPingPongStrength(float pingPongStrength);
 		float pingPongStrength(void);
+		void setAmplitude(float amplitude);
+		float amplitude(void);
 
 		void setMouseHitLabelText(std::string text);
 		void setMouseQuadHitLabelText(std::string text);
@@ -87,6 +89,8 @@ namespace godot
 		godot::LineEdit* m_fractalGain;
 		godot::LineEdit* m_fractalWeightedStrength;
 		godot::LineEdit* m_fractalPingPongStrength;
+
+		godot::LineEdit* m_amplitude;
 
 		godot::Label* m_mouseHitLabel;
 		godot::Label* m_mouseQuadHitLabel;

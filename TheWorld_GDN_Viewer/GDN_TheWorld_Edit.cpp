@@ -40,6 +40,7 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_fractalGain = nullptr;
 	m_fractalWeightedStrength = nullptr;
 	m_fractalPingPongStrength = nullptr;
+	m_amplitude = nullptr;
 	m_mouseHitLabel = nullptr;
 	m_mouseQuadHitLabel = nullptr;
 	m_mouseQuadHitPosLabel = nullptr;
@@ -191,6 +192,21 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalPingPongStrength = godot::LineEdit::_new();
 					hBoxContainer->add_child(m_fractalPingPongStrength);
 					m_fractalPingPongStrength->set_align(godot::Label::Align::ALIGN_RIGHT);
+
+			separator = HSeparator::_new();
+			mainVBoxContainer->add_child(separator);
+
+			marginContainer = godot::MarginContainer::_new();
+			mainVBoxContainer->add_child(marginContainer);
+				hBoxContainer = godot::HBoxContainer::_new();
+				marginContainer->add_child(hBoxContainer);
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Amplitude");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					m_amplitude = godot::LineEdit::_new();
+					hBoxContainer->add_child(m_amplitude);
+					m_amplitude->set_align(godot::Label::Align::ALIGN_RIGHT);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -357,6 +373,20 @@ void GDN_TheWorld_Edit::setPingPongStrength(float pingPongStrength)
 float GDN_TheWorld_Edit::pingPongStrength(void)
 {
 	godot::String s = m_fractalPingPongStrength->get_text();
+	char* str = s.alloc_c_string();
+	float ret = std::stof(std::string(str));
+	godot::api->godot_free(str);
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setAmplitude(float amplitude)
+{
+	m_amplitude->set_text(std::to_string(amplitude).c_str());
+}
+
+float GDN_TheWorld_Edit::amplitude(void)
+{
+	godot::String s = m_amplitude->get_text();
 	char* str = s.alloc_c_string();
 	float ret = std::stof(std::string(str));
 	godot::api->godot_free(str);

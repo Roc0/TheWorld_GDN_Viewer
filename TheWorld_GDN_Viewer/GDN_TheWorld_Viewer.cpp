@@ -47,6 +47,8 @@ TerrainEdit::TerrainEdit(void)
 	fractalGain = 0.5f;
 	fractalWeightedStrength = 0.0f;
 	fractalPingPongStrength = 2.0f;
+	
+	amplitude = 100.0f;
 
 	cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
 	cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
@@ -1254,6 +1256,7 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 									editModeUIControl->setGain(terrainEdit->fractalGain);
 									editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
 									editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
+									editModeUIControl->setAmplitude(terrainEdit->amplitude);
 								}
 							}
 
@@ -2509,6 +2512,7 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 	terrainEdit->fractalGain = editModeUIControl->gain();
 	terrainEdit->fractalWeightedStrength = editModeUIControl->weightedStrength();
 	terrainEdit->fractalPingPongStrength = editModeUIControl->pingPongStrength();
+	terrainEdit->amplitude = editModeUIControl->amplitude();
 	terrainEdit->needUploadToServer = true;
 
 	FastNoiseLite noise(terrainEdit->noiseSeed);
@@ -2564,7 +2568,10 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 			{
 				float xf = lowerXGridVertex + (x * gridStepInWU);
 				float zf = lowerZGridVertex + (z * gridStepInWU);
-				vectGridHeights[idx] = noise.GetNoise(xf, zf);
+				float altitude = noise.GetNoise(xf, zf);
+				// noises are value in range -1 to 1 we need to interpolate with amplitude
+				altitude *= terrainEdit->amplitude;
+				vectGridHeights[idx] = altitude;
 				idx++;
 			}
 	}
@@ -2582,7 +2589,7 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.3 ") + __FUNCTION__, "Quadrant refreshGridVertices");
 		quadTreeSel->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
-		quadTreeSel->materialParamsNeedReset();
+		quadTreeSel->materialParamsNeedReset(true);
 	}
 
 }
