@@ -305,6 +305,11 @@ namespace godot
 			return m_float16HeigthsBuffer;
 		}
 
+		//TheWorld_Utils::MemoryBuffer& getFloat32HeightsBuffer(void)
+		//{
+		//	return m_float32HeigthsBuffer;
+		//}
+
 		TheWorld_Utils::MemoryBuffer& getNormalsBuffer(void)
 		{
 			return m_normalsBuffer;
@@ -343,7 +348,7 @@ namespace godot
 		QuadTree* m_quadTree;
 		TheWorld_Utils::MemoryBuffer m_float16HeigthsBuffer;	// each height is expressed as a 16-bit float (image with FORMAT_RH) and are serialized line by line (each line from x=0 to x=numVertexPerQuadrant, first line ==> z=0, last line z=numVertexPerQuadrant)
 		TheWorld_Utils::MemoryBuffer m_float32HeigthsBuffer;	// each height is expressed as a 32-bit and are serialized as above
-		TheWorld_Utils::MemoryBuffer m_normalsBuffer;	// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heigths
+		TheWorld_Utils::MemoryBuffer m_normalsBuffer;			// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heigths
 		bool m_heigthsUpdated;
 		bool m_colorsUpdated;
 		std::unique_ptr<TerrainEdit> m_terrainEdit;
@@ -394,7 +399,7 @@ namespace godot
 		};
 
 	private:
-		void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
+		//void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
 		//Color encodeNormal(Vector3 normal);
 
 	private:

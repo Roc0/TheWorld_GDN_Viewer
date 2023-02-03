@@ -358,6 +358,12 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum cla
 			Chunk* chunk = quad->getChunk();
 			assert(chunk != nullptr);
 			
+			//std::string id = chunk->getIdStr();
+			//if ((chunk->getLod() == 0 && chunk->getSlotPosX() == 31 && chunk->getSlotPosZ() == 31) || id == "LOD:0-X:31-Z:31")
+			//{
+			//	PLOG_DEBUG << "eccolo";
+			//}
+
 			if (chunk != nullptr)
 			{
 				switch (posInQuad)
@@ -369,12 +375,16 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum cla
 						{
 							neighbourChunk->getQuad()->setSplitRequired(true);
 							numSplitRequired++;
+							if (neighbourChunk->getLod() - quad->Lod() > 2)
+								PLOG_DEBUG << getQuadrant()->getPos().getName() << " " << chunk->getIdStr() << " (First) - " << " XMinus neighbour " << neighbourChunk->getQuadTree()->getQuadrant()->getPos().getName() << " " << neighbourChunk->getIdStr();
 						}
 						neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::ZMinusChunk, Chunk::LookForChunk::HigherLod);
 						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
 						{
 							neighbourChunk->getQuad()->setSplitRequired(true);
 							numSplitRequired++;
+							if (neighbourChunk->getLod() - quad->Lod() > 2)
+								PLOG_DEBUG << getQuadrant()->getPos().getName() << " " << chunk->getIdStr() << " (First) - " << " ZMinus neighbour " << neighbourChunk->getQuadTree()->getQuadrant()->getPos().getName() << " " << neighbourChunk->getIdStr();
 						}
 					}
 					break;
@@ -385,12 +395,16 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum cla
 						{
 							neighbourChunk->getQuad()->setSplitRequired(true);
 							numSplitRequired++;
+							if (neighbourChunk->getLod() - quad->Lod() > 2)
+								PLOG_DEBUG << getQuadrant()->getPos().getName() << " " << chunk->getIdStr() << " (Second) - " << " XPlus neighbour " << neighbourChunk->getQuadTree()->getQuadrant()->getPos().getName() << " " << neighbourChunk->getIdStr();
 						}
 						neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::ZMinusChunk, Chunk::LookForChunk::HigherLod);
 						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
 						{
 							neighbourChunk->getQuad()->setSplitRequired(true);
 							numSplitRequired++;
+							if (neighbourChunk->getLod() - quad->Lod() > 2)
+								PLOG_DEBUG << getQuadrant()->getPos().getName() << " " << chunk->getIdStr() << " (Second) - " << " ZMinus neighbour " << neighbourChunk->getQuadTree()->getQuadrant()->getPos().getName() << " " << neighbourChunk->getIdStr();
 						}
 					}
 					break;
@@ -401,12 +415,16 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum cla
 						{
 							neighbourChunk->getQuad()->setSplitRequired(true);
 							numSplitRequired++;
+							if (neighbourChunk->getLod() - quad->Lod() > 2)
+								PLOG_DEBUG << getQuadrant()->getPos().getName() << " " << chunk->getIdStr() << " (Third) - " << " XMinus neighbour " << neighbourChunk->getQuadTree()->getQuadrant()->getPos().getName() << " " << neighbourChunk->getIdStr();
 						}
 						neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::ZPlusChunk, Chunk::LookForChunk::HigherLod);
 						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
 						{
 							neighbourChunk->getQuad()->setSplitRequired(true);
 							numSplitRequired++;
+							if (neighbourChunk->getLod() - quad->Lod() > 2)
+								PLOG_DEBUG << getQuadrant()->getPos().getName() << " " << chunk->getIdStr() << " (Third) - " << " ZPlus neighbour " << neighbourChunk->getQuadTree()->getQuadrant()->getPos().getName() << " " << neighbourChunk->getIdStr();
 						}
 					}
 					break;
@@ -417,12 +435,16 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum cla
 						{
 							neighbourChunk->getQuad()->setSplitRequired(true);
 							numSplitRequired++;
+							if (neighbourChunk->getLod() - quad->Lod() > 2)
+								PLOG_DEBUG << getQuadrant()->getPos().getName() << " " << chunk->getIdStr() << " (Forth) - " << " XPlus neighbour " << neighbourChunk->getQuadTree()->getQuadrant()->getPos().getName() << " " << neighbourChunk->getIdStr();
 						}
 						neighbourChunk = m_viewer->getActiveChunkAt(chunk, Chunk::DirectionSlot::ZPlusChunk, Chunk::LookForChunk::HigherLod);
 						if (neighbourChunk != nullptr && neighbourChunk->getLod() > 0 && (neighbourChunk->getLod() - quad->Lod()) > 1 && neighbourChunk->getQuad() != nullptr)
 						{
 							neighbourChunk->getQuad()->setSplitRequired(true);
 							numSplitRequired++;
+							if (neighbourChunk->getLod() - quad->Lod() > 2)
+								PLOG_DEBUG << getQuadrant()->getPos().getName() << " " << chunk->getIdStr() << " (Forth) - " << " ZPlus neighbour " << neighbourChunk->getQuadTree()->getQuadrant()->getPos().getName() << " " << neighbourChunk->getIdStr();
 						}
 					}
 					break;
@@ -441,6 +463,10 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum cla
 		// (updateStage == UpdateStage::Stage3)
 		if (quad->isLeaf())
 		{
+			bool trackChunk = false;
+			if (m_viewer->trackMouse() && getQuadrant()->getPos().getName() == m_viewer->getMouseQuadrantHitName())
+				trackChunk = true;
+
 			if (quad->splitRequired() && quad->Lod() > 0)
 			{
 				// Split
@@ -448,6 +474,9 @@ void QuadTree::internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quad, enum cla
 				for (int i = 0; i < 4; i++)
 				{
 					quad->getChild(i)->setCameraPos(cameraPosGlobalCoord);
+					if (trackChunk)
+						quad->getChild(i)->getChunk()->checkMouseHit();
+					quad->getChild(i)->getChunk()->setDistanceFromCamera(0);
 				}
 				m_numSplits++;
 			}
@@ -1073,51 +1102,51 @@ void ShaderTerrainData::updateMaterialParams(void)
 	}
 }
 
-void ShaderTerrainData::debugPrintTexture(std::string tex_name, Ref<Texture> tex)
-{
-	File* _file = File::_new();
-	_file->open("res://" + String(tex_name.c_str()) + ".txt", File::WRITE);
-	Ref<Image> _image = tex->get_data();
-	int64_t width = _image->get_width();
-	int64_t height = _image->get_height();
-	Image::Format format = _image->get_format();
-	std::string formatStr = std::to_string(format);
-	if (format == Image::Format::FORMAT_RH)
-		formatStr = "FORMAT_RH";
-	else if (format == Image::Format::FORMAT_RGB8)
-		formatStr = "FORMAT_RGB8";
-	else if (format == Image::Format::FORMAT_RGBA8)
-		formatStr = "FORMAT_RGBA8";
-	std::string text = "Name=" + tex_name + " Format=" + formatStr + " W=" + std::to_string(width) + " H=" + std::to_string(height);
-	_file->store_string(String(text.c_str()) + "\n");
-	_image->lock();
-	for (int h = 0; h < height; h++)
-	{
-		std::string row = "";
-		for (int w = 0; w < width; w++)
-		{
-			row += std::to_string(w) + ":";
-			if (format == Image::Format::FORMAT_RH)
-				row += std::to_string(_image->get_pixel(w, h).r) + " ";
-			else if (format == Image::Format::FORMAT_RGB8)
-				row += std::to_string(_image->get_pixel(w, h).r) + "-" + std::to_string(_image->get_pixel(w, h).g) + "-" + std::to_string(_image->get_pixel(w, h).b) + " ";
-			else if (format == Image::Format::FORMAT_RGBA8)
-				row += std::to_string(_image->get_pixel(w, h).r) + "-" + std::to_string(_image->get_pixel(w, h).g) + "-" + std::to_string(_image->get_pixel(w, h).b) + "-" + std::to_string(_image->get_pixel(w, h).a) + " ";
-			else
-			{
-				String s = String(_image->get_pixel(w, h));
-				char* str = s.alloc_c_string();
-				row += str;
-				row += " ";
-				godot::api->godot_free(str);
-			}
-		}
-		text = "H=" + std::to_string(h) + " " + row;
-		_file->store_string(String(text.c_str()) + "\n");
-	}
-	_image->unlock();
-	_file->close();
-}
+//void ShaderTerrainData::debugPrintTexture(std::string tex_name, Ref<Texture> tex)
+//{
+//	File* _file = File::_new();
+//	_file->open("res://" + String(tex_name.c_str()) + ".txt", File::WRITE);
+//	Ref<Image> _image = tex->get_data();
+//	int64_t width = _image->get_width();
+//	int64_t height = _image->get_height();
+//	Image::Format format = _image->get_format();
+//	std::string formatStr = std::to_string(format);
+//	if (format == Image::Format::FORMAT_RH)
+//		formatStr = "FORMAT_RH";
+//	else if (format == Image::Format::FORMAT_RGB8)
+//		formatStr = "FORMAT_RGB8";
+//	else if (format == Image::Format::FORMAT_RGBA8)
+//		formatStr = "FORMAT_RGBA8";
+//	std::string text = "Name=" + tex_name + " Format=" + formatStr + " W=" + std::to_string(width) + " H=" + std::to_string(height);
+//	_file->store_string(String(text.c_str()) + "\n");
+//	_image->lock();
+//	for (int h = 0; h < height; h++)
+//	{
+//		std::string row = "";
+//		for (int w = 0; w < width; w++)
+//		{
+//			row += std::to_string(w) + ":";
+//			if (format == Image::Format::FORMAT_RH)
+//				row += std::to_string(_image->get_pixel(w, h).r) + " ";
+//			else if (format == Image::Format::FORMAT_RGB8)
+//				row += std::to_string(_image->get_pixel(w, h).r) + "-" + std::to_string(_image->get_pixel(w, h).g) + "-" + std::to_string(_image->get_pixel(w, h).b) + " ";
+//			else if (format == Image::Format::FORMAT_RGBA8)
+//				row += std::to_string(_image->get_pixel(w, h).r) + "-" + std::to_string(_image->get_pixel(w, h).g) + "-" + std::to_string(_image->get_pixel(w, h).b) + "-" + std::to_string(_image->get_pixel(w, h).a) + " ";
+//			else
+//			{
+//				String s = String(_image->get_pixel(w, h));
+//				char* str = s.alloc_c_string();
+//				row += str;
+//				row += " ";
+//				godot::api->godot_free(str);
+//			}
+//		}
+//		text = "H=" + std::to_string(h) + " " + row;
+//		_file->store_string(String(text.c_str()) + "\n");
+//	}
+//	_image->unlock();
+//	_file->close();
+//}
 
 QuadrantPos QuadrantPos::getQuadrantPos(enum class DirectionSlot dir, int numSlot)
 {
@@ -1181,7 +1210,6 @@ size_t Quadrant::getIndexFromHeighmap(float posX, float posZ, size_t level)
 
 float Quadrant::getAltitudeFromHeigthmap(size_t index)
 {
-	//float* p = (float*)m_float32HeigthsBuffer.c_str();
 	float* p = (float*)m_float32HeigthsBuffer.ptr();
 	return *(p + index);
 }
@@ -1293,6 +1321,7 @@ void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Grid Vertices not of the correct size").c_str()));
 
 	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
 		m_heigths.resize((int)numFloat32Heights);
 		godot::PoolRealArray::Write w = m_heigths.write();
 		memcpy((char*)w.ptr(), m_float32HeigthsBuffer.ptr(), m_float32HeigthsBuffer.len());

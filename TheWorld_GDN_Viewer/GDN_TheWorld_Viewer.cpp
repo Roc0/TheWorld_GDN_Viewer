@@ -2117,7 +2117,7 @@ Chunk* GDN_TheWorld_Viewer::getActiveChunkAt(Chunk* chunk, enum class Chunk::Dir
 					if (retChunk != nullptr && !retChunk->isActive())
 						retChunk = nullptr;
 				}
-				if (retChunk != nullptr)
+				if (retChunk == nullptr)
 				{
 					Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
 					Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(pos.getSlotPosX() / 2, pos.getSlotPosZ() / 2, lod + 1);
@@ -2221,7 +2221,7 @@ Chunk* GDN_TheWorld_Viewer::getActiveChunkAt(Chunk* chunk, enum class Chunk::Dir
 					if (retChunk != nullptr && !retChunk->isActive())
 						retChunk = nullptr;
 				}
-				if (retChunk != nullptr)
+				if (retChunk == nullptr)
 				{
 					Chunk::ChunkPos posSecondInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2 + 1, pos.getSlotPosZ() * 2, lod - 1);
 					Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(pos.getSlotPosX() / 2, pos.getSlotPosZ() / 2, lod + 1);
@@ -2325,7 +2325,7 @@ Chunk* GDN_TheWorld_Viewer::getActiveChunkAt(Chunk* chunk, enum class Chunk::Dir
 					if (retChunk != nullptr && !retChunk->isActive())
 						retChunk = nullptr;
 				}
-				if (retChunk != nullptr)
+				if (retChunk == nullptr)
 				{
 					Chunk::ChunkPos posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
 					Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(pos.getSlotPosX() / 2, pos.getSlotPosZ() / 2, lod + 1);
@@ -2429,7 +2429,7 @@ Chunk* GDN_TheWorld_Viewer::getActiveChunkAt(Chunk* chunk, enum class Chunk::Dir
 					if (retChunk != nullptr && !retChunk->isActive())
 						retChunk = nullptr;
 				}
-				if (retChunk != nullptr)
+				if (retChunk == nullptr)
 				{
 					Chunk::ChunkPos posThirdInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2 + 1, lod - 1);
 					Chunk::ChunkPos posChunkAtHigherLod = Chunk::ChunkPos(pos.getSlotPosX() / 2, pos.getSlotPosZ() / 2, lod + 1);
