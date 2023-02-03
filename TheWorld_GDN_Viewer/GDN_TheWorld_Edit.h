@@ -64,8 +64,14 @@ namespace godot
 		float weightedStrength(void);
 		void setPingPongStrength(float pingPongStrength);
 		float pingPongStrength(void);
-		void setAmplitude(float amplitude);
-		float amplitude(void);
+		void setAmplitude(unsigned int amplitude);
+		unsigned int amplitude(void);
+		void setMinHeight(float minHeight);
+		float minHeight(void);
+		void setMaxHeight(float maxHeight);
+		float maxHeight(void);
+		void setElapsed(size_t elapsed);
+		size_t elapsed(void);
 
 		void setMouseHitLabelText(std::string text);
 		void setMouseQuadHitLabelText(std::string text);
@@ -90,7 +96,10 @@ namespace godot
 		godot::LineEdit* m_fractalWeightedStrength;
 		godot::LineEdit* m_fractalPingPongStrength;
 
-		godot::LineEdit* m_amplitude;
+		godot::LineEdit* m_amplitudeLabel;
+		godot::Label* m_minHeightLabel;
+		godot::Label* m_maxHeightLabel;
+		godot::Label* m_elapsedLabel;
 
 		godot::Label* m_mouseHitLabel;
 		godot::Label* m_mouseQuadHitLabel;

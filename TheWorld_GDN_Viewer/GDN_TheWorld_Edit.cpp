@@ -40,7 +40,10 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_fractalGain = nullptr;
 	m_fractalWeightedStrength = nullptr;
 	m_fractalPingPongStrength = nullptr;
-	m_amplitude = nullptr;
+	m_amplitudeLabel = nullptr;
+	m_minHeightLabel = nullptr;
+	m_maxHeightLabel = nullptr;
+	m_elapsedLabel = nullptr;
 	m_mouseHitLabel = nullptr;
 	m_mouseQuadHitLabel = nullptr;
 	m_mouseQuadHitPosLabel = nullptr;
@@ -93,19 +96,22 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					hBoxContainer->add_child(button);
 					button->set_text("Generate");
 					button->connect("pressed", this, "edit_mode_generate");
+					button->set_focus_mode(FocusMode::FOCUS_NONE);
 					separator = VSeparator::_new();
 					hBoxContainer->add_child(separator);
 					button = godot::Button::_new();
 					hBoxContainer->add_child(button);
 					button->set_text("Save");
 					button->connect("pressed", this, "edit_mode_generate");
+					button->set_focus_mode(FocusMode::FOCUS_NONE);
 					separator = VSeparator::_new();
 					hBoxContainer->add_child(separator);
 					button = godot::Button::_new();
 					hBoxContainer->add_child(button);
 					button->set_text("Upload");
 					button->connect("pressed", this, "edit_mode_generate");
-					
+					button->set_focus_mode(FocusMode::FOCUS_NONE);
+
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
 
@@ -204,9 +210,35 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					hBoxContainer->add_child(label);
 					label->set_text("Amplitude");
 					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					m_amplitude = godot::LineEdit::_new();
-					hBoxContainer->add_child(m_amplitude);
-					m_amplitude->set_align(godot::Label::Align::ALIGN_RIGHT);
+					m_amplitudeLabel = godot::LineEdit::_new();
+					hBoxContainer->add_child(m_amplitudeLabel);
+					m_amplitudeLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+
+			marginContainer = godot::MarginContainer::_new();
+			mainVBoxContainer->add_child(marginContainer);
+				hBoxContainer = godot::HBoxContainer::_new();
+				marginContainer->add_child(hBoxContainer);
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Min");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					m_minHeightLabel = godot::Label::_new();
+					hBoxContainer->add_child(m_minHeightLabel);
+					m_minHeightLabel->set_align(godot::Label::Align::ALIGN_LEFT);
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Max");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					m_maxHeightLabel = godot::Label::_new();
+					hBoxContainer->add_child(m_maxHeightLabel);
+					m_maxHeightLabel->set_align(godot::Label::Align::ALIGN_LEFT);
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Elapsed");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					m_elapsedLabel = godot::Label::_new();
+					hBoxContainer->add_child(m_elapsedLabel);
+					m_elapsedLabel->set_align(godot::Label::Align::ALIGN_LEFT);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -379,16 +411,58 @@ float GDN_TheWorld_Edit::pingPongStrength(void)
 	return ret;
 }
 
-void GDN_TheWorld_Edit::setAmplitude(float amplitude)
+void GDN_TheWorld_Edit::setAmplitude(unsigned int amplitude)
 {
-	m_amplitude->set_text(std::to_string(amplitude).c_str());
+	m_amplitudeLabel->set_text(std::to_string(amplitude).c_str());
 }
 
-float GDN_TheWorld_Edit::amplitude(void)
+unsigned int GDN_TheWorld_Edit::amplitude(void)
 {
-	godot::String s = m_amplitude->get_text();
+	godot::String s = m_amplitudeLabel->get_text();
+	char* str = s.alloc_c_string();
+	unsigned int ret = std::stoi(std::string(str));
+	godot::api->godot_free(str);
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setMinHeight(float minHeight)
+{
+	m_minHeightLabel->set_text(std::to_string(minHeight).c_str());
+}
+
+float GDN_TheWorld_Edit::minHeight(void)
+{
+	godot::String s = m_minHeightLabel->get_text();
 	char* str = s.alloc_c_string();
 	float ret = std::stof(std::string(str));
+	godot::api->godot_free(str);
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setMaxHeight(float maxHeight)
+{
+	m_maxHeightLabel->set_text(std::to_string(maxHeight).c_str());
+}
+
+float GDN_TheWorld_Edit::maxHeight(void)
+{
+	godot::String s = m_maxHeightLabel->get_text();
+	char* str = s.alloc_c_string();
+	float ret = std::stof(std::string(str));
+	godot::api->godot_free(str);
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setElapsed(size_t elapsed)
+{
+	m_elapsedLabel->set_text(std::to_string(elapsed).c_str());
+}
+
+size_t GDN_TheWorld_Edit::elapsed(void)
+{
+	godot::String s = m_elapsedLabel->get_text();
+	char* str = s.alloc_c_string();
+	size_t ret = std::stoll(std::string(str));
 	godot::api->godot_free(str);
 	return ret;
 }

@@ -66,7 +66,9 @@ namespace godot
 		float warpNoiseFractalLacunarity;
 		float warpNoiseFractalGain;
 
-		float amplitude;
+		unsigned int amplitude;		// range of heigths in WU (noise is from -1 to 1)
+		float minHeight;
+		float maxHeight;
 
 		TerrainEdit(void);
 		void serialize(TheWorld_Utils::MemoryBuffer& buffer);
@@ -287,7 +289,9 @@ namespace godot
 	private:
 		bool m_initialized;
 		bool m_useVisualServer;
+		bool m_altPressed;
 		bool m_ctrlPressed;
+		bool m_shiftPressed;
 		bool m_firstProcess;
 		int64_t m_timeElapsedFromLastDump;
 		bool m_initialWordlViewerPosSet;

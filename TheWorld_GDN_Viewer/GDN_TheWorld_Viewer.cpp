@@ -48,8 +48,6 @@ TerrainEdit::TerrainEdit(void)
 	fractalWeightedStrength = 0.0f;
 	fractalPingPongStrength = 2.0f;
 	
-	amplitude = 100.0f;
-
 	cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
 	cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
 	cellularJitter = 1.0f;
@@ -63,6 +61,10 @@ TerrainEdit::TerrainEdit(void)
 	warpNoiseFractalOctaves = 5;
 	warpNoiseFractalLacunarity = 2.0f;
 	warpNoiseFractalGain = 0.5f;
+
+	amplitude = 1000;
+	minHeight = 0;
+	maxHeight = 0;
 }
 
 void TerrainEdit::serialize(TheWorld_Utils::MemoryBuffer& buffer)
@@ -190,7 +192,9 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_updateDebugModeRequired = false;
 	m_numWorldVerticesPerSize = 0;
 	m_debugDraw = Viewport::DebugDraw::DEBUG_DRAW_DISABLED;
+	m_altPressed = false;
 	m_ctrlPressed = false;
+	m_shiftPressed = false;
 	m_streamerThreadRequiredExit = false;
 	m_streamerThreadRunning = false;
 	m_numVisibleQuadrantOnPerimeter = 0;
@@ -567,7 +571,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
-	if (event->is_action_pressed("ui_select"))
+	if (event->is_action_pressed("ui_select") && m_altPressed)
 	{
 		if (m_trackMouse)
 		{
@@ -1049,6 +1053,10 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		return;
 	}
 
+	TheWorld_Viewer_Utils::TimerMcs clock;
+	clock.tick();
+	auto save_duration = TheWorld_Viewer_Utils::finally([&clock, this] { clock.tock(); this->m_numProcessExecution++; this->m_processDuration += clock.duration().count(); });
+
 	_process_impl(_delta, activeCamera);
 }
 
@@ -1059,14 +1067,6 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 		return;
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.1 ") + __FUNCTION__, "Lock owned");
-
-	TheWorld_Viewer_Utils::TimerMcs clock;
-	clock.tick();
-	auto save_duration = TheWorld_Viewer_Utils::finally([&clock, this] {
-		clock.tock(); 
-		this->m_numProcessExecution++; 
-		this->m_processDuration += clock.duration().count();
-		});
 
 	if (m_firstProcess)
 	{
@@ -1257,6 +1257,9 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 									editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
 									editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
 									editModeUIControl->setAmplitude(terrainEdit->amplitude);
+									editModeUIControl->setMinHeight(terrainEdit->minHeight);
+									editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
+									editModeUIControl->setElapsed(0);
 								}
 							}
 
@@ -1999,10 +2002,20 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 
 	Input* input = Input::get_singleton();
 
+	if (input->is_action_pressed("ui_shift"))
+		m_shiftPressed = true;
+	else
+		m_shiftPressed = false;
+
 	if (input->is_action_pressed("ui_ctrl"))
 		m_ctrlPressed = true;
 	else
 		m_ctrlPressed = false;
+
+	if (input->is_action_pressed("ui_alt"))
+		m_altPressed = true;
+	else
+		m_altPressed = false;
 }
 
 QuadTree* GDN_TheWorld_Viewer::getQuadTree(QuadrantPos pos)
@@ -2485,6 +2498,9 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 {
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1 ") + __FUNCTION__, "ALL");
 
+	TheWorld_Viewer_Utils::TimerMs clock;
+	clock.tick();
+
 	// TODORIC0: find quadrant hit and set terrainData
 	// generate heigths
 	// pass to cache
@@ -2492,6 +2508,9 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 
 	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
 	if (editModeUIControl == nullptr || !m_editMode)
+		return;
+
+	if (m_quadrantSelPos.empty())
 		return;
 
 	QuadTree* quadTreeSel = nullptr;
@@ -2578,11 +2597,12 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 
 	std::string meshBuffer;
 	std::string meshId;
+	float minHeight = 0, maxHeight = 0;
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.2 ") + __FUNCTION__, "Quadrant reverse array to buffer");
 		TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
 		meshId = cache.getMeshId();
-		cache.setBufferForMeshCache(meshId, numVerticesPerSize, gridStepInWU, vectGridHeights, meshBuffer);
+		cache.setBufferForMeshCache(meshId, numVerticesPerSize, gridStepInWU, vectGridHeights, meshBuffer, minHeight, maxHeight);
 		editModeUIControl->getMapQUadToSave()[m_quadrantSelPos] = true;
 	}
 
@@ -2592,6 +2612,14 @@ void GDN_TheWorld_Viewer::GenerateHeigths(void)
 		quadTreeSel->materialParamsNeedReset(true);
 	}
 
+	clock.tock();
+	size_t duration = clock.duration().count();
+
+	editModeUIControl->setMinHeight(minHeight);
+	editModeUIControl->setMaxHeight(maxHeight);
+	editModeUIControl->setElapsed(duration);
+	terrainEdit->minHeight = minHeight;
+	terrainEdit->maxHeight = maxHeight;
 }
 
 godot::GDN_TheWorld_Edit* GDN_TheWorld_Viewer::EditModeUIControl(bool useCache)

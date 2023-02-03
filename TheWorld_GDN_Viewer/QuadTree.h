@@ -112,6 +112,8 @@ namespace godot
 
 		bool operator<(const QuadrantPos& quadrantPos) const
 		{
+			assert(m_initialized == true);
+			assert(quadrantPos.m_initialized == true);
 			assert(m_level == quadrantPos.m_level);
 			if (m_level < quadrantPos.m_level)
 				return true;
