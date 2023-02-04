@@ -909,6 +909,13 @@ ShaderTerrainData::ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quad
 
 ShaderTerrainData::~ShaderTerrainData()
 {
+	m_material.unref();
+	m_heightMapImage.unref();
+	m_heightMapTexture.unref();
+	m_normalMapImage.unref();
+	m_normalMapTexture.unref();
+	m_colorMapImage.unref();
+	m_colorMapTexture.unref();
 }
 
 void ShaderTerrainData::init(void)
@@ -1281,13 +1288,17 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	return;
 }
 
-void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache)
+void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache)
 {
 	float minAltitude = 0, maxAltitude = 0;
 	
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.1 ") + __FUNCTION__, "m_cache.refreshMapsFromBuffer");
-		m_cache.refreshMapsFromBuffer(buffer, meshIdFromBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, updateCache);
+
+		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+		m_cache.refreshMapsFromBuffer(buffer, meshIdFromBuffer, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, updateCache);
+		if (terrainEditValuesBuffer.size() > 0)
+			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 	}
 
 	if (meshIdFromBuffer != meshId)
@@ -1296,7 +1307,11 @@ void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::
 	if (m_float16HeigthsBuffer.empty())
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
-		m_cache.readMapsFromMeshCache(meshId, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+
+		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+		m_cache.readMapsFromMeshCache(meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+		if (terrainEditValuesBuffer.size() > 0)
+			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 	}
 
 	setHeightsUpdated(true);
@@ -1321,10 +1336,24 @@ void Quadrant::refreshGridVertices(std::string buffer, std::string meshId, std::
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Grid Vertices not of the correct size").c_str()));
 
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("MeshCacheBuffer ") + __FUNCTION__, "ALL");
+		//TheWorld_Utils::GuardProfiler profiler(std::string("SetColliderHeights ") + __FUNCTION__, "ALL");
 		m_heigths.resize((int)numFloat32Heights);
 		godot::PoolRealArray::Write w = m_heigths.write();
 		memcpy((char*)w.ptr(), m_float32HeigthsBuffer.ptr(), m_float32HeigthsBuffer.len());
+		//{
+		//	uint16_t* ptrFrom = (uint16_t*)m_float16HeigthsBuffer.ptr();
+		//	m_heigths.resize((int)numFloat16Heights);
+		//	godot::PoolRealArray::Write w = m_heigths.write();
+		//	float* ptrTo = w.ptr();
+		//	for (size_t idx = 0; idx < numFloat16Heights; idx++)
+		//	{
+		//		TheWorld_Utils::FLOAT_32 f;
+		//		f.u32 = half_to_float(*ptrFrom);
+		//		*ptrTo = f.f32;
+		//		ptrFrom++;
+		//		ptrTo++;
+		//	}
+		//}
 	}
 
 	Vector3 startPosition(m_quadrantPos.getLowerXGridVertex(), minAltitude, m_quadrantPos.getLowerZGridVertex());

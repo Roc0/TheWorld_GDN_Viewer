@@ -49,6 +49,8 @@ namespace godot
 
 		void resizeUI(void);
 		void editModeGenerate(void);
+		void editModeSave(void);
+		void editModeUpload(void);
 
 		void setSeed(int seed);
 		int seed(void);
@@ -79,10 +81,10 @@ namespace godot
 		void setMouseQuadSelLabelText(std::string text);
 		void setMouseQuadSelPosLabelText(std::string text);
 
-		std::map<QuadrantPos, bool>& getMapQUadToSave(void)
-		{
-			return m_quadToSave;
-		}
+		//std::map<QuadrantPos, bool>& getMapQuadToSave(void)
+		//{
+		//	return m_mapQuadToSave;
+		//}
 
 	private:
 		bool m_initialized;
@@ -107,7 +109,7 @@ namespace godot
 		godot::Label* m_mouseQuadSelLabel;
 		godot::Label* m_mouseQuadSelPosLabel;
 
-		std::map<QuadrantPos, bool> m_quadToSave;
+		std::map<QuadrantPos, std::string> m_mapQuadToSave;
 	};
 
 }

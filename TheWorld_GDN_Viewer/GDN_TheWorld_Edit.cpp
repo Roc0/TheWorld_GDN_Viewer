@@ -2,6 +2,7 @@
 #include <Godot.hpp>
 #include <Node.hpp>
 #include <MarginContainer.hpp>
+#include <TabContainer.hpp>
 #include <PanelContainer.hpp>
 #include <VBoxContainer.hpp>
 #include <HBoxContainer.hpp>
@@ -15,6 +16,7 @@
 
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Edit.h"
+#include "FastNoiseLite.h"
 
 using namespace godot;
 
@@ -27,6 +29,8 @@ void GDN_TheWorld_Edit::_register_methods()
 
 	//register_method("hello", &GDN_TheWorld_Edit::hello);
 	register_method("edit_mode_generate", &GDN_TheWorld_Edit::editModeGenerate);
+	register_method("edit_mode_save", &GDN_TheWorld_Edit::editModeSave);
+	register_method("edit_mode_upload", &GDN_TheWorld_Edit::editModeUpload);
 }
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
@@ -72,24 +76,29 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	godot::Button* button = nullptr;
 	godot::Label* label = nullptr;
 
+	godot::Control* mainTabContainer = godot::TabContainer::_new();
+	mainTabContainer->set_name("EditModeTab");
+	add_child(mainTabContainer);
+
 	godot::Control* mainPanelContainer = godot::PanelContainer::_new();
-	add_child(mainPanelContainer);
+	mainPanelContainer->set_name("Terrain");
+	mainTabContainer->add_child(mainPanelContainer);
 
 		godot::Control* mainVBoxContainer = godot::VBoxContainer::_new();
 		mainPanelContainer->add_child(mainVBoxContainer);
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-				label = godot::Label::_new();
-				marginContainer->add_child(label);
-				label->set_text("Edit Mode");
-				label->set_align(godot::Label::Align::ALIGN_CENTER);
+			
+		//	marginContainer = godot::MarginContainer::_new();
+		//	mainVBoxContainer->add_child(marginContainer);
+		//		label = godot::Label::_new();
+		//		marginContainer->add_child(label);
+		//		label->set_text("Terrain");
+		//		label->set_align(godot::Label::Align::ALIGN_CENTER);
+
+			separator = HSeparator::_new();
+			mainVBoxContainer->add_child(separator);
 
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
-			//marginContainer->set_margin(GDN_TheWorld_Viewer::Margin::MARGIN_RIGHT, 50.0);
-			//marginContainer->set_margin(GDN_TheWorld_Viewer::Margin::MARGIN_TOP, 5.0);
-			//marginContainer->set_margin(GDN_TheWorld_Viewer::Margin::MARGIN_LEFT, 50.0);
-			//marginContainer->set_margin(GDN_TheWorld_Viewer::Margin::MARGIN_BOTTOM, 5.0);
 				hBoxContainer = godot::HBoxContainer::_new();
 				marginContainer->add_child(hBoxContainer);
 					button = godot::Button::_new();
@@ -97,23 +106,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					button->set_text("Generate");
 					button->connect("pressed", this, "edit_mode_generate");
 					button->set_focus_mode(FocusMode::FOCUS_NONE);
-					separator = VSeparator::_new();
-					hBoxContainer->add_child(separator);
-					button = godot::Button::_new();
-					hBoxContainer->add_child(button);
-					button->set_text("Save");
-					button->connect("pressed", this, "edit_mode_generate");
-					button->set_focus_mode(FocusMode::FOCUS_NONE);
-					separator = VSeparator::_new();
-					hBoxContainer->add_child(separator);
-					button = godot::Button::_new();
-					hBoxContainer->add_child(button);
-					button->set_text("Upload");
-					button->connect("pressed", this, "edit_mode_generate");
-					button->set_focus_mode(FocusMode::FOCUS_NONE);
-
-			separator = HSeparator::_new();
-			mainVBoxContainer->add_child(separator);
+					//separator = VSeparator::_new();
+					//hBoxContainer->add_child(separator);
 
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
@@ -126,11 +120,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_seed = godot::LineEdit::_new();
 					hBoxContainer->add_child(m_seed);
 					m_seed->set_align(godot::Label::Align::ALIGN_RIGHT);
-
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
 					label->set_text("Frequency");
@@ -138,6 +127,18 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_frequency = godot::LineEdit::_new();
 					hBoxContainer->add_child(m_frequency);
 					m_frequency->set_align(godot::Label::Align::ALIGN_RIGHT);
+
+			//marginContainer = godot::MarginContainer::_new();
+			//mainVBoxContainer->add_child(marginContainer);
+			//	hBoxContainer = godot::HBoxContainer::_new();
+			//	marginContainer->add_child(hBoxContainer);
+			//		label = godot::Label::_new();
+			//		hBoxContainer->add_child(label);
+			//		label->set_text("Frequency");
+			//		label->set_align(godot::Label::Align::ALIGN_LEFT);
+			//		m_frequency = godot::LineEdit::_new();
+			//		hBoxContainer->add_child(m_frequency);
+			//		m_frequency->set_align(godot::Label::Align::ALIGN_RIGHT);
 					
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
@@ -150,11 +151,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalOctaves = godot::LineEdit::_new();
 					hBoxContainer->add_child(m_fractalOctaves);
 					m_fractalOctaves->set_align(godot::Label::Align::ALIGN_RIGHT);
-
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
 					label->set_text("Lacunarity");
@@ -162,6 +158,18 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalLacunarity = godot::LineEdit::_new();
 					hBoxContainer->add_child(m_fractalLacunarity);
 					m_fractalLacunarity->set_align(godot::Label::Align::ALIGN_RIGHT);
+
+			//marginContainer = godot::MarginContainer::_new();
+			//mainVBoxContainer->add_child(marginContainer);
+			//	hBoxContainer = godot::HBoxContainer::_new();
+			//	marginContainer->add_child(hBoxContainer);
+			//		label = godot::Label::_new();
+			//		hBoxContainer->add_child(label);
+			//		label->set_text("Lacunarity");
+			//		label->set_align(godot::Label::Align::ALIGN_LEFT);
+			//		m_fractalLacunarity = godot::LineEdit::_new();
+			//		hBoxContainer->add_child(m_fractalLacunarity);
+			//		m_fractalLacunarity->set_align(godot::Label::Align::ALIGN_RIGHT);
 					
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
@@ -174,7 +182,14 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalGain = godot::LineEdit::_new();
 					hBoxContainer->add_child(m_fractalGain);
 					m_fractalGain->set_align(godot::Label::Align::ALIGN_RIGHT);
-					
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Amplitude");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					m_amplitudeLabel = godot::LineEdit::_new();
+					hBoxContainer->add_child(m_amplitudeLabel);
+					m_amplitudeLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
 				hBoxContainer = godot::HBoxContainer::_new();
@@ -199,20 +214,20 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					hBoxContainer->add_child(m_fractalPingPongStrength);
 					m_fractalPingPongStrength->set_align(godot::Label::Align::ALIGN_RIGHT);
 
+			//marginContainer = godot::MarginContainer::_new();
+			//mainVBoxContainer->add_child(marginContainer);
+			//	hBoxContainer = godot::HBoxContainer::_new();
+			//	marginContainer->add_child(hBoxContainer);
+			//		label = godot::Label::_new();
+			//		hBoxContainer->add_child(label);
+			//		label->set_text("Amplitude");
+			//		label->set_align(godot::Label::Align::ALIGN_LEFT);
+			//		m_amplitudeLabel = godot::LineEdit::_new();
+			//		hBoxContainer->add_child(m_amplitudeLabel);
+			//		m_amplitudeLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
-
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Amplitude");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					m_amplitudeLabel = godot::LineEdit::_new();
-					hBoxContainer->add_child(m_amplitudeLabel);
-					m_amplitudeLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
 
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
@@ -302,6 +317,29 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_mouseQuadSelPosLabel = godot::Label::_new();
 					hBoxContainer->add_child(m_mouseQuadSelPosLabel);
 					m_mouseQuadSelPosLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+
+			separator = HSeparator::_new();
+			mainVBoxContainer->add_child(separator);
+
+			marginContainer = godot::MarginContainer::_new();
+			mainVBoxContainer->add_child(marginContainer);
+				hBoxContainer = godot::HBoxContainer::_new();
+				marginContainer->add_child(hBoxContainer);
+					button = godot::Button::_new();
+					hBoxContainer->add_child(button);
+					button->set_text("Save");
+					button->connect("pressed", this, "edit_mode_save");
+					button->set_focus_mode(FocusMode::FOCUS_NONE);
+					separator = VSeparator::_new();
+					hBoxContainer->add_child(separator);
+					button = godot::Button::_new();
+					hBoxContainer->add_child(button);
+					button->set_text("Upload");
+					button->connect("pressed", this, "edit_mode_upload");
+					button->set_focus_mode(FocusMode::FOCUS_NONE);
+
+			separator = HSeparator::_new();
+			mainVBoxContainer->add_child(separator);
 }
 
 void GDN_TheWorld_Edit::resizeUI(void)
@@ -455,7 +493,10 @@ float GDN_TheWorld_Edit::maxHeight(void)
 
 void GDN_TheWorld_Edit::setElapsed(size_t elapsed)
 {
-	m_elapsedLabel->set_text(std::to_string(elapsed).c_str());
+	if (elapsed == 0)
+		m_elapsedLabel->set_text("");
+	else
+		m_elapsedLabel->set_text(std::to_string(elapsed).c_str());
 }
 
 size_t GDN_TheWorld_Edit::elapsed(void)
@@ -533,7 +574,145 @@ void GDN_TheWorld_Edit::_process(float _delta)
 	//Godot::print("GDN_Template::_process");
 }
 
+void GDN_TheWorld_Edit::editModeSave(void)
+{
+	for (auto& item : m_mapQuadToSave)
+	{
+		QuadTree* quadToSave = m_viewer->getQuadTree(item.first);
+		if (quadToSave != nullptr)
+		{
+			TheWorld_Utils::MeshCacheBuffer& cache = quadToSave->getQuadrant()->getMeshCacheBuffer();
+			cache.writeBufferToMeshCache(item.second);
+		}
+	}
+}
+
+void GDN_TheWorld_Edit::editModeUpload(void)
+{
+}
+
 void GDN_TheWorld_Edit::editModeGenerate(void)
 {
-	m_viewer->GenerateHeigths();
+	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1 ") + __FUNCTION__, "ALL");
+
+	TheWorld_Viewer_Utils::TimerMs clock;
+	clock.tick();
+
+	QuadTree* quadTreeSel = nullptr;
+	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
+
+	if (quadrantSelPos.empty())
+		return;
+
+	TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
+	terrainEdit->noiseSeed = seed();
+	terrainEdit->frequency = frequency();
+	terrainEdit->fractalOctaves = octaves();
+	terrainEdit->fractalLacunarity = lacunarity();
+	terrainEdit->fractalGain = gain();
+	terrainEdit->fractalWeightedStrength = weightedStrength();
+	terrainEdit->fractalPingPongStrength = pingPongStrength();
+	terrainEdit->amplitude = amplitude();
+	terrainEdit->needUploadToServer = true;
+
+	FastNoiseLite noise(terrainEdit->noiseSeed);
+	noise.SetNoiseType(FastNoiseLite::NoiseType::NoiseType_Perlin);
+	//noise.SetRotationType3D();
+	noise.SetFrequency(terrainEdit->frequency);
+	noise.SetFractalType(FastNoiseLite::FractalType::FractalType_FBm);
+	noise.SetFractalOctaves(terrainEdit->fractalOctaves);
+	noise.SetFractalLacunarity(terrainEdit->fractalLacunarity);
+	noise.SetFractalGain(terrainEdit->fractalGain);
+	noise.SetFractalWeightedStrength(terrainEdit->fractalWeightedStrength);
+	noise.SetFractalPingPongStrength(terrainEdit->fractalPingPongStrength);
+	//noise.SetCellularDistanceFunction();
+	//noise.SetCellularReturnType();
+	//noise.SetCellularJitter()
+
+	//{
+	//	float f = 0.0f, x= 0.0f, y= 0.0f;
+
+	//	x = 1.0f;	y = 1.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+
+	//	x = 1.0f;	y = -1.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+
+	//	x = -1.0f;	y = 1.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+
+	//	x = -1.0f;	y = -1.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+
+	//	x = 2.0f;	y = 2.0f;
+	//	f = noise.GetNoise(x, y);
+	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+	//}
+
+	size_t numVerticesPerSize = quadrantSelPos.getNumVerticesPerSize();
+	float gridStepInWU = quadrantSelPos.getGridStepInWU();
+	float lowerXGridVertex = quadrantSelPos.getLowerXGridVertex();
+	float lowerZGridVertex = quadrantSelPos.getLowerZGridVertex();
+	std::vector<float> vectGridHeights(numVerticesPerSize * numVerticesPerSize);
+
+	float minHeight = FLT_MAX;
+	float maxHeight = FLT_MIN;
+
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1 ") + __FUNCTION__, "Generate Heights");
+
+		size_t idx = 0;
+		for (int z = 0; z < numVerticesPerSize; z++)
+			for (int x = 0; x < numVerticesPerSize; x++)
+			{
+				float xf = lowerXGridVertex + (x * gridStepInWU);
+				float zf = lowerZGridVertex + (z * gridStepInWU);
+				float altitude = noise.GetNoise(xf, zf);
+				// noises are value in range -1 to 1 we need to interpolate with amplitude
+				altitude *= (terrainEdit->amplitude / 2);
+
+				if (altitude < minHeight)
+					minHeight = altitude;
+				if (altitude > maxHeight)
+					maxHeight = altitude;
+
+				vectGridHeights[idx] = altitude;
+				idx++;
+			}
+	}
+
+	terrainEdit->minHeight = minHeight;
+	terrainEdit->maxHeight = maxHeight;
+
+	std::string meshBuffer;
+	std::string meshId;
+
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.2 ") + __FUNCTION__, "Quadrant reverse array to buffer");
+
+		float minHeight = 0, maxHeight = 0;
+		TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
+		meshId = cache.getMeshId();
+		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
+		cache.setBufferForMeshCache(meshId, numVerticesPerSize, gridStepInWU, terrainEditValuesBuffer, vectGridHeights, meshBuffer, minHeight, maxHeight);
+		m_mapQuadToSave[quadrantSelPos] = meshBuffer;
+	}
+
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.3 ") + __FUNCTION__, "Quadrant refreshGridVertices");
+
+		quadTreeSel->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
+		quadTreeSel->materialParamsNeedReset(true);
+	}
+
+	setMinHeight(minHeight);
+	setMaxHeight(maxHeight);
+
+	clock.tock();
+	size_t duration = clock.duration().count();
+	setElapsed(duration);
 }

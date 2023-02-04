@@ -240,6 +240,7 @@ namespace godot
 	{
 		friend class ShaderTerrainData;
 		friend class GDN_TheWorld_Viewer;
+		friend class GDN_TheWorld_Edit;
 
 	public:
 		Quadrant(QuadrantPos& quadrantPos, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
@@ -259,6 +260,9 @@ namespace godot
 		{
 			//TheWorld_Viewer_Utils::TimerMs clock;
 			//clock.tick();
+			m_shaderTerrainData.reset();
+			m_collider.reset();
+			m_terrainEdit.reset();
 			//clock.tock();
 			//godot::GDN_TheWorld_Globals::s_elapsed1 += clock.duration().count();
 		}
@@ -280,7 +284,7 @@ namespace godot
 			m_meshId = meshId;
 		}
 
-		void refreshGridVertices(std::string buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache);
+		void refreshGridVertices(std::string& buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache);
 
 		AABB& getGlobalCoordAABB(void)
 		{

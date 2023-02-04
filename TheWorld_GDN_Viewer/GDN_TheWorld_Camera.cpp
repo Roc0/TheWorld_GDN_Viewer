@@ -144,6 +144,10 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	if (globals == nullptr)
 		return;
 
+	GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
+	if (viewer == nullptr)
+		return;
+
 	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
@@ -154,19 +158,19 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	Input* input = Input::get_singleton();
 
-	if (input->is_action_pressed("ui_mouse_button_right"))
+	if (input->is_action_pressed("ui_mouse_button_right") && !viewer->editMode())
 		m_rotateCameraOn = true;
 	else
 		m_rotateCameraOn = false;
 
 	//input = Input::get_singleton();
-	if (input->is_action_pressed("ui_mouse_button_left"))
+	if (input->is_action_pressed("ui_mouse_button_left") && !viewer->editMode())
 		m_shiftOriCameraOn = true;
 	else
 		m_shiftOriCameraOn = false;
 
 	//input = Input::get_singleton();
-	if (input->is_action_pressed("ui_mouse_button_mid"))
+	if (input->is_action_pressed("ui_mouse_button_mid") && !viewer->editMode())
 		m_shiftVertCameraOn = true;
 	else
 		m_shiftVertCameraOn = false;
@@ -188,7 +192,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_forward") /* && !m_altPressed*/)
 	{
-		if (Globals()->Viewer()->terrainShiftPermitted())
+		if (viewer->terrainShiftPermitted() && !viewer->editMode())
 		{
 			m_numMoveStepForward--;
 			m_updateCameraRequired = true;
@@ -200,7 +204,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_backward") /* && !m_altPressed*/)
 	{
-		if (Globals()->Viewer()->terrainShiftPermitted())
+		if (viewer->terrainShiftPermitted() && !viewer->editMode())
 		{
 			m_numMoveStepForward++;
 			m_updateCameraRequired = true;
@@ -212,7 +216,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_left") && !m_altPressed)
 	{
-		if (Globals()->Viewer()->terrainShiftPermitted())
+		if (viewer->terrainShiftPermitted() && !viewer->editMode())
 		{
 			m_numMoveStepLeft++;
 			m_updateCameraRequired = true;
@@ -224,7 +228,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_right") && !m_altPressed)
 	{
-		if (Globals()->Viewer()->terrainShiftPermitted())
+		if (viewer->terrainShiftPermitted() && !viewer->editMode())
 		{
 			m_numMoveStepLeft--;
 			m_updateCameraRequired = true;
@@ -236,7 +240,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_up") && !m_altPressed)
 	{
-		if (Globals()->Viewer()->terrainShiftPermitted())
+		if (viewer->terrainShiftPermitted() && !viewer->editMode())
 		{
 			m_numMoveStepUp++;
 			m_updateCameraRequired = true;
@@ -248,7 +252,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_down") && !m_altPressed)
 	{
-		if (Globals()->Viewer()->terrainShiftPermitted())
+		if (viewer->terrainShiftPermitted() && !viewer->editMode())
 		{
 			m_numMoveStepUp--;
 			m_updateCameraRequired = true;
@@ -265,6 +269,10 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
+		return;
+
+	GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
+	if (viewer == nullptr)
 		return;
 
 	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
@@ -298,7 +306,7 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 
 	if (event->is_action_pressed("ui_mouse_wheel_up"))
 	{
-		if (Globals()->Viewer()->terrainShiftPermitted())
+		if (viewer->terrainShiftPermitted())
 		{
 			m_numMoveStepForward--;
 			m_updateCameraRequired = true;
@@ -307,7 +315,7 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 
 	if (event->is_action_pressed("ui_mouse_wheel_down"))
 	{
-		if (Globals()->Viewer()->terrainShiftPermitted())
+		if (viewer->terrainShiftPermitted())
 		{
 			m_numMoveStepForward++;
 			m_updateCameraRequired = true;

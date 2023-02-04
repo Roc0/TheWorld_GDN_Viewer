@@ -16,6 +16,7 @@
 #include <File.hpp>
 #include <PhysicsDirectSpaceState.hpp>
 #include <filesystem>
+#include <limits>
 
 #include "MeshCache.h"
 #include "QuadTree.h"
@@ -35,12 +36,13 @@ namespace fs = std::filesystem;
 
 TerrainEdit::TerrainEdit(void)
 {
+	size = sizeof(TerrainEdit);
 	needUploadToServer = false;
 
 	noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
 	rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
 	noiseSeed = 1337;
-	frequency = 0.01f;
+	frequency = 0.0005f;
 	fractalType = FastNoiseLite::FractalType::FractalType_FBm;
 	fractalOctaves = 5;
 	fractalLacunarity = 2.0f;
@@ -75,8 +77,11 @@ void TerrainEdit::serialize(TheWorld_Utils::MemoryBuffer& buffer)
 
 void TerrainEdit::deserialize(TheWorld_Utils::MemoryBuffer& buffer)
 {
-	assert(buffer.len() == sizeof(TerrainEdit));
-	memcpy(this, buffer.ptr(), sizeof(TerrainEdit));
+	size_t minLen = (buffer.size() <= size ? buffer.size() : size);
+	//assert(buffer.len() == sizeof(TerrainEdit));
+	size_t saveSize = size;
+	memcpy(this, buffer.ptr(), minLen);
+	size = saveSize;
 }
 
 void GDN_TheWorld_Viewer::_register_methods()
@@ -577,6 +582,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 		{
 			m_mouseQuadrantHitName = "";
 
+			QuadTree* quadTree = nullptr;
 			if (m_quadrantSelPos.empty())
 			{
 				if (!m_quadrantHitPos.empty())
@@ -588,6 +594,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 						MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
 						if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 						{
+							quadTree = it->second.get();
 							it->second->setEditModeSel(true);
 							it->second->getQuadrant()->setColorsUpdated(true);
 							it->second->materialParamsNeedReset(true);
@@ -612,17 +619,51 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 			}
 
 			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
-			if (editModeUIControl != nullptr && m_editMode)
+			if (editModeUIControl == nullptr)
+			{
+				createEditModeUI();
+				editModeUIControl = EditModeUIControl();
+				editModeUIControl->set_visible(false);
+				m_editModeHudVisible = false;
+
+			}
+			if (editModeUIControl != nullptr /* && m_editMode*/)
 			{
 				if (m_quadrantSelPos.empty())
 				{
 					editModeUIControl->setMouseQuadSelLabelText("");
 					editModeUIControl->setMouseQuadSelPosLabelText("");
+					editModeUIControl->setSeed(0);
+					editModeUIControl->setFrequency(0.0f);
+					editModeUIControl->setOctaves(0);
+					editModeUIControl->setLacunarity(0.0f);
+					editModeUIControl->setGain(0.0f);
+					editModeUIControl->setWeightedStrength(0.0f);
+					editModeUIControl->setPingPongStrength(0.0f);
+					editModeUIControl->setAmplitude(0);
+					editModeUIControl->setMinHeight(0.0f);
+					editModeUIControl->setMaxHeight(0.0f);
+					editModeUIControl->setElapsed(0);
 				}
 				else
 				{
 					editModeUIControl->setMouseQuadSelLabelText(m_quadrantSelPos.getName() + " " + m_quadrantSelPos.getTag());
 					editModeUIControl->setMouseQuadSelPosLabelText(std::string("X=") + std::to_string(m_quadrantSelPos.getLowerXGridVertex()) + " Z=" + std::to_string(m_quadrantSelPos.getLowerZGridVertex()) + " " + std::to_string(m_quadrantSelPos.getSizeInWU()));
+					if (quadTree != nullptr)
+					{
+						TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
+						editModeUIControl->setSeed(terrainEdit->noiseSeed);
+						editModeUIControl->setFrequency(terrainEdit->frequency);
+						editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
+						editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
+						editModeUIControl->setGain(terrainEdit->fractalGain);
+						editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
+						editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
+						editModeUIControl->setAmplitude(terrainEdit->amplitude);
+						editModeUIControl->setMinHeight(terrainEdit->minHeight);
+						editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
+						//editModeUIControl->setElapsed(0);
+					}
 				}
 			}
 		}
@@ -1244,23 +1285,23 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 								editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
 								editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
 
-								// Get TerrainEdit Data from hit quadrant
-								MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
-								if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-								{
-									TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
-									editModeUIControl->setSeed(terrainEdit->noiseSeed);
-									editModeUIControl->setFrequency(terrainEdit->frequency);
-									editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
-									editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
-									editModeUIControl->setGain(terrainEdit->fractalGain);
-									editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
-									editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
-									editModeUIControl->setAmplitude(terrainEdit->amplitude);
-									editModeUIControl->setMinHeight(terrainEdit->minHeight);
-									editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
-									editModeUIControl->setElapsed(0);
-								}
+								//// Get TerrainEdit Data from hit quadrant
+								//MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
+								//if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+								//{
+								//	TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
+								//	editModeUIControl->setSeed(terrainEdit->noiseSeed);
+								//	editModeUIControl->setFrequency(terrainEdit->frequency);
+								//	editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
+								//	editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
+								//	editModeUIControl->setGain(terrainEdit->fractalGain);
+								//	editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
+								//	editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
+								//	editModeUIControl->setAmplitude(terrainEdit->amplitude);
+								//	editModeUIControl->setMinHeight(terrainEdit->minHeight);
+								//	editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
+								//	//editModeUIControl->setElapsed(0);
+								//}
 							}
 
 							m_mouseQuadrantHitName = mouseQuadrantHitName;
@@ -2494,133 +2535,161 @@ void GDN_TheWorld_Viewer::createEditModeUI(void)
 	editModeUIControl->init(this);
 }
 
-void GDN_TheWorld_Viewer::GenerateHeigths(void)
+QuadrantPos GDN_TheWorld_Viewer::getQuadrantSelForEdit(QuadTree** quadTreeSel)
 {
-	TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1 ") + __FUNCTION__, "ALL");
+	*quadTreeSel = nullptr;
+	QuadrantPos ret = m_quadrantSelPos;
 
-	TheWorld_Viewer_Utils::TimerMs clock;
-	clock.tick();
+	if (ret.empty())
+		return ret;
 
-	// TODORIC0: find quadrant hit and set terrainData
-	// generate heigths
-	// pass to cache
-	// refresh
-
-	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
-	if (editModeUIControl == nullptr || !m_editMode)
-		return;
-
-	if (m_quadrantSelPos.empty())
-		return;
-
-	QuadTree* quadTreeSel = nullptr;
 	{
 		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
-		MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
+		MapQuadTree::iterator it = m_mapQuadTree.find(ret);
 		if (it == m_mapQuadTree.end() || it->second->statusToErase())
-			return;
+			return QuadrantPos();
 		else
-			quadTreeSel = it->second.get();
+		{
+			*quadTreeSel = it->second.get();
+			return ret;
+		}
 	}
-	
-	TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
-	terrainEdit->noiseSeed = editModeUIControl->seed();
-	terrainEdit->frequency = editModeUIControl->frequency();
-	terrainEdit->fractalOctaves = editModeUIControl->octaves();
-	terrainEdit->fractalLacunarity = editModeUIControl->lacunarity();
-	terrainEdit->fractalGain = editModeUIControl->gain();
-	terrainEdit->fractalWeightedStrength = editModeUIControl->weightedStrength();
-	terrainEdit->fractalPingPongStrength = editModeUIControl->pingPongStrength();
-	terrainEdit->amplitude = editModeUIControl->amplitude();
-	terrainEdit->needUploadToServer = true;
-
-	FastNoiseLite noise(terrainEdit->noiseSeed);
-	noise.SetNoiseType(FastNoiseLite::NoiseType::NoiseType_Perlin);
-	//noise.SetRotationType3D();
-	noise.SetFrequency(terrainEdit->frequency);
-	noise.SetFractalType(FastNoiseLite::FractalType::FractalType_FBm);
-	noise.SetFractalOctaves(terrainEdit->fractalOctaves);
-	noise.SetFractalLacunarity(terrainEdit->fractalLacunarity);
-	noise.SetFractalGain(terrainEdit->fractalGain);
-	noise.SetFractalWeightedStrength(terrainEdit->fractalWeightedStrength);
-	noise.SetFractalPingPongStrength(terrainEdit->fractalPingPongStrength);
-	//noise.SetCellularDistanceFunction();
-	//noise.SetCellularReturnType();
-	//noise.SetCellularJitter()
-
-	//{
-	//	float f = 0.0f, x= 0.0f, y= 0.0f;
-
-	//	x = 1.0f;	y = 1.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-
-	//	x = 1.0f;	y = -1.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-
-	//	x = -1.0f;	y = 1.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-
-	//	x = -1.0f;	y = -1.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-
-	//	x = 2.0f;	y = 2.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-	//}
-
-	size_t numVerticesPerSize = m_quadrantSelPos.getNumVerticesPerSize();
-	float gridStepInWU = m_quadrantSelPos.getGridStepInWU();
-	float lowerXGridVertex = m_quadrantSelPos.getLowerXGridVertex();
-	float lowerZGridVertex = m_quadrantSelPos.getLowerZGridVertex();
-	std::vector<float> vectGridHeights(numVerticesPerSize * numVerticesPerSize);
-
-	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.1 ") + __FUNCTION__, "Generate Heights");
-
-		size_t idx = 0;
-		for (int z = 0; z < numVerticesPerSize; z++)
-			for (int x = 0; x < numVerticesPerSize; x++)
-			{
-				float xf = lowerXGridVertex + (x * gridStepInWU);
-				float zf = lowerZGridVertex + (z * gridStepInWU);
-				float altitude = noise.GetNoise(xf, zf);
-				// noises are value in range -1 to 1 we need to interpolate with amplitude
-				altitude *= terrainEdit->amplitude;
-				vectGridHeights[idx] = altitude;
-				idx++;
-			}
-	}
-
-	std::string meshBuffer;
-	std::string meshId;
-	float minHeight = 0, maxHeight = 0;
-	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.2 ") + __FUNCTION__, "Quadrant reverse array to buffer");
-		TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
-		meshId = cache.getMeshId();
-		cache.setBufferForMeshCache(meshId, numVerticesPerSize, gridStepInWU, vectGridHeights, meshBuffer, minHeight, maxHeight);
-		editModeUIControl->getMapQUadToSave()[m_quadrantSelPos] = true;
-	}
-
-	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.3 ") + __FUNCTION__, "Quadrant refreshGridVertices");
-		quadTreeSel->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
-		quadTreeSel->materialParamsNeedReset(true);
-	}
-
-	clock.tock();
-	size_t duration = clock.duration().count();
-
-	editModeUIControl->setMinHeight(minHeight);
-	editModeUIControl->setMaxHeight(maxHeight);
-	editModeUIControl->setElapsed(duration);
-	terrainEdit->minHeight = minHeight;
-	terrainEdit->maxHeight = maxHeight;
 }
+
+//void GDN_TheWorld_Viewer::GenerateHeigths(void)
+//{
+//	TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1 ") + __FUNCTION__, "ALL");
+//
+//	TheWorld_Viewer_Utils::TimerMs clock;
+//	clock.tick();
+//
+//	// TODORIC0: find quadrant hit and set terrainData
+//	// generate heigths
+//	// pass to cache
+//	// refresh
+//
+//	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+//	if (editModeUIControl == nullptr || !m_editMode)
+//		return;
+//
+//	QuadTree* quadTreeSel = nullptr;
+//	QuadrantPos quadrantSelPos = getQuadrantSelForEdit(&quadTreeSel);
+//	
+//	if (quadrantSelPos.empty())
+//		return;
+//
+//	TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
+//	terrainEdit->noiseSeed = editModeUIControl->seed();
+//	terrainEdit->frequency = editModeUIControl->frequency();
+//	terrainEdit->fractalOctaves = editModeUIControl->octaves();
+//	terrainEdit->fractalLacunarity = editModeUIControl->lacunarity();
+//	terrainEdit->fractalGain = editModeUIControl->gain();
+//	terrainEdit->fractalWeightedStrength = editModeUIControl->weightedStrength();
+//	terrainEdit->fractalPingPongStrength = editModeUIControl->pingPongStrength();
+//	terrainEdit->amplitude = editModeUIControl->amplitude();
+//	terrainEdit->needUploadToServer = true;
+//
+//	FastNoiseLite noise(terrainEdit->noiseSeed);
+//	noise.SetNoiseType(FastNoiseLite::NoiseType::NoiseType_Perlin);
+//	//noise.SetRotationType3D();
+//	noise.SetFrequency(terrainEdit->frequency);
+//	noise.SetFractalType(FastNoiseLite::FractalType::FractalType_FBm);
+//	noise.SetFractalOctaves(terrainEdit->fractalOctaves);
+//	noise.SetFractalLacunarity(terrainEdit->fractalLacunarity);
+//	noise.SetFractalGain(terrainEdit->fractalGain);
+//	noise.SetFractalWeightedStrength(terrainEdit->fractalWeightedStrength);
+//	noise.SetFractalPingPongStrength(terrainEdit->fractalPingPongStrength);
+//	//noise.SetCellularDistanceFunction();
+//	//noise.SetCellularReturnType();
+//	//noise.SetCellularJitter()
+//
+//	//{
+//	//	float f = 0.0f, x= 0.0f, y= 0.0f;
+//
+//	//	x = 1.0f;	y = 1.0f;
+//	//	f = noise.GetNoise(x, y);
+//	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+//
+//	//	x = 1.0f;	y = -1.0f;
+//	//	f = noise.GetNoise(x, y);
+//	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+//
+//	//	x = -1.0f;	y = 1.0f;
+//	//	f = noise.GetNoise(x, y);
+//	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+//
+//	//	x = -1.0f;	y = -1.0f;
+//	//	f = noise.GetNoise(x, y);
+//	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+//
+//	//	x = 2.0f;	y = 2.0f;
+//	//	f = noise.GetNoise(x, y);
+//	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
+//	//}
+//
+//	size_t numVerticesPerSize = quadrantSelPos.getNumVerticesPerSize();
+//	float gridStepInWU = quadrantSelPos.getGridStepInWU();
+//	float lowerXGridVertex = quadrantSelPos.getLowerXGridVertex();
+//	float lowerZGridVertex = quadrantSelPos.getLowerZGridVertex();
+//	std::vector<float> vectGridHeights(numVerticesPerSize * numVerticesPerSize);
+//
+//	float minHeight = FLT_MAX;
+//	float maxHeight = FLT_MIN;
+//
+//	{
+//		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.1 ") + __FUNCTION__, "Generate Heights");
+//
+//		size_t idx = 0;
+//		for (int z = 0; z < numVerticesPerSize; z++)
+//			for (int x = 0; x < numVerticesPerSize; x++)
+//			{
+//				float xf = lowerXGridVertex + (x * gridStepInWU);
+//				float zf = lowerZGridVertex + (z * gridStepInWU);
+//				float altitude = noise.GetNoise(xf, zf);
+//				// noises are value in range -1 to 1 we need to interpolate with amplitude
+//				altitude *= terrainEdit->amplitude;
+//
+//				if (altitude < minHeight)
+//					minHeight = altitude;
+//				if (altitude > maxHeight)
+//					maxHeight = altitude;
+//
+//				vectGridHeights[idx] = altitude;
+//				idx++;
+//			}
+//	}
+//
+//	terrainEdit->minHeight = minHeight;
+//	terrainEdit->maxHeight = maxHeight;
+//
+//	std::string meshBuffer;
+//	std::string meshId;
+//	
+//	{
+//		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.2 ") + __FUNCTION__, "Quadrant reverse array to buffer");
+//
+//		float minHeight = 0, maxHeight = 0;
+//		TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
+//		meshId = cache.getMeshId();
+//		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
+//		cache.setBufferForMeshCache(meshId, numVerticesPerSize, gridStepInWU, terrainEditValuesBuffer, vectGridHeights, meshBuffer, minHeight, maxHeight);
+//		editModeUIControl->getMapQUadToSave()[quadrantSelPos] = true;
+//	}
+//
+//	{
+//		TheWorld_Utils::GuardProfiler profiler(std::string("EditMode 1.3 ") + __FUNCTION__, "Quadrant refreshGridVertices");
+//
+//		quadTreeSel->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
+//		quadTreeSel->materialParamsNeedReset(true);
+//	}
+//
+//	clock.tock();
+//	size_t duration = clock.duration().count();
+//
+//	editModeUIControl->setMinHeight(minHeight);
+//	editModeUIControl->setMaxHeight(maxHeight);
+//	editModeUIControl->setElapsed(duration);
+//}
 
 godot::GDN_TheWorld_Edit* GDN_TheWorld_Viewer::EditModeUIControl(bool useCache)
 {

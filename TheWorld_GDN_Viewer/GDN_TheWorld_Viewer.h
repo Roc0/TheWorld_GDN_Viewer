@@ -39,6 +39,7 @@ namespace godot
 	class TerrainEdit
 	{
 	public:
+		size_t size;
 		bool needUploadToServer;
 
 		int noiseType;
@@ -88,6 +89,8 @@ namespace godot
 			MARGIN_RIGHT,
 			MARGIN_BOTTOM
 		};
+
+		friend class GDN_TheWorld_Edit;
 
 	public:
 		GDN_TheWorld_Viewer();
@@ -270,7 +273,7 @@ namespace godot
 			return m_editMode;
 		}
 
-		void GenerateHeigths(void);
+		//void GenerateHeigths(void);
 
 	private:
 		void onTransformChanged(void);
@@ -285,6 +288,7 @@ namespace godot
 		void printKeyboardMapping(void);
 		void streamer(void);
 		void streamingQuadrantStuff(void);
+		QuadrantPos getQuadrantSelForEdit(QuadTree** quadTreeSel);
 
 	private:
 		bool m_initialized;
