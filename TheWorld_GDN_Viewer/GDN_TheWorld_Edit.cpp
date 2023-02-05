@@ -36,6 +36,7 @@ void GDN_TheWorld_Edit::_register_methods()
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 {
 	m_initialized = false;
+	m_terrainGenerationInProgress = false;
 	m_viewer = nullptr;
 	m_seed = nullptr;
 	m_frequency = nullptr;
@@ -570,8 +571,10 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 
 void GDN_TheWorld_Edit::_process(float _delta)
 {
-	// To activate _process method add this Node to a Godot Scene
-	//Godot::print("GDN_Template::_process");
+	if (m_terrainGenerationInProgress)
+	{
+		setElapsed(m_clockTerrainGeneration.partialDuration().count());
+	}
 }
 
 void GDN_TheWorld_Edit::editModeSave(void)
@@ -595,14 +598,15 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 {
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1 ") + __FUNCTION__, "ALL");
 
-	TheWorld_Viewer_Utils::TimerMs clock;
-	clock.tick();
+	m_clockTerrainGeneration.tick();
 
 	QuadTree* quadTreeSel = nullptr;
 	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
 
 	if (quadrantSelPos.empty())
 		return;
+
+	m_terrainGenerationInProgress = true;
 
 	TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
 	terrainEdit->noiseSeed = seed();
@@ -657,7 +661,8 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	float gridStepInWU = quadrantSelPos.getGridStepInWU();
 	float lowerXGridVertex = quadrantSelPos.getLowerXGridVertex();
 	float lowerZGridVertex = quadrantSelPos.getLowerZGridVertex();
-	std::vector<float> vectGridHeights(numVerticesPerSize * numVerticesPerSize);
+	std::vector<float> vectGridHeights(numVerticesPerSize * numVerticesPerSize);;
+	//vectGridHeights.reserve(numVerticesPerSize * numVerticesPerSize);
 
 	float minHeight = FLT_MAX;
 	float maxHeight = FLT_MIN;
@@ -681,6 +686,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 					maxHeight = altitude;
 
 				vectGridHeights[idx] = altitude;
+				//vectGridHeights.push_back(altitude);
 				idx++;
 			}
 	}
@@ -712,7 +718,9 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	setMinHeight(minHeight);
 	setMaxHeight(maxHeight);
 
-	clock.tock();
-	size_t duration = clock.duration().count();
+	m_terrainGenerationInProgress = false;
+
+	m_clockTerrainGeneration.tock();
+	size_t duration = m_clockTerrainGeneration.duration().count();
 	setElapsed(duration);
 }

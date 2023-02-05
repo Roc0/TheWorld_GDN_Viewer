@@ -90,6 +90,9 @@ namespace godot
 		bool m_initialized;
 		GDN_TheWorld_Viewer* m_viewer;
 
+		bool m_terrainGenerationInProgress;
+		TheWorld_Utils::TimerMs m_clockTerrainGeneration;
+
 		godot::LineEdit* m_seed;
 		godot::LineEdit* m_frequency;
 		godot::LineEdit* m_fractalOctaves;
