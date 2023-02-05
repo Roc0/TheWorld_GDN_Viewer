@@ -643,7 +643,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 					editModeUIControl->setAmplitude(0);
 					editModeUIControl->setMinHeight(0.0f);
 					editModeUIControl->setMaxHeight(0.0f);
-					editModeUIControl->setElapsed(0);
+					editModeUIControl->setElapsed(0, false);
 				}
 				else
 				{

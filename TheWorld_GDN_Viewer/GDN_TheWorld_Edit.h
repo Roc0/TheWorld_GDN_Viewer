@@ -11,7 +11,7 @@ namespace godot
 {
 	//class GDN_TheWorld_Viewer;
 
-	class GDN_TheWorld_Edit : public MarginContainer
+	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit
 	{
 		GODOT_CLASS(GDN_TheWorld_Edit, MarginContainer)
 
@@ -27,6 +27,9 @@ namespace godot
 		~GDN_TheWorld_Edit();
 		void init(GDN_TheWorld_Viewer* viewer);
 		void deinit(void);
+
+		virtual void threadInit(void) {}
+		virtual void threadDeinit(void) {}
 
 		static void _register_methods();
 
@@ -48,9 +51,13 @@ namespace godot
 		//};
 
 		void resizeUI(void);
+		void editModeGenerateAction(void);
+		void editModeMendAction(void);
+		void editModeSaveAction(void);
+		void editModeUploadAction(void);
+
 		void editModeGenerate(void);
-		void editModeSave(void);
-		void editModeUpload(void);
+		void editModeMend(void);
 
 		void setSeed(int seed);
 		int seed(void);
@@ -72,7 +79,7 @@ namespace godot
 		float minHeight(void);
 		void setMaxHeight(float maxHeight);
 		float maxHeight(void);
-		void setElapsed(size_t elapsed);
+		void setElapsed(size_t elapsed, bool onGoing);
 		size_t elapsed(void);
 
 		void setMouseHitLabelText(std::string text);
@@ -90,8 +97,10 @@ namespace godot
 		bool m_initialized;
 		GDN_TheWorld_Viewer* m_viewer;
 
-		bool m_terrainGenerationInProgress;
-		TheWorld_Utils::TimerMs m_clockTerrainGeneration;
+		bool m_actionInProgress;
+		TheWorld_Utils::TimerMs m_actionClock;
+		bool m_onGoingElapsedLabel;
+		Color m_elapsedLabelNormalColor;
 
 		godot::LineEdit* m_seed;
 		godot::LineEdit* m_frequency;
@@ -113,7 +122,8 @@ namespace godot
 		godot::Label* m_mouseQuadSelPosLabel;
 
 		std::map<QuadrantPos, std::string> m_mapQuadToSave;
-	};
 
+		TheWorld_Utils::ThreadPool m_tp;
+	};
 }
 

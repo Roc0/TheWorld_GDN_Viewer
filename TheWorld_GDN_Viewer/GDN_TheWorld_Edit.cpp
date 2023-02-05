@@ -28,15 +28,17 @@ void GDN_TheWorld_Edit::_register_methods()
 	register_method("_notification", &GDN_TheWorld_Edit::_notification);
 
 	//register_method("hello", &GDN_TheWorld_Edit::hello);
-	register_method("edit_mode_generate", &GDN_TheWorld_Edit::editModeGenerate);
-	register_method("edit_mode_save", &GDN_TheWorld_Edit::editModeSave);
-	register_method("edit_mode_upload", &GDN_TheWorld_Edit::editModeUpload);
+	register_method("edit_mode_generate", &GDN_TheWorld_Edit::editModeGenerateAction);
+	register_method("edit_mode_mend", &GDN_TheWorld_Edit::editModeMendAction);
+	register_method("edit_mode_save", &GDN_TheWorld_Edit::editModeSaveAction);
+	register_method("edit_mode_upload", &GDN_TheWorld_Edit::editModeUploadAction);
 }
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 {
 	m_initialized = false;
-	m_terrainGenerationInProgress = false;
+	m_actionInProgress = false;
+	m_onGoingElapsedLabel = false;
 	m_viewer = nullptr;
 	m_seed = nullptr;
 	m_frequency = nullptr;
@@ -107,8 +109,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					button->set_text("Generate");
 					button->connect("pressed", this, "edit_mode_generate");
 					button->set_focus_mode(FocusMode::FOCUS_NONE);
-					//separator = VSeparator::_new();
-					//hBoxContainer->add_child(separator);
+					separator = VSeparator::_new();
+					hBoxContainer->add_child(separator);
+					button = godot::Button::_new();
+					hBoxContainer->add_child(button);
+					button->set_text("Mend");
+					button->connect("pressed", this, "edit_mode_mend");
+					button->set_focus_mode(FocusMode::FOCUS_NONE);
 
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
@@ -341,6 +348,17 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
+
+			m_tp.Start("EditModeWorker", 1, this);
+}
+
+void GDN_TheWorld_Edit::deinit(void)
+{
+	if (m_initialized)
+	{
+		m_tp.Stop();
+		m_initialized = false;
+	}
 }
 
 void GDN_TheWorld_Edit::resizeUI(void)
@@ -492,8 +510,26 @@ float GDN_TheWorld_Edit::maxHeight(void)
 	return ret;
 }
 
-void GDN_TheWorld_Edit::setElapsed(size_t elapsed)
+void GDN_TheWorld_Edit::setElapsed(size_t elapsed, bool onGoing)
 {
+	if (onGoing)
+	{
+		if (!m_onGoingElapsedLabel)
+		{
+			//m_elapsedLabelNormalColor = m_elapsedLabel->get("custom_colors/font_color");
+			m_elapsedLabel->set("custom_colors/font_color", Color(1, 0, 0));
+			m_onGoingElapsedLabel = true;
+		}
+	}
+	else
+	{
+		if (m_onGoingElapsedLabel)
+		{
+			m_elapsedLabel->set("custom_colors/font_color", Color(1, 1, 1));
+			m_onGoingElapsedLabel = false;
+		}
+	}
+	
 	if (elapsed == 0)
 		m_elapsedLabel->set_text("");
 	else
@@ -534,14 +570,6 @@ void GDN_TheWorld_Edit::setMouseQuadSelPosLabelText(std::string text)
 	m_mouseQuadSelPosLabel->set_text(text.c_str());
 }
 
-void GDN_TheWorld_Edit::deinit(void)
-{
-	if (m_initialized)
-	{
-		m_initialized = false;
-	}
-}
-
 void GDN_TheWorld_Edit::_init(void)
 {
 	//Godot::print("GDN_Template::Init");
@@ -571,13 +599,13 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 
 void GDN_TheWorld_Edit::_process(float _delta)
 {
-	if (m_terrainGenerationInProgress)
+	if (m_actionInProgress)
 	{
-		setElapsed(m_clockTerrainGeneration.partialDuration().count());
+		setElapsed(m_actionClock.partialDuration().count(), true);
 	}
 }
 
-void GDN_TheWorld_Edit::editModeSave(void)
+void GDN_TheWorld_Edit::editModeSaveAction(void)
 {
 	for (auto& item : m_mapQuadToSave)
 	{
@@ -590,23 +618,43 @@ void GDN_TheWorld_Edit::editModeSave(void)
 	}
 }
 
-void GDN_TheWorld_Edit::editModeUpload(void)
+void GDN_TheWorld_Edit::editModeUploadAction(void)
 {
+}
+
+void GDN_TheWorld_Edit::editModeGenerateAction(void)
+{
+	if (m_actionInProgress)
+		return;
+
+	m_actionInProgress = true;
+	setElapsed(0, true);
+
+	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeGenerate, this);
+	m_tp.QueueJob(f);
 }
 
 void GDN_TheWorld_Edit::editModeGenerate(void)
 {
-	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1 ") + __FUNCTION__, "ALL");
+	if (m_actionClock.counterStarted())
+	{
+		m_actionInProgress = false;
+		return;
+	}
 
-	m_clockTerrainGeneration.tick();
+	m_actionClock.tick();
 
 	QuadTree* quadTreeSel = nullptr;
 	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
 
 	if (quadrantSelPos.empty())
+	{
+		m_actionClock.tock();
+		m_actionInProgress = false;
 		return;
+	}
 
-	m_terrainGenerationInProgress = true;
+	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1 ") + __FUNCTION__, "ALL");
 
 	TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
 	terrainEdit->noiseSeed = seed();
@@ -718,9 +766,54 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	setMinHeight(minHeight);
 	setMaxHeight(maxHeight);
 
-	m_terrainGenerationInProgress = false;
+	m_actionClock.tock();
 
-	m_clockTerrainGeneration.tock();
-	size_t duration = m_clockTerrainGeneration.duration().count();
-	setElapsed(duration);
+	size_t duration = m_actionClock.duration().count();
+	setElapsed(duration, false);
+	
+	m_actionInProgress = false;
+}
+
+void GDN_TheWorld_Edit::editModeMendAction(void)
+{
+	if (m_actionInProgress)
+		return;
+
+	m_actionInProgress = true;
+	setElapsed(0, true);
+
+	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeMend, this);
+	m_tp.QueueJob(f);
+}
+
+void GDN_TheWorld_Edit::editModeMend(void)
+{
+	if (m_actionClock.counterStarted())
+	{
+		m_actionInProgress = false;
+		return;
+	}
+
+	m_actionClock.tick();
+
+	QuadTree* quadTreeSel = nullptr;
+	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
+
+	if (quadrantSelPos.empty())
+	{
+		m_actionClock.tock();
+		m_actionInProgress = false;
+		return;
+	}
+
+	TheWorld_Utils::GuardProfiler profiler(std::string("EditMend 1 ") + __FUNCTION__, "ALL");
+
+	// TODO
+
+	m_actionClock.tock();
+
+	size_t duration = m_actionClock.duration().count();
+	setElapsed(duration, false);
+
+	m_actionInProgress = false;
 }
