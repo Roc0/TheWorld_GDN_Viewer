@@ -952,7 +952,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 			data.resize((int)heightmapBufferSizeInBytes);
 			{
 				godot::PoolByteArray::Write w = data.write();
-				size_t heightsBufferSize = m_quadTree->getQuadrant()->getFloat16HeightsBuffer().len();
+				size_t heightsBufferSize = m_quadTree->getQuadrant()->getFloat16HeightsBuffer().size();
 				assert(heightmapBufferSizeInBytes == heightsBufferSize);
 				memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getFloat16HeightsBuffer().ptr(), heightsBufferSize);
 			}
@@ -970,9 +970,11 @@ void ShaderTerrainData::resetMaterialParams(void)
 			m_heightMapTexModified = true;
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
 		}
+
+		m_quadTree->getQuadrant()->setHeightsUpdated(false);
 	}
 
-	if (m_quadTree->getQuadrant()->heightsUpdated())
+	if (m_quadTree->getQuadrant()->normalsUpdated())
 	{
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Image from normal buffer");
@@ -982,7 +984,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 			data.resize((int)normalmapBufferSizeInBytes);
 			{
 				godot::PoolByteArray::Write w = data.write();
-				size_t normalsBufferSize = m_quadTree->getQuadrant()->getNormalsBuffer().len();
+				size_t normalsBufferSize = m_quadTree->getQuadrant()->getNormalsBuffer().size();
 				assert(normalmapBufferSizeInBytes == normalsBufferSize);
 				memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getNormalsBuffer().ptr(), normalsBufferSize);
 			}
@@ -1000,6 +1002,8 @@ void ShaderTerrainData::resetMaterialParams(void)
 			m_normalMapTexModified = true;
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
 		}
+
+		m_quadTree->getQuadrant()->setNormalsUpdated(false);
 	}
 
 	if (m_quadTree->getQuadrant()->colorsUpdated())
@@ -1027,6 +1031,8 @@ void ShaderTerrainData::resetMaterialParams(void)
 			m_colorMapTexture = tex;
 			m_colorMapTexModified = true;
 		}
+
+		m_quadTree->getQuadrant()->setColorsUpdated(false);
 	}
 
 	// Creating Splat Map Texture
@@ -1049,9 +1055,6 @@ void ShaderTerrainData::resetMaterialParams(void)
 	//	# RGF image where R is min heightand G is max height
 	//	var _chunked_vertical_bounds : = Image.new()	// _chunked_vertical_bounds.create(csize_x, csize_y, false, Image.FORMAT_RGF)
 	//	_update_vertical_bounds(0, 0, _resolution - 1, _resolution - 1)
-
-	m_quadTree->getQuadrant()->setHeightsUpdated(false);
-	m_quadTree->getQuadrant()->setColorsUpdated(false);
 
 	materialParamsNeedUpdate(true);
 }
@@ -1262,7 +1265,7 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 
 	// look for cache in file system
 	TheWorld_Utils::MeshCacheBuffer cache = getMeshCacheBuffer();
-	std::string meshId = cache.getMeshIdFromMeshCache();
+	std::string meshId = cache.getMeshIdFromCache();
 
 	if (meshId.length() > 0)
 	{
@@ -1301,6 +1304,7 @@ void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std:
 			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 	}
 
+	assert(meshIdFromBuffer == meshId);
 	if (meshIdFromBuffer != meshId)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshId from server").c_str()));
 
@@ -1309,13 +1313,18 @@ void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std:
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
 
 		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
-		m_cache.readMapsFromMeshCache(meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+		m_cache.refreshMapsFromCache(meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
 		if (terrainEditValuesBuffer.size() > 0)
 			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 	}
 
+	assert(!m_float16HeigthsBuffer.empty());
+
 	setHeightsUpdated(true);
 	setColorsUpdated(true);
+
+	if (m_normalsBuffer.size() > 0)
+		setNormalsUpdated(true);
 
 	int areaSize = (m_viewer->Globals()->heightmapResolution() + 1) * (m_viewer->Globals()->heightmapResolution() + 1);
 
@@ -1325,21 +1334,22 @@ void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std:
 	size_t float_size = sizeof(float);	// the size of a float
 	//TheWorld_Utils::serializeToByteStream<float>(0, shortBuffer, float_size);
 
-	size_t numFloat16Heights = m_float16HeigthsBuffer.len() / uint16_t_size;
-	size_t numFloat32Heights = m_float32HeigthsBuffer.len() / float_size;
-	size_t numNormals = m_normalsBuffer.len() / sizeof(struct TheWorld_Utils::_RGB);
+	size_t numFloat16Heights = m_float16HeigthsBuffer.size() / uint16_t_size;
+	size_t numFloat32Heights = m_float32HeigthsBuffer.size() / float_size;
+	size_t numNormals = m_normalsBuffer.size() / sizeof(struct TheWorld_Utils::_RGB);
 
 	assert(numFloat16Heights == numFloat32Heights);
-	assert(numFloat16Heights == numNormals);
+	if (numNormals > 0)
+		assert(numFloat16Heights == numNormals);
 	assert(numFloat16Heights == areaSize);
-	if (numFloat16Heights != numFloat32Heights || numFloat16Heights != numNormals || numFloat16Heights != areaSize)
+	if (numFloat16Heights != numFloat32Heights || (numNormals > 0 && numFloat16Heights != numNormals) || numFloat16Heights != areaSize)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Grid Vertices not of the correct size").c_str()));
 
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("SetColliderHeights ") + __FUNCTION__, "ALL");
 		m_heigths.resize((int)numFloat32Heights);
 		godot::PoolRealArray::Write w = m_heigths.write();
-		memcpy((char*)w.ptr(), m_float32HeigthsBuffer.ptr(), m_float32HeigthsBuffer.len());
+		memcpy((char*)w.ptr(), m_float32HeigthsBuffer.ptr(), m_float32HeigthsBuffer.size());
 		//{
 		//	uint16_t* ptrFrom = (uint16_t*)m_float16HeigthsBuffer.ptr();
 		//	m_heigths.resize((int)numFloat16Heights);

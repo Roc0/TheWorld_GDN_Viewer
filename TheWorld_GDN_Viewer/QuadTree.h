@@ -253,6 +253,7 @@ namespace godot
 			m_shaderTerrainData = make_unique<ShaderTerrainData>(viewer, quadTree);
 			m_collider = make_unique<Collider>(quadTree);
 			m_heigthsUpdated = false;
+			m_normalsUpdated = false;
 			m_colorsUpdated = false;
 		}
 
@@ -311,10 +312,10 @@ namespace godot
 			return m_float16HeigthsBuffer;
 		}
 
-		//TheWorld_Utils::MemoryBuffer& getFloat32HeightsBuffer(void)
-		//{
-		//	return m_float32HeigthsBuffer;
-		//}
+		TheWorld_Utils::MemoryBuffer& getFloat32HeightsBuffer(void)
+		{
+			return m_float32HeigthsBuffer;
+		}
 
 		TheWorld_Utils::MemoryBuffer& getNormalsBuffer(void)
 		{
@@ -336,6 +337,14 @@ namespace godot
 		{
 			return m_heigthsUpdated;
 		}
+		void setNormalsUpdated(bool b)
+		{
+			m_normalsUpdated = b;
+		}
+		bool normalsUpdated(void)
+		{
+			return m_normalsUpdated;
+		}
 		void setColorsUpdated(bool b)
 		{
 			m_colorsUpdated = b;
@@ -356,6 +365,7 @@ namespace godot
 		TheWorld_Utils::MemoryBuffer m_float32HeigthsBuffer;	// each height is expressed as a 32-bit and are serialized as above
 		TheWorld_Utils::MemoryBuffer m_normalsBuffer;			// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heigths
 		bool m_heigthsUpdated;
+		bool m_normalsUpdated;
 		bool m_colorsUpdated;
 		std::unique_ptr<TerrainEdit> m_terrainEdit;
 		godot::PoolRealArray m_heigths;

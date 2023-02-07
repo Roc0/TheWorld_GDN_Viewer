@@ -53,11 +53,15 @@ namespace godot
 		void resizeUI(void);
 		void editModeGenerateAction(void);
 		void editModeMendAction(void);
+		void editModeGenNormalsAction(void);
 		void editModeSaveAction(void);
 		void editModeUploadAction(void);
 
 		void editModeGenerate(void);
 		void editModeMend(void);
+		void editModeGenNormals(void);
+		void editModeSave(void);
+		void editModeUpload(void);
 
 		void setSeed(int seed);
 		int seed(void);
