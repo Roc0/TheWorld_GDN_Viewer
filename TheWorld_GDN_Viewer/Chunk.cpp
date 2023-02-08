@@ -256,7 +256,9 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 
 		if (mesh != nullptr)
 		{
+			m_viewer->getMainProcessingMutex().lock();
 			m_meshInstance = GDN_Chunk_MeshInstance::_new();
+			m_viewer->getMainProcessingMutex().unlock();
 			m_meshInstance->init(this);
 			m_meshInstance->add_to_group(GD_CHUNK_MESHINSTANCE_GROUP);
 			m_meshInstance->set_mesh(mesh);
@@ -948,7 +950,9 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 		
 		if (mesh != nullptr)
 		{
+			m_viewer->getMainProcessingMutex().lock();
 			m_debugMeshInstance = MeshInstance::_new();
+			m_viewer->getMainProcessingMutex().unlock();
 			m_debugMeshInstance->add_to_group(GD_DEBUGCHUNK_MESHINSTANCE_GROUP);
 			m_debugMeshInstance->set_mesh(mesh);
 			string id = TheWorld_Viewer_Utils::Utils::ReplaceString(getPos().getIdStr(), ":", "");
@@ -1027,7 +1031,9 @@ void ChunkDebug::applyDebugMesh()
 		{
 			// set special Wirecube
 			Ref<Mesh> _mesh = createWireCubeMesh(GDN_TheWorld_Globals::g_color_blue);
+			m_viewer->getMainProcessingMutex().lock();
 			SpatialMaterial* mat = SpatialMaterial::_new();
+			m_viewer->getMainProcessingMutex().unlock();
 			mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
 			mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 			mat->set_albedo(GDN_TheWorld_Globals::g_color_blue);
@@ -1055,7 +1061,9 @@ void ChunkDebug::applyDebugMesh()
 					wiredMeshColor = GDN_TheWorld_Globals::g_color_red;
 
 				Ref<ArrayMesh> _mesh = createWireCubeMesh(wiredMeshColor);
+				m_viewer->getMainProcessingMutex().lock();
 				SpatialMaterial* mat = SpatialMaterial::_new();
+				m_viewer->getMainProcessingMutex().unlock();
 				mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
 				mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 				mat->set_albedo(wiredMeshColor);
@@ -1079,7 +1087,9 @@ void ChunkDebug::applyDebugMesh()
 			// set special Wirecube
 			Color wiredMeshColor = GDN_TheWorld_Globals::g_color_blue;
 			Ref<Mesh> _mesh = createWireSquareMesh(wiredMeshColor);
+			m_viewer->getMainProcessingMutex().lock();
 			SpatialMaterial* mat = SpatialMaterial::_new();
+			m_viewer->getMainProcessingMutex().unlock();
 			mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
 			mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 			mat->set_albedo(wiredMeshColor);
@@ -1107,7 +1117,9 @@ void ChunkDebug::applyDebugMesh()
 					wiredMeshColor = GDN_TheWorld_Globals::g_color_red;
 
 				Ref<ArrayMesh> _mesh = createWireSquareMesh(wiredMeshColor);
+				m_viewer->getMainProcessingMutex().lock();
 				SpatialMaterial* mat = SpatialMaterial::_new();
+				m_viewer->getMainProcessingMutex().unlock();
 				mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
 				mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 				mat->set_albedo(wiredMeshColor);
@@ -1179,7 +1191,9 @@ Ref<ArrayMesh> ChunkDebug::createWireCubeMesh(Color c)
 	arrays[ArrayMesh::ARRAY_COLOR] = colors;
 	arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
+	m_viewer->getMainProcessingMutex().lock();
 	Ref<ArrayMesh> mesh = ArrayMesh::_new();
+	m_viewer->getMainProcessingMutex().unlock();
 	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
 	
 	return mesh;
@@ -1211,7 +1225,9 @@ Ref<ArrayMesh> ChunkDebug::createWireSquareMesh(Color c)
 	arrays[ArrayMesh::ARRAY_COLOR] = colors;
 	arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
+	m_viewer->getMainProcessingMutex().lock();
 	Ref<ArrayMesh> mesh = ArrayMesh::_new();
+	m_viewer->getMainProcessingMutex().unlock();
 	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
 
 	return mesh;

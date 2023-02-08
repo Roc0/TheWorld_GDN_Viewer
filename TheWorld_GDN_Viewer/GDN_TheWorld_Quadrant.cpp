@@ -176,7 +176,9 @@ namespace godot
 	{
 		if (m_colliderMeshInstance == nullptr)
 		{
+			m_quadTree->Viewer()->getMainProcessingMutex().lock();
 			m_colliderMeshInstance = GDN_Collider_MeshInstance::_new();
+			m_quadTree->Viewer()->getMainProcessingMutex().unlock();
 			m_colliderMeshInstance->init();
 
 			PoolRealArray& heights = m_quadTree->getQuadrant()->getHeights();
@@ -208,12 +210,16 @@ namespace godot
 			arrays[ArrayMesh::ARRAY_COLOR] = colors;
 			arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
+			m_quadTree->Viewer()->getMainProcessingMutex().lock();
 			Ref<ArrayMesh> mesh = ArrayMesh::_new();
+			m_quadTree->Viewer()->getMainProcessingMutex().unlock();
 			int64_t surf_idx = mesh->get_surface_count();	// next surface added will have this surf_idx
 			mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
 
 			// Initial Material
+			m_quadTree->Viewer()->getMainProcessingMutex().lock();
 			Ref<SpatialMaterial> initialMaterial = SpatialMaterial::_new();
+			m_quadTree->Viewer()->getMainProcessingMutex().unlock();
 			initialMaterial->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 			initialMaterial->set_albedo(initialVertexColor);
 			mesh->surface_set_material(surf_idx, initialMaterial);

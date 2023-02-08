@@ -17,6 +17,7 @@
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Edit.h"
 #include "FastNoiseLite.h"
+#include "half.h"
 
 using namespace godot;
 
@@ -68,6 +69,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 {
 	m_initialized = true;
 	m_viewer = viewer;
+
+	std::lock_guard<std::recursive_mutex> lock(m_viewer->getMainProcessingMutex());
 
 	m_viewer->add_child(this);
 	set_name(THEWORLD_EDIT_MODE_UI_CONTROL_NAME);
@@ -635,16 +638,6 @@ void GDN_TheWorld_Edit::editModeSave(void)
 
 	m_actionClock.tick();
 
-	QuadTree* quadTreeSel = nullptr;
-	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
-
-	if (quadrantSelPos.empty())
-	{
-		m_actionClock.tock();
-		m_actionInProgress = false;
-		return;
-	}
-
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditSave 1 ") + __FUNCTION__, "ALL");
 
 	for (auto& item : m_mapQuadToSave)
@@ -653,7 +646,20 @@ void GDN_TheWorld_Edit::editModeSave(void)
 		if (quadToSave != nullptr)
 		{
 			TheWorld_Utils::MeshCacheBuffer& cache = quadToSave->getQuadrant()->getMeshCacheBuffer();
-			cache.writeBufferToCache(item.second);
+			TheWorld_Utils::MeshCacheBuffer::CacheData cacheData;
+			cacheData.meshId = cache.getMeshId();
+			TerrainEdit* terrainEdit = quadToSave->getQuadrant()->getTerrainEdit();
+			TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
+			cacheData.minHeight = terrainEdit->minHeight;
+			cacheData.maxHeight = terrainEdit->maxHeight;
+			cacheData.terrainEditValues = &terrainEditValuesBuffer;
+			cacheData.heights16Buffer = &quadToSave->getQuadrant()->getFloat16HeightsBuffer();
+			cacheData.heights32Buffer = &quadToSave->getQuadrant()->getFloat32HeightsBuffer();
+			cacheData.normalsBuffer = &quadToSave->getQuadrant()->getNormalsBuffer();
+			QuadrantPos quadrantPos = item.first;
+			TheWorld_Utils::MemoryBuffer buffer;
+			cache.setBufferFromCacheData(quadrantPos.getNumVerticesPerSize(), quadrantPos.getGridStepInWU(), cacheData, buffer);
+			cache.writeBufferToCache(buffer);
 		}
 	}
 
@@ -665,7 +671,6 @@ void GDN_TheWorld_Edit::editModeSave(void)
 	setElapsed(duration, false);
 
 	m_actionInProgress = false;
-
 }
 
 void GDN_TheWorld_Edit::editModeUploadAction(void)
@@ -689,16 +694,6 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	}
 
 	m_actionClock.tick();
-
-	QuadTree* quadTreeSel = nullptr;
-	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
-
-	if (quadrantSelPos.empty())
-	{
-		m_actionClock.tock();
-		m_actionInProgress = false;
-		return;
-	}
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditUpload 1 ") + __FUNCTION__, "ALL");
 
@@ -796,11 +791,22 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	//}
 
 	size_t numVerticesPerSize = quadrantSelPos.getNumVerticesPerSize();
+	size_t numVertices = numVerticesPerSize * numVerticesPerSize;
 	float gridStepInWU = quadrantSelPos.getGridStepInWU();
+	float sizeInWU = quadrantSelPos.getSizeInWU();
 	float lowerXGridVertex = quadrantSelPos.getLowerXGridVertex();
 	float lowerZGridVertex = quadrantSelPos.getLowerZGridVertex();
-	std::vector<float> vectGridHeights(numVerticesPerSize * numVerticesPerSize);;
-	//vectGridHeights.reserve(numVerticesPerSize * numVerticesPerSize);
+	
+	TheWorld_Utils::MemoryBuffer& heights16Buffer = quadTreeSel->getQuadrant()->getFloat16HeightsBuffer();
+	size_t heights16BufferSize = numVertices * sizeof(uint16_t);
+	heights16Buffer.reserve(heights16BufferSize);
+	uint16_t* movingHeights16Buffer = (uint16_t*)heights16Buffer.ptr();
+	//std::vector<float> vectGridHeights(numVertices);;
+	//vectGridHeights.reserve(numVertices);
+	TheWorld_Utils::MemoryBuffer& heights32Buffer = quadTreeSel->getQuadrant()->getFloat32HeightsBuffer();
+	size_t heights32BufferSize = numVertices * sizeof(float);
+	heights32Buffer.reserve(heights32BufferSize);
+	float* movingHeights32Buffer = (float*)heights32Buffer.ptr();
 
 	float minHeight = FLT_MAX;
 	float maxHeight = FLT_MIN;
@@ -812,47 +818,92 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 		for (int z = 0; z < numVerticesPerSize; z++)
 			for (int x = 0; x < numVerticesPerSize; x++)
 			{
-				float xf = lowerXGridVertex + (x * gridStepInWU);
-				float zf = lowerZGridVertex + (z * gridStepInWU);
-				float altitude = noise.GetNoise(xf, zf);
-				// noises are value in range -1 to 1 we need to interpolate with amplitude
-				altitude *= (terrainEdit->amplitude / 2);
+				float altitude = 0.0f;
 
-				if (altitude < minHeight)
-					minHeight = altitude;
-				if (altitude > maxHeight)
-					maxHeight = altitude;
+				{
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1.1 ") + __FUNCTION__, "GetNoise");
 
-				vectGridHeights[idx] = altitude;
+					float xf = lowerXGridVertex + (x * gridStepInWU);
+					float zf = lowerZGridVertex + (z * gridStepInWU);
+					altitude = noise.GetNoise(xf, zf);
+					// noises are value in range -1 to 1 we need to interpolate with amplitude
+					altitude *= (terrainEdit->amplitude / 2);
+
+					if (altitude < minHeight)
+						minHeight = altitude;
+					if (altitude > maxHeight)
+						maxHeight = altitude;
+				}
+
+				{
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1.2 ") + __FUNCTION__, "half_from_float");
+
+					TheWorld_Utils::FLOAT_32 f(altitude);
+					*movingHeights16Buffer = half_from_float(f.u32);;
+					movingHeights16Buffer++;
+				}
+
+				*movingHeights32Buffer = altitude;
+				movingHeights32Buffer++;
+				//vectGridHeights[idx] = altitude;
 				//vectGridHeights.push_back(altitude);
+
 				idx++;
 			}
 	}
 
+	my_assert((BYTE*)movingHeights16Buffer - heights16Buffer.ptr() == heights16BufferSize);
+	heights16Buffer.adjustSize(heights16BufferSize);
+
+	my_assert((BYTE*)movingHeights32Buffer - heights32Buffer.ptr() == heights32BufferSize);
+	heights32Buffer.adjustSize(heights32BufferSize);
+
+	quadTreeSel->getQuadrant()->getNormalsBuffer().clear();
+
 	terrainEdit->minHeight = minHeight;
 	terrainEdit->maxHeight = maxHeight;
 
-	std::string meshBuffer;
-	std::string meshId;
-
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.2 ") + __FUNCTION__, "Quadrant reverse array to buffer");
-
-		float minHeight = 0, maxHeight = 0;
-		TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
-		meshId = cache.getMeshId();
-		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
-		cache.setBufferFromHeights(meshId, numVerticesPerSize, gridStepInWU, terrainEditValuesBuffer, vectGridHeights, meshBuffer, minHeight, maxHeight, false);
-		
-		m_mapQuadToSave[quadrantSelPos] = meshBuffer;
+		PoolRealArray& heigths = quadTreeSel->getQuadrant()->getHeights();
+		heigths.resize((int)numVertices);
+		godot::PoolRealArray::Write w = heigths.write();
+		memcpy((char*)w.ptr(), heights32Buffer.ptr(), heights32Buffer.size());
 	}
 
-	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.3 ") + __FUNCTION__, "Quadrant refreshGridVertices");
+	Vector3 startPosition(lowerXGridVertex, minHeight, lowerZGridVertex);
+	Vector3 endPosition(startPosition.x + sizeInWU, maxHeight, startPosition.z + sizeInWU);
+	Vector3 size = endPosition - startPosition;
 
-		quadTreeSel->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
-		quadTreeSel->materialParamsNeedReset(true);
-	}
+	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_position(startPosition);
+	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_size(size);
+
+	quadTreeSel->getQuadrant()->setHeightsUpdated(true);
+	quadTreeSel->getQuadrant()->setColorsUpdated(true);
+	quadTreeSel->materialParamsNeedReset(true);
+
+	m_mapQuadToSave[quadrantSelPos] = "";
+
+	//std::string meshBuffer;
+	//std::string meshId;
+
+	//{
+	//	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.2 ") + __FUNCTION__, "Quadrant reverse array to buffer");
+
+	//	float minHeight = 0, maxHeight = 0;
+	//	TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
+	//	meshId = cache.getMeshId();
+	//	TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
+	//	cache.setBufferFromHeights(meshId, numVerticesPerSize, gridStepInWU, terrainEditValuesBuffer, vectGridHeights, meshBuffer, minHeight, maxHeight, false);
+	//	
+	//	m_mapQuadToSave[quadrantSelPos] = meshBuffer;
+	//}
+
+	//{
+	//	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.3 ") + __FUNCTION__, "Quadrant refreshGridVertices");
+
+	//	quadTreeSel->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
+	//	quadTreeSel->materialParamsNeedReset(true);
+	//}
 
 	setMinHeight(minHeight);
 	setMaxHeight(maxHeight);
@@ -933,23 +984,30 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 
 	m_actionClock.tick();
 
-	for (auto& item : m_mapQuadToSave)
+	std::vector<QuadrantPos> allQuandrantPos;
+	m_viewer->getAllQuadrantPos(allQuandrantPos);
+
+	for (auto& pos : allQuandrantPos)
 	{
-		QuadTree* quadToSave = m_viewer->getQuadTree(item.first);
-		if (quadToSave != nullptr)
+		QuadTree* quadTree = m_viewer->getQuadTree(pos);
+		if (quadTree != nullptr)
 		{
-			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadToSave->getQuadrant()->getNormalsBuffer();
+			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer();
 			if (normalsBuffer.size() == 0)
 			{
-				TheWorld_Utils::MeshCacheBuffer& cache = quadToSave->getQuadrant()->getMeshCacheBuffer();
-				QuadrantPos pos = item.first;
-				TheWorld_Utils::MemoryBuffer& heightsBuffer = quadToSave->getQuadrant()->getFloat32HeightsBuffer();
+				TheWorld_Utils::GuardProfiler profiler(std::string("EditGenMesh 1.1 ") + __FUNCTION__, "Single QuadTree");
+
+				TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
+				TheWorld_Utils::MemoryBuffer& heightsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
 				size_t numElements = heightsBuffer.size() / sizeof(float);
 				my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
-				std::vector<float> vectGridHeights((float*)heightsBuffer.ptr(), (float*)heightsBuffer.ptr() + numElements);
+				//std::vector<float> vectGridHeights((float*)heightsBuffer.ptr(), (float*)heightsBuffer.ptr() + numElements);
+				std::vector<float> vectGridHeights;
+				heightsBuffer.populateFloatVector(vectGridHeights);
 				cache.generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
-				quadToSave->getQuadrant()->setNormalsUpdated(true);
-				quadToSave->materialParamsNeedReset(true);
+				m_mapQuadToSave[pos] = "";
+				quadTree->getQuadrant()->setNormalsUpdated(true);
+				quadTree->materialParamsNeedReset(true);
 			}
 		}
 	}

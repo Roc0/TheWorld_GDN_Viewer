@@ -101,7 +101,9 @@ namespace godot
 				int val = indices[i];
 				m_viewer->Globals()->debugPrint("Index(" + String(to_string(i).c_str()) + ")=" + String(to_string(val).c_str()));
 			}
+			//m_viewer->getMainProcessingMutex().lock();
 			//MeshDataTool* mdt = MeshDataTool::_new();
+			//m_viewer->getMainProcessingMutex().unlock();
 			//Error err = mdt->create_from_surface(mesh, 0);
 			//assert(err == Error::OK);
 			//int64_t numEdges = mdt->get_edge_count();
@@ -121,12 +123,16 @@ namespace godot
 		arrays[ArrayMesh::ARRAY_COLOR] = colors;
 		arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
+		m_viewer->getMainProcessingMutex().lock();
 		Ref<ArrayMesh> mesh = ArrayMesh::_new();
+		m_viewer->getMainProcessingMutex().unlock();
 		int64_t surf_idx = mesh->get_surface_count();	// next surface added will have this surf_idx
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
 
 		// Initial Material
+		m_viewer->getMainProcessingMutex().lock();
 		Ref<SpatialMaterial> initialMaterial = SpatialMaterial::_new();
+		m_viewer->getMainProcessingMutex().unlock();
 		initialMaterial->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 		initialMaterial->set_albedo(initialVertexColor);
 		mesh->surface_set_material(surf_idx, initialMaterial);

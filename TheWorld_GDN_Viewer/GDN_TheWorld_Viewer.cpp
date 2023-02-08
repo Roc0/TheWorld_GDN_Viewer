@@ -2059,6 +2059,18 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 		m_altPressed = false;
 }
 
+void GDN_TheWorld_Viewer::getAllQuadrantPos(std::vector<QuadrantPos>& allQuandrantPos)
+{
+	allQuandrantPos.clear();
+
+	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+
+	size_t size = m_mapQuadTree.size();
+	allQuandrantPos.reserve(size);
+	for (auto const& item : m_mapQuadTree)
+		allQuandrantPos.push_back(item.first);
+}
+
 QuadTree* GDN_TheWorld_Viewer::getQuadTree(QuadrantPos pos)
 {
 	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
@@ -2723,6 +2735,24 @@ GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
 	return m_globals;
 }
 
+bool GDN_TheWorld_Viewer::terrainShiftPermitted(void)
+{
+	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+
+	if (editModeUIControl == nullptr)
+		return true;
+	else
+	{
+		if (!editMode() && !editModeUIControl->actionInProgress())
+			return true;
+		else
+			return false;
+	}
+
+	return true;
+	return m_numinitializedQuadrant >= m_numQuadrant;
+}
+
 void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift)
 {
 	// World Node Local Coordinate System is the same as MapManager coordinate system
@@ -3239,7 +3269,7 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 		if (m_streamingTime.counterStarted())
 		{
 			m_streamingTime.tock();
-			PLOG_DEBUG << "Initilization of last stream of quadrant in " << m_streamingTime.duration().count() << " ms";
+			PLOG_DEBUG << "Initialization of last stream of quadrant in " << m_streamingTime.duration().count() << " ms";
 		}
 	}
 }

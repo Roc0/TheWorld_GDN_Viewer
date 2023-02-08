@@ -158,19 +158,19 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	Input* input = Input::get_singleton();
 
-	if (input->is_action_pressed("ui_mouse_button_right") && !viewer->editMode())
+	if (input->is_action_pressed("ui_mouse_button_right") && viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
 		m_rotateCameraOn = true;
 	else
 		m_rotateCameraOn = false;
 
 	//input = Input::get_singleton();
-	if (input->is_action_pressed("ui_mouse_button_left") && !viewer->editMode())
+	if (input->is_action_pressed("ui_mouse_button_left") && viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
 		m_shiftOriCameraOn = true;
 	else
 		m_shiftOriCameraOn = false;
 
 	//input = Input::get_singleton();
-	if (input->is_action_pressed("ui_mouse_button_mid") && !viewer->editMode())
+	if (input->is_action_pressed("ui_mouse_button_mid") && viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
 		m_shiftVertCameraOn = true;
 	else
 		m_shiftVertCameraOn = false;
@@ -192,7 +192,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_forward") /* && !m_altPressed*/)
 	{
-		if (viewer->terrainShiftPermitted() && !viewer->editMode())
+		if (viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
 		{
 			m_numMoveStepForward--;
 			m_updateCameraRequired = true;
@@ -204,7 +204,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_backward") /* && !m_altPressed*/)
 	{
-		if (viewer->terrainShiftPermitted() && !viewer->editMode())
+		if (viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
 		{
 			m_numMoveStepForward++;
 			m_updateCameraRequired = true;
@@ -216,7 +216,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_left") && !m_altPressed)
 	{
-		if (viewer->terrainShiftPermitted() && !viewer->editMode())
+		if (viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
 		{
 			m_numMoveStepLeft++;
 			m_updateCameraRequired = true;
@@ -228,7 +228,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_right") && !m_altPressed)
 	{
-		if (viewer->terrainShiftPermitted() && !viewer->editMode())
+		if (viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
 		{
 			m_numMoveStepLeft--;
 			m_updateCameraRequired = true;
@@ -240,7 +240,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_up") && !m_altPressed)
 	{
-		if (viewer->terrainShiftPermitted() && !viewer->editMode())
+		if (viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
 		{
 			m_numMoveStepUp++;
 			m_updateCameraRequired = true;
@@ -252,7 +252,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	if (input->is_action_pressed("ui_down") && !m_altPressed)
 	{
-		if (viewer->terrainShiftPermitted() && !viewer->editMode())
+		if (viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
 		{
 			m_numMoveStepUp--;
 			m_updateCameraRequired = true;
@@ -620,6 +620,8 @@ GDN_TheWorld_Globals* GDN_TheWorld_Camera::Globals(bool useCache)
 
 Ref<ArrayMesh> GDN_TheWorld_Camera::DrawViewFrustum(Color c)
 {
+	GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
+
 	float m_FarOffset = Camera::get_zfar();
 	float m_NearOffset = Camera::get_znear();
 	float m_ScreenWidth = Camera::get_viewport()->get_size().x;
@@ -691,7 +693,11 @@ Ref<ArrayMesh> GDN_TheWorld_Camera::DrawViewFrustum(Color c)
 	arrays[ArrayMesh::ARRAY_COLOR] = colors;
 	arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
+	if (viewer != nullptr)
+		viewer->getMainProcessingMutex().lock();
 	Ref<ArrayMesh> mesh = ArrayMesh::_new();
+	if (viewer != nullptr)
+		viewer->getMainProcessingMutex().unlock();
 	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
 
 	return mesh;

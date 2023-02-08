@@ -91,6 +91,8 @@ namespace godot
 		};
 
 		friend class GDN_TheWorld_Edit;
+		//friend class QuadTree;
+		//friend class ShaderTerrainData;
 
 	public:
 		GDN_TheWorld_Viewer();
@@ -180,14 +182,11 @@ namespace godot
 		{
 			m_refreshMapQuadTree = true; 
 		}
+		void getAllQuadrantPos(std::vector<QuadrantPos>& allQuandrantPos);
 		QuadTree* getQuadTree(QuadrantPos pos);
 		Chunk* getActiveChunkAt(QuadrantPos pos, Chunk::ChunkPos chunkPos, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter);
 		Chunk* getActiveChunkAt(Chunk* chunk, enum class Chunk::DirectionSlot dir, Chunk::LookForChunk filter);
-		bool terrainShiftPermitted(void)
-		{
-			return true;
-			return m_numinitializedQuadrant >= m_numQuadrant;
-		}
+		bool terrainShiftPermitted(void);
 		godot::Vector3 getMouseHit(void)
 		{
 			return m_mouseHit;
@@ -274,6 +273,11 @@ namespace godot
 		}
 
 		//void GenerateHeigths(void);
+
+		std::recursive_mutex& getMainProcessingMutex(void)
+		{
+			return m_mtxQuadTree;
+		}
 
 	private:
 		void onTransformChanged(void);

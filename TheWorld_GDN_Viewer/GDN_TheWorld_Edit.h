@@ -86,6 +86,11 @@ namespace godot
 		void setElapsed(size_t elapsed, bool onGoing);
 		size_t elapsed(void);
 
+		bool actionInProgress(void)
+		{
+			return m_actionInProgress;
+		}
+
 		void setMouseHitLabelText(std::string text);
 		void setMouseQuadHitLabelText(std::string text);
 		void setMouseQuadHitPosLabelText(std::string text);
