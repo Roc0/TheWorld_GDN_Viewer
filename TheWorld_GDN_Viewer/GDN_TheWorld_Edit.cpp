@@ -766,30 +766,6 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	//noise.SetCellularReturnType();
 	//noise.SetCellularJitter()
 
-	//{
-	//	float f = 0.0f, x= 0.0f, y= 0.0f;
-
-	//	x = 1.0f;	y = 1.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-
-	//	x = 1.0f;	y = -1.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-
-	//	x = -1.0f;	y = 1.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-
-	//	x = -1.0f;	y = -1.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-
-	//	x = 2.0f;	y = 2.0f;
-	//	f = noise.GetNoise(x, y);
-	//	Globals()->print((std::string("x=") + std::to_string(x) + " y=" + std::to_string(y) + " value=" + std::to_string(f)).c_str());
-	//}
-
 	size_t numVerticesPerSize = quadrantSelPos.getNumVerticesPerSize();
 	size_t numVertices = numVerticesPerSize * numVerticesPerSize;
 	float gridStepInWU = quadrantSelPos.getGridStepInWU();
