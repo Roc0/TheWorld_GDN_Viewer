@@ -456,6 +456,59 @@ namespace TheWorld_ClientServer
 				reply->replyParam(f);
 				reply->replyComplete();
 			}
+			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER)
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("UploadBuffer 1a ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER);
+
+				float* lowerXGridVertex = std::get_if<float>(&reply->m_inputParams[0]);
+				if (lowerXGridVertex == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be a FLOAT");
+					return;
+				}
+
+				float* lowerZGridVertex = std::get_if<float>(&reply->m_inputParams[1]);
+				if (lowerZGridVertex == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Second param must be a FLOAT");
+					return;
+				}
+
+				int* numVerticesPerSize = std::get_if<int>(&reply->m_inputParams[2]);
+				if (numVerticesPerSize == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Third param must be an INT");
+					return;
+				}
+
+				float* gridStepinWU = std::get_if<float>(&reply->m_inputParams[3]);
+				if (gridStepinWU == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Forth param must be a FLOAT");
+					return;
+				}
+
+				int* level = std::get_if<int>(&reply->m_inputParams[4]);
+				if (level == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Fifth param must be an INT");
+					return;
+				}
+				
+				std::string* buffer = std::get_if<std::string>(&reply->m_inputParams[5]);
+				if (buffer == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Sixth param must be an std::string");
+					return;
+				}
+
+				if (expiredTimeToLive(reply))
+					return;
+
+				m_threadContextPool->getCurrentContext()->getMapManager()->uploadCacheBuffer(*lowerXGridVertex, *lowerZGridVertex, *numVerticesPerSize, *gridStepinWU, *level, *buffer);
+
+				reply->replyComplete();
+			}
 			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES)
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 1a ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);

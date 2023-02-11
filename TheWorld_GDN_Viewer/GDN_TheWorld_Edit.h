@@ -12,7 +12,7 @@ namespace godot
 {
 	//class GDN_TheWorld_Viewer;
 
-	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit
+	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
 	{
 		GODOT_CLASS(GDN_TheWorld_Edit, MarginContainer)
 
@@ -42,6 +42,8 @@ namespace godot
 		void _process(float _delta);
 		void _input(const Ref<InputEvent> event);
 		void _notification(int p_what);
+
+		virtual void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
 
 		//
 		// Test
@@ -86,6 +88,7 @@ namespace godot
 		float maxHeight(void);
 		void setElapsed(size_t elapsed, bool onGoing);
 		size_t elapsed(void);
+		void setCounter(size_t curr, size_t all);
 
 		bool actionInProgress(void)
 		{
@@ -111,6 +114,8 @@ namespace godot
 		TheWorld_Utils::TimerMs m_actionClock;
 		bool m_onGoingElapsedLabel;
 		Color m_elapsedLabelNormalColor;
+		size_t m_completedItems;
+		size_t m_allItems;
 
 		godot::LineEdit* m_seed;
 		godot::LineEdit* m_frequency;
@@ -124,6 +129,7 @@ namespace godot
 		godot::Label* m_minHeightLabel;
 		godot::Label* m_maxHeightLabel;
 		godot::Label* m_elapsedLabel;
+		godot::Label* m_counterLabel;
 
 		godot::Label* m_mouseHitLabel;
 		godot::Label* m_mouseQuadHitLabel;

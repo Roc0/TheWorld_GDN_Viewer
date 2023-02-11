@@ -110,6 +110,25 @@ namespace godot
 		}
 	}
 
+	void GDN_TheWorld_Globals_Client::MapManagerUploadBuffer(float lowerXGridVertex, float lowerZGridVertex, int numVerticesPerSize, float gridStepinWU, int level, std::string buffer)
+	{
+		std::vector<ClientServerVariant> replyParams;
+		std::vector<ClientServerVariant> inputParams;
+		inputParams.push_back(lowerXGridVertex);
+		inputParams.push_back(lowerZGridVertex);
+		inputParams.push_back(numVerticesPerSize);
+		inputParams.push_back(gridStepinWU);
+		inputParams.push_back(level);
+		inputParams.push_back(buffer);
+		std::string ref;
+		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER, ref, inputParams, THEWORLD_CLIENTSERVER_MAPVERTICES_TIME_TO_LIVE, m_globals->Viewer());
+		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+		{
+			std::string m = std::string("ClientInterface::execMethodSync ==> MapManager::getVertices error ") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
+		}
+	}
+
 	/*GDN_TheWorld_Globals* GDN_TheWorld_Globals_Client::Globals(bool useCache)
 	{
 		if (m_globals == NULL || !useCache)

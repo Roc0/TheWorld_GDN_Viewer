@@ -62,7 +62,8 @@ namespace godot
 		void MapManagerSetLogMaxSeverity(plog::Severity sev);
 		void ServerInitializeSession(plog::Severity sev);
 		void MapManagerGetVertices(float viewerPosX, float viewerPosZ, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, bool setCamera, float cameraDistanceFromTerrain, std::string meshId);
-	
+		void MapManagerUploadBuffer(float lowerXGridVertex, float lowerZGridVertex, int numVerticesPerSize, float gridStepinWU, int level, std::string buffer);
+
 	private:
 		//GDN_TheWorld_Globals* Globals(bool useCache);
 

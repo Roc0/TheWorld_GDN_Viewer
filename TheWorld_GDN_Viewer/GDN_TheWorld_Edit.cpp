@@ -54,17 +54,54 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_minHeightLabel = nullptr;
 	m_maxHeightLabel = nullptr;
 	m_elapsedLabel = nullptr;
+	m_counterLabel = nullptr;
 	m_mouseHitLabel = nullptr;
 	m_mouseQuadHitLabel = nullptr;
 	m_mouseQuadHitPosLabel = nullptr;
 	m_mouseQuadSelLabel = nullptr;
 	m_mouseQuadSelPosLabel = nullptr;
 	m_genAllNormals = nullptr;
+	m_allItems = 0;
+	m_completedItems = 0;
 }
 
 GDN_TheWorld_Edit::~GDN_TheWorld_Edit()
 {
 	deinit();
+}
+
+void GDN_TheWorld_Edit::replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply)
+{
+	std::string method = reply.getMethod();
+
+	if (reply.error())
+	{
+		m_viewer->Globals()->setStatus(TheWorldStatus::error);
+		m_viewer->Globals()->errorPrint((std::string("GDN_TheWorld_Edit::replyFromServer: error method ") + method + std::string(" rc=") + std::to_string(reply.getErrorCode()) + std::string(" ") + reply.getErrorMessage()).c_str());
+		return;
+	}
+
+	try
+	{
+		if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER)
+		{
+		}
+		else
+		{
+			m_viewer->Globals()->setStatus(TheWorldStatus::error);
+			m_viewer->Globals()->errorPrint((std::string("GDN_TheWorld_Edit::replyFromServer: unknow method ") + method).c_str());
+		}
+	}
+	catch (GDN_TheWorld_Exception ex)
+	{
+		m_viewer->Globals()->setStatus(TheWorldStatus::error);
+		m_viewer->Globals()->errorPrint(String(ex.exceptionName()) + String(" caught - ") + ex.what());
+	}
+	catch (...)
+	{
+		m_viewer->Globals()->setStatus(TheWorldStatus::error);
+		m_viewer->Globals()->errorPrint("GDN_TheWorld_Globals::GDN_TheWorld_Edit: exception caught");
+	}
 }
 
 void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
@@ -273,6 +310,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_maxHeightLabel = godot::Label::_new();
 					hBoxContainer->add_child(m_maxHeightLabel);
 					m_maxHeightLabel->set_align(godot::Label::Align::ALIGN_LEFT);
+
+			marginContainer = godot::MarginContainer::_new();
+			mainVBoxContainer->add_child(marginContainer);
+				hBoxContainer = godot::HBoxContainer::_new();
+				marginContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
 					label->set_text("Elapsed");
@@ -280,6 +322,9 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_elapsedLabel = godot::Label::_new();
 					hBoxContainer->add_child(m_elapsedLabel);
 					m_elapsedLabel->set_align(godot::Label::Align::ALIGN_LEFT);
+					m_counterLabel = godot::Label::_new();
+					hBoxContainer->add_child(m_counterLabel);
+					m_counterLabel->set_align(godot::Label::Align::ALIGN_LEFT);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -554,6 +599,11 @@ void GDN_TheWorld_Edit::setElapsed(size_t elapsed, bool onGoing)
 		m_elapsedLabel->set_text(std::to_string(elapsed).c_str());
 }
 
+void GDN_TheWorld_Edit::setCounter(size_t current, size_t all)
+{
+	m_counterLabel->set_text((std::to_string(current) + "/" + std::to_string(all)).c_str());
+}
+
 size_t GDN_TheWorld_Edit::elapsed(void)
 {
 	godot::String s = m_elapsedLabel->get_text();
@@ -620,6 +670,8 @@ void GDN_TheWorld_Edit::_process(float _delta)
 	if (m_actionInProgress)
 	{
 		setElapsed(m_actionClock.partialDuration().count(), true);
+		if (m_allItems != 0)
+			setCounter(m_completedItems, m_allItems);
 	}
 }
 
@@ -629,6 +681,7 @@ void GDN_TheWorld_Edit::editModeSaveAction(void)
 		return;
 
 	m_actionInProgress = true;
+	m_allItems = 0;
 	setElapsed(0, true);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeSave, this);
@@ -647,6 +700,8 @@ void GDN_TheWorld_Edit::editModeSave(void)
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditSave 1 ") + __FUNCTION__, "ALL");
 
+	m_completedItems = 0;
+	m_allItems = m_mapQuadToSave.size();
 	for (auto& item : m_mapQuadToSave)
 	{
 		QuadTree* quadToSave = m_viewer->getQuadTree(item.first);
@@ -669,6 +724,8 @@ void GDN_TheWorld_Edit::editModeSave(void)
 			TheWorld_Utils::MemoryBuffer buffer;
 			cache.setBufferFromCacheData(quadrantPos.getNumVerticesPerSize(), quadrantPos.getGridStepInWU(), cacheData, buffer);
 			cache.writeBufferToCache(buffer);
+
+			m_completedItems++;
 		}
 	}
 
@@ -678,6 +735,7 @@ void GDN_TheWorld_Edit::editModeSave(void)
 
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
+	setCounter(m_completedItems, m_allItems);
 
 	m_actionInProgress = false;
 }
@@ -688,6 +746,7 @@ void GDN_TheWorld_Edit::editModeUploadAction(void)
 		return;
 
 	m_actionInProgress = true;
+	m_allItems = 0;
 	setElapsed(0, true);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeUpload, this);
@@ -711,6 +770,7 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	std::vector<QuadrantPos> allQuandrantPos;
 	m_viewer->getAllQuadrantPos(allQuandrantPos);
 
+	std::vector<QuadrantPos> quandrantPos;
 	for (auto& pos : allQuandrantPos)
 	{
 		QuadTree* quadTree = m_viewer->getQuadTree(pos);
@@ -718,35 +778,55 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 		{
 			if (quadTree->getQuadrant()->needUploadToServer())
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("EditUpload 1.1 ") + __FUNCTION__, "Single QuadTree");
-
-				TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
-				TheWorld_Utils::MeshCacheBuffer::CacheData cacheData;
-				cacheData.meshId = cache.getMeshId();
-				TheWorld_Utils::TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
-				terrainEdit->needUploadToServer = false;
-				TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
-				cacheData.minHeight = terrainEdit->minHeight;
-				cacheData.maxHeight = terrainEdit->maxHeight;
-				cacheData.terrainEditValues = &terrainEditValuesBuffer;
-				cacheData.heights16Buffer = &quadTree->getQuadrant()->getFloat16HeightsBuffer();
-				cacheData.heights32Buffer = &quadTree->getQuadrant()->getFloat32HeightsBuffer();
-				cacheData.normalsBuffer = &quadTree->getQuadrant()->getNormalsBuffer();
-				std::string buffer;
-				cache.setBufferFromCacheData(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), cacheData, buffer);
-				// UPLOAD buffer
-
-				cache.writeBufferToCache(buffer);
-
-				quadTree->getQuadrant()->setNeedUploadToServer(false);
+				quandrantPos.push_back(pos);
 			}
 		}
 	}
 
+	m_completedItems = 0;
+	m_allItems = quandrantPos.size();
+	for (auto& pos : quandrantPos)
+	{
+		QuadTree* quadTree = m_viewer->getQuadTree(pos);
+		if (quadTree != nullptr)
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("EditUpload 1.1 ") + __FUNCTION__, "Single QuadTree");
+
+			TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
+			TheWorld_Utils::MeshCacheBuffer::CacheData cacheData;
+			cacheData.meshId = cache.getMeshId();
+			TheWorld_Utils::TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
+			terrainEdit->needUploadToServer = false;
+			TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
+			cacheData.minHeight = terrainEdit->minHeight;
+			cacheData.maxHeight = terrainEdit->maxHeight;
+			cacheData.terrainEditValues = &terrainEditValuesBuffer;
+			cacheData.heights16Buffer = &quadTree->getQuadrant()->getFloat16HeightsBuffer();
+			cacheData.heights32Buffer = &quadTree->getQuadrant()->getFloat32HeightsBuffer();
+			cacheData.normalsBuffer = &quadTree->getQuadrant()->getNormalsBuffer();
+			std::string buffer;
+			cache.setBufferFromCacheData(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), cacheData, buffer);
+			
+			float lowerXGridVertex = pos.getLowerXGridVertex();
+			float lowerZGridVertex = pos.getLowerZGridVertex();
+			int numVerticesPerSize = pos.getNumVerticesPerSize();
+			float gridStepinWU = pos.getGridStepInWU();
+			int lvl = pos.getLevel();
+			quadTree->Viewer()->Globals()->Client()->MapManagerUploadBuffer(lowerXGridVertex, lowerZGridVertex, numVerticesPerSize, gridStepinWU, lvl, buffer);
+
+			cache.writeBufferToCache(buffer);
+
+			quadTree->getQuadrant()->setNeedUploadToServer(false);
+
+			m_completedItems++;
+		}
+	}
+	
 	m_actionClock.tock();
 
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
+	setCounter(m_completedItems, m_allItems);
 
 	m_actionInProgress = false;
 }
@@ -757,6 +837,7 @@ void GDN_TheWorld_Edit::editModeGenerateAction(void)
 		return;
 
 	m_actionInProgress = true;
+	m_allItems = 0;
 	setElapsed(0, true);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeGenerate, this);
@@ -782,6 +863,9 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 		m_actionInProgress = false;
 		return;
 	}
+
+	m_completedItems = 0;
+	m_allItems = 1;
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1 ") + __FUNCTION__, "ALL");
 
@@ -928,11 +1012,14 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	setMinHeight(minHeight);
 	setMaxHeight(maxHeight);
 
+	m_completedItems++;
+
 	m_actionClock.tock();
 
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
-	
+	setCounter(m_completedItems, m_allItems);
+
 	m_actionInProgress = false;
 }
 
@@ -942,6 +1029,7 @@ void GDN_TheWorld_Edit::editModeMendAction(void)
 		return;
 
 	m_actionInProgress = true;
+	m_allItems = 0;
 	setElapsed(0, true);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeMend, this);
@@ -976,6 +1064,7 @@ void GDN_TheWorld_Edit::editModeMend(void)
 
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
+	setCounter(m_completedItems, m_allItems);
 
 	m_actionInProgress = false;
 }
@@ -986,6 +1075,7 @@ void GDN_TheWorld_Edit::editModeGenNormalsAction(void)
 		return;
 
 	m_actionInProgress = true;
+	m_allItems = 0;
 	setElapsed(0, true);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeGenNormals, this);
@@ -1019,6 +1109,7 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	std::vector<QuadrantPos> allQuandrantPos;
 	m_viewer->getAllQuadrantPos(allQuandrantPos);
 
+	std::vector<QuadrantPos> quandrantPos;
 	for (auto& pos : allQuandrantPos)
 	{
 		QuadTree* quadTree = m_viewer->getQuadTree(pos);
@@ -1029,19 +1120,7 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 			{
 				if (genAllNormals || pos == quadrantSelPos)
 				{
-					TheWorld_Utils::GuardProfiler profiler(std::string("EditGenMesh 1.1 ") + __FUNCTION__, "Single QuadTree");
-
-					TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
-					TheWorld_Utils::MemoryBuffer& heightsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
-					size_t numElements = heightsBuffer.size() / sizeof(float);
-					my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
-					//std::vector<float> vectGridHeights((float*)heightsBuffer.ptr(), (float*)heightsBuffer.ptr() + numElements);
-					std::vector<float> vectGridHeights;
-					heightsBuffer.populateFloatVector(vectGridHeights);
-					cache.generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
-					m_mapQuadToSave[pos] = "";
-					quadTree->getQuadrant()->setNormalsUpdated(true);
-					quadTree->materialParamsNeedReset(true);
+					quandrantPos.push_back(pos);
 
 					if (!genAllNormals)
 						break;
@@ -1050,10 +1129,40 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 		}
 	}
 
+	m_completedItems = 0;
+	m_allItems = quandrantPos.size();
+	for (auto& pos : quandrantPos)
+	{
+		QuadTree* quadTree = m_viewer->getQuadTree(pos);
+		if (quadTree != nullptr)
+		{
+			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer();
+			if (normalsBuffer.size() == 0)
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("EditGenMesh 1.1 ") + __FUNCTION__, "Single QuadTree");
+
+				TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
+				TheWorld_Utils::MemoryBuffer& heightsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
+				size_t numElements = heightsBuffer.size() / sizeof(float);
+				my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
+				//std::vector<float> vectGridHeights((float*)heightsBuffer.ptr(), (float*)heightsBuffer.ptr() + numElements);
+				std::vector<float> vectGridHeights;
+				heightsBuffer.populateFloatVector(vectGridHeights);
+				cache.generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
+				m_mapQuadToSave[pos] = "";
+				quadTree->getQuadrant()->setNormalsUpdated(true);
+				quadTree->materialParamsNeedReset(true);
+
+				m_completedItems++;
+			}
+		}
+	}
+
 	m_actionClock.tock();
 
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
+	setCounter(m_completedItems, m_allItems);
 
 	m_actionInProgress = false;
 }
