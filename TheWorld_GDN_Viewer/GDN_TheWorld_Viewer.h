@@ -36,45 +36,45 @@ namespace godot
 #define TIME_INTERVAL_BETWEEN_STATISTICS 100	// ms, 0 = diasble periodic dump
 #define TIME_INTERVAL_BETWEEN_MOUSE_TRACK 250	// ms
 
-	class TerrainEdit
-	{
-	public:
-		size_t size;
-		bool needUploadToServer;
+	//class TerrainEdit
+	//{
+	//public:
+	//	size_t size;
+	//	bool needUploadToServer;
 
-		int noiseType;
-		int rotationType3D;
-		int noiseSeed;
-		float frequency;
-		int fractalType;
-		int fractalOctaves;
-		float fractalLacunarity;
-		float fractalGain;
-		float fractalWeightedStrength;
-		float fractalPingPongStrength;
+	//	int noiseType;
+	//	int rotationType3D;
+	//	int noiseSeed;
+	//	float frequency;
+	//	int fractalType;
+	//	int fractalOctaves;
+	//	float fractalLacunarity;
+	//	float fractalGain;
+	//	float fractalWeightedStrength;
+	//	float fractalPingPongStrength;
 
-		int cellularDistanceFunction;
-		int cellularReturnType;
-		float cellularJitter;
+	//	int cellularDistanceFunction;
+	//	int cellularReturnType;
+	//	float cellularJitter;
 
-		int warpNoiseDomainWarpType;
-		int warpNoiseRotationType3D;
-		int warpNoiseSeed;
-		float warpNoiseDomainWarpAmp;
-		float warpNoiseFrequency;
-		int warpNoieseFractalType;
-		int warpNoiseFractalOctaves;
-		float warpNoiseFractalLacunarity;
-		float warpNoiseFractalGain;
+	//	int warpNoiseDomainWarpType;
+	//	int warpNoiseRotationType3D;
+	//	int warpNoiseSeed;
+	//	float warpNoiseDomainWarpAmp;
+	//	float warpNoiseFrequency;
+	//	int warpNoieseFractalType;
+	//	int warpNoiseFractalOctaves;
+	//	float warpNoiseFractalLacunarity;
+	//	float warpNoiseFractalGain;
 
-		unsigned int amplitude;		// range of heigths in WU (noise is from -1 to 1)
-		float minHeight;
-		float maxHeight;
+	//	unsigned int amplitude;		// range of heigths in WU (noise is from -1 to 1)
+	//	float minHeight;
+	//	float maxHeight;
 
-		TerrainEdit(void);
-		void serialize(TheWorld_Utils::MemoryBuffer& buffer);
-		void deserialize(TheWorld_Utils::MemoryBuffer& buffer);
-	};
+	//	TerrainEdit(void);
+	//	void serialize(TheWorld_Utils::MemoryBuffer& buffer);
+	//	void deserialize(TheWorld_Utils::MemoryBuffer& buffer);
+	//};
 
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0

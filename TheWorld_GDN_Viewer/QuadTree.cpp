@@ -1330,21 +1330,47 @@ void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std:
 			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 	}
 
-	assert(meshIdFromBuffer == meshId);
-	if (meshIdFromBuffer != meshId)
-		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshId from server").c_str()));
+	if (meshIdFromBuffer.size() > 0)
+	{
+		assert(meshIdFromBuffer == meshId);
+		if (meshIdFromBuffer != meshId)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshId from server").c_str()));
+	}
 
-	if (m_float16HeigthsBuffer.empty())
+	TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+	if (meshIdFromBuffer.size() == 0 || m_float16HeigthsBuffer.empty())
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
 
-		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
-		m_cache.refreshMapsFromCache(meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+		bool ok = m_cache.refreshMapsFromCache(meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
 		if (terrainEditValuesBuffer.size() > 0)
 			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 	}
 
+	if (m_float16HeigthsBuffer.empty())
+	{
+		TheWorld_Utils::MemoryBuffer tempBuffer;
+
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.3 ") + __FUNCTION__, "m_cache.setEmptyBuffer");
+			m_cache.setEmptyBuffer(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), meshIdFromBuffer, tempBuffer);
+		}
+
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
+
+			m_cache.refreshMapsFromBuffer(tempBuffer, meshIdFromBuffer, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, false);
+			if (terrainEditValuesBuffer.size() > 0)
+				getTerrainEdit()->deserialize(terrainEditValuesBuffer);
+		}
+	}
+
 	assert(!m_float16HeigthsBuffer.empty());
+
+	if (getTerrainEdit()->needUploadToServer)
+		setNeedUploadToServer(true);
+	else
+		setNeedUploadToServer(false);
 
 	setHeightsUpdated(true);
 	setColorsUpdated(true);

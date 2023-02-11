@@ -8,6 +8,7 @@
 #include <HBoxContainer.hpp>
 #include <Button.hpp>
 #include <Label.hpp>
+#include <CheckBox.hpp>
 #include <HSeparator.hpp>
 #include <VSeparator.hpp>
 
@@ -58,6 +59,7 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_mouseQuadHitPosLabel = nullptr;
 	m_mouseQuadSelLabel = nullptr;
 	m_mouseQuadSelPosLabel = nullptr;
+	m_genAllNormals = nullptr;
 }
 
 GDN_TheWorld_Edit::~GDN_TheWorld_Edit()
@@ -82,6 +84,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	godot::Control* separator = nullptr;
 	godot::Button* button = nullptr;
 	godot::Label* label = nullptr;
+	//godot::CheckBox* checkBox = nullptr;
 
 	godot::Control* mainTabContainer = godot::TabContainer::_new();
 	mainTabContainer->set_name("EditModeTab");
@@ -127,6 +130,10 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					button->set_text("Gen. Normals");
 					button->connect("pressed", this, "edit_mode_gen_normals");
 					button->set_focus_mode(FocusMode::FOCUS_NONE);
+					m_genAllNormals = godot::CheckBox::_new();
+					hBoxContainer->add_child(m_genAllNormals);
+					m_genAllNormals->set_text("All");
+					m_genAllNormals->set_toggle_mode(true);
 
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
@@ -648,7 +655,9 @@ void GDN_TheWorld_Edit::editModeSave(void)
 			TheWorld_Utils::MeshCacheBuffer& cache = quadToSave->getQuadrant()->getMeshCacheBuffer();
 			TheWorld_Utils::MeshCacheBuffer::CacheData cacheData;
 			cacheData.meshId = cache.getMeshId();
-			TerrainEdit* terrainEdit = quadToSave->getQuadrant()->getTerrainEdit();
+			TheWorld_Utils::TerrainEdit* terrainEdit = quadToSave->getQuadrant()->getTerrainEdit();
+			terrainEdit->needUploadToServer = true;
+			quadToSave->getQuadrant()->setNeedUploadToServer(true);
 			TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
 			cacheData.minHeight = terrainEdit->minHeight;
 			cacheData.maxHeight = terrainEdit->maxHeight;
@@ -687,6 +696,8 @@ void GDN_TheWorld_Edit::editModeUploadAction(void)
 
 void GDN_TheWorld_Edit::editModeUpload(void)
 {
+	editModeSave();
+		
 	if (m_actionClock.counterStarted())
 	{
 		m_actionInProgress = false;
@@ -697,7 +708,40 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditUpload 1 ") + __FUNCTION__, "ALL");
 
-	// TODO
+	std::vector<QuadrantPos> allQuandrantPos;
+	m_viewer->getAllQuadrantPos(allQuandrantPos);
+
+	for (auto& pos : allQuandrantPos)
+	{
+		QuadTree* quadTree = m_viewer->getQuadTree(pos);
+		if (quadTree != nullptr)
+		{
+			if (quadTree->getQuadrant()->needUploadToServer())
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("EditUpload 1.1 ") + __FUNCTION__, "Single QuadTree");
+
+				TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
+				TheWorld_Utils::MeshCacheBuffer::CacheData cacheData;
+				cacheData.meshId = cache.getMeshId();
+				TheWorld_Utils::TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
+				terrainEdit->needUploadToServer = false;
+				TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
+				cacheData.minHeight = terrainEdit->minHeight;
+				cacheData.maxHeight = terrainEdit->maxHeight;
+				cacheData.terrainEditValues = &terrainEditValuesBuffer;
+				cacheData.heights16Buffer = &quadTree->getQuadrant()->getFloat16HeightsBuffer();
+				cacheData.heights32Buffer = &quadTree->getQuadrant()->getFloat32HeightsBuffer();
+				cacheData.normalsBuffer = &quadTree->getQuadrant()->getNormalsBuffer();
+				std::string buffer;
+				cache.setBufferFromCacheData(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), cacheData, buffer);
+				// UPLOAD buffer
+
+				cache.writeBufferToCache(buffer);
+
+				quadTree->getQuadrant()->setNeedUploadToServer(false);
+			}
+		}
+	}
 
 	m_actionClock.tock();
 
@@ -741,7 +785,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1 ") + __FUNCTION__, "ALL");
 
-	TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
+	TheWorld_Utils::TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
 	terrainEdit->noiseSeed = seed();
 	terrainEdit->frequency = frequency();
 	terrainEdit->fractalOctaves = octaves();
@@ -750,7 +794,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	terrainEdit->fractalWeightedStrength = weightedStrength();
 	terrainEdit->fractalPingPongStrength = pingPongStrength();
 	terrainEdit->amplitude = amplitude();
-	terrainEdit->needUploadToServer = true;
+	//terrainEdit->needUploadToServer = true;
 
 	FastNoiseLite noise(terrainEdit->noiseSeed);
 	noise.SetNoiseType(FastNoiseLite::NoiseType::NoiseType_Perlin);
@@ -960,6 +1004,18 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 
 	m_actionClock.tick();
 
+	bool genAllNormals = m_genAllNormals->is_pressed();
+
+	QuadTree* quadTreeSel = nullptr;
+	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
+
+	if (!genAllNormals && quadrantSelPos.empty())
+	{
+		m_actionClock.tock();
+		m_actionInProgress = false;
+		return;
+	}
+
 	std::vector<QuadrantPos> allQuandrantPos;
 	m_viewer->getAllQuadrantPos(allQuandrantPos);
 
@@ -971,19 +1027,25 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer();
 			if (normalsBuffer.size() == 0)
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("EditGenMesh 1.1 ") + __FUNCTION__, "Single QuadTree");
+				if (genAllNormals || pos == quadrantSelPos)
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditGenMesh 1.1 ") + __FUNCTION__, "Single QuadTree");
 
-				TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
-				TheWorld_Utils::MemoryBuffer& heightsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
-				size_t numElements = heightsBuffer.size() / sizeof(float);
-				my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
-				//std::vector<float> vectGridHeights((float*)heightsBuffer.ptr(), (float*)heightsBuffer.ptr() + numElements);
-				std::vector<float> vectGridHeights;
-				heightsBuffer.populateFloatVector(vectGridHeights);
-				cache.generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
-				m_mapQuadToSave[pos] = "";
-				quadTree->getQuadrant()->setNormalsUpdated(true);
-				quadTree->materialParamsNeedReset(true);
+					TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
+					TheWorld_Utils::MemoryBuffer& heightsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
+					size_t numElements = heightsBuffer.size() / sizeof(float);
+					my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
+					//std::vector<float> vectGridHeights((float*)heightsBuffer.ptr(), (float*)heightsBuffer.ptr() + numElements);
+					std::vector<float> vectGridHeights;
+					heightsBuffer.populateFloatVector(vectGridHeights);
+					cache.generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
+					m_mapQuadToSave[pos] = "";
+					quadTree->getQuadrant()->setNormalsUpdated(true);
+					quadTree->materialParamsNeedReset(true);
+
+					if (!genAllNormals)
+						break;
+				}
 			}
 		}
 	}

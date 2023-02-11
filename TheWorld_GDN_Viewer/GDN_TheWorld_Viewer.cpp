@@ -34,55 +34,55 @@ namespace fs = std::filesystem;
 // Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 // Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 
-TerrainEdit::TerrainEdit(void)
-{
-	size = sizeof(TerrainEdit);
-	needUploadToServer = false;
-
-	noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
-	rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
-	noiseSeed = 1337;
-	frequency = 0.0005f;
-	fractalType = FastNoiseLite::FractalType::FractalType_FBm;
-	fractalOctaves = 5;
-	fractalLacunarity = 2.0f;
-	fractalGain = 0.5f;
-	fractalWeightedStrength = 0.0f;
-	fractalPingPongStrength = 2.0f;
-	
-	cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
-	cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
-	cellularJitter = 1.0f;
-
-	warpNoiseDomainWarpType = -1;
-	warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
-	warpNoiseSeed = 1337;
-	warpNoiseDomainWarpAmp = 30.0f;
-	warpNoiseFrequency = 0.005f;
-	warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
-	warpNoiseFractalOctaves = 5;
-	warpNoiseFractalLacunarity = 2.0f;
-	warpNoiseFractalGain = 0.5f;
-
-	amplitude = 1000;
-	minHeight = 0;
-	maxHeight = 0;
-}
-
-void TerrainEdit::serialize(TheWorld_Utils::MemoryBuffer& buffer)
-{
-	buffer.reserve(sizeof(TerrainEdit));
-	buffer.set((BYTE*)this, sizeof(TerrainEdit));
-}
-
-void TerrainEdit::deserialize(TheWorld_Utils::MemoryBuffer& buffer)
-{
-	size_t minLen = (buffer.size() <= size ? buffer.size() : size);
-	//assert(buffer.len() == sizeof(TerrainEdit));
-	size_t saveSize = size;
-	memcpy(this, buffer.ptr(), minLen);
-	size = saveSize;
-}
+//TerrainEdit::TerrainEdit(void)
+//{
+//	size = sizeof(TerrainEdit);
+//	needUploadToServer = false;
+//
+//	noiseType = FastNoiseLite::NoiseType::NoiseType_Perlin;
+//	rotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+//	noiseSeed = 1337;
+//	frequency = 0.0005f;
+//	fractalType = FastNoiseLite::FractalType::FractalType_FBm;
+//	fractalOctaves = 5;
+//	fractalLacunarity = 2.0f;
+//	fractalGain = 0.5f;
+//	fractalWeightedStrength = 0.0f;
+//	fractalPingPongStrength = 2.0f;
+//	
+//	cellularDistanceFunction = FastNoiseLite::CellularDistanceFunction::CellularDistanceFunction_EuclideanSq;
+//	cellularReturnType = FastNoiseLite::CellularReturnType::CellularReturnType_Distance;
+//	cellularJitter = 1.0f;
+//
+//	warpNoiseDomainWarpType = -1;
+//	warpNoiseRotationType3D = FastNoiseLite::RotationType3D::RotationType3D_None;
+//	warpNoiseSeed = 1337;
+//	warpNoiseDomainWarpAmp = 30.0f;
+//	warpNoiseFrequency = 0.005f;
+//	warpNoieseFractalType = FastNoiseLite::FractalType::FractalType_None;
+//	warpNoiseFractalOctaves = 5;
+//	warpNoiseFractalLacunarity = 2.0f;
+//	warpNoiseFractalGain = 0.5f;
+//
+//	amplitude = 1000;
+//	minHeight = 0;
+//	maxHeight = 0;
+//}
+//
+//void TerrainEdit::serialize(TheWorld_Utils::MemoryBuffer& buffer)
+//{
+//	buffer.reserve(sizeof(TerrainEdit));
+//	buffer.set((BYTE*)this, sizeof(TerrainEdit));
+//}
+//
+//void TerrainEdit::deserialize(TheWorld_Utils::MemoryBuffer& buffer)
+//{
+//	size_t minLen = (buffer.size() <= size ? buffer.size() : size);
+//	//assert(buffer.len() == sizeof(TerrainEdit));
+//	size_t saveSize = size;
+//	memcpy(this, buffer.ptr(), minLen);
+//	size = saveSize;
+//}
 
 void GDN_TheWorld_Viewer::_register_methods()
 {
@@ -651,7 +651,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 					editModeUIControl->setMouseQuadSelPosLabelText(std::string("X=") + std::to_string(m_quadrantSelPos.getLowerXGridVertex()) + " Z=" + std::to_string(m_quadrantSelPos.getLowerZGridVertex()) + " " + std::to_string(m_quadrantSelPos.getSizeInWU()));
 					if (quadTree != nullptr)
 					{
-						TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
+						TheWorld_Utils::TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
 						editModeUIControl->setSeed(terrainEdit->noiseSeed);
 						editModeUIControl->setFrequency(terrainEdit->frequency);
 						editModeUIControl->setOctaves(terrainEdit->fractalOctaves);

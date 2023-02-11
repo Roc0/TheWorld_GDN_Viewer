@@ -6,6 +6,7 @@
 #include <MarginContainer.hpp>
 #include <Label.hpp>
 #include <LineEdit.hpp>
+#include <CheckBox.hpp>
 
 namespace godot
 {
@@ -129,6 +130,8 @@ namespace godot
 		godot::Label* m_mouseQuadHitPosLabel;
 		godot::Label* m_mouseQuadSelLabel;
 		godot::Label* m_mouseQuadSelPosLabel;
+
+		godot::CheckBox* m_genAllNormals;
 
 		std::map<QuadrantPos, std::string> m_mapQuadToSave;
 

@@ -255,6 +255,7 @@ namespace godot
 			m_heigthsUpdated = false;
 			m_normalsUpdated = false;
 			m_colorsUpdated = false;
+			m_needUploadToServer = false;
 		}
 
 		~Quadrant()
@@ -322,11 +323,21 @@ namespace godot
 			return m_normalsBuffer;
 		}
 
-		TerrainEdit* getTerrainEdit()
+		TheWorld_Utils::TerrainEdit* getTerrainEdit()
 		{
 			if (m_terrainEdit == nullptr)
-				m_terrainEdit = make_unique<TerrainEdit>();
+				m_terrainEdit = make_unique<TheWorld_Utils::TerrainEdit>();
 			return m_terrainEdit.get();
+		}
+
+		void setNeedUploadToServer(bool b)
+		{
+			m_needUploadToServer = b;
+		}
+
+		bool needUploadToServer(void)
+		{
+			return m_needUploadToServer;
 		}
 
 		void setHeightsUpdated(bool b)
@@ -367,13 +378,14 @@ namespace godot
 		bool m_heigthsUpdated;
 		bool m_normalsUpdated;
 		bool m_colorsUpdated;
-		std::unique_ptr<TerrainEdit> m_terrainEdit;
+		std::unique_ptr<TheWorld_Utils::TerrainEdit> m_terrainEdit;
 		godot::PoolRealArray m_heigths;
 		std::string m_meshId;
 		TheWorld_Utils::MeshCacheBuffer m_cache;
 		godot::AABB m_globalCoordAABB;
 		std::unique_ptr<Collider> m_collider;
 		std::unique_ptr<ShaderTerrainData> m_shaderTerrainData;
+		bool m_needUploadToServer;
 	};
 
 	class ShaderTerrainData
