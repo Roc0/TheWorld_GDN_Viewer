@@ -7,6 +7,7 @@
 #include <Label.hpp>
 #include <LineEdit.hpp>
 #include <CheckBox.hpp>
+#include <OptionButton.hpp>
 
 namespace godot
 {
@@ -60,12 +61,16 @@ namespace godot
 		void editModeSaveAction(void);
 		void editModeUploadAction(void);
 		void editModeStopAction(void);
+		void editModeSelectTerrainTypeAction(int64_t index);
 
 		void editModeGenerate(void);
 		void editModeMend(void);
 		void editModeGenNormals(void);
 		void editModeSave(void);
 		void editModeUpload(void);
+
+		void setEmptyTerrainEditValues(void);
+		void setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrainEdit);
 
 		void setSeed(int seed);
 		int seed(void);
@@ -140,6 +145,7 @@ namespace godot
 		godot::Label* m_mouseQuadSelPosLabel;
 
 		godot::CheckBox* m_genAllNormals;
+		godot::OptionButton* m_terrTypeOptionButton;
 
 		std::map<QuadrantPos, std::string> m_mapQuadToSave;
 

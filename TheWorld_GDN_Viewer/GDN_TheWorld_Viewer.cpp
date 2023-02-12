@@ -589,16 +589,17 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 				{
 					editModeUIControl->setMouseQuadSelLabelText("");
 					editModeUIControl->setMouseQuadSelPosLabelText("");
-					editModeUIControl->setSeed(0);
-					editModeUIControl->setFrequency(0.0f);
-					editModeUIControl->setOctaves(0);
-					editModeUIControl->setLacunarity(0.0f);
-					editModeUIControl->setGain(0.0f);
-					editModeUIControl->setWeightedStrength(0.0f);
-					editModeUIControl->setPingPongStrength(0.0f);
-					editModeUIControl->setAmplitude(0);
-					editModeUIControl->setMinHeight(0.0f);
-					editModeUIControl->setMaxHeight(0.0f);
+					editModeUIControl->setEmptyTerrainEditValues();
+					//editModeUIControl->setSeed(0);
+					//editModeUIControl->setFrequency(0.0f);
+					//editModeUIControl->setOctaves(0);
+					//editModeUIControl->setLacunarity(0.0f);
+					//editModeUIControl->setGain(0.0f);
+					//editModeUIControl->setWeightedStrength(0.0f);
+					//editModeUIControl->setPingPongStrength(0.0f);
+					//editModeUIControl->setAmplitude(0);
+					//editModeUIControl->setMinHeight(0.0f);
+					//editModeUIControl->setMaxHeight(0.0f);
 					editModeUIControl->setElapsed(0, false);
 				}
 				else
@@ -608,17 +609,18 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 					if (quadTree != nullptr)
 					{
 						TheWorld_Utils::TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
-						editModeUIControl->setSeed(terrainEdit->noiseSeed);
-						editModeUIControl->setFrequency(terrainEdit->frequency);
-						editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
-						editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
-						editModeUIControl->setGain(terrainEdit->fractalGain);
-						editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
-						editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
-						editModeUIControl->setAmplitude(terrainEdit->amplitude);
-						editModeUIControl->setMinHeight(terrainEdit->minHeight);
-						editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
-						//editModeUIControl->setElapsed(0);
+						editModeUIControl->setTerrainEditValues(*terrainEdit);
+						//editModeUIControl->setSeed(terrainEdit->noiseSeed);
+						//editModeUIControl->setFrequency(terrainEdit->frequency);
+						//editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
+						//editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
+						//editModeUIControl->setGain(terrainEdit->fractalGain);
+						//editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
+						//editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
+						//editModeUIControl->setAmplitude(terrainEdit->amplitude);
+						//editModeUIControl->setMinHeight(terrainEdit->minHeight);
+						//editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
+						////editModeUIControl->setElapsed(0);
 					}
 				}
 			}

@@ -9,6 +9,7 @@
 #include <Button.hpp>
 #include <Label.hpp>
 #include <CheckBox.hpp>
+#include <OptionButton.hpp>
 #include <HSeparator.hpp>
 #include <VSeparator.hpp>
 
@@ -17,6 +18,7 @@
 
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Edit.h"
+#include "Utils.h"
 #include "FastNoiseLite.h"
 #include "half.h"
 
@@ -36,6 +38,7 @@ void GDN_TheWorld_Edit::_register_methods()
 	register_method("edit_mode_save", &GDN_TheWorld_Edit::editModeSaveAction);
 	register_method("edit_mode_upload", &GDN_TheWorld_Edit::editModeUploadAction);
 	register_method("edit_mode_stop", &GDN_TheWorld_Edit::editModeStopAction);
+	register_method("edit_mode_sel_terr_type", &GDN_TheWorld_Edit::editModeSelectTerrainTypeAction);
 }
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
@@ -65,6 +68,7 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_genAllNormals = nullptr;
 	m_allItems = 0;
 	m_completedItems = 0;
+	m_terrTypeOptionButton = nullptr;
 }
 
 GDN_TheWorld_Edit::~GDN_TheWorld_Edit()
@@ -124,6 +128,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	godot::Control* separator = nullptr;
 	godot::Button* button = nullptr;
 	godot::Label* label = nullptr;
+	//godot::OptionButton* optionButton = nullptr;
 	//godot::CheckBox* checkBox = nullptr;
 
 	godot::Control* mainTabContainer = godot::TabContainer::_new();
@@ -137,13 +142,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		godot::Control* mainVBoxContainer = godot::VBoxContainer::_new();
 		mainPanelContainer->add_child(mainVBoxContainer);
 			
-		//	marginContainer = godot::MarginContainer::_new();
-		//	mainVBoxContainer->add_child(marginContainer);
-		//		label = godot::Label::_new();
-		//		marginContainer->add_child(label);
-		//		label->set_text("Terrain");
-		//		label->set_align(godot::Label::Align::ALIGN_CENTER);
-
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
 
@@ -179,6 +177,22 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(marginContainer);
 				hBoxContainer = godot::HBoxContainer::_new();
 				marginContainer->add_child(hBoxContainer);
+					m_terrTypeOptionButton = godot::OptionButton::_new();
+					hBoxContainer->add_child(m_terrTypeOptionButton);
+					//optionButton->connect("pressed", this, "edit_mode_sel_terr_type");
+					m_terrTypeOptionButton->connect("item_selected", this, "edit_mode_sel_terr_type");
+					m_terrTypeOptionButton->set_focus_mode(FocusMode::FOCUS_NONE);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::unknown).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::unknown);
+					m_terrTypeOptionButton->add_separator();
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::campaign_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::campaign_1);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::campaign_2).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::campaign_2);
+					m_terrTypeOptionButton->add_separator();
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::noise_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::noise_1);
+
+			marginContainer = godot::MarginContainer::_new();
+			mainVBoxContainer->add_child(marginContainer);
+				hBoxContainer = godot::HBoxContainer::_new();
+				marginContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
 					label->set_text("Seed");
@@ -194,18 +208,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					hBoxContainer->add_child(m_frequency);
 					m_frequency->set_align(godot::Label::Align::ALIGN_RIGHT);
 
-			//marginContainer = godot::MarginContainer::_new();
-			//mainVBoxContainer->add_child(marginContainer);
-			//	hBoxContainer = godot::HBoxContainer::_new();
-			//	marginContainer->add_child(hBoxContainer);
-			//		label = godot::Label::_new();
-			//		hBoxContainer->add_child(label);
-			//		label->set_text("Frequency");
-			//		label->set_align(godot::Label::Align::ALIGN_LEFT);
-			//		m_frequency = godot::LineEdit::_new();
-			//		hBoxContainer->add_child(m_frequency);
-			//		m_frequency->set_align(godot::Label::Align::ALIGN_RIGHT);
-					
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
 				hBoxContainer = godot::HBoxContainer::_new();
@@ -225,18 +227,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					hBoxContainer->add_child(m_fractalLacunarity);
 					m_fractalLacunarity->set_align(godot::Label::Align::ALIGN_RIGHT);
 
-			//marginContainer = godot::MarginContainer::_new();
-			//mainVBoxContainer->add_child(marginContainer);
-			//	hBoxContainer = godot::HBoxContainer::_new();
-			//	marginContainer->add_child(hBoxContainer);
-			//		label = godot::Label::_new();
-			//		hBoxContainer->add_child(label);
-			//		label->set_text("Lacunarity");
-			//		label->set_align(godot::Label::Align::ALIGN_LEFT);
-			//		m_fractalLacunarity = godot::LineEdit::_new();
-			//		hBoxContainer->add_child(m_fractalLacunarity);
-			//		m_fractalLacunarity->set_align(godot::Label::Align::ALIGN_RIGHT);
-					
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
 				hBoxContainer = godot::HBoxContainer::_new();
@@ -279,18 +269,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalPingPongStrength = godot::LineEdit::_new();
 					hBoxContainer->add_child(m_fractalPingPongStrength);
 					m_fractalPingPongStrength->set_align(godot::Label::Align::ALIGN_RIGHT);
-
-			//marginContainer = godot::MarginContainer::_new();
-			//mainVBoxContainer->add_child(marginContainer);
-			//	hBoxContainer = godot::HBoxContainer::_new();
-			//	marginContainer->add_child(hBoxContainer);
-			//		label = godot::Label::_new();
-			//		hBoxContainer->add_child(label);
-			//		label->set_text("Amplitude");
-			//		label->set_align(godot::Label::Align::ALIGN_LEFT);
-			//		m_amplitudeLabel = godot::LineEdit::_new();
-			//		hBoxContainer->add_child(m_amplitudeLabel);
-			//		m_amplitudeLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -441,6 +419,48 @@ void GDN_TheWorld_Edit::resizeUI(void)
 	set_margin(GDN_TheWorld_Edit::Margin::MARGIN_TOP, 0.0);
 	set_margin(GDN_TheWorld_Edit::Margin::MARGIN_LEFT, get_viewport()->get_size().x - 350);
 	set_margin(GDN_TheWorld_Edit::Margin::MARGIN_BOTTOM, 0.0);
+}
+
+void GDN_TheWorld_Edit::setEmptyTerrainEditValues(void)
+{
+	m_terrTypeOptionButton->select(m_terrTypeOptionButton->get_item_index((int64_t)TheWorld_Utils::TerrainEdit::TerrainType::unknown));
+
+	setSeed(0);
+	setFrequency(0.0f);
+	setOctaves(0);
+	setLacunarity(0.0f);
+	setGain(0.0f);
+	setWeightedStrength(0.0f);
+	setPingPongStrength(0.0f);
+	setAmplitude(0);
+	setMinHeight(0.0f);
+	setMaxHeight(0.0f);
+}
+
+void GDN_TheWorld_Edit::setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrainEdit)
+{
+	int64_t id = m_terrTypeOptionButton->get_selected_id();
+	if (id != -1)
+	{
+		TheWorld_Utils::TerrainEdit::TerrainType selectedTerrainType = (TheWorld_Utils::TerrainEdit::TerrainType)id;
+		if (selectedTerrainType != terrainEdit.terrainType)
+		{
+			//std::string text = TheWorld_Utils::TerrainEdit::terrainTypeString(terrainEdit.terrainType);
+			//m_terrTypeOptionButton->set_text(text.c_str());
+			m_terrTypeOptionButton->select(m_terrTypeOptionButton->get_item_index((int64_t)terrainEdit.terrainType));
+		}
+	}
+	
+	setSeed(terrainEdit.noiseSeed);
+	setFrequency(terrainEdit.frequency);
+	setOctaves(terrainEdit.fractalOctaves);
+	setLacunarity(terrainEdit.fractalLacunarity);
+	setGain(terrainEdit.fractalGain);
+	setWeightedStrength(terrainEdit.fractalWeightedStrength);
+	setPingPongStrength(terrainEdit.fractalPingPongStrength);
+	setAmplitude(terrainEdit.amplitude);
+	setMinHeight(terrainEdit.minHeight);
+	setMaxHeight(terrainEdit.maxHeight);
 }
 
 void GDN_TheWorld_Edit::setSeed(int seed)
@@ -1204,4 +1224,13 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	setCounter(m_completedItems, m_allItems);
 
 	m_actionInProgress = false;
+}
+
+void GDN_TheWorld_Edit::editModeSelectTerrainTypeAction(int64_t index)
+{
+	enum class TheWorld_Utils::TerrainEdit::TerrainType terrainType = (enum class TheWorld_Utils::TerrainEdit::TerrainType)m_terrTypeOptionButton->get_item_id(index);
+	std::string s = TheWorld_Utils::TerrainEdit::terrainTypeString(terrainType);
+
+	TheWorld_Utils::TerrainEdit terrainEdit(terrainType);
+	setTerrainEditValues(terrainEdit);
 }

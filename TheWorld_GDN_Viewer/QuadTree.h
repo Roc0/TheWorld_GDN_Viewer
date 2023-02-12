@@ -327,7 +327,10 @@ namespace godot
 		TheWorld_Utils::TerrainEdit* getTerrainEdit()
 		{
 			if (m_terrainEdit == nullptr)
+			{
+				//m_terrainEdit = make_unique<TheWorld_Utils::TerrainEdit>(TheWorld_Utils::TerrainEdit::TerrainType::campaign_1);
 				m_terrainEdit = make_unique<TheWorld_Utils::TerrainEdit>();
+			}
 			return m_terrainEdit.get();
 		}
 
