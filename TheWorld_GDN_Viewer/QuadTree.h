@@ -256,6 +256,7 @@ namespace godot
 			m_normalsUpdated = false;
 			m_colorsUpdated = false;
 			m_needUploadToServer = false;
+			m_empty = true;
 		}
 
 		~Quadrant()
@@ -364,6 +365,14 @@ namespace godot
 		{
 			return m_colorsUpdated;
 		}
+		void setEmpty(bool b)
+		{
+			m_empty = b;
+		}
+		bool empty(void)
+		{
+			return m_empty;
+		}
 
 	private:
 		TheWorld_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
@@ -386,6 +395,7 @@ namespace godot
 		std::unique_ptr<Collider> m_collider;
 		std::unique_ptr<ShaderTerrainData> m_shaderTerrainData;
 		bool m_needUploadToServer;
+		bool m_empty;
 	};
 
 	class ShaderTerrainData

@@ -59,6 +59,7 @@ namespace godot
 		void editModeGenNormalsAction(void);
 		void editModeSaveAction(void);
 		void editModeUploadAction(void);
+		void editModeStopAction(void);
 
 		void editModeGenerate(void);
 		void editModeMend(void);
@@ -111,6 +112,7 @@ namespace godot
 		GDN_TheWorld_Viewer* m_viewer;
 
 		bool m_actionInProgress;
+		bool m_actionStopRequested;
 		TheWorld_Utils::TimerMs m_actionClock;
 		bool m_onGoingElapsedLabel;
 		Color m_elapsedLabelNormalColor;

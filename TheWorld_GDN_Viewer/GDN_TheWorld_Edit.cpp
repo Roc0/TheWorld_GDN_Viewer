@@ -35,12 +35,14 @@ void GDN_TheWorld_Edit::_register_methods()
 	register_method("edit_mode_gen_normals", &GDN_TheWorld_Edit::editModeGenNormalsAction);
 	register_method("edit_mode_save", &GDN_TheWorld_Edit::editModeSaveAction);
 	register_method("edit_mode_upload", &GDN_TheWorld_Edit::editModeUploadAction);
+	register_method("edit_mode_stop", &GDN_TheWorld_Edit::editModeStopAction);
 }
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 {
 	m_initialized = false;
 	m_actionInProgress = false;
+	m_actionStopRequested = false;
 	m_onGoingElapsedLabel = false;
 	m_viewer = nullptr;
 	m_seed = nullptr;
@@ -85,6 +87,7 @@ void GDN_TheWorld_Edit::replyFromServer(TheWorld_ClientServer::ClientServerExecu
 	{
 		if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER)
 		{
+			m_completedItems++;
 		}
 		else
 		{
@@ -408,6 +411,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					button->set_text("Upload");
 					button->connect("pressed", this, "edit_mode_upload");
 					button->set_focus_mode(FocusMode::FOCUS_NONE);
+					separator = VSeparator::_new();
+					hBoxContainer->add_child(separator);
+					button = godot::Button::_new();
+					hBoxContainer->add_child(button);
+					button->set_text("Stop");
+					button->connect("pressed", this, "edit_mode_stop");
+					button->set_focus_mode(FocusMode::FOCUS_NONE);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -675,6 +685,14 @@ void GDN_TheWorld_Edit::_process(float _delta)
 	}
 }
 
+void GDN_TheWorld_Edit::editModeStopAction(void)
+{
+	if (!m_actionInProgress)
+		return;
+
+	m_actionStopRequested = true;
+}
+
 void GDN_TheWorld_Edit::editModeSaveAction(void)
 {
 	if (m_actionInProgress)
@@ -704,8 +722,14 @@ void GDN_TheWorld_Edit::editModeSave(void)
 	m_allItems = m_mapQuadToSave.size();
 	for (auto& item : m_mapQuadToSave)
 	{
+		if (m_actionStopRequested)
+		{
+			m_actionStopRequested = false;
+			break;
+		}
+		
 		QuadTree* quadToSave = m_viewer->getQuadTree(item.first);
-		if (quadToSave != nullptr)
+		if (quadToSave != nullptr && !quadToSave->getQuadrant()->empty())
 		{
 			TheWorld_Utils::MeshCacheBuffer& cache = quadToSave->getQuadrant()->getMeshCacheBuffer();
 			TheWorld_Utils::MeshCacheBuffer::CacheData cacheData;
@@ -787,6 +811,12 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	m_allItems = quandrantPos.size();
 	for (auto& pos : quandrantPos)
 	{
+		if (m_actionStopRequested)
+		{
+			m_actionStopRequested = false;
+			break;
+		}
+
 		QuadTree* quadTree = m_viewer->getQuadTree(pos);
 		if (quadTree != nullptr)
 		{
@@ -817,10 +847,11 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 			cache.writeBufferToCache(buffer);
 
 			quadTree->getQuadrant()->setNeedUploadToServer(false);
-
-			m_completedItems++;
 		}
 	}
+	
+	while (!m_actionStopRequested && m_allItems > m_completedItems)
+		Sleep(10);
 	
 	m_actionClock.tock();
 
@@ -985,6 +1016,8 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	quadTreeSel->getQuadrant()->setColorsUpdated(true);
 	quadTreeSel->materialParamsNeedReset(true);
 
+	quadTreeSel->getQuadrant()->setEmpty(false);
+
 	m_mapQuadToSave[quadrantSelPos] = "";
 
 	//std::string meshBuffer;
@@ -1113,7 +1146,7 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	for (auto& pos : allQuandrantPos)
 	{
 		QuadTree* quadTree = m_viewer->getQuadTree(pos);
-		if (quadTree != nullptr)
+		if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
 		{
 			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer();
 			if (normalsBuffer.size() == 0)
@@ -1133,6 +1166,12 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	m_allItems = quandrantPos.size();
 	for (auto& pos : quandrantPos)
 	{
+		if (m_actionStopRequested)
+		{
+			m_actionStopRequested = false;
+			break;
+		}
+
 		QuadTree* quadTree = m_viewer->getQuadTree(pos);
 		if (quadTree != nullptr)
 		{

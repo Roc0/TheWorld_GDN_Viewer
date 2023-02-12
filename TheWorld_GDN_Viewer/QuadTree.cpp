@@ -1363,7 +1363,11 @@ void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std:
 			if (terrainEditValuesBuffer.size() > 0)
 				getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 		}
+
+		setEmpty(true);
 	}
+	else
+		setEmpty(false);
 
 	assert(!m_float16HeigthsBuffer.empty());
 
