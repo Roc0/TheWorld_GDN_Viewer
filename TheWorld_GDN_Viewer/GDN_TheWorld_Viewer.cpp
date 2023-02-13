@@ -2566,10 +2566,14 @@ bool GDN_TheWorld_Viewer::terrainShiftPermitted(void)
 		return true;
 	else
 	{
-		if (!editMode() && !editModeUIControl->actionInProgress())
-			return true;
-		else
+		if (editModeUIControl->UIAcceptingFocus())
 			return false;
+		else
+			return true;
+		//if (!editMode() && !editModeUIControl->actionInProgress())
+		//	return true;
+		//else
+		//	return false;
 	}
 
 	return true;

@@ -3,6 +3,8 @@
 #include <Node.hpp>
 #include <Reference.hpp>
 #include <InputEvent.hpp>
+#include <PanelContainer.hpp>
+#include <TabContainer.hpp>
 #include <MarginContainer.hpp>
 #include <Label.hpp>
 #include <LineEdit.hpp>
@@ -72,6 +74,11 @@ namespace godot
 		void setEmptyTerrainEditValues(void);
 		void setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrainEdit);
 
+		void editModeMouseEnteredMainPanel(void);
+		void editModeMouseExitedMainPanel(void);
+		void setUIAcceptFocus(bool b);
+		bool UIAcceptingFocus(void);
+
 		void setSeed(int seed);
 		int seed(void);
 		void setFrequency(float frequency);
@@ -123,7 +130,12 @@ namespace godot
 		Color m_elapsedLabelNormalColor;
 		size_t m_completedItems;
 		size_t m_allItems;
+		bool m_requiredUIAcceptFocus;
+		bool m_UIAcceptingFocus;
 
+		godot::PanelContainer* m_mainPanelContainer;
+		godot::TabContainer* m_mainTabContainer;
+		
 		godot::LineEdit* m_seed;
 		godot::LineEdit* m_frequency;
 		godot::LineEdit* m_fractalOctaves;
