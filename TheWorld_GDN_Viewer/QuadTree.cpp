@@ -1403,13 +1403,13 @@ void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std:
 
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("SetColliderHeights ") + __FUNCTION__, "ALL");
-		m_heigths.resize((int)numFloat32Heights);
-		godot::PoolRealArray::Write w = m_heigths.write();
+		m_heights.resize((int)numFloat32Heights);
+		godot::PoolRealArray::Write w = m_heights.write();
 		memcpy((char*)w.ptr(), m_float32HeigthsBuffer.ptr(), m_float32HeigthsBuffer.size());
 		//{
 		//	uint16_t* ptrFrom = (uint16_t*)m_float16HeigthsBuffer.ptr();
-		//	m_heigths.resize((int)numFloat16Heights);
-		//	godot::PoolRealArray::Write w = m_heigths.write();
+		//	m_heights.resize((int)numFloat16Heights);
+		//	godot::PoolRealArray::Write w = m_heights.write();
 		//	float* ptrTo = w.ptr();
 		//	for (size_t idx = 0; idx < numFloat16Heights; idx++)
 		//	{

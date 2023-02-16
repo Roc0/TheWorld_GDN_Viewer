@@ -39,6 +39,8 @@ namespace godot
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 	// Chunk and QuadTree coordinates are in Viewer Node local coordinate System
+	// X growing on East direction
+	// Z growing on South direction
 	class GDN_TheWorld_Viewer : public Spatial, public TheWorld_ClientServer::ClientCallback
 	{
 		GODOT_CLASS(GDN_TheWorld_Viewer, Spatial)

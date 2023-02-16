@@ -11,6 +11,8 @@
 #include <CheckBox.hpp>
 #include <OptionButton.hpp>
 
+#include <WorldModifier.h>
+
 namespace godot
 {
 	//class GDN_TheWorld_Viewer;
@@ -123,6 +125,8 @@ namespace godot
 		bool m_initialized;
 		GDN_TheWorld_Viewer* m_viewer;
 
+		map<TheWorld_Utils::WorldModifierPos, std::unique_ptr<TheWorld_Utils::WorldModifier>> m_wms;
+		
 		bool m_actionInProgress;
 		bool m_actionStopRequested;
 		TheWorld_Utils::TimerMs m_actionClock;

@@ -18,6 +18,7 @@
 
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Edit.h"
+#include "WorldModifier.h"
 #include "Utils.h"
 #include "FastNoiseLite.h"
 #include "half.h"
@@ -168,6 +169,10 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 {
 	m_initialized = true;
 	m_viewer = viewer;
+
+	TheWorld_Utils::WorldModifierPos pos(0, 4096, 4096, TheWorld_Utils::WMType::elevator, 0);
+	m_wms[pos] = std::make_unique<TheWorld_Utils::WorldModifier>(pos, TheWorld_Utils::WMFunctionType::Add, 10000.0f, -100.0f, 2000.0f, TheWorld_Utils::WMOrder::MaxEffectOnWM);
+
 
 	std::lock_guard<std::recursive_mutex> lock(m_viewer->getMainProcessingMutex());
 
@@ -645,13 +650,13 @@ void GDN_TheWorld_Edit::setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrai
 		}
 	}
 	
-	setSeed(terrainEdit.noiseSeed);
-	setFrequency(terrainEdit.frequency);
-	setOctaves(terrainEdit.fractalOctaves);
-	setLacunarity(terrainEdit.fractalLacunarity);
-	setGain(terrainEdit.fractalGain);
-	setWeightedStrength(terrainEdit.fractalWeightedStrength);
-	setPingPongStrength(terrainEdit.fractalPingPongStrength);
+	setSeed(terrainEdit.noise.noiseSeed);
+	setFrequency(terrainEdit.noise.frequency);
+	setOctaves(terrainEdit.noise.fractalOctaves);
+	setLacunarity(terrainEdit.noise.fractalLacunarity);
+	setGain(terrainEdit.noise.fractalGain);
+	setWeightedStrength(terrainEdit.noise.fractalWeightedStrength);
+	setPingPongStrength(terrainEdit.noise.fractalPingPongStrength);
 	setAmplitude(terrainEdit.amplitude);
 	setMinHeight(terrainEdit.minHeight);
 	setMaxHeight(terrainEdit.maxHeight);
@@ -1137,29 +1142,15 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1 ") + __FUNCTION__, "ALL");
 
 	TheWorld_Utils::TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
-	terrainEdit->noiseSeed = seed();
-	terrainEdit->frequency = frequency();
-	terrainEdit->fractalOctaves = octaves();
-	terrainEdit->fractalLacunarity = lacunarity();
-	terrainEdit->fractalGain = gain();
-	terrainEdit->fractalWeightedStrength = weightedStrength();
-	terrainEdit->fractalPingPongStrength = pingPongStrength();
+	terrainEdit->noise.noiseSeed = seed();
+	terrainEdit->noise.frequency = frequency();
+	terrainEdit->noise.fractalOctaves = octaves();
+	terrainEdit->noise.fractalLacunarity = lacunarity();
+	terrainEdit->noise.fractalGain = gain();
+	terrainEdit->noise.fractalWeightedStrength = weightedStrength();
+	terrainEdit->noise.fractalPingPongStrength = pingPongStrength();
 	terrainEdit->amplitude = amplitude();
 	//terrainEdit->needUploadToServer = true;
-
-	FastNoiseLite noise(terrainEdit->noiseSeed);
-	noise.SetNoiseType(FastNoiseLite::NoiseType::NoiseType_Perlin);
-	//noise.SetRotationType3D();
-	noise.SetFrequency(terrainEdit->frequency);
-	noise.SetFractalType(FastNoiseLite::FractalType::FractalType_FBm);
-	noise.SetFractalOctaves(terrainEdit->fractalOctaves);
-	noise.SetFractalLacunarity(terrainEdit->fractalLacunarity);
-	noise.SetFractalGain(terrainEdit->fractalGain);
-	noise.SetFractalWeightedStrength(terrainEdit->fractalWeightedStrength);
-	noise.SetFractalPingPongStrength(terrainEdit->fractalPingPongStrength);
-	//noise.SetCellularDistanceFunction();
-	//noise.SetCellularReturnType();
-	//noise.SetCellularJitter()
 
 	size_t numVerticesPerSize = quadrantSelPos.getNumVerticesPerSize();
 	size_t numVertices = numVerticesPerSize * numVerticesPerSize;
@@ -1168,57 +1159,37 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	float lowerXGridVertex = quadrantSelPos.getLowerXGridVertex();
 	float lowerZGridVertex = quadrantSelPos.getLowerZGridVertex();
 	
+	std::vector<float> vectGridHeights;
+	float minHeight = 0, maxHeight = 0;
+	TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1 ") + __FUNCTION__, "Generate Heights");
+		cache.generateHeights(numVerticesPerSize, gridStepInWU, lowerXGridVertex, lowerZGridVertex, terrainEdit->noise, terrainEdit->amplitude, vectGridHeights, minHeight, maxHeight);
+	}
+
 	TheWorld_Utils::MemoryBuffer& heights16Buffer = quadTreeSel->getQuadrant()->getFloat16HeightsBuffer();
 	size_t heights16BufferSize = numVertices * sizeof(uint16_t);
 	heights16Buffer.reserve(heights16BufferSize);
 	uint16_t* movingHeights16Buffer = (uint16_t*)heights16Buffer.ptr();
-	//std::vector<float> vectGridHeights(numVertices);;
-	//vectGridHeights.reserve(numVertices);
+	
 	TheWorld_Utils::MemoryBuffer& heights32Buffer = quadTreeSel->getQuadrant()->getFloat32HeightsBuffer();
 	size_t heights32BufferSize = numVertices * sizeof(float);
 	heights32Buffer.reserve(heights32BufferSize);
 	float* movingHeights32Buffer = (float*)heights32Buffer.ptr();
 
-	float minHeight = FLT_MAX;
-	float maxHeight = FLT_MIN;
-
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1 ") + __FUNCTION__, "Generate Heights");
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.2 ") + __FUNCTION__, "Move Heights");
 
 		size_t idx = 0;
 		for (int z = 0; z < numVerticesPerSize; z++)
 			for (int x = 0; x < numVerticesPerSize; x++)
 			{
-				float altitude = 0.0f;
-
-				{
-					//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1.1 ") + __FUNCTION__, "GetNoise");
-
-					float xf = lowerXGridVertex + (x * gridStepInWU);
-					float zf = lowerZGridVertex + (z * gridStepInWU);
-					altitude = noise.GetNoise(xf, zf);
-					// noises are value in range -1 to 1 we need to interpolate with amplitude
-					altitude *= (terrainEdit->amplitude / 2);
-
-					if (altitude < minHeight)
-						minHeight = altitude;
-					if (altitude > maxHeight)
-						maxHeight = altitude;
-				}
-
-				{
-					//TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1.2 ") + __FUNCTION__, "half_from_float");
-
-					TheWorld_Utils::FLOAT_32 f(altitude);
-					*movingHeights16Buffer = half_from_float(f.u32);;
-					movingHeights16Buffer++;
-				}
-
+				float altitude = vectGridHeights[idx];
+				TheWorld_Utils::FLOAT_32 f(altitude);
+				*movingHeights16Buffer = half_from_float(f.u32);;
+				movingHeights16Buffer++;
 				*movingHeights32Buffer = altitude;
 				movingHeights32Buffer++;
-				//vectGridHeights[idx] = altitude;
-				//vectGridHeights.push_back(altitude);
-
 				idx++;
 			}
 	}
@@ -1235,9 +1206,9 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	terrainEdit->maxHeight = maxHeight;
 
 	{
-		PoolRealArray& heigths = quadTreeSel->getQuadrant()->getHeights();
-		heigths.resize((int)numVertices);
-		godot::PoolRealArray::Write w = heigths.write();
+		PoolRealArray& heights = quadTreeSel->getQuadrant()->getHeights();
+		heights.resize((int)numVertices);
+		godot::PoolRealArray::Write w = heights.write();
 		memcpy((char*)w.ptr(), heights32Buffer.ptr(), heights32Buffer.size());
 	}
 

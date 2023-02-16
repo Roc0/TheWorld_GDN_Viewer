@@ -181,8 +181,17 @@ namespace godot
 			m_quadTree->Viewer()->getMainProcessingMutex().unlock();
 			m_colliderMeshInstance->init();
 
-			PoolRealArray& heights = m_quadTree->getQuadrant()->getHeights();
+			PoolRealArray heights;
+			int numVertices = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize() * m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
+			heights.resize((int)numVertices);
+			{
+				godot::PoolRealArray::Write w = heights.write();
+				memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().size());
+			}
+
 			size_t size = heights.size();
+			if (size == 0)
+				return;
 
 			PoolVector3Array positions;
 			PoolColorArray colors;

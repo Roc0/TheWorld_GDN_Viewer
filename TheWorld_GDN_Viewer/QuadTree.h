@@ -252,7 +252,7 @@ namespace godot
 			m_cache = TheWorld_Utils::MeshCacheBuffer(dir, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
 			m_shaderTerrainData = make_unique<ShaderTerrainData>(viewer, quadTree);
 			m_collider = make_unique<Collider>(quadTree);
-			m_heigthsUpdated = false;
+			m_heightsUpdated = false;
 			m_normalsUpdated = false;
 			m_colorsUpdated = false;
 			m_needUploadToServer = false;
@@ -274,7 +274,7 @@ namespace godot
 
 		PoolRealArray& getHeights(void)
 		{
-			return m_heigths;
+			return m_heights;
 		}
 
 		QuadrantPos getPos(void)
@@ -346,11 +346,11 @@ namespace godot
 
 		void setHeightsUpdated(bool b)
 		{
-			m_heigthsUpdated = b;
+			m_heightsUpdated = b;
 		}
 		bool heightsUpdated(void)
 		{
-			return m_heigthsUpdated;
+			return m_heightsUpdated;
 		}
 		void setNormalsUpdated(bool b)
 		{
@@ -386,12 +386,12 @@ namespace godot
 		QuadTree* m_quadTree;
 		TheWorld_Utils::MemoryBuffer m_float16HeigthsBuffer;	// each height is expressed as a 16-bit float (image with FORMAT_RH) and are serialized line by line (each line from x=0 to x=numVertexPerQuadrant, first line ==> z=0, last line z=numVertexPerQuadrant)
 		TheWorld_Utils::MemoryBuffer m_float32HeigthsBuffer;	// each height is expressed as a 32-bit and are serialized as above
-		TheWorld_Utils::MemoryBuffer m_normalsBuffer;			// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heigths
-		bool m_heigthsUpdated;
+		TheWorld_Utils::MemoryBuffer m_normalsBuffer;			// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heights
+		bool m_heightsUpdated;
 		bool m_normalsUpdated;
 		bool m_colorsUpdated;
 		std::unique_ptr<TheWorld_Utils::TerrainEdit> m_terrainEdit;
-		godot::PoolRealArray m_heigths;
+		godot::PoolRealArray m_heights;
 		std::string m_meshId;
 		TheWorld_Utils::MeshCacheBuffer m_cache;
 		godot::AABB m_globalCoordAABB;

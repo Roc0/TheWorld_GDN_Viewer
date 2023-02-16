@@ -129,6 +129,7 @@ namespace godot
 
 		int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
 		int areaSize = numVerticesPerSize * numVerticesPerSize;
+		my_assert(areaSize == m_quadTree->getQuadrant()->getHeights().size());
 		if (areaSize != m_quadTree->getQuadrant()->getHeights().size())
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Size of Heigths inconsistent, areaSize=" + std::to_string(areaSize) + " Heigths size=" + std::to_string(m_quadTree->getQuadrant()->getHeights().size())).c_str()));
 
@@ -148,6 +149,8 @@ namespace godot
 		ps->shape_set_data(m_shapeRID, data);
 
 		updateTransform();
+
+		heights.resize(0);
 	}
 	
 	void Collider::onGlobalTransformChanged(void)
