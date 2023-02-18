@@ -681,14 +681,22 @@ bool  QuadTree::updateMaterialParams(void)
 		return updated;
 	
 	if (!isVisible())
+	{
+		if (!getQuadrant()->needUploadToServer())
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.2 ") + __FUNCTION__, "QuadTree releaseMemoryForTerrainValues");
+			getQuadrant()->releaseMemoryForTerrainValues();
+		}
+
 		return updated;
+	}
 
 	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4 ") + __FUNCTION__, "itQuadTree->second->updateMaterialParams");
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4 ") + __FUNCTION__, "QuadTree updateMaterialParams");
 
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1 ") + __FUNCTION__, "set data for collider");
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1 ") + __FUNCTION__, "QuadTree set data for collider");
 
 			m_worldQuadrant->getCollider()->deinit();
 			m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
@@ -702,6 +710,12 @@ bool  QuadTree::updateMaterialParams(void)
 		//clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
 		getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(false);
 
+		if (!getQuadrant()->needUploadToServer())
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.2 ") + __FUNCTION__, "QuadTree releaseMemoryForTerrainValues");
+			getQuadrant()->releaseMemoryForTerrainValues();
+		}
+		
 		updated = true;
 	}
 
@@ -912,11 +926,11 @@ ShaderTerrainData::ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quad
 ShaderTerrainData::~ShaderTerrainData()
 {
 	m_material.unref();
-	m_heightMapImage.unref();
+	//m_heightMapImage.unref();
 	m_heightMapTexture.unref();
-	m_normalMapImage.unref();
+	//m_normalMapImage.unref();
 	m_normalMapTexture.unref();
-	m_colorMapImage.unref();
+	//m_colorMapImage.unref();
 	m_colorMapTexture.unref();
 }
 
@@ -949,6 +963,10 @@ void ShaderTerrainData::resetMaterialParams(void)
 	{
 		if (m_quadTree->getQuadrant()->getFloat16HeightsBuffer().size() > 0)
 		{
+			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> image = godot::Image::_new();
+			m_viewer->getMainProcessingMutex().unlock();
+
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.1 ") + __FUNCTION__, "Create Image from heights buffer");
 
@@ -962,11 +980,8 @@ void ShaderTerrainData::resetMaterialParams(void)
 					assert(heightmapBufferSizeInBytes == heightsBufferSize);
 					memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getFloat16HeightsBuffer().ptr(), heightsBufferSize);
 				}
-				m_viewer->getMainProcessingMutex().lock();
-				godot::Ref<godot::Image> image = godot::Image::_new();
-				m_viewer->getMainProcessingMutex().unlock();
 				image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, data);
-				m_heightMapImage = image;
+				//m_heightMapImage = image;
 			}
 
 			{
@@ -975,11 +990,14 @@ void ShaderTerrainData::resetMaterialParams(void)
 				m_viewer->getMainProcessingMutex().lock();
 				Ref<ImageTexture> tex = ImageTexture::_new();
 				m_viewer->getMainProcessingMutex().unlock();
-				tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
+				//tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
+				tex->create_from_image(image, Texture::FLAG_FILTER);
 				m_heightMapTexture = tex;
 				m_heightMapTexModified = true;
 				//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
 			}
+
+			image.unref();
 		}
 
 		m_quadTree->getQuadrant()->setHeightsUpdated(false);
@@ -989,6 +1007,10 @@ void ShaderTerrainData::resetMaterialParams(void)
 	{
 		if (m_quadTree->getQuadrant()->getNormalsBuffer().size() > 0)
 		{
+			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> image = godot::Image::_new();
+			m_viewer->getMainProcessingMutex().unlock();
+
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Image from normal buffer");
 
@@ -1001,11 +1023,8 @@ void ShaderTerrainData::resetMaterialParams(void)
 					assert(normalmapBufferSizeInBytes == normalsBufferSize);
 					memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getNormalsBuffer().ptr(), normalsBufferSize);
 				}
-				m_viewer->getMainProcessingMutex().lock();
-				godot::Ref<godot::Image> image = godot::Image::_new();
-				m_viewer->getMainProcessingMutex().unlock();
 				image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
-				m_normalMapImage = image;
+				//m_normalMapImage = image;
 			}
 
 			{
@@ -1014,11 +1033,14 @@ void ShaderTerrainData::resetMaterialParams(void)
 				m_viewer->getMainProcessingMutex().lock();
 				Ref<ImageTexture> tex = ImageTexture::_new();
 				m_viewer->getMainProcessingMutex().unlock();
-				tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
+				//tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
+				tex->create_from_image(image, Texture::FLAG_FILTER);
 				m_normalMapTexture = tex;
 				m_normalMapTexModified = true;
 				//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
 			}
+
+			image.unref();
 		}
 
 		m_quadTree->getQuadrant()->setNormalsUpdated(false);
@@ -1026,13 +1048,14 @@ void ShaderTerrainData::resetMaterialParams(void)
 
 	if (m_quadTree->getQuadrant()->colorsUpdated())
 	{
+		m_viewer->getMainProcessingMutex().lock();
+		Ref<Image> image = Image::_new();
+		m_viewer->getMainProcessingMutex().unlock();
+
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.5 ") + __FUNCTION__, "Create color image");
 
 			// Creating Color Map Texture
-			m_viewer->getMainProcessingMutex().lock();
-			Ref<Image> image = Image::_new();
-			m_viewer->getMainProcessingMutex().unlock();
 			image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
 			//image->fill(Color(1, 1, 1, 1));
 			// Filling Color Map Texture
@@ -1040,7 +1063,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 				image->fill(godot::GDN_TheWorld_Globals::g_color_yellow_amber);
 			else
 				image->fill(godot::GDN_TheWorld_Globals::g_color_white);
-			m_colorMapImage = image;
+			//m_colorMapImage = image;
 		}
 
 		{
@@ -1049,12 +1072,15 @@ void ShaderTerrainData::resetMaterialParams(void)
 			m_viewer->getMainProcessingMutex().lock();
 			Ref<ImageTexture> tex = ImageTexture::_new();
 			m_viewer->getMainProcessingMutex().unlock();
-			tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
+			//tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
+			tex->create_from_image(image, Texture::FLAG_FILTER);
 			m_colorMapTexture = tex;
 			m_colorMapTexModified = true;
 		}
 
 		m_quadTree->getQuadrant()->setColorsUpdated(false);
+
+		image.unref();
 	}
 
 	// Creating Splat Map Texture
@@ -1118,6 +1144,7 @@ void ShaderTerrainData::updateMaterialParams(void)
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));	// DEBUGRIC
 			m_material->set_shader_param(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
 			m_heightMapTexModified = false;
+			m_heightMapTexture.unref();
 		}
 
 		if (m_normalMapTexModified)
@@ -1125,6 +1152,7 @@ void ShaderTerrainData::updateMaterialParams(void)
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));	// DEBUGRIC
 			m_material->set_shader_param(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
 			m_normalMapTexModified = false;
+			m_normalMapTexture.unref();
 		}
 
 		if (m_colorMapTexModified)
@@ -1132,6 +1160,7 @@ void ShaderTerrainData::updateMaterialParams(void)
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_COLORMAP));	// DEBUGRIC
 			m_material->set_shader_param(SHADER_PARAM_TERRAIN_COLORMAP, m_colorMapTexture);
 			m_colorMapTexModified = false;
+			m_colorMapTexture.unref();
 		}
 
 		//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
@@ -1246,8 +1275,13 @@ size_t Quadrant::getIndexFromHeighmap(float posX, float posZ, size_t level)
 
 float Quadrant::getAltitudeFromHeigthmap(size_t index)
 {
-	float* p = (float*)m_float32HeigthsBuffer.ptr();
-	return *(p + index);
+	//float* p = (float*)getFloat32HeightsBuffer().ptr();
+	//return *(p + index);
+	
+	uint16_t* p = (uint16_t*)getFloat16HeightsBuffer().ptr();
+	TheWorld_Utils::FLOAT_32 f;
+	f.u32 = half_to_float(*(p + index));
+	return f.f32;
 }
 
 float Quadrant::getPosXFromHeigthmap(size_t index)
@@ -1317,7 +1351,7 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	return;
 }
 
-void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache)
+void Quadrant::refreshGridVerticesFromServer(std::string& buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache)
 {
 	float minAltitude = 0, maxAltitude = 0;
 	
@@ -1337,37 +1371,42 @@ void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std:
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("MeshId from buffer not equal to meshId from server").c_str()));
 	}
 
+	setEmpty(false);
+
 	TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
 	if (meshIdFromBuffer.size() == 0 || m_float16HeigthsBuffer.empty())
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
 
-		bool ok = m_cache.refreshMapsFromCache(meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+		bool empty = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
 		if (terrainEditValuesBuffer.size() > 0)
 			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
+
+		if (empty)
+			setEmpty(true);
 	}
 
-	if (m_float16HeigthsBuffer.empty())
-	{
-		TheWorld_Utils::MemoryBuffer tempBuffer;
+	//if (m_float16HeigthsBuffer.empty())
+	//{
+	//	TheWorld_Utils::MemoryBuffer tempBuffer;
 
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.3 ") + __FUNCTION__, "m_cache.setEmptyBuffer");
-			m_cache.setEmptyBuffer(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), meshIdFromBuffer, tempBuffer);
-		}
+	//	{
+	//		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.3 ") + __FUNCTION__, "m_cache.setEmptyBuffer");
+	//		m_cache.setEmptyBuffer(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), meshIdFromBuffer, tempBuffer);
+	//	}
 
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
+	//	{
+	//		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
 
-			m_cache.refreshMapsFromBuffer(tempBuffer, meshIdFromBuffer, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, false);
-			if (terrainEditValuesBuffer.size() > 0)
-				getTerrainEdit()->deserialize(terrainEditValuesBuffer);
-		}
+	//		m_cache.refreshMapsFromBuffer(tempBuffer, meshIdFromBuffer, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, false);
+	//		if (terrainEditValuesBuffer.size() > 0)
+	//			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
+	//	}
 
-		setEmpty(true);
-	}
-	else
-		setEmpty(false);
+	//	setEmpty(true);
+	//}
+	//else
+	//	setEmpty(false);
 
 	assert(!m_float16HeigthsBuffer.empty());
 
@@ -1403,8 +1442,8 @@ void Quadrant::refreshGridVertices(std::string& buffer, std::string meshId, std:
 
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("SetColliderHeights ") + __FUNCTION__, "ALL");
-		m_heights.resize((int)numFloat32Heights);
-		godot::PoolRealArray::Write w = m_heights.write();
+		m_heightsForCollider.resize((int)numFloat32Heights);
+		godot::PoolRealArray::Write w = m_heightsForCollider.write();
 		memcpy((char*)w.ptr(), m_float32HeigthsBuffer.ptr(), m_float32HeigthsBuffer.size());
 		//{
 		//	uint16_t* ptrFrom = (uint16_t*)m_float16HeigthsBuffer.ptr();

@@ -27,7 +27,7 @@ namespace godot
 					m_message += " - ";
 					m_message += message2;
 					m_message += " - rc=";
-					m_message += to_string(rc);
+					m_message += std::to_string(rc);
 				}
 			}
 		};
@@ -43,10 +43,10 @@ namespace godot
 			return m_exceptionName.c_str();
 		}
 	private:
-		string m_message;
+		std::string m_message;
 
 	protected:
-		string m_exceptionName;
+		std::string m_exceptionName;
 	};
 
 	//class MapManagerExceptionWrongInput : public MapManagerException

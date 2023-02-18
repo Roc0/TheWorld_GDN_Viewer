@@ -98,6 +98,59 @@ void GDN_TheWorld_Edit::replyFromServer(TheWorld_ClientServer::ClientServerExecu
 	{
 		if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER)
 		{
+			ClientServerVariant v = reply.getInputParam(0);
+			const auto _lowerXGridVertex(std::get_if<float>(&v));
+			if (_lowerXGridVertex == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as first input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float lowerXGridVertex = *_lowerXGridVertex;
+
+			v = reply.getInputParam(1);
+			const auto _lowerZGridVertex(std::get_if<float>(&v));
+			if (_lowerZGridVertex == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as second input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float lowerZGridVertex = *_lowerZGridVertex;
+
+			v = reply.getInputParam(2);
+			const auto _numVerticesPerSize(std::get_if<int>(&v));
+			if (_numVerticesPerSize == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have an int as third input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			int numVerticesPerSize = *_numVerticesPerSize;
+
+			v = reply.getInputParam(3);
+			const auto _gridStepinWU(std::get_if<float>(&v));
+			if (_gridStepinWU == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as forth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float gridStepInWU = *_gridStepinWU;
+
+			v = reply.getInputParam(4);
+			const auto _level(std::get_if<int>(&v));
+			if (_level == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have an int as fifth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			int level = *_level;
+
+			QuadrantPos pos(lowerXGridVertex, lowerZGridVertex, level, numVerticesPerSize, gridStepInWU);
+			QuadTree* quadTree = m_viewer->getQuadTree(pos);
+			if (quadTree != nullptr)
+			{
+				quadTree->getQuadrant()->setNeedUploadToServer(false);
+				quadTree->setStatus(QuadrantStatus::uninitialized);
+			}
+
 			m_completedItems++;
 		}
 		else
@@ -976,15 +1029,17 @@ void GDN_TheWorld_Edit::editModeSave(void)
 			TheWorld_Utils::MeshCacheBuffer::CacheData cacheData;
 			cacheData.meshId = cache.getMeshId();
 			TheWorld_Utils::TerrainEdit* terrainEdit = quadToSave->getQuadrant()->getTerrainEdit();
+			
 			terrainEdit->needUploadToServer = true;
 			quadToSave->getQuadrant()->setNeedUploadToServer(true);
+			
 			TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
 			cacheData.minHeight = terrainEdit->minHeight;
 			cacheData.maxHeight = terrainEdit->maxHeight;
 			cacheData.terrainEditValues = &terrainEditValuesBuffer;
-			cacheData.heights16Buffer = &quadToSave->getQuadrant()->getFloat16HeightsBuffer();
-			cacheData.heights32Buffer = &quadToSave->getQuadrant()->getFloat32HeightsBuffer();
-			cacheData.normalsBuffer = &quadToSave->getQuadrant()->getNormalsBuffer();
+			cacheData.heights16Buffer = &quadToSave->getQuadrant()->getFloat16HeightsBuffer(false);
+			cacheData.heights32Buffer = &quadToSave->getQuadrant()->getFloat32HeightsBuffer(false);
+			cacheData.normalsBuffer = &quadToSave->getQuadrant()->getNormalsBuffer(false);
 			QuadrantPos quadrantPos = item.first;
 			TheWorld_Utils::MemoryBuffer buffer;
 			cache.setBufferFromCacheData(quadrantPos.getNumVerticesPerSize(), quadrantPos.getGridStepInWU(), cacheData, buffer);
@@ -1072,9 +1127,9 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 			cacheData.minHeight = terrainEdit->minHeight;
 			cacheData.maxHeight = terrainEdit->maxHeight;
 			cacheData.terrainEditValues = &terrainEditValuesBuffer;
-			cacheData.heights16Buffer = &quadTree->getQuadrant()->getFloat16HeightsBuffer();
-			cacheData.heights32Buffer = &quadTree->getQuadrant()->getFloat32HeightsBuffer();
-			cacheData.normalsBuffer = &quadTree->getQuadrant()->getNormalsBuffer();
+			cacheData.heights16Buffer = &quadTree->getQuadrant()->getFloat16HeightsBuffer(false);
+			cacheData.heights32Buffer = &quadTree->getQuadrant()->getFloat32HeightsBuffer(false);
+			cacheData.normalsBuffer = &quadTree->getQuadrant()->getNormalsBuffer(false);
 			std::string buffer;
 			cache.setBufferFromCacheData(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), cacheData, buffer);
 			
@@ -1087,7 +1142,7 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 
 			cache.writeBufferToCache(buffer);
 
-			quadTree->getQuadrant()->setNeedUploadToServer(false);
+			//quadTree->getQuadrant()->setNeedUploadToServer(false);
 		}
 	}
 	
@@ -1167,12 +1222,14 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 		cache.generateHeights(numVerticesPerSize, gridStepInWU, lowerXGridVertex, lowerZGridVertex, terrainEdit->noise, terrainEdit->amplitude, vectGridHeights, minHeight, maxHeight);
 	}
 
-	TheWorld_Utils::MemoryBuffer& heights16Buffer = quadTreeSel->getQuadrant()->getFloat16HeightsBuffer();
+	quadTreeSel->getQuadrant()->setNeedUploadToServer(true);
+
+	TheWorld_Utils::MemoryBuffer& heights16Buffer = quadTreeSel->getQuadrant()->getFloat16HeightsBuffer(false);
 	size_t heights16BufferSize = numVertices * sizeof(uint16_t);
 	heights16Buffer.reserve(heights16BufferSize);
 	uint16_t* movingHeights16Buffer = (uint16_t*)heights16Buffer.ptr();
 	
-	TheWorld_Utils::MemoryBuffer& heights32Buffer = quadTreeSel->getQuadrant()->getFloat32HeightsBuffer();
+	TheWorld_Utils::MemoryBuffer& heights32Buffer = quadTreeSel->getQuadrant()->getFloat32HeightsBuffer(false);
 	size_t heights32BufferSize = numVertices * sizeof(float);
 	heights32Buffer.reserve(heights32BufferSize);
 	float* movingHeights32Buffer = (float*)heights32Buffer.ptr();
@@ -1200,15 +1257,16 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	my_assert((BYTE*)movingHeights32Buffer - heights32Buffer.ptr() == heights32BufferSize);
 	heights32Buffer.adjustSize(heights32BufferSize);
 
-	quadTreeSel->getQuadrant()->getNormalsBuffer().clear();
+	quadTreeSel->getQuadrant()->getNormalsBuffer(false).clear();
+	terrainEdit->emptyNormals = true;
 
 	terrainEdit->minHeight = minHeight;
 	terrainEdit->maxHeight = maxHeight;
 
 	{
-		PoolRealArray& heights = quadTreeSel->getQuadrant()->getHeights();
-		heights.resize((int)numVertices);
-		godot::PoolRealArray::Write w = heights.write();
+		PoolRealArray& heightsForCollider = quadTreeSel->getQuadrant()->getHeightsForCollider();
+		heightsForCollider.resize((int)numVertices);
+		godot::PoolRealArray::Write w = heightsForCollider.write();
 		memcpy((char*)w.ptr(), heights32Buffer.ptr(), heights32Buffer.size());
 	}
 
@@ -1219,35 +1277,15 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_position(startPosition);
 	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_size(size);
 
-	quadTreeSel->getQuadrant()->setHeightsUpdated(true);
-	quadTreeSel->getQuadrant()->setColorsUpdated(true);
-	quadTreeSel->materialParamsNeedReset(true);
-
-	quadTreeSel->getQuadrant()->setEmpty(false);
 
 	m_mapQuadToSave[quadrantSelPos] = "";
+	terrainEdit->needUploadToServer = true;
 
-	//std::string meshBuffer;
-	//std::string meshId;
-
-	//{
-	//	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.2 ") + __FUNCTION__, "Quadrant reverse array to buffer");
-
-	//	float minHeight = 0, maxHeight = 0;
-	//	TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
-	//	meshId = cache.getMeshId();
-	//	TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer((BYTE*)terrainEdit, terrainEdit->size);
-	//	cache.setBufferFromHeights(meshId, numVerticesPerSize, gridStepInWU, terrainEditValuesBuffer, vectGridHeights, meshBuffer, minHeight, maxHeight, false);
-	//	
-	//	m_mapQuadToSave[quadrantSelPos] = meshBuffer;
-	//}
-
-	//{
-	//	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.3 ") + __FUNCTION__, "Quadrant refreshGridVertices");
-
-	//	quadTreeSel->getQuadrant()->refreshGridVertices(meshBuffer, meshId, meshId, false);
-	//	quadTreeSel->materialParamsNeedReset(true);
-	//}
+	quadTreeSel->getQuadrant()->setEmpty(false);
+	quadTreeSel->getQuadrant()->setHeightsUpdated(true);
+	quadTreeSel->getQuadrant()->setColorsUpdated(true);
+	quadTreeSel->getQuadrant()->setNormalsUpdated(true);
+	quadTreeSel->materialParamsNeedReset(true);
 
 	setMinHeight(minHeight);
 	setMaxHeight(maxHeight);
@@ -1355,12 +1393,13 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 		QuadTree* quadTree = m_viewer->getQuadTree(pos);
 		if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
 		{
-			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer();
+			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
 			if (normalsBuffer.size() == 0)
 			{
 				if (genAllNormals || pos == quadrantSelPos)
 				{
 					quandrantPos.push_back(pos);
+					quadTree->getQuadrant()->setNeedUploadToServer(true);
 
 					if (!genAllNormals)
 						break;
@@ -1382,7 +1421,7 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 		QuadTree* quadTree = m_viewer->getQuadTree(pos);
 		if (quadTree != nullptr)
 		{
-			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer();
+			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
 			if (normalsBuffer.size() == 0)
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("EditGenMesh 1.1 ") + __FUNCTION__, "Single QuadTree");
@@ -1395,7 +1434,13 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 				std::vector<float> vectGridHeights;
 				heightsBuffer.populateFloatVector(vectGridHeights);
 				cache.generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
+				
 				m_mapQuadToSave[pos] = "";
+				TheWorld_Utils::TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
+				terrainEdit->needUploadToServer = true;
+				quadTree->getQuadrant()->setNeedUploadToServer(true);
+				
+				terrainEdit->emptyNormals = false;
 				quadTree->getQuadrant()->setNormalsUpdated(true);
 				quadTree->materialParamsNeedReset(true);
 

@@ -129,16 +129,22 @@ namespace godot
 
 		int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
 		int areaSize = numVerticesPerSize * numVerticesPerSize;
-		my_assert(areaSize == m_quadTree->getQuadrant()->getHeights().size());
-		if (areaSize != m_quadTree->getQuadrant()->getHeights().size())
-			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Size of Heigths inconsistent, areaSize=" + std::to_string(areaSize) + " Heigths size=" + std::to_string(m_quadTree->getQuadrant()->getHeights().size())).c_str()));
+		PoolRealArray& heightsForCollider = m_quadTree->getQuadrant()->getHeightsForCollider();
+		//if (heights.size() == 0)
+		//{
+		//	heights.resize((int)areaSize);
+		//	godot::PoolRealArray::Write w = heights.write();
+		//	memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().size());
+		//}
+		my_assert(areaSize == heightsForCollider.size());
+		if (areaSize != heightsForCollider.size())
+			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Size of Heigths inconsistent, areaSize=" + std::to_string(areaSize) + " Heigths size=" + std::to_string(heightsForCollider.size())).c_str()));
 
-		PoolRealArray& heights = m_quadTree->getQuadrant()->getHeights();
-		size_t size = heights.size();
+		size_t size = heightsForCollider.size();
 		Dictionary data;
 		data["width"] = numVerticesPerSize;			// data["map_width"];	
 		data["depth"] = numVerticesPerSize;			// data["map_depth"];
-		data["heights"] = heights;					// data["map_data"];
+		data["heights"] = heightsForCollider;					// data["map_data"];
 		Vector3 startPoint = m_quadTree->getQuadrant()->getGlobalCoordAABB().position;
 		Vector3 endPoint = startPoint + m_quadTree->getQuadrant()->getGlobalCoordAABB().size;
 		data["min_height"] = startPoint.y;			// ???
@@ -150,7 +156,7 @@ namespace godot
 
 		updateTransform();
 
-		heights.resize(0);
+		//heightsForCollider.resize(0);
 	}
 	
 	void Collider::onGlobalTransformChanged(void)

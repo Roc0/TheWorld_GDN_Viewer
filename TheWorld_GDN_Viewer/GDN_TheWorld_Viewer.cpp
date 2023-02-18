@@ -294,7 +294,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			const auto _lowerXGridVertex(std::get_if<float>(&v));
 			if (_lowerXGridVertex == NULL)
 			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a string as third input param");
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as third input param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
 			float lowerXGridVertex = *_lowerXGridVertex;
@@ -303,7 +303,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			const auto _lowerZGridVertex(std::get_if<float>(&v));
 			if (_lowerZGridVertex == NULL)
 			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a string as forth input param");
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as forth input param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
 			float lowerZGridVertex = *_lowerZGridVertex;
@@ -312,25 +312,25 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			const auto _numVerticesPerSize(std::get_if<int>(&v));
 			if (_numVerticesPerSize == NULL)
 			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a string as fifth input param");
+				std::string m = std::string("Reply MapManager::getVertices did not have an int as fifth input param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
 			int numVerticesPerSize = *_numVerticesPerSize;
 
 			v = reply.getInputParam(5);
-			const auto _gridStepinWU(std::get_if<float>(&v));
-			if (_gridStepinWU == NULL)
+			const auto _gridStepInWU(std::get_if<float>(&v));
+			if (_gridStepInWU == NULL)
 			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a string as sixth input param");
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as sixth input param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
-			float gridStepinWU = *_gridStepinWU;
+			float gridStepInWU = *_gridStepInWU;
 
 			v = reply.getInputParam(6);
 			const auto _level(std::get_if<int>(&v));
 			if (_level == NULL)
 			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a string as seventh input param");
+				std::string m = std::string("Reply MapManager::getVertices did not have an int as seventh input param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
 			int level = *_level;
@@ -348,7 +348,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			const auto _setCamera(std::get_if<bool>(&v));
 			if (_setCamera == NULL)
 			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a string as nineth input param");
+				std::string m = std::string("Reply MapManager::getVertices did not have a bool as nineth input param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
 			bool setCamera = *_setCamera;
@@ -357,12 +357,12 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			const auto _cameraDistanceFromTerrain(std::get_if<float>(&v));
 			if (_cameraDistanceFromTerrain == NULL)
 			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a string as tenth input param");
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as tenth input param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
 			float cameraDistanceFromTerrain = *_cameraDistanceFromTerrain;
 
-			QuadrantPos quadrantPos(lowerXGridVertex, lowerZGridVertex, level, numVerticesPerSize, gridStepinWU);
+			QuadrantPos quadrantPos(lowerXGridVertex, lowerZGridVertex, level, numVerticesPerSize, gridStepInWU);
 
 			//clock.tock();
 
@@ -389,7 +389,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 						// ATTENZIONE
 						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
 						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1 ") + __FUNCTION__,"quadTree->getQuadrant()->refreshGridVertices");
-						quadTree->getQuadrant()->refreshGridVertices(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer, true);
+						quadTree->getQuadrant()->refreshGridVerticesFromServer(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer, true);
 					}
 					
 					//clock.headerMsg("MapManager::getVertices - resetMaterialParams");
@@ -2911,6 +2911,14 @@ void GDN_TheWorld_Viewer::dump()
 	float f = Engine::get_singleton()->get_frames_per_second();
 	Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
 
+	{
+		size_t memoryOccupation = 0;
+		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
+		for (auto& quadTree : m_mapQuadTree)
+			memoryOccupation += quadTree.second->getQuadrant()->calcMemoryOccupation();
+		Globals()->debugPrint("Quadrant busy memory : " + String(std::to_string(memoryOccupation).c_str()));
+	}
+
 	//Node* node = get_node(NodePath("/root"));
 	//if (node != nullptr)
 	//{
@@ -3061,42 +3069,48 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 {
 	bool allQuadrantInitialized = true;
 
-	bool exitForNow = false;
-	for (size_t distance = 0; distance <= m_numCacheQuadrantOnPerimeter; distance++)
+	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTree, std::try_to_lock);
+	if (lock.owns_lock())
 	{
-		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		bool exitForNow = false;
+		for (size_t distance = 0; distance <= m_numCacheQuadrantOnPerimeter; distance++)
 		{
-			//if (itQuadTree->second->status() != QuadrantStatus::initialized)
-			//if (itQuadTree->second->status() != QuadrantStatus::initialized && itQuadTree->second->status() != QuadrantStatus::toErase)
-			if (itQuadTree->second->status() < QuadrantStatus::initialized)
-				allQuadrantInitialized = false;
-
-			if (itQuadTree->second->status() == QuadrantStatus::uninitialized)
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
-				size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(m_computedCameraQuadrantPos);
-				if (distanceInPerimeterFromCameraQuadrant == distance)
+				//if (itQuadTree->second->status() != QuadrantStatus::initialized)
+				//if (itQuadTree->second->status() != QuadrantStatus::initialized && itQuadTree->second->status() != QuadrantStatus::toErase)
+				if (itQuadTree->second->status() < QuadrantStatus::initialized)
+					allQuadrantInitialized = false;
+
+				if (itQuadTree->second->status() == QuadrantStatus::uninitialized)
 				{
-					float x = 0, z = 0;
-					itQuadTree->second->init(x, z);
-					exitForNow = true;
-					break;
+					size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(m_computedCameraQuadrantPos);
+					if (distanceInPerimeterFromCameraQuadrant == distance)
+					{
+						float x = 0, z = 0;
+						itQuadTree->second->init(x, z);
+						exitForNow = true;
+						break;
+					}
 				}
 			}
+
+			if (exitForNow)
+				break;
 		}
 
-		if (exitForNow)
-			break;
-	}
+		lock.unlock();
 
-	if (allQuadrantInitialized)
-	{
-		if (Globals()->status() == TheWorldStatus::worldDeployInProgress && m_mapQuadTree.size() > 1)
-			Globals()->setStatus(TheWorldStatus::worldDeployed);
-
-		if (m_streamingTime.counterStarted())
+		if (allQuadrantInitialized)
 		{
-			m_streamingTime.tock();
-			PLOG_DEBUG << "Initialization of last stream of quadrant in " << m_streamingTime.duration().count() << " ms";
+			if (Globals()->status() == TheWorldStatus::worldDeployInProgress && m_mapQuadTree.size() > 1)
+				Globals()->setStatus(TheWorldStatus::worldDeployed);
+
+			if (m_streamingTime.counterStarted())
+			{
+				m_streamingTime.tock();
+				PLOG_DEBUG << "Initialization of last stream of quadrant in " << m_streamingTime.duration().count() << " ms";
+			}
 		}
 	}
 }

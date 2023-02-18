@@ -255,6 +255,7 @@ namespace godot
 			m_heightsUpdated = false;
 			m_normalsUpdated = false;
 			m_colorsUpdated = false;
+			//m_terrainValuesCanBeCleared = false;
 			m_needUploadToServer = false;
 			m_empty = true;
 		}
@@ -272,9 +273,16 @@ namespace godot
 
 		_declspec(dllexport) void populateGridVertices(float initialViewerPosX, float initialViewerPosZ, bool setCamera, float cameraDistanceFromTerrain);
 
-		PoolRealArray& getHeights(void)
+		PoolRealArray& getHeightsForCollider(bool reload = true)
 		{
-			return m_heights;
+			if (m_heightsForCollider.size() == 0 && reload)
+			{
+				int numVertices = getPos().getNumVerticesPerSize() * getPos().getNumVerticesPerSize();
+				m_heightsForCollider.resize((int)numVertices);
+				godot::PoolRealArray::Write w = m_heightsForCollider.write();
+				memcpy((char*)w.ptr(), getFloat32HeightsBuffer().ptr(), getFloat32HeightsBuffer().size());
+			}
+			return m_heightsForCollider;
 		}
 
 		QuadrantPos getPos(void)
@@ -287,7 +295,7 @@ namespace godot
 			m_meshId = meshId;
 		}
 
-		void refreshGridVertices(std::string& buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache);
+		void refreshGridVerticesFromServer(std::string& buffer, std::string meshId, std::string& meshIdFromBuffer, bool updateCache);
 
 		AABB& getGlobalCoordAABB(void)
 		{
@@ -309,18 +317,39 @@ namespace godot
 		float getPosXFromHeigthmap(size_t index);
 		float getPosZFromHeigthmap(size_t index);
 
-		TheWorld_Utils::MemoryBuffer& getFloat16HeightsBuffer(void)
+		TheWorld_Utils::MemoryBuffer& getFloat16HeightsBuffer(bool reloadFromCache = true)
 		{
+			if (m_float16HeigthsBuffer.empty() && reloadFromCache)
+			{
+				TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+				float minAltitude, maxAltitude;
+				bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+			}
 			return m_float16HeigthsBuffer;
 		}
 
-		TheWorld_Utils::MemoryBuffer& getFloat32HeightsBuffer(void)
+		TheWorld_Utils::MemoryBuffer& getFloat32HeightsBuffer(bool reloadFromCache = true)
 		{
+			if (m_float32HeigthsBuffer.empty() && reloadFromCache)
+			{
+				TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+				float minAltitude, maxAltitude;
+				bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+			}
 			return m_float32HeigthsBuffer;
 		}
 
-		TheWorld_Utils::MemoryBuffer& getNormalsBuffer(void)
+		TheWorld_Utils::MemoryBuffer& getNormalsBuffer(bool reloadFromCache = true)
 		{
+			if (m_normalsBuffer.empty() && reloadFromCache)
+			{
+				if (!m_terrainEdit->emptyNormals)
+				{
+					TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+					float minAltitude, maxAltitude;
+					bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+				}
+			}
 			return m_normalsBuffer;
 		}
 
@@ -377,6 +406,21 @@ namespace godot
 			return m_empty;
 		}
 
+		void releaseMemoryForTerrainValues(void)
+		{
+			//return;
+			//m_float16HeigthsBuffer.clear();
+			m_float32HeigthsBuffer.clear();
+			m_normalsBuffer.clear();
+			m_heightsForCollider.resize(0);
+		}
+
+		size_t calcMemoryOccupation(void)
+		{
+			size_t occupation = m_float16HeigthsBuffer.reserved() + m_float32HeigthsBuffer.reserved() + m_normalsBuffer.reserved() + (m_terrainEdit == nullptr ? 0 : m_terrainEdit->size) + m_heightsForCollider.size() * sizeof(real_t);
+			return occupation;
+		}
+
 	private:
 		TheWorld_Utils::MeshCacheBuffer& getMeshCacheBuffer(void);
 
@@ -384,21 +428,26 @@ namespace godot
 		QuadrantPos m_quadrantPos;
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
-		TheWorld_Utils::MemoryBuffer m_float16HeigthsBuffer;	// each height is expressed as a 16-bit float (image with FORMAT_RH) and are serialized line by line (each line from x=0 to x=numVertexPerQuadrant, first line ==> z=0, last line z=numVertexPerQuadrant)
-		TheWorld_Utils::MemoryBuffer m_float32HeigthsBuffer;	// each height is expressed as a 32-bit and are serialized as above
-		TheWorld_Utils::MemoryBuffer m_normalsBuffer;			// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heights
-		bool m_heightsUpdated;
-		bool m_normalsUpdated;
-		bool m_colorsUpdated;
-		std::unique_ptr<TheWorld_Utils::TerrainEdit> m_terrainEdit;
-		godot::PoolRealArray m_heights;
-		std::string m_meshId;
 		TheWorld_Utils::MeshCacheBuffer m_cache;
 		godot::AABB m_globalCoordAABB;
 		std::unique_ptr<Collider> m_collider;
 		std::unique_ptr<ShaderTerrainData> m_shaderTerrainData;
 		bool m_needUploadToServer;
 		bool m_empty;
+
+		// Terrain Values
+		std::string m_meshId;
+		TheWorld_Utils::MemoryBuffer m_float16HeigthsBuffer;	// each height is expressed as a 16-bit float (image with FORMAT_RH) and are serialized line by line (each line from x=0 to x=numVertexPerQuadrant, first line ==> z=0, last line z=numVertexPerQuadrant)
+		TheWorld_Utils::MemoryBuffer m_float32HeigthsBuffer;	// each height is expressed as a 32-bit and are serialized as above
+		TheWorld_Utils::MemoryBuffer m_normalsBuffer;			// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heights
+		std::unique_ptr<TheWorld_Utils::TerrainEdit> m_terrainEdit;
+		godot::PoolRealArray m_heightsForCollider;
+		// Terrain Values
+
+		bool m_heightsUpdated;
+		bool m_normalsUpdated;
+		bool m_colorsUpdated;
+		//bool m_terrainValuesCanBeCleared;
 	};
 
 	class ShaderTerrainData
@@ -450,11 +499,11 @@ namespace godot
 		bool m_materialParamsNeedUpdate;
 		bool m_materialParamsNeedReset;
 
-		Ref<Image> m_heightMapImage;
+		//Ref<Image> m_heightMapImage;
 		Ref<Texture> m_heightMapTexture;
 		bool m_heightMapTexModified;
 
-		Ref<Image> m_normalMapImage;
+		//Ref<Image> m_normalMapImage;
 		Ref<Texture> m_normalMapTexture;
 		bool m_normalMapTexModified;
 
@@ -462,7 +511,7 @@ namespace godot
 		//Ref<Texture> m_splat1MapTexture;
 		//bool m_splat1MapTexModified;
 
-		Ref<Image> m_colorMapImage;
+		//Ref<Image> m_colorMapImage;
 		Ref<Texture> m_colorMapTexture;
 		bool m_colorMapTexModified;
 	};
