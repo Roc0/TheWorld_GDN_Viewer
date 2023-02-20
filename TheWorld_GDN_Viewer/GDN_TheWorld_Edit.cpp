@@ -230,7 +230,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	m_viewer = viewer;
 
 	TheWorld_Utils::WorldModifierPos pos(0, 4096, 4096, TheWorld_Utils::WMType::elevator, 0);
-	m_wms[pos] = std::make_unique<TheWorld_Utils::WorldModifier>(pos, TheWorld_Utils::WMFunctionType::Add, 10000.0f, -100.0f, 2000.0f, TheWorld_Utils::WMOrder::MaxEffectOnWM);
+	m_wms[pos] = std::make_unique<TheWorld_Utils::WorldModifier>(pos, TheWorld_Utils::WMFunctionType::ConsiderMinMax, 10000.0f, -100.0f, 2000.0f, TheWorld_Utils::WMOrder::MaxEffectOnWM);
 
 
 	std::lock_guard<std::recursive_mutex> lock(m_viewer->getMainProcessingMutex());
@@ -1253,6 +1253,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	terrainEdit->amplitude = amplitude();
 	//terrainEdit->needUploadToServer = true;
 
+	int level = quadrantSelPos.getLevel();
 	size_t numVerticesPerSize = quadrantSelPos.getNumVerticesPerSize();
 	size_t numVertices = numVerticesPerSize * numVerticesPerSize;
 	float gridStepInWU = quadrantSelPos.getGridStepInWU();
@@ -1266,6 +1267,11 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1 ") + __FUNCTION__, "Generate Heights");
 		cache.generateHeights(numVerticesPerSize, gridStepInWU, lowerXGridVertex, lowerZGridVertex, terrainEdit->noise, terrainEdit->amplitude, vectGridHeights, minHeight, maxHeight);
+
+		for (auto& item : m_wms)
+		{
+			cache.applyWorldModifier(level, numVerticesPerSize, gridStepInWU, lowerXGridVertex, lowerZGridVertex, vectGridHeights, minHeight, maxHeight, *item.second.get());
+		}
 	}
 
 	quadTreeSel->getQuadrant()->setNeedUploadToServer(true);
@@ -1278,7 +1284,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	TheWorld_Utils::MemoryBuffer& heights32Buffer = quadTreeSel->getQuadrant()->getFloat32HeightsBuffer(false);
 	size_t heights32BufferSize = numVertices * sizeof(float);
 	heights32Buffer.reserve(heights32BufferSize);
-	float* movingHeights32Buffer = (float*)heights32Buffer.ptr();
+	//float* movingHeights32Buffer = (float*)heights32Buffer.ptr();
 
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.2 ") + __FUNCTION__, "Move Heights");
@@ -1291,16 +1297,18 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 				TheWorld_Utils::FLOAT_32 f(altitude);
 				*movingHeights16Buffer = half_from_float(f.u32);;
 				movingHeights16Buffer++;
-				*movingHeights32Buffer = altitude;
-				movingHeights32Buffer++;
+				//*movingHeights32Buffer = altitude;
+				//movingHeights32Buffer++;
 				idx++;
 			}
+
+		memcpy(heights32Buffer.ptr(), &vectGridHeights[0], heights32BufferSize);
 	}
 
 	my_assert((BYTE*)movingHeights16Buffer - heights16Buffer.ptr() == heights16BufferSize);
 	heights16Buffer.adjustSize(heights16BufferSize);
 
-	my_assert((BYTE*)movingHeights32Buffer - heights32Buffer.ptr() == heights32BufferSize);
+	//my_assert((BYTE*)movingHeights32Buffer - heights32Buffer.ptr() == heights32BufferSize);
 	heights32Buffer.adjustSize(heights32BufferSize);
 
 	quadTreeSel->getQuadrant()->getNormalsBuffer(false).clear();
