@@ -409,7 +409,7 @@ namespace godot
 		void releaseMemoryForTerrainValues(void)
 		{
 			//return;
-			//m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join
+			//m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join (Quadrant::getAltitudeFromHeigthmap)
 			m_float32HeigthsBuffer.clear();
 			m_normalsBuffer.clear();
 			m_heightsForCollider.resize(0);
