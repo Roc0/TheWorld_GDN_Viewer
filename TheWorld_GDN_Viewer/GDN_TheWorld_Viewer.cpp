@@ -376,7 +376,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1 ") + __FUNCTION__, "Elab. quadrant");
 				QuadTree* quadTree = m_mapQuadTree[quadrantPos].get();
 				m_mtxQuadTree.unlock();
-				if (quadTree->status() == QuadrantStatus::getVerticesInProgress)
+				if (quadTree->statusGetTerrainDataInProgress() || quadTree->statusRefreshTerrainDataInProgress())
 				{
 					//clock.headerMsg("MapManager::getVertices - Lock quadrantMutex");
 					//clock.tick();
@@ -3082,13 +3082,16 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 				if (itQuadTree->second->status() < QuadrantStatus::initialized)
 					allQuadrantInitialized = false;
 
-				if (itQuadTree->second->status() == QuadrantStatus::uninitialized)
+				if (itQuadTree->second->statusUninitialized() || itQuadTree->second->statusRefreshTerrainDataNeeded())
 				{
 					size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(m_computedCameraQuadrantPos);
 					if (distanceInPerimeterFromCameraQuadrant == distance)
 					{
 						float x = 0, z = 0;
-						itQuadTree->second->init(x, z);
+						if (itQuadTree->second->statusUninitialized())
+							itQuadTree->second->init(x, z);
+						else
+							itQuadTree->second->refreshTerrainData(x, z);
 						exitForNow = true;
 						break;
 					}

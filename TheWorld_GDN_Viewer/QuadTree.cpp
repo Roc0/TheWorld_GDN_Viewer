@@ -146,12 +146,22 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantPos)
 	m_editModeSel = false;
 }
 
+void QuadTree::refreshTerrainData(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
+{
+	my_assert(statusInitialized() || statusRefreshTerrainDataNeeded());
+	if (!(statusInitialized() || statusRefreshTerrainDataNeeded()))
+		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Quadrant status not comply: " + std::to_string((int)status())).c_str()));
+
+	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadrant);
+
+	setStatus(QuadrantStatus::refreshTerrainDataInProgress);
+
+	m_worldQuadrant->populateGridVertices(viewerPosX, viewerPosZ, setCamera, cameraDistanceFromTerrain);
+}
+
 void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
 {
-	//TheWorld_Viewer_Utils::TimerMs clock;
-	//clock.tick();
-
-	assert(status() == QuadrantStatus::uninitialized);
+	my_assert(status() == QuadrantStatus::uninitialized);
 	if (status() != QuadrantStatus::uninitialized)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Quadrant status not comply: " + std::to_string((int)status())).c_str()));
 
@@ -166,23 +176,13 @@ void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float ca
 	m_viewer->add_child(m_GDN_Quadrant);
 	onGlobalTransformChanged();
 
-	setStatus(QuadrantStatus::getVerticesInProgress);
+	setStatus(QuadrantStatus::getTerrainDataInProgress);
 
-	TheWorld_Viewer_Utils::TimerMs clock1;
-	clock1.tick();
 	m_worldQuadrant->populateGridVertices(viewerPosX, viewerPosZ, setCamera, cameraDistanceFromTerrain);
-	clock1.tock();	
-	//m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - QuadTree::init (populateGridVertices) " + std::to_string(clock1.duration().count()).c_str() + " ms");
 
 	getQuadrant()->getShaderTerrainData()->init();
 
 	m_root = make_unique<Quad>(0, 0, m_viewer->Globals()->lodMaxDepth(), PosInQuad::Root, m_viewer, this);
-
-	//m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
-	//m_worldQuadrant->getCollider()->enterWorld();
-
-	//clock.tock();
-	//m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getId().getId().c_str() + " TAG=" + m_tag.c_str() + " - QuadTree::init " + std::to_string(clock.duration().count()).c_str() + " ms");
 }
 
 void QuadTree::onGlobalTransformChanged(void)
@@ -680,43 +680,37 @@ bool  QuadTree::updateMaterialParams(void)
 	if (!isValid())
 		return updated;
 	
-	if (!isVisible())
-	{
-		if (!getQuadrant()->needUploadToServer())
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.2 ") + __FUNCTION__, "QuadTree releaseMemoryForTerrainValues");
-			getQuadrant()->releaseMemoryForTerrainValues();
-		}
-
-		return updated;
-	}
-
 	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4 ") + __FUNCTION__, "QuadTree updateMaterialParams");
+		//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4 ") + __FUNCTION__, "QuadTree updateMaterialParams");
 
+		if (isVisible())
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1 ") + __FUNCTION__, "QuadTree set data for collider");
+			{
+				//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1 ") + __FUNCTION__, "QuadTree set data for collider");
 
-			m_worldQuadrant->getCollider()->deinit();
-			m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
-			m_worldQuadrant->getCollider()->enterWorld();
-			m_worldQuadrant->getCollider()->setData();
+				m_worldQuadrant->getCollider()->deinit();
+				m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
+				m_worldQuadrant->getCollider()->enterWorld();
+				m_worldQuadrant->getCollider()->setData();
+			}
+
+			//TheWorld_Viewer_Utils::TimerMs clock;
+			//clock.tick();
+			getQuadrant()->getShaderTerrainData()->updateMaterialParams();
+			//clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
+
+			updated = true;
 		}
-		
-		//TheWorld_Viewer_Utils::TimerMs clock;
-		//clock.tick();
-		getQuadrant()->getShaderTerrainData()->updateMaterialParams();
-		//clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
+
 		getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(false);
 
 		if (!getQuadrant()->needUploadToServer())
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.2 ") + __FUNCTION__, "QuadTree releaseMemoryForTerrainValues");
+			//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.2 ") + __FUNCTION__, "QuadTree releaseMemoryForTerrainValues");
 			getQuadrant()->releaseMemoryForTerrainValues();
 		}
 		
-		updated = true;
 	}
 
 	return updated;
@@ -1005,43 +999,86 @@ void ShaderTerrainData::resetMaterialParams(void)
 
 	if (m_quadTree->getQuadrant()->normalsUpdated())
 	{
-		if (m_quadTree->getQuadrant()->getNormalsBuffer().size() > 0)
+		m_viewer->getMainProcessingMutex().lock();
+		godot::Ref<godot::Image> image = godot::Image::_new();
+		m_viewer->getMainProcessingMutex().unlock();
+
+		TheWorld_Utils::MemoryBuffer& normalsBuffer = m_quadTree->getQuadrant()->getNormalsBuffer();
+		size_t normalsBufferSize = normalsBuffer.size();
+
+		if (normalsBufferSize == 0)
 		{
-			m_viewer->getMainProcessingMutex().lock();
-			godot::Ref<godot::Image> image = godot::Image::_new();
-			m_viewer->getMainProcessingMutex().unlock();
-
-			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Image from normal buffer");
-
-				godot::PoolByteArray data;
-				size_t normalmapBufferSizeInBytes = _resolution * _resolution * sizeof(struct TheWorld_Utils::_RGB);
-				data.resize((int)normalmapBufferSizeInBytes);
-				{
-					godot::PoolByteArray::Write w = data.write();
-					size_t normalsBufferSize = m_quadTree->getQuadrant()->getNormalsBuffer().size();
-					assert(normalmapBufferSizeInBytes == normalsBufferSize);
-					memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getNormalsBuffer().ptr(), normalsBufferSize);
-				}
-				image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
-				//m_normalMapImage = image;
-			}
-
-			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from normal image");
-
-				m_viewer->getMainProcessingMutex().lock();
-				Ref<ImageTexture> tex = ImageTexture::_new();
-				m_viewer->getMainProcessingMutex().unlock();
-				//tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
-				tex->create_from_image(image, Texture::FLAG_FILTER);
-				m_normalMapTexture = tex;
-				m_normalMapTexModified = true;
-				//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
-			}
-
-			image.unref();
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for normals");
+			image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+			image->fill(godot::Color(0,0,0));
 		}
+		else
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Image from normal buffer");
+
+			godot::PoolByteArray data;
+			size_t normalmapBufferSizeInBytes = _resolution * _resolution * sizeof(struct TheWorld_Utils::_RGB);
+			data.resize((int)normalmapBufferSizeInBytes);
+			assert(normalmapBufferSizeInBytes == normalsBufferSize);
+			{
+				godot::PoolByteArray::Write w = data.write();
+				memcpy((char*)w.ptr(), normalsBuffer.ptr(), normalsBufferSize);
+			}
+			image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
+		}
+
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from normal image");
+
+			m_viewer->getMainProcessingMutex().lock();
+			Ref<ImageTexture> tex = ImageTexture::_new();
+			m_viewer->getMainProcessingMutex().unlock();
+			//tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
+			tex->create_from_image(image, Texture::FLAG_FILTER);
+			m_normalMapTexture = tex;
+			m_normalMapTexModified = true;
+			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
+		}
+
+		image.unref();
+
+		//if (m_quadTree->getQuadrant()->getNormalsBuffer().size() > 0)
+		//{
+		//	m_viewer->getMainProcessingMutex().lock();
+		//	godot::Ref<godot::Image> image = godot::Image::_new();
+		//	m_viewer->getMainProcessingMutex().unlock();
+
+		//	{
+		//		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Image from normal buffer");
+
+		//		godot::PoolByteArray data;
+		//		size_t normalmapBufferSizeInBytes = _resolution * _resolution * sizeof(struct TheWorld_Utils::_RGB);
+		//		data.resize((int)normalmapBufferSizeInBytes);
+		//		{
+		//			godot::PoolByteArray::Write w = data.write();
+		//			size_t normalsBufferSize = m_quadTree->getQuadrant()->getNormalsBuffer().size();
+		//			assert(normalmapBufferSizeInBytes == normalsBufferSize);
+		//			memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getNormalsBuffer().ptr(), normalsBufferSize);
+		//		}
+		//		image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
+		//		//m_normalMapImage = image;
+		//	}
+
+		//	{
+		//		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from normal image");
+
+		//		m_viewer->getMainProcessingMutex().lock();
+		//		Ref<ImageTexture> tex = ImageTexture::_new();
+		//		m_viewer->getMainProcessingMutex().unlock();
+		//		//tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
+		//		tex->create_from_image(image, Texture::FLAG_FILTER);
+		//		m_normalMapTexture = tex;
+		//		m_normalMapTexModified = true;
+		//		//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
+		//	}
+
+		//	image.unref();
+		//}
 
 		m_quadTree->getQuadrant()->setNormalsUpdated(false);
 	}

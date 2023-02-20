@@ -158,19 +158,19 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 
 	Input* input = Input::get_singleton();
 
-	if (input->is_action_pressed("ui_mouse_button_right") && viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
+	if (input->is_action_pressed("ui_mouse_button_right") /* && viewer->terrainShiftPermitted()*/ /* && !viewer->editMode()*/)
 		m_rotateCameraOn = true;
 	else
 		m_rotateCameraOn = false;
 
 	//input = Input::get_singleton();
-	if (input->is_action_pressed("ui_mouse_button_left") && viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
+	if (input->is_action_pressed("ui_mouse_button_left") /* && viewer->terrainShiftPermitted()*/ /* && !viewer->editMode()*/)
 		m_shiftOriCameraOn = true;
 	else
 		m_shiftOriCameraOn = false;
 
 	//input = Input::get_singleton();
-	if (input->is_action_pressed("ui_mouse_button_mid") && viewer->terrainShiftPermitted() /* && !viewer->editMode()*/)
+	if (input->is_action_pressed("ui_mouse_button_mid") /* && viewer->terrainShiftPermitted()*/ /* && !viewer->editMode()*/)
 		m_shiftVertCameraOn = true;
 	else
 		m_shiftVertCameraOn = false;
@@ -261,6 +261,24 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	}
 	//else
 	//	m_downwardMovementOn = false;
+
+	//if (input->is_action_pressed("ui_mouse_wheel_up"))
+	//{
+	//	if (viewer->terrainShiftPermitted())
+	//	{
+	//		m_numMoveStepForward--;
+	//		m_updateCameraRequired = true;
+	//	}
+	//}
+
+	//if (input->is_action_pressed("ui_mouse_wheel_down"))
+	//{
+	//	if (viewer->terrainShiftPermitted())
+	//	{
+	//		m_numMoveStepForward++;
+	//		m_updateCameraRequired = true;
+	//	}
+	//}
 }
 
 void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)

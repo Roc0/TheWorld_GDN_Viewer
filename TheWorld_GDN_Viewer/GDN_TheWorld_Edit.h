@@ -104,6 +104,8 @@ namespace godot
 		void setElapsed(size_t elapsed, bool onGoing);
 		size_t elapsed(void);
 		void setCounter(size_t curr, size_t all);
+		void setNote1(size_t num);
+		void setNote1(std::string msg);
 
 		bool actionInProgress(void)
 		{
@@ -133,7 +135,9 @@ namespace godot
 		bool m_onGoingElapsedLabel;
 		Color m_elapsedLabelNormalColor;
 		size_t m_completedItems;
+		size_t m_elapsedCompleted;
 		size_t m_allItems;
+		size_t m_lastElapsed;
 		bool m_requiredUIAcceptFocus;
 		bool m_UIAcceptingFocus;
 
@@ -153,6 +157,7 @@ namespace godot
 		godot::Label* m_maxHeightLabel;
 		godot::Label* m_elapsedLabel;
 		godot::Label* m_counterLabel;
+		godot::Label* m_note1Label;
 
 		godot::Label* m_mouseHitLabel;
 		godot::Label* m_mouseQuadHitLabel;

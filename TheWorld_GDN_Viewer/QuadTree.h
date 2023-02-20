@@ -343,7 +343,7 @@ namespace godot
 		{
 			if (m_normalsBuffer.empty() && reloadFromCache)
 			{
-				if (!m_terrainEdit->emptyNormals)
+				if (!m_terrainEdit->normalsNeedRegen)
 				{
 					TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
 					float minAltitude, maxAltitude;
@@ -409,7 +409,7 @@ namespace godot
 		void releaseMemoryForTerrainValues(void)
 		{
 			//return;
-			//m_float16HeigthsBuffer.clear();
+			//m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join
 			m_float32HeigthsBuffer.clear();
 			m_normalsBuffer.clear();
 			m_heightsForCollider.resize(0);
@@ -596,10 +596,12 @@ namespace godot
 
 	enum class QuadrantStatus
 	{
-		uninitialized = 0,
-		getVerticesInProgress = 1,
-		initialized = 2,
-		toErase = 3
+		refreshTerrainDataNeeded = -2
+		,refreshTerrainDataInProgress = -1
+		,uninitialized = 0
+		,getTerrainDataInProgress = 1
+		,initialized = 2
+		,toErase = 3
 	};
 
 	class QuadTree
@@ -611,6 +613,7 @@ namespace godot
 		void onGlobalTransformChanged(void);
 
 		void init(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
+		void refreshTerrainData(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
 		enum class UpdateStage
 		{
 			Stage1 = 1,
@@ -692,9 +695,17 @@ namespace godot
 		{
 			return status() == QuadrantStatus::initialized;
 		}
-		bool statusGetVerticesInProgress(void)
+		bool statusGetTerrainDataInProgress(void)
 		{
-			return status() == QuadrantStatus::getVerticesInProgress;
+			return status() == QuadrantStatus::getTerrainDataInProgress;
+		}
+		bool statusRefreshTerrainDataNeeded(void)
+		{
+			return status() == QuadrantStatus::refreshTerrainDataNeeded;
+		}
+		bool statusRefreshTerrainDataInProgress(void)
+		{
+			return status() == QuadrantStatus::refreshTerrainDataInProgress;
 		}
 		bool statusUninitialized(void)
 		{
@@ -710,7 +721,7 @@ namespace godot
 		}
 		enum class QuadrantStatus status(void)
 		{
-			if (m_status == QuadrantStatus::getVerticesInProgress)
+			if (m_status == QuadrantStatus::getTerrainDataInProgress)
 			{
 				TheWorld_Viewer_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 				long long elapsedFromStatusChange = (now - m_lastStatusChange).count();

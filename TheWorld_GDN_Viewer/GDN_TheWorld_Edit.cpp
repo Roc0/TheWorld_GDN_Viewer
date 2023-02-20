@@ -65,6 +65,7 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_maxHeightLabel = nullptr;
 	m_elapsedLabel = nullptr;
 	m_counterLabel = nullptr;
+	m_note1Label = nullptr;
 	m_mouseHitLabel = nullptr;
 	m_mouseQuadHitLabel = nullptr;
 	m_mouseQuadHitPosLabel = nullptr;
@@ -73,6 +74,8 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_genAllNormals = nullptr;
 	m_allItems = 0;
 	m_completedItems = 0;
+	m_elapsedCompleted = 0;
+	m_lastElapsed = 0;
 	m_terrTypeOptionButton = nullptr;
 	m_UIAcceptingFocus = false;
 	m_requiredUIAcceptFocus = false;
@@ -148,10 +151,13 @@ void GDN_TheWorld_Edit::replyFromServer(TheWorld_ClientServer::ClientServerExecu
 			if (quadTree != nullptr)
 			{
 				quadTree->getQuadrant()->setNeedUploadToServer(false);
-				quadTree->setStatus(QuadrantStatus::uninitialized);
+				quadTree->setStatus(QuadrantStatus::refreshTerrainDataNeeded);
 			}
 
 			m_completedItems++;
+			size_t partialCount = m_actionClock.partialDuration().count();
+			m_lastElapsed = partialCount - m_elapsedCompleted;
+			m_elapsedCompleted = partialCount;
 		}
 		else
 		{
@@ -510,6 +516,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_counterLabel->set_align(godot::Label::Align::ALIGN_LEFT);
 					m_counterLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
 					m_counterLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+					m_note1Label = godot::Label::_new();
+					hBoxContainer->add_child(m_note1Label);
+					m_note1Label->set_align(godot::Label::Align::ALIGN_LEFT);
+					m_note1Label->connect("mouse_entered", this, "mouse_entered_main_panel");
+					m_note1Label->connect("mouse_exited", this, "mouse_exited_main_panel");
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -886,6 +897,19 @@ void GDN_TheWorld_Edit::setCounter(size_t current, size_t all)
 	m_counterLabel->set_text((std::to_string(current) + "/" + std::to_string(all)).c_str());
 }
 
+void GDN_TheWorld_Edit::setNote1(size_t num)
+{
+	if (num == 0)
+		m_note1Label->set_text("");
+	else
+		m_note1Label->set_text(std::to_string(num).c_str());
+}
+
+void GDN_TheWorld_Edit::setNote1(std::string msg)
+{
+	m_note1Label->set_text(msg.c_str());
+}
+
 size_t GDN_TheWorld_Edit::elapsed(void)
 {
 	godot::String s = m_elapsedLabel->get_text();
@@ -975,7 +999,10 @@ void GDN_TheWorld_Edit::_process(float _delta)
 	{
 		setElapsed(m_actionClock.partialDuration().count(), true);
 		if (m_allItems != 0)
+		{
 			setCounter(m_completedItems, m_allItems);
+			setNote1(m_lastElapsed);
+		}
 	}
 }
 
@@ -995,6 +1022,7 @@ void GDN_TheWorld_Edit::editModeSaveAction(void)
 	m_actionInProgress = true;
 	m_allItems = 0;
 	setElapsed(0, true);
+	setNote1(0);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeSave, this);
 	m_tp.QueueJob(f);
@@ -1013,6 +1041,8 @@ void GDN_TheWorld_Edit::editModeSave(void)
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditSave 1 ") + __FUNCTION__, "ALL");
 
 	m_completedItems = 0;
+	m_elapsedCompleted = 0;
+	m_lastElapsed = 0;
 	m_allItems = m_mapQuadToSave.size();
 	for (auto& item : m_mapQuadToSave)
 	{
@@ -1046,6 +1076,10 @@ void GDN_TheWorld_Edit::editModeSave(void)
 			cache.writeBufferToCache(buffer);
 
 			m_completedItems++;
+			size_t partialCount = m_actionClock.partialDuration().count();
+			m_lastElapsed = partialCount - m_elapsedCompleted;
+			m_elapsedCompleted = partialCount;
+			m_lastElapsed = m_actionClock.partialDuration().count() - m_lastElapsed;
 		}
 	}
 
@@ -1056,6 +1090,7 @@ void GDN_TheWorld_Edit::editModeSave(void)
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
+	setNote1(m_lastElapsed);
 
 	m_actionInProgress = false;
 }
@@ -1068,6 +1103,7 @@ void GDN_TheWorld_Edit::editModeUploadAction(void)
 	m_actionInProgress = true;
 	m_allItems = 0;
 	setElapsed(0, true);
+	setNote1(0);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeUpload, this);
 	m_tp.QueueJob(f);
@@ -1104,6 +1140,8 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	}
 
 	m_completedItems = 0;
+	m_elapsedCompleted = 0;
+	m_lastElapsed = 0;
 	m_allItems = quandrantPos.size();
 	for (auto& pos : quandrantPos)
 	{
@@ -1154,6 +1192,7 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
+	setNote1(m_lastElapsed);
 
 	m_actionInProgress = false;
 }
@@ -1166,6 +1205,7 @@ void GDN_TheWorld_Edit::editModeGenerateAction(void)
 	m_actionInProgress = true;
 	m_allItems = 0;
 	setElapsed(0, true);
+	setNote1(0);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeGenerate, this);
 	m_tp.QueueJob(f);
@@ -1192,11 +1232,17 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	}
 
 	m_completedItems = 0;
+	m_elapsedCompleted = 0;
+	m_lastElapsed = 0;
 	m_allItems = 1;
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1 ") + __FUNCTION__, "ALL");
 
+	int64_t id = m_terrTypeOptionButton->get_selected_id();
+	enum class TheWorld_Utils::TerrainEdit::TerrainType terrainType = (enum class TheWorld_Utils::TerrainEdit::TerrainType)id;
+
 	TheWorld_Utils::TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
+	terrainEdit->terrainType = terrainType;
 	terrainEdit->noise.noiseSeed = seed();
 	terrainEdit->noise.frequency = frequency();
 	terrainEdit->noise.fractalOctaves = octaves();
@@ -1258,7 +1304,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	heights32Buffer.adjustSize(heights32BufferSize);
 
 	quadTreeSel->getQuadrant()->getNormalsBuffer(false).clear();
-	terrainEdit->emptyNormals = true;
+	terrainEdit->normalsNeedRegen = true;
 
 	terrainEdit->minHeight = minHeight;
 	terrainEdit->maxHeight = maxHeight;
@@ -1291,12 +1337,16 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	setMaxHeight(maxHeight);
 
 	m_completedItems++;
+	size_t partialCount = m_actionClock.partialDuration().count();
+	m_lastElapsed = partialCount - m_elapsedCompleted;
+	m_elapsedCompleted = partialCount;
 
 	m_actionClock.tock();
 
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
+	setNote1(m_lastElapsed);
 
 	m_actionInProgress = false;
 }
@@ -1309,6 +1359,7 @@ void GDN_TheWorld_Edit::editModeMendAction(void)
 	m_actionInProgress = true;
 	m_allItems = 0;
 	setElapsed(0, true);
+	setNote1(0);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeMend, this);
 	m_tp.QueueJob(f);
@@ -1343,6 +1394,7 @@ void GDN_TheWorld_Edit::editModeMend(void)
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
+	setNote1(m_lastElapsed);
 
 	m_actionInProgress = false;
 }
@@ -1355,6 +1407,7 @@ void GDN_TheWorld_Edit::editModeGenNormalsAction(void)
 	m_actionInProgress = true;
 	m_allItems = 0;
 	setElapsed(0, true);
+	setNote1(0);
 
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeGenNormals, this);
 	m_tp.QueueJob(f);
@@ -1409,6 +1462,8 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	}
 
 	m_completedItems = 0;
+	m_elapsedCompleted = 0;
+	m_lastElapsed = 0;
 	m_allItems = quandrantPos.size();
 	for (auto& pos : quandrantPos)
 	{
@@ -1440,11 +1495,14 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 				terrainEdit->needUploadToServer = true;
 				quadTree->getQuadrant()->setNeedUploadToServer(true);
 				
-				terrainEdit->emptyNormals = false;
+				terrainEdit->normalsNeedRegen = false;
 				quadTree->getQuadrant()->setNormalsUpdated(true);
 				quadTree->materialParamsNeedReset(true);
 
 				m_completedItems++;
+				size_t partialCount = m_actionClock.partialDuration().count();
+				m_lastElapsed = partialCount - m_elapsedCompleted;
+				m_elapsedCompleted = partialCount;
 			}
 		}
 	}
@@ -1454,6 +1512,7 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
+	setNote1(m_lastElapsed);
 
 	m_actionInProgress = false;
 }
