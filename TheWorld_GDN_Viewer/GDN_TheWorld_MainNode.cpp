@@ -195,7 +195,9 @@ void GDN_TheWorld_MainNode::deinit(void)
 
 		Node* parent = get_parent();
 		if (parent)
+		{
 			parent->remove_child(this);
+		}
 	}
 }
 

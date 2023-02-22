@@ -53,6 +53,7 @@ namespace godot
 		};
 
 		friend class GDN_TheWorld_Edit;
+		friend class Chunk;
 		//friend class QuadTree;
 		//friend class ShaderTerrainData;
 
@@ -179,9 +180,9 @@ namespace godot
 		}
 		godot::String getMouseChunkHitId(void)
 		{
-			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() && m_mouseHitQuadTree != nullptr)
+			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() /* && m_mouseHitQuadTree != nullptr*/)
 			{
-				return std::string(m_mouseHitQuadTree->getQuadrant()->getPos().getName() + " " + m_mouseHitChunk->getIdStr()).c_str();
+				return std::string(m_mouseHitChunk->getQuadTree()->getQuadrant()->getPos().getName() + " " + m_mouseHitChunk->getIdStr()).c_str();
 				//return m_mouseHitChunk->getIdStr().c_str();
 			}
 			else
@@ -189,7 +190,7 @@ namespace godot
 		}
 		godot::Vector3 getMouseChunkHitPos(void)
 		{
-			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() && m_mouseHitQuadTree != nullptr)
+			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() /* && m_mouseHitQuadTree != nullptr*/)
 			{
 				return Vector3(m_mouseHitChunk->getLowerXInWUsGlobal(), 0, m_mouseHitChunk->getLowerZInWUsGlobal());
 			}
@@ -198,7 +199,7 @@ namespace godot
 		}
 		float getMouseChunkHitSize(void)
 		{
-			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() && m_mouseHitQuadTree != nullptr)
+			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() /* && m_mouseHitQuadTree != nullptr*/)
 			{
 				return m_mouseHitChunk->getChunkSizeInWUs();
 			}
@@ -208,7 +209,7 @@ namespace godot
 
 		float getMouseChunkHitDistFromCam(void)
 		{
-			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() && m_mouseHitQuadTree != nullptr)
+			if (m_mouseHitChunk != nullptr && m_mouseHitChunk->isActive() /* && m_mouseHitQuadTree != nullptr*/)
 			{
 				return m_mouseHitChunk->getDistanceFromCamera();
 			}
@@ -224,10 +225,10 @@ namespace godot
 		{
 			m_mouseHitChunk = chunk;
 		}
-		void setMouseHitQuadTree(QuadTree* quadTree)
-		{
-			m_mouseHitQuadTree = quadTree;
-		}
+		//void setMouseHitQuadTree(QuadTree* quadTree)
+		//{
+		//	m_mouseHitQuadTree = quadTree;
+		//}
 
 		bool editMode(void)
 		{
@@ -319,7 +320,7 @@ namespace godot
 		QuadrantPos m_quadrantHitPos;
 		QuadrantPos m_quadrantSelPos;
 		Chunk* m_mouseHitChunk;
-		QuadTree* m_mouseHitQuadTree;
+		//QuadTree* m_mouseHitQuadTree;
 
 		bool m_debugContentVisibility;
 		bool m_updateTerrainVisibilityRequired;
@@ -342,7 +343,7 @@ namespace godot
 		// Viewer (Camera)
 		GDN_TheWorld_Camera* m_worldCamera;
 		Chunk* m_cameraChunk;
-		QuadTree* m_cameraQuadTree;
+		//QuadTree* m_cameraQuadTree;
 		
 		// World Data
 		MapQuadTree m_mapQuadTree;	// Actually only 1 level is managed (to manage more levels we shold have a map for each level)

@@ -241,6 +241,7 @@ namespace godot
 		friend class ShaderTerrainData;
 		friend class GDN_TheWorld_Viewer;
 		friend class GDN_TheWorld_Edit;
+		friend class QuadTree;
 
 	public:
 		Quadrant(QuadrantPos& quadrantPos, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
@@ -761,6 +762,7 @@ namespace godot
 		void setTag(string tag)
 		{
 			m_tag = tag;
+			m_worldQuadrant->m_quadrantPos.setTag(tag);
 		}
 		std::string getTag(void)
 		{

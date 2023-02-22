@@ -128,6 +128,11 @@ void Chunk::deinit(void)
 			m_meshInstance = nullptr;
 		}
 	}
+
+	if (m_viewer->m_cameraChunk == this)
+		m_viewer->m_cameraChunk = nullptr;
+	if (m_viewer->m_mouseHitChunk == this)
+		m_viewer->m_mouseHitChunk = nullptr;
 }
 
 void Chunk::enterWorld(void)
@@ -522,6 +527,8 @@ void Chunk::setActive(bool b)
 	if (!b)
 	{
 		m_justJoined = false;
+		if (m_viewer->m_cameraChunk == this)
+			m_viewer->m_cameraChunk = nullptr;
 		m_isCameraVerticalOnChunk = false;
 		m_globalCoordCameraLastPos = Vector3(0, 0, 0);
 
@@ -535,6 +542,8 @@ void Chunk::setCameraPos(Vector3 globalCoordCameraLastPos)
 	if (!isActive())
 	{
 		m_globalCoordCameraLastPos = Vector3(0, 0, 0);
+		if (m_viewer->m_cameraChunk == this)
+			m_viewer->m_cameraChunk = nullptr;
 		m_isCameraVerticalOnChunk = false;
 	}
 	else
@@ -545,7 +554,11 @@ void Chunk::setCameraPos(Vector3 globalCoordCameraLastPos)
 			&& globalCoordCameraLastPos.z >= m_originZInWUsGlobal && globalCoordCameraLastPos.z < m_originZInWUsGlobal + m_chunkSizeInWUs)
 			m_isCameraVerticalOnChunk = true;
 		else
+		{
+			if (m_viewer->m_cameraChunk == this)
+				m_viewer->m_cameraChunk = nullptr;
 			m_isCameraVerticalOnChunk = false;
+		}
 	}
 
 	if (m_isCameraVerticalOnChunk)
@@ -641,7 +654,7 @@ void Chunk::checkMouseHit(void)
 	godot::Vector3 mouseHit = m_viewer->getMouseHit();
 	if (checkHit(mouseHit))
 	{
-		m_viewer->setMouseHitQuadTree(m_quadTree);
+		//m_viewer->setMouseHitQuadTree(m_quadTree);
 		m_viewer->setMouseHitChunk(this);
 	}
 
@@ -990,14 +1003,15 @@ void ChunkDebug::setCameraPos(Vector3 globalCoordCameraLastPos)
 		float globalOriginXInGridInWUs = m_viewer->get_global_transform().origin.x + m_originXInWUsLocalToGrid;
 		float globalOriginZInGridInWUs = m_viewer->get_global_transform().origin.z + m_originZInWUsLocalToGrid;
 
-		m_viewer->Globals()->debugPrint("Camera vertical on chunk ("
-			+ String(to_string(getPos().getSlotPosX()).c_str()) + ":" + to_string(getPos().getSlotPosZ()).c_str()
-			+ ") of " + m_quadTree->getQuadrant()->getPos().getName().c_str() + " - Chunk pos (Global) = "
-			+ to_string(globalOriginXInGridInWUs).c_str() + ":" + to_string(globalOriginZInGridInWUs).c_str()
-			+ " - MinH = " + to_string(m_aabb.position.y).c_str()
-			+ " - MaxH = " + to_string((m_aabb.position + m_aabb.size).y).c_str()
-			+ " - Chunk Size in WUs = " + to_string(getChunkSizeInWUs()).c_str()
-		);
+		//m_viewer->Globals()->debugPrint("Camera vertical on chunk ("
+		//	+ String(to_string(getPos().getSlotPosX()).c_str()) + ":" + to_string(getPos().getSlotPosZ()).c_str()
+		//	+ ") of " + m_quadTree->getQuadrant()->getPos().getName().c_str() + " - Chunk pos (Global) = "
+		//	+ to_string(globalOriginXInGridInWUs).c_str() + ":" + to_string(globalOriginZInGridInWUs).c_str()
+		//	+ " - MinH = " + to_string(m_aabb.position.y).c_str()
+		//	+ " - MaxH = " + to_string((m_aabb.position + m_aabb.size).y).c_str()
+		//	+ " - Chunk Size in WUs = " + to_string(getChunkSizeInWUs()).c_str()
+		//);
+		
 		applyDebugMesh();
 		applyAABB();
 	}

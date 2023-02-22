@@ -31,7 +31,7 @@ namespace godot
 		//set_name(m_quadTree->getQuadrant()->getPos().getName().c_str());
 		set_meta("QuadrantPos", m_quadTree->getQuadrant()->getPos().getIdStr().c_str());
 		set_meta("QuadrantName", m_quadTree->getQuadrant()->getPos().getName().c_str());
-		set_meta("QuadrantTag", m_quadTree->getQuadrant()->getPos().getTag().c_str());
+		//set_meta("QuadrantTag", m_quadTree->getQuadrant()->getPos().getTag().c_str());	// wrong: tag change during movement
 		set_meta("QuadrantOrig", Vector3(m_quadTree->getQuadrant()->getPos().getLowerXGridVertex(), 0, m_quadTree->getQuadrant()->getPos().getLowerZGridVertex()));
 		set_meta("QuadrantStep", m_quadTree->getQuadrant()->getPos().getGridStepInWU());
 		set_meta("QuadrantLevel", m_quadTree->getQuadrant()->getPos().getLevel());

@@ -94,7 +94,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_worldViewerLevel = 0;
 	m_worldCamera = nullptr;
 	m_cameraChunk = nullptr;
-	m_cameraQuadTree = nullptr;
+	//m_cameraQuadTree = nullptr;
 	m_refreshMapQuadTree = false;
 	m_globals = nullptr;
 	m_editModeUIControl = nullptr;
@@ -140,7 +140,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_timeElapsedFromLastMouseTrack = 0;
 	m_mouseQuadrantHitSize = 0;
 	m_mouseHitChunk = nullptr;
-	m_mouseHitQuadTree = nullptr;
+	//m_mouseHitQuadTree = nullptr;
 	m_updateTerrainVisibilityRequired = false;
 	m_currentChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
 	m_requiredChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
@@ -873,10 +873,10 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	//			m_numVisibleQuadrantOnPerimeter = 3;
 	//	}
 	//}
-	m_numVisibleQuadrantOnPerimeter = 3;
-	m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter * 2;
-
 	{
+		m_numVisibleQuadrantOnPerimeter = 3;
+		m_numCacheQuadrantOnPerimeter = 6;
+
 		//m_numVisibleQuadrantOnPerimeter = 0;	// SUPERDEBUGRIC only camera quadrant
 		//m_numCacheQuadrantOnPerimeter = 0;		// SUPERDEBUGRIC only camera quadrant
 
@@ -954,6 +954,7 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 					//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.1.2 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (refresh old quads)");
 
 					it->second->refreshTime(refreshTime);
+					it->second->setTag(quadrantPosNeeded[idx].getTag());
 				}
 			}
 		}
@@ -981,6 +982,7 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 						{
 							visibilityChanged = true;
 							itQuadTree->second->setVisible(true);
+							itQuadTree->second->materialParamsNeedReset(true);
 						}
 					}
 
@@ -999,12 +1001,12 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 						itQuadTree->second->setVisible(false);
 						quadrantToDelete.push_back(itQuadTree->first);
 					}
-					if (m_cameraQuadTree != nullptr /* && m_cameraQuadTree->isValid()*/ && itQuadTree->first == m_cameraQuadTree->getQuadrant()->getPos())
-					{
-						// if we delete the ones containing old camera chunk we invalidate it
-						m_cameraChunk = nullptr;
-						m_cameraQuadTree = nullptr;
-					}
+					//if (m_cameraQuadTree != nullptr && itQuadTree->first == m_cameraQuadTree->getQuadrant()->getPos())
+					//{
+					//	// if we delete the ones containing old camera chunk we invalidate it
+					//	m_cameraChunk = nullptr;
+					//	m_cameraQuadTree = nullptr;
+					//}
 				}
 			}
 		}
@@ -1227,20 +1229,27 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 						godot::api->godot_free(str);
 						if (mouseQuadrantHitName != m_mouseQuadrantHitName)
 						{
-							s = collider->get_meta("QuadrantTag", "");
+							/*s = collider->get_meta("QuadrantTag", "");
 							str = s.alloc_c_string();
 							std::string mouseQuadrantHitTag = str;
-							godot::api->godot_free(str);
+							godot::api->godot_free(str);*/
 							godot::Vector3 mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
 							float mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
 							float gridStepInWu = collider->get_meta("QuadrantStep");
 							int level = collider->get_meta("QuadrantLevel");
 							int numVerticesPerSize = collider->get_meta("QuadrantNumVert");
 							QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
-							quadrantHitPos.setTag(mouseQuadrantHitTag);
+							//quadrantHitPos.setTag(mouseQuadrantHitTag);
+
+							// Get current Tag
+							std::string mouseQuadrantHitTag;
+							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
+							if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+								mouseQuadrantHitTag = it->second->getTag();
 
 							if (editModeUIControl != nullptr && m_editMode)
 							{
+
 								editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
 								editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
 
@@ -2770,8 +2779,8 @@ String GDN_TheWorld_Viewer::getCameraChunkId(void)
 
 String GDN_TheWorld_Viewer::getCameraQuadrantName(void)
 {
-	if (m_cameraQuadTree)
-		return m_cameraQuadTree->getQuadrant()->getPos().getName().c_str();
+	if (m_cameraChunk)
+		return m_cameraChunk->getQuadTree()->getQuadrant()->getPos().getName().c_str();
 	else
 		return "";
 }
@@ -2920,18 +2929,18 @@ void GDN_TheWorld_Viewer::dump()
 		Globals()->debugPrint("Quadrant busy memory : " + String(std::to_string(memoryOccupation).c_str()));
 	}
 
-	//Node* node = get_node(NodePath("/root"));
-	//if (node != nullptr)
-	//{
-	//	Globals()->debugPrint("============================================");
-	//	Globals()->debugPrint("");
-	//	Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
-	//	Globals()->debugPrint("");
-	//	Globals()->debugPrint(node->get_name());
-	//	Array nodes = node->get_children();
-	//	dumpRecurseIntoChildrenNodes(nodes, 1);
-	//	Globals()->debugPrint("============================================");
-	//}
+	Node* node = get_node(NodePath("/root"));
+	if (node != nullptr)
+	{
+		Globals()->debugPrint("=== NODES ===========================================");
+		Globals()->debugPrint("");
+		Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
+		Globals()->debugPrint("");
+		Globals()->debugPrint(node->get_name());
+		Array nodes = node->get_children();
+		dumpRecurseIntoChildrenNodes(nodes, 1);
+		Globals()->debugPrint("=== NODES ===========================================");
+	}
 	
 	//{
 	//	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTree);
@@ -2986,7 +2995,7 @@ void GDN_TheWorld_Viewer::setCameraChunk(Chunk* chunk, QuadTree* quadTree)
 	}
 
 	m_cameraChunk = chunk;
-	m_cameraQuadTree = quadTree;
+	//m_cameraQuadTree = quadTree;
 }
 
 void GDN_TheWorld_Viewer::streamer(void)
@@ -3107,7 +3116,7 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 
 		if (allQuadrantInitialized)
 		{
-			if (Globals()->status() == TheWorldStatus::worldDeployInProgress && m_mapQuadTree.size() > 1)
+			if (Globals()->status() == TheWorldStatus::worldDeployInProgress && ((m_numVisibleQuadrantOnPerimeter == 0 && m_mapQuadTree.size() == 1) || m_mapQuadTree.size() > 1))
 				Globals()->setStatus(TheWorldStatus::worldDeployed);
 
 			if (m_streamingTime.counterStarted())
