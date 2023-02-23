@@ -77,15 +77,6 @@ bool GDN_TheWorld_MainNode::init(Node* pMainNode, Spatial* pWorldMainNode)
 
 	pMainNode->add_child(this);
 
-	//GDN_Template* temp = GDN_Template::_new();
-	//if (temp)
-	//{
-	//	pWorldMainNode->add_child(temp);
-	//	temp->set_name("GDN_Template");
-	//	temp->init();
-	//	m_temp = temp;
-	//}
-	
 	GDN_TheWorld_Globals* globals = GDN_TheWorld_Globals::_new();
 	if (globals)
 	{

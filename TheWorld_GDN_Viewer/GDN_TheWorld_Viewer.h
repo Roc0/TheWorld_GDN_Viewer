@@ -239,7 +239,7 @@ namespace godot
 
 		std::recursive_mutex& getMainProcessingMutex(void)
 		{
-			return m_mtxQuadTree;
+			return m_mtxQuadTreeAndMainProcessing;
 		}
 
 	private:
@@ -347,7 +347,7 @@ namespace godot
 		
 		// World Data
 		MapQuadTree m_mapQuadTree;	// Actually only 1 level is managed (to manage more levels we shold have a map for each level)
-		std::recursive_mutex m_mtxQuadTree;
+		std::recursive_mutex m_mtxQuadTreeAndMainProcessing;
 		QuadrantPos m_computedCameraQuadrantPos;
 		bool m_recalcQuadrantsInViewNeeded;
 		bool m_refreshMapQuadTree;
