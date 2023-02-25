@@ -682,12 +682,12 @@ bool  QuadTree::updateMaterialParams(void)
 	
 	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
-		//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4 ") + __FUNCTION__, "QuadTree updateMaterialParams");
+		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4 ") + __FUNCTION__, "QuadTree updateMaterialParams");
 
 		if (isVisible())
 		{
 			{
-				//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1 ") + __FUNCTION__, "QuadTree set data for collider");
+				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1 ") + __FUNCTION__, "QuadTree set data for collider");
 
 				m_worldQuadrant->getCollider()->deinit();
 				m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
@@ -695,10 +695,11 @@ bool  QuadTree::updateMaterialParams(void)
 				m_worldQuadrant->getCollider()->setData();
 			}
 
-			//TheWorld_Viewer_Utils::TimerMs clock;
-			//clock.tick();
-			getQuadrant()->getShaderTerrainData()->updateMaterialParams();
-			//clock.tock();	m_viewer->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + m_worldQuadrant->getPos().getIdStr().c_str() + " TAG=" + m_tag.c_str() + " - updateMaterialParams " + std::to_string(clock.duration().count()).c_str() + " ms");
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.2 ") + __FUNCTION__, "QuadTree update shader");
+
+				getQuadrant()->getShaderTerrainData()->updateMaterialParams();
+			}
 
 			updated = true;
 		}

@@ -34,7 +34,7 @@ void GDN_TheWorld_Edit::_register_methods()
 
 	//register_method("hello", &GDN_TheWorld_Edit::hello);
 	register_method("edit_mode_generate", &GDN_TheWorld_Edit::editModeGenerateAction);
-	register_method("edit_mode_mend", &GDN_TheWorld_Edit::editModeMendAction);
+	register_method("edit_mode_blend", &GDN_TheWorld_Edit::editModeBlendAction);
 	register_method("edit_mode_gen_normals", &GDN_TheWorld_Edit::editModeGenNormalsAction);
 	register_method("edit_mode_save", &GDN_TheWorld_Edit::editModeSaveAction);
 	register_method("edit_mode_upload", &GDN_TheWorld_Edit::editModeUploadAction);
@@ -61,6 +61,8 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_fractalWeightedStrength = nullptr;
 	m_fractalPingPongStrength = nullptr;
 	m_amplitudeLabel = nullptr;
+	m_scaleFactorLabel = nullptr;
+	m_desideredMinHeightLabel = nullptr;
 	m_minHeightLabel = nullptr;
 	m_maxHeightLabel = nullptr;
 	m_elapsedLabel = nullptr;
@@ -218,6 +220,8 @@ void GDN_TheWorld_Edit::setUIAcceptFocus(bool b)
 	m_fractalLacunarity->set_focus_mode(focusMode);
 	m_fractalGain->set_focus_mode(focusMode);
 	m_amplitudeLabel->set_focus_mode(focusMode);
+	m_scaleFactorLabel->set_focus_mode(focusMode);
+	m_desideredMinHeightLabel->set_focus_mode(focusMode);
 	m_fractalWeightedStrength->set_focus_mode(focusMode);
 	m_fractalPingPongStrength->set_focus_mode(focusMode);
 
@@ -229,8 +233,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	m_initialized = true;
 	m_viewer = viewer;
 
-	TheWorld_Utils::WorldModifierPos pos(0, 4096, 4096, TheWorld_Utils::WMType::elevator, 0);
-	m_wms[pos] = std::make_unique<TheWorld_Utils::WorldModifier>(pos, TheWorld_Utils::WMFunctionType::ConsiderMinMax, 10000.0f, -100.0f, 2000.0f, TheWorld_Utils::WMOrder::MaxEffectOnWM);
+	//TheWorld_Utils::WorldModifierPos pos(0, 4096, 4096, TheWorld_Utils::WMType::elevator, 0);
+	//m_wms[pos] = std::make_unique<TheWorld_Utils::WorldModifier>(pos, TheWorld_Utils::WMFunctionType::ConsiderMinMax, 10000.0f, 0.0f, 200.0f, TheWorld_Utils::WMOrder::MaxEffectOnWM);
 
 
 	std::lock_guard<std::recursive_mutex> lock(m_viewer->getMainProcessingMutex());
@@ -294,8 +298,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					separator->connect("mouse_exited", this, "mouse_exited_main_panel");
 					button = godot::Button::_new();
 					hBoxContainer->add_child(button);
-					button->set_text("Mend");
-					button->connect("pressed", this, "edit_mode_mend");
+					button->set_text("Blend");
+					button->connect("pressed", this, "edit_mode_blend");
 					button->connect("mouse_entered", this, "mouse_entered_main_panel");
 					button->connect("mouse_exited", this, "mouse_exited_main_panel");
 					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
@@ -333,7 +337,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::unknown).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::unknown);
 					m_terrTypeOptionButton->add_separator();
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::campaign_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::campaign_1);
-					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::campaign_2).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::campaign_2);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_hills).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_hills);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_hills).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_hills);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_mountains).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_mountains);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2);
 					m_terrTypeOptionButton->add_separator();
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::noise_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::noise_1);
 
@@ -365,6 +373,17 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_frequency->set_align(godot::Label::Align::ALIGN_RIGHT);
 					m_frequency->connect("mouse_entered", this, "mouse_entered_main_panel");
 					m_frequency->connect("mouse_exited", this, "mouse_exited_main_panel");
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Gain");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					label->connect("mouse_entered", this, "mouse_entered_main_panel");
+					label->connect("mouse_exited", this, "mouse_exited_main_panel");
+					m_fractalGain = godot::LineEdit::_new();
+					hBoxContainer->add_child(m_fractalGain);
+					m_fractalGain->set_align(godot::Label::Align::ALIGN_RIGHT);
+					m_fractalGain->connect("mouse_entered", this, "mouse_entered_main_panel");
+					m_fractalGain->connect("mouse_exited", this, "mouse_exited_main_panel");
 
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
@@ -403,17 +422,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				marginContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
-					label->set_text("Gain");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_fractalGain = godot::LineEdit::_new();
-					hBoxContainer->add_child(m_fractalGain);
-					m_fractalGain->set_align(godot::Label::Align::ALIGN_RIGHT);
-					m_fractalGain->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_fractalGain->connect("mouse_exited", this, "mouse_exited_main_panel");
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
 					label->set_text("Amplitude");
 					label->set_align(godot::Label::Align::ALIGN_LEFT);
 					label->connect("mouse_entered", this, "mouse_entered_main_panel");
@@ -423,6 +431,28 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_amplitudeLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
 					m_amplitudeLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
 					m_amplitudeLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Scale");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					label->connect("mouse_entered", this, "mouse_entered_main_panel");
+					label->connect("mouse_exited", this, "mouse_exited_main_panel");
+					m_scaleFactorLabel = godot::LineEdit::_new();
+					hBoxContainer->add_child(m_scaleFactorLabel);
+					m_scaleFactorLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+					m_scaleFactorLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+					m_scaleFactorLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Start H");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					label->connect("mouse_entered", this, "mouse_entered_main_panel");
+					label->connect("mouse_exited", this, "mouse_exited_main_panel");
+					m_desideredMinHeightLabel = godot::LineEdit::_new();
+					hBoxContainer->add_child(m_desideredMinHeightLabel);
+					m_desideredMinHeightLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+					m_desideredMinHeightLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+					m_desideredMinHeightLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
 
 			marginContainer = godot::MarginContainer::_new();
 			mainVBoxContainer->add_child(marginContainer);
@@ -696,6 +726,7 @@ void GDN_TheWorld_Edit::setEmptyTerrainEditValues(void)
 	setWeightedStrength(0.0f);
 	setPingPongStrength(0.0f);
 	setAmplitude(0);
+	setScaleFactor(1.0f);
 	setMinHeight(0.0f);
 	setMaxHeight(0.0f);
 }
@@ -721,7 +752,9 @@ void GDN_TheWorld_Edit::setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrai
 	setGain(terrainEdit.noise.fractalGain);
 	setWeightedStrength(terrainEdit.noise.fractalWeightedStrength);
 	setPingPongStrength(terrainEdit.noise.fractalPingPongStrength);
-	setAmplitude(terrainEdit.amplitude);
+	setAmplitude(terrainEdit.noise.amplitude);
+	setScaleFactor(terrainEdit.noise.scaleFactor);
+	setDesideredMinHeight(terrainEdit.noise.desideredMinHeight);
 	setMinHeight(terrainEdit.minHeight);
 	setMaxHeight(terrainEdit.maxHeight);
 }
@@ -834,6 +867,34 @@ unsigned int GDN_TheWorld_Edit::amplitude(void)
 	godot::String s = m_amplitudeLabel->get_text();
 	char* str = s.alloc_c_string();
 	unsigned int ret = std::stoi(std::string(str));
+	godot::api->godot_free(str);
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setScaleFactor(float scaleFactor)
+{
+	m_scaleFactorLabel->set_text(std::to_string(scaleFactor).c_str());
+}
+
+float GDN_TheWorld_Edit::scaleFactor(void)
+{
+	godot::String s = m_scaleFactorLabel->get_text();
+	char* str = s.alloc_c_string();
+	float ret = std::stof(std::string(str));
+	godot::api->godot_free(str);
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setDesideredMinHeight(float desideredMinHeight)
+{
+	m_desideredMinHeightLabel->set_text(std::to_string(desideredMinHeight).c_str());
+}
+
+float GDN_TheWorld_Edit::desideredMinHeight(void)
+{
+	godot::String s = m_desideredMinHeightLabel->get_text();
+	char* str = s.alloc_c_string();
+	float ret = std::stof(std::string(str));
 	godot::api->godot_free(str);
 	return ret;
 }
@@ -1072,7 +1133,7 @@ void GDN_TheWorld_Edit::editModeSave(void)
 			cacheData.normalsBuffer = &quadToSave->getQuadrant()->getNormalsBuffer(false);
 			QuadrantPos quadrantPos = item.first;
 			TheWorld_Utils::MemoryBuffer buffer;
-			cache.setBufferFromCacheData(quadrantPos.getNumVerticesPerSize(), quadrantPos.getGridStepInWU(), cacheData, buffer);
+			cache.setBufferFromCacheData(quadrantPos.getNumVerticesPerSize(), cacheData, buffer);
 			cache.writeBufferToCache(buffer);
 
 			m_completedItems++;
@@ -1169,7 +1230,7 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 			cacheData.heights32Buffer = &quadTree->getQuadrant()->getFloat32HeightsBuffer(false);
 			cacheData.normalsBuffer = &quadTree->getQuadrant()->getNormalsBuffer(false);
 			std::string buffer;
-			cache.setBufferFromCacheData(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), cacheData, buffer);
+			cache.setBufferFromCacheData(pos.getNumVerticesPerSize(), cacheData, buffer);
 			
 			float lowerXGridVertex = pos.getLowerXGridVertex();
 			float lowerZGridVertex = pos.getLowerZGridVertex();
@@ -1250,7 +1311,9 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	terrainEdit->noise.fractalGain = gain();
 	terrainEdit->noise.fractalWeightedStrength = weightedStrength();
 	terrainEdit->noise.fractalPingPongStrength = pingPongStrength();
-	terrainEdit->amplitude = amplitude();
+	terrainEdit->noise.amplitude = amplitude();
+	terrainEdit->noise.scaleFactor = scaleFactor();
+	terrainEdit->noise.desideredMinHeight = desideredMinHeight();
 	//terrainEdit->needUploadToServer = true;
 
 	int level = quadrantSelPos.getLevel();
@@ -1262,15 +1325,14 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	float lowerZGridVertex = quadrantSelPos.getLowerZGridVertex();
 	
 	std::vector<float> vectGridHeights;
-	float minHeight = 0, maxHeight = 0;
 	TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.1 ") + __FUNCTION__, "Generate Heights");
-		cache.generateHeights(numVerticesPerSize, gridStepInWU, lowerXGridVertex, lowerZGridVertex, terrainEdit->noise, terrainEdit->amplitude, vectGridHeights, minHeight, maxHeight);
+		cache.generateHeightsWithNoise(numVerticesPerSize, gridStepInWU, lowerXGridVertex, lowerZGridVertex, terrainEdit, vectGridHeights);
 
 		for (auto& item : m_wms)
 		{
-			cache.applyWorldModifier(level, numVerticesPerSize, gridStepInWU, lowerXGridVertex, lowerZGridVertex, vectGridHeights, minHeight, maxHeight, *item.second.get());
+			cache.applyWorldModifier(level, numVerticesPerSize, gridStepInWU, lowerXGridVertex, lowerZGridVertex, terrainEdit, vectGridHeights, *item.second.get());
 		}
 	}
 
@@ -1314,9 +1376,6 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	quadTreeSel->getQuadrant()->getNormalsBuffer(false).clear();
 	terrainEdit->normalsNeedRegen = true;
 
-	terrainEdit->minHeight = minHeight;
-	terrainEdit->maxHeight = maxHeight;
-
 	{
 		PoolRealArray& heightsForCollider = quadTreeSel->getQuadrant()->getHeightsForCollider();
 		heightsForCollider.resize((int)numVertices);
@@ -1324,8 +1383,8 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 		memcpy((char*)w.ptr(), heights32Buffer.ptr(), heights32Buffer.size());
 	}
 
-	Vector3 startPosition(lowerXGridVertex, minHeight, lowerZGridVertex);
-	Vector3 endPosition(startPosition.x + sizeInWU, maxHeight, startPosition.z + sizeInWU);
+	Vector3 startPosition(lowerXGridVertex, terrainEdit->minHeight, lowerZGridVertex);
+	Vector3 endPosition(startPosition.x + sizeInWU, terrainEdit->maxHeight, startPosition.z + sizeInWU);
 	Vector3 size = endPosition - startPosition;
 
 	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_position(startPosition);
@@ -1341,8 +1400,8 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	quadTreeSel->getQuadrant()->setNormalsUpdated(true);
 	quadTreeSel->materialParamsNeedReset(true);
 
-	setMinHeight(minHeight);
-	setMaxHeight(maxHeight);
+	setMinHeight(terrainEdit->minHeight);
+	setMaxHeight(terrainEdit->maxHeight);
 
 	m_completedItems++;
 	size_t partialCount = m_actionClock.partialDuration().count();
@@ -1359,7 +1418,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	m_actionInProgress = false;
 }
 
-void GDN_TheWorld_Edit::editModeMendAction(void)
+void GDN_TheWorld_Edit::editModeBlendAction(void)
 {
 	if (m_actionInProgress)
 		return;
@@ -1369,11 +1428,11 @@ void GDN_TheWorld_Edit::editModeMendAction(void)
 	setElapsed(0, true);
 	setNote1(0);
 
-	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeMend, this);
+	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeBlend, this);
 	m_tp.QueueJob(f);
 }
 
-void GDN_TheWorld_Edit::editModeMend(void)
+void GDN_TheWorld_Edit::editModeBlend(void)
 {
 	if (m_actionClock.counterStarted())
 	{
@@ -1393,7 +1452,7 @@ void GDN_TheWorld_Edit::editModeMend(void)
 		return;
 	}
 
-	TheWorld_Utils::GuardProfiler profiler(std::string("EditMend 1 ") + __FUNCTION__, "ALL");
+	TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1 ") + __FUNCTION__, "ALL");
 
 	// TODO
 

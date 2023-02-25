@@ -69,7 +69,7 @@ namespace godot
 		register_method("get_collider_transform", &GDN_TheWorld_Quadrant::getColliderTransform);
 		register_method("set_collider_mesh_transform", &GDN_TheWorld_Quadrant::setDebugColliderMeshTransform);
 		register_method("get_collider_mesh_transform", &GDN_TheWorld_Quadrant::getDebugColliderMeshTransform);
-		register_method("show_collider_mesh", &GDN_TheWorld_Quadrant::showDebugColliderMesh);
+		//register_method("show_collider_mesh", &GDN_TheWorld_Quadrant::showDebugColliderMesh);
 	}
 
 	void GDN_TheWorld_Quadrant::_init(void)
@@ -159,88 +159,88 @@ namespace godot
 		return t;
 	}
 
-	void GDN_TheWorld_Quadrant::showDebugColliderMesh(bool show)
-	{
-		if (!show && m_colliderMeshInstance == nullptr)
-			return;
-		
-		createDebugColliderMeshInstance();
+	//void GDN_TheWorld_Quadrant::showDebugColliderMesh(bool show)
+	//{
+	//	if (!show && m_colliderMeshInstance == nullptr)
+	//		return;
+	//	
+	//	createDebugColliderMeshInstance();
 
-		if (show)
-			m_colliderMeshInstance->set_visible(true);
-		else
-			m_colliderMeshInstance->set_visible(false);
-	}
-	
-	void GDN_TheWorld_Quadrant::createDebugColliderMeshInstance(void)
-	{
-		if (m_colliderMeshInstance == nullptr)
-		{
-			m_quadTree->Viewer()->getMainProcessingMutex().lock();
-			m_colliderMeshInstance = GDN_Collider_MeshInstance::_new();
-			m_quadTree->Viewer()->getMainProcessingMutex().unlock();
-			m_colliderMeshInstance->init();
+	//	if (show)
+	//		m_colliderMeshInstance->set_visible(true);
+	//	else
+	//		m_colliderMeshInstance->set_visible(false);
+	//}
+	//
+	//void GDN_TheWorld_Quadrant::createDebugColliderMeshInstance(void)
+	//{
+	//	if (m_colliderMeshInstance == nullptr)
+	//	{
+	//		m_quadTree->Viewer()->getMainProcessingMutex().lock();
+	//		m_colliderMeshInstance = GDN_Collider_MeshInstance::_new();
+	//		m_quadTree->Viewer()->getMainProcessingMutex().unlock();
+	//		m_colliderMeshInstance->init();
 
-			PoolRealArray heights;
-			int numVertices = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize() * m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
-			heights.resize((int)numVertices);
-			{
-				godot::PoolRealArray::Write w = heights.write();
-				memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().size());
-			}
+	//		PoolRealArray heights;
+	//		int numVertices = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize() * m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
+	//		heights.resize((int)numVertices);
+	//		{
+	//			godot::PoolRealArray::Write w = heights.write();
+	//			memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().size());
+	//		}
 
-			size_t size = heights.size();
-			if (size == 0)
-				return;
+	//		size_t size = heights.size();
+	//		if (size == 0)
+	//			return;
 
-			PoolVector3Array positions;
-			PoolColorArray colors;
-			Color initialVertexColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
-			int numVerticesPerSide = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
-			positions.resize((int)pow(numVerticesPerSide, 2));
-			colors.resize((int)pow(numVerticesPerSide, 2));
-			int pos = 0;
-			for (real_t z = 0; z < numVerticesPerSide; z++)
-				for (real_t x = 0; x < numVerticesPerSide; x++)
-				{
-					Vector3 v(x, heights[pos], z);
-					positions.set(pos, v);
-					colors.set(pos, initialVertexColor);
-					pos++;
-				}
+	//		PoolVector3Array positions;
+	//		PoolColorArray colors;
+	//		Color initialVertexColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
+	//		int numVerticesPerSide = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
+	//		positions.resize((int)pow(numVerticesPerSide, 2));
+	//		colors.resize((int)pow(numVerticesPerSide, 2));
+	//		int pos = 0;
+	//		for (real_t z = 0; z < numVerticesPerSide; z++)
+	//			for (real_t x = 0; x < numVerticesPerSide; x++)
+	//			{
+	//				Vector3 v(x, heights[pos], z);
+	//				positions.set(pos, v);
+	//				colors.set(pos, initialVertexColor);
+	//				pos++;
+	//			}
 
-			PoolIntArray indices;
-			void GDN_TheWorld_Quadrant_showCollider_makeIndices(PoolIntArray& indices, int numVerticesPerSide);
-			GDN_TheWorld_Quadrant_showCollider_makeIndices(indices, numVerticesPerSide);
+	//		PoolIntArray indices;
+	//		void GDN_TheWorld_Quadrant_showCollider_makeIndices(PoolIntArray& indices, int numVerticesPerSide);
+	//		GDN_TheWorld_Quadrant_showCollider_makeIndices(indices, numVerticesPerSide);
 
-			godot::Array arrays;
-			arrays.resize(ArrayMesh::ARRAY_MAX);
-			arrays[ArrayMesh::ARRAY_VERTEX] = positions;
-			arrays[ArrayMesh::ARRAY_COLOR] = colors;
-			arrays[ArrayMesh::ARRAY_INDEX] = indices;
+	//		godot::Array arrays;
+	//		arrays.resize(ArrayMesh::ARRAY_MAX);
+	//		arrays[ArrayMesh::ARRAY_VERTEX] = positions;
+	//		arrays[ArrayMesh::ARRAY_COLOR] = colors;
+	//		arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
-			m_quadTree->Viewer()->getMainProcessingMutex().lock();
-			Ref<ArrayMesh> mesh = ArrayMesh::_new();
-			m_quadTree->Viewer()->getMainProcessingMutex().unlock();
-			int64_t surf_idx = mesh->get_surface_count();	// next surface added will have this surf_idx
-			mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
+	//		m_quadTree->Viewer()->getMainProcessingMutex().lock();
+	//		Ref<ArrayMesh> mesh = ArrayMesh::_new();
+	//		m_quadTree->Viewer()->getMainProcessingMutex().unlock();
+	//		int64_t surf_idx = mesh->get_surface_count();	// next surface added will have this surf_idx
+	//		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
 
-			// Initial Material
-			m_quadTree->Viewer()->getMainProcessingMutex().lock();
-			Ref<SpatialMaterial> initialMaterial = SpatialMaterial::_new();
-			m_quadTree->Viewer()->getMainProcessingMutex().unlock();
-			initialMaterial->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-			initialMaterial->set_albedo(initialVertexColor);
-			mesh->surface_set_material(surf_idx, initialMaterial);
+	//		// Initial Material
+	//		m_quadTree->Viewer()->getMainProcessingMutex().lock();
+	//		Ref<SpatialMaterial> initialMaterial = SpatialMaterial::_new();
+	//		m_quadTree->Viewer()->getMainProcessingMutex().unlock();
+	//		initialMaterial->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+	//		initialMaterial->set_albedo(initialVertexColor);
+	//		mesh->surface_set_material(surf_idx, initialMaterial);
 
-			//Ref<Mesh> mesh;
-			m_colliderMeshInstance->set_mesh(mesh);
+	//		//Ref<Mesh> mesh;
+	//		m_colliderMeshInstance->set_mesh(mesh);
 
-			add_child(m_colliderMeshInstance);
+	//		add_child(m_colliderMeshInstance);
 
-			onGlobalTransformChanged();
-		}
-	}
+	//		onGlobalTransformChanged();
+	//	}
+	//}
 
 	void GDN_TheWorld_Quadrant::onGlobalTransformChanged(void)
 	{

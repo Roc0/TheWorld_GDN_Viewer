@@ -152,7 +152,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_shiftPressed = false;
 	m_streamerThreadRequiredExit = false;
 	m_streamerThreadRunning = false;
-	m_numVisibleQuadrantOnPerimeter = 0;
+	m_numVisibleQuadrantOnPerimeter = -1;
 	m_numCacheQuadrantOnPerimeter = 0;
 	m_recalcQuadrantsInViewNeeded = false;
 }

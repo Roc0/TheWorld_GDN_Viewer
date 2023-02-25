@@ -60,7 +60,7 @@ namespace godot
 
 		void resizeUI(void);
 		void editModeGenerateAction(void);
-		void editModeMendAction(void);
+		void editModeBlendAction(void);
 		void editModeGenNormalsAction(void);
 		void editModeSaveAction(void);
 		void editModeUploadAction(void);
@@ -68,7 +68,7 @@ namespace godot
 		void editModeSelectTerrainTypeAction(int64_t index);
 
 		void editModeGenerate(void);
-		void editModeMend(void);
+		void editModeBlend(void);
 		void editModeGenNormals(void);
 		void editModeSave(void);
 		void editModeUpload(void);
@@ -97,6 +97,10 @@ namespace godot
 		float pingPongStrength(void);
 		void setAmplitude(unsigned int amplitude);
 		unsigned int amplitude(void);
+		void setScaleFactor(float scaleFactor);
+		float scaleFactor(void);
+		void setDesideredMinHeight(float desideredMinHeight);
+		float desideredMinHeight(void);
 		void setMinHeight(float minHeight);
 		float minHeight(void);
 		void setMaxHeight(float maxHeight);
@@ -153,6 +157,8 @@ namespace godot
 		godot::LineEdit* m_fractalPingPongStrength;
 
 		godot::LineEdit* m_amplitudeLabel;
+		godot::LineEdit* m_scaleFactorLabel;
+		godot::LineEdit* m_desideredMinHeightLabel;
 		godot::Label* m_minHeightLabel;
 		godot::Label* m_maxHeightLabel;
 		godot::Label* m_elapsedLabel;
