@@ -687,12 +687,15 @@ bool  QuadTree::updateMaterialParams(void)
 		if (isVisible())
 		{
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1 ") + __FUNCTION__, "QuadTree set data for collider");
+				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1 ") + __FUNCTION__, "QuadTree collider stuff");
 
 				m_worldQuadrant->getCollider()->deinit();
 				m_worldQuadrant->getCollider()->init(m_GDN_Quadrant, 1, 1);
 				m_worldQuadrant->getCollider()->enterWorld();
-				m_worldQuadrant->getCollider()->setData();
+				{
+					//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1.1 ") + __FUNCTION__, "QuadTree set data for collider");
+					m_worldQuadrant->getCollider()->setData();
+				}
 			}
 
 			{

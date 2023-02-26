@@ -875,7 +875,7 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	//}
 	{
 		m_numVisibleQuadrantOnPerimeter = 3;
-		m_numCacheQuadrantOnPerimeter = 6;
+		m_numCacheQuadrantOnPerimeter = 4;
 
 		//m_numVisibleQuadrantOnPerimeter = 0;	// SUPERDEBUGRIC only camera quadrant
 		//m_numCacheQuadrantOnPerimeter = 0;		// SUPERDEBUGRIC only camera quadrant
@@ -940,8 +940,14 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 				{
 					//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.1.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (create new quads)");
 
-					if (it != m_mapQuadTree.end() && it->second->statusToErase())
-						m_mapQuadTree.erase(it->first);
+					if (it != m_mapQuadTree.end() /* && it->second->statusToErase() // useless for the previous if */)
+					{
+						// extract element from map without destroying it than remembre to destory later (next _process)
+						auto h = m_mapQuadTree.extract(it->first);
+						QuadrantPos pos = h.key();
+						m_toErase.push_back(pos);
+						//m_mapQuadTree.erase(it->first);
+					}
 
 					m_mapQuadTree[quadrantPosNeeded[idx]] = make_unique<QuadTree>(this, quadrantPosNeeded[idx]);
 					m_mapQuadTree[quadrantPosNeeded[idx]]->refreshTime(refreshTime);
@@ -1113,6 +1119,18 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 			editModeUIControl->set_visible(false);
 			m_editModeHudVisible = false;
 		}
+	
+	// erasing out-of-view quadrants
+	{
+		for (auto& pos : m_toErase)
+		{
+			if (m_mapQuadTree.contains(pos))
+			{
+				size_t numErased = m_mapQuadTree.erase(pos);
+			}
+		}
+		m_toErase.clear();
+	}
 	
 	Vector3 cameraPosGlobalCoord = activeCamera->get_global_transform().get_origin();
 	//Transform globalTransform = internalTransformGlobalCoord();
@@ -3008,69 +3026,56 @@ void GDN_TheWorld_Viewer::streamer(void)
 	{
 		try
 		{
-			////std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-			//std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing, std::try_to_lock);
-			//if (lock.owns_lock())
-			//{
-				try
+			try
+			{
 				{
+					//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+					std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing, std::try_to_lock);
+					if (lock.owns_lock())
 					{
-						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-						std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing, std::try_to_lock);
-						if (lock.owns_lock())
+						for (MapQuadTree::iterator it = m_mapQuadTree.begin(); it != m_mapQuadTree.end(); it++)
 						{
-							//if (m_computedCameraQuadrantPos.isInitialized())
-							//{
-							//	streamingQuadrantStuff();
-							//}
+							bool reset = false;
+							reset = it->second->resetMaterialParams();
 
-							vector<QuadrantPos> toErase;
-							for (MapQuadTree::iterator it = m_mapQuadTree.begin(); it != m_mapQuadTree.end(); it++)
+							if (it->second->statusToErase())
 							{
-								bool reset = false;
-								reset = it->second->resetMaterialParams();
-
-								if (it->second->statusToErase())
-								{
-									toErase.push_back(it->first);
-									break;
-								}
+								m_toErase.push_back(it->first);
+								break;
 							}
-
-							for (auto& pos : toErase)
-							{
-								m_mapQuadTree.erase(pos);
-							}
-
-							lock.unlock();
 						}
-					}
 
-					if (m_recalcQuadrantsInViewNeeded)
-					{
-						recalcQuadrantsInView();
-						m_recalcQuadrantsInViewNeeded = false;
+						lock.unlock();
 					}
-					if (m_dumpRequired)
-					{
-						TheWorld_Utils::GuardProfiler profiler(std::string("streamer 1 ") + __FUNCTION__, "Dump stuff");
-
-						m_dumpRequired = false;
-						dump();
-					}
-
 				}
-				catch (std::exception& e)
+
+				// Optimization: calc here getHeightsForCollider, getFloat16HeightsBuffer, getFloat32HeightsBuffer, getNormalsBuffer if they are empty and if we know they will be loaded in next _process
+				// with this optimization we want to do the work outside _process to have more fluidity
+				
+				if (m_recalcQuadrantsInViewNeeded)
 				{
-					Globals()->errorPrint((std::string("GDN_TheWorld_Viewer::streamer - std::exception caught - ") + e.what()).c_str());
-					throw(e);
+					recalcQuadrantsInView();
+					m_recalcQuadrantsInViewNeeded = false;
 				}
-				catch (...)
+				if (m_dumpRequired)
 				{
-					Globals()->errorPrint("GDN_TheWorld_Viewer::streamer - Exception caught");
-					throw(new exception("exception caught"));
+					TheWorld_Utils::GuardProfiler profiler(std::string("streamer 1 ") + __FUNCTION__, "Dump stuff");
+
+					m_dumpRequired = false;
+					dump();
 				}
-			//}
+
+			}
+			catch (std::exception& e)
+			{
+				Globals()->errorPrint((std::string("GDN_TheWorld_Viewer::streamer - std::exception caught - ") + e.what()).c_str());
+				throw(e);
+			}
+			catch (...)
+			{
+				Globals()->errorPrint("GDN_TheWorld_Viewer::streamer - Exception caught");
+				throw(new exception("exception caught"));
+			}
 		}
 		catch (std::exception& e)
 		{

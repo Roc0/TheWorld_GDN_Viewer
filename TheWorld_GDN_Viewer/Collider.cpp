@@ -125,17 +125,13 @@ namespace godot
 		if (!m_initialized)
 			return;
 
-		//std::vector<TheWorld_Viewer_Utils::GridVertex>& gridVertices = m_quadTree->getQuadrant()->getGridVertices();
-
 		int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
 		int areaSize = numVerticesPerSize * numVerticesPerSize;
-		PoolRealArray& heightsForCollider = m_quadTree->getQuadrant()->getHeightsForCollider();
-		//if (heights.size() == 0)
 		//{
-		//	heights.resize((int)areaSize);
-		//	godot::PoolRealArray::Write w = heights.write();
-		//	memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().ptr(), m_quadTree->getQuadrant()->getFloat32HeightsBuffer().size());
+		//	TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1.1.1 ") + __FUNCTION__, "Collider::setData - gen empty heights");
+		//	PoolRealArray& h = m_quadTree->getQuadrant()->getHeightsForCollider();
 		//}
+		PoolRealArray& heightsForCollider = m_quadTree->getQuadrant()->getHeightsForCollider();
 		my_assert(areaSize == heightsForCollider.size());
 		if (areaSize != heightsForCollider.size())
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Size of Heigths inconsistent, areaSize=" + std::to_string(areaSize) + " Heigths size=" + std::to_string(heightsForCollider.size())).c_str()));
@@ -144,7 +140,7 @@ namespace godot
 		Dictionary data;
 		data["width"] = numVerticesPerSize;			// data["map_width"];	
 		data["depth"] = numVerticesPerSize;			// data["map_depth"];
-		data["heights"] = heightsForCollider;					// data["map_data"];
+		data["heights"] = heightsForCollider;		// data["map_data"];
 		Vector3 startPoint = m_quadTree->getQuadrant()->getGlobalCoordAABB().position;
 		Vector3 endPoint = startPoint + m_quadTree->getQuadrant()->getGlobalCoordAABB().size;
 		data["min_height"] = startPoint.y;			// ???
@@ -152,11 +148,15 @@ namespace godot
 		data["max_height"] = endPoint.y;			// ???
 
 		PhysicsServer* ps = PhysicsServer::get_singleton();
-		ps->shape_set_data(m_shapeRID, data);
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1.1.2 ") + __FUNCTION__, "Collider::setData - ps->shape_set_data(m_shapeRID, data)");
+			ps->shape_set_data(m_shapeRID, data);
+		}
 
-		updateTransform();
-
-		//heightsForCollider.resize(0);
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1.1.3 ") + __FUNCTION__, "Collider::setData - updateTransform");
+			updateTransform();
+		}
 	}
 	
 	void Collider::onGlobalTransformChanged(void)
