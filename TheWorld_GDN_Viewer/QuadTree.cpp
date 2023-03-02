@@ -709,10 +709,10 @@ bool  QuadTree::updateMaterialParams(void)
 
 		getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(false);
 
-		if (!getQuadrant()->needUploadToServer())
+		//if (!getQuadrant()->needUploadToServer())
 		{
 			//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.2 ") + __FUNCTION__, "QuadTree releaseMemoryForTerrainValues");
-			getQuadrant()->releaseMemoryForTerrainValues();
+			getQuadrant()->releaseTerrainValuesMemory(isVisible());
 		}
 		
 	}
@@ -727,15 +727,15 @@ bool QuadTree::resetMaterialParams(bool force)
 	if (force)
 	{
 		getQuadrant()->getShaderTerrainData()->resetMaterialParams();
+		materialParamsNeedReset(false);
 		reset = true;
 	}
-	else if (materialParamsNeedReset())
+	else if (materialParamsNeedReset() && !getQuadrant()->internalDataLocked())
 	{
 		getQuadrant()->getShaderTerrainData()->resetMaterialParams();
+		materialParamsNeedReset(false);
 		reset = true;
 	}
-
-	materialParamsNeedReset(false);
 
 	return reset;
 }
@@ -1256,35 +1256,59 @@ void ShaderTerrainData::updateMaterialParams(void)
 
 QuadrantPos QuadrantPos::getQuadrantPos(enum class DirectionSlot dir, int numSlot)
 {
-	QuadrantPos q = *this;
+	QuadrantPos pos = *this;
 
 	switch (dir)
 	{
 	case DirectionSlot::XMinus:
 	{
-		q.m_lowerXGridVertex -= (m_sizeInWU * numSlot);
+		pos.m_lowerXGridVertex -= (m_sizeInWU * numSlot);
 	}
 	break;
 	case DirectionSlot::XPlus:
 	{
-		q.m_lowerXGridVertex += (m_sizeInWU * numSlot);
+		pos.m_lowerXGridVertex += (m_sizeInWU * numSlot);
 	}
 	break;
 	case DirectionSlot::ZMinus:
 	{
-		q.m_lowerZGridVertex -= (m_sizeInWU * numSlot);
+		pos.m_lowerZGridVertex -= (m_sizeInWU * numSlot);
 	}
 	break;
 	case DirectionSlot::ZPlus:
 	{
-		q.m_lowerZGridVertex += (m_sizeInWU * numSlot);
+		pos.m_lowerZGridVertex += (m_sizeInWU * numSlot);
+	}
+	break;
+	case DirectionSlot::ZMinusXMinus:
+	{
+		QuadrantPos pos1 = getQuadrantPos(DirectionSlot::ZMinus, numSlot);
+		pos = pos1.getQuadrantPos(DirectionSlot::XMinus, numSlot);
+	}
+	break;
+	case DirectionSlot::ZMinusXPlus:
+	{
+		QuadrantPos pos1 = getQuadrantPos(DirectionSlot::ZMinus, numSlot);
+		pos = pos1.getQuadrantPos(DirectionSlot::XPlus, numSlot);
+	}
+	break;
+	case DirectionSlot::ZPlusXMinus:
+	{
+		QuadrantPos pos1 = getQuadrantPos(DirectionSlot::ZPlus, numSlot);
+		pos = pos1.getQuadrantPos(DirectionSlot::XMinus, numSlot);
+	}
+	break;
+	case DirectionSlot::ZPlusXPlus:
+	{
+		QuadrantPos pos1 = getQuadrantPos(DirectionSlot::ZPlus, numSlot);
+		pos = pos1.getQuadrantPos(DirectionSlot::XPlus, numSlot);
 	}
 	break;
 	}
 
-	q.resetName();
+	pos.resetName();
 
-	return q;
+	return pos;
 }
 
 size_t QuadrantPos::distanceInPerimeter(QuadrantPos& q)

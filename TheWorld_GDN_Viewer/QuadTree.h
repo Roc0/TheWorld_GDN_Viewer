@@ -54,6 +54,25 @@ namespace godot
 			//   -
 			ZPlus = 3,
 
+			// - 
+			//   o
+			//   
+			ZMinusXMinus = 4,
+
+			//     - 
+			//   o
+			//   
+			ZMinusXPlus = 5,
+
+			//     
+			//   o
+			// -    
+			ZPlusXMinus = 6,
+
+			//      
+			//   o
+			//     -
+			ZPlusXPlus = 7
 		};
 
 		QuadrantPos()
@@ -258,6 +277,7 @@ namespace godot
 			m_colorsUpdated = false;
 			//m_terrainValuesCanBeCleared = false;
 			m_needUploadToServer = false;
+			m_internalDataLocked = false;
 			m_empty = true;
 		}
 
@@ -374,6 +394,21 @@ namespace godot
 			return m_needUploadToServer;
 		}
 
+		void lockInternalData(void)
+		{
+			m_internalDataLocked = true;
+		}
+
+		void unlockInternalData(void)
+		{
+			m_internalDataLocked = false;
+		}
+
+		bool internalDataLocked()
+		{
+			return m_internalDataLocked;
+		}
+
 		void setHeightsUpdated(bool b)
 		{
 			m_heightsUpdated = b;
@@ -407,10 +442,13 @@ namespace godot
 			return m_empty;
 		}
 
-		void releaseMemoryForTerrainValues(void)
+		void releaseTerrainValuesMemory(bool visible)
 		{
-			//return;
-			//m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join (Quadrant::getAltitudeFromHeigthmap)
+			if (needUploadToServer() || internalDataLocked())
+				return;
+			
+			if (!visible)
+				m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join (Quadrant::getAltitudeFromHeigthmap): it is a performance reason to keep it for visible quadrants
 			m_float32HeigthsBuffer.clear();
 			m_normalsBuffer.clear();
 			m_heightsForCollider.resize(0);
@@ -434,6 +472,7 @@ namespace godot
 		std::unique_ptr<Collider> m_collider;
 		std::unique_ptr<ShaderTerrainData> m_shaderTerrainData;
 		bool m_needUploadToServer;
+		bool m_internalDataLocked;
 		bool m_empty;
 
 		// Terrain Values
@@ -562,6 +601,10 @@ namespace godot
 					return aabb;
 			}
 			return m_chunkAABB;
+		}
+		void resetChachedChunkAABB()
+		{
+			m_chunkAABB = AABB();
 		}
 		float getChunkSizeInWUs(void)
 		{
@@ -805,7 +848,7 @@ namespace godot
 		std::recursive_mutex m_mtxQuadrant;
 		TheWorld_Viewer_Utils::MsTimePoint m_lastStatusChange;
 		bool m_isVisible;
-		string m_tag;
+		std::string m_tag;
 		std::unique_ptr<Quad> m_root;
 		GDN_TheWorld_Viewer* m_viewer;
 		Chunk::MapChunk m_mapChunk;

@@ -297,6 +297,18 @@ namespace godot
 			bool m_isVisible;
 		};
 
+		class HeightsChangedChunkAction : public ChunkAction
+		{
+		public:
+			HeightsChangedChunkAction(void)	{}
+			virtual ~HeightsChangedChunkAction() {}
+			virtual void exec(Chunk* chunk)
+			{
+				chunk->heightsChanged();
+			}
+		private:
+		};
+
 		class ChunkPos
 		{
 		public:
@@ -397,6 +409,7 @@ namespace godot
 		virtual bool isMeshNull(void);
 		virtual bool isDebugMeshNull(void);
 		virtual void refresh(bool isVisible);
+		virtual void heightsChanged(void);
 		virtual void update(bool isVisible);
 		virtual void setActive(bool b);
 
@@ -602,6 +615,7 @@ namespace godot
 		virtual AABB getDebugMeshAABB(void) { return m_debugMeshAABB; };
 		virtual bool isDebugMeshNull(void);
 		virtual void refresh(bool isVisible);
+		virtual void heightsChanged(void);
 		virtual void update(bool isVisible);
 		virtual void releaseDebugMesh(void);
 		virtual void setActive(bool b);

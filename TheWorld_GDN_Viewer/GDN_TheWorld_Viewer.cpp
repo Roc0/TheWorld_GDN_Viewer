@@ -60,6 +60,8 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_num_initialized_quadrant", &GDN_TheWorld_Viewer::getNuminitializedQuadrant);
 	register_method("get_num_visible_quadrant", &GDN_TheWorld_Viewer::getNumVisibleQuadrant);
 	register_method("get_num_initialized_visible_quadrant", &GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant);
+	register_method("get_num_empty_quadrant", &GDN_TheWorld_Viewer::getNumEmptyQuadrant);
+	register_method("get_num_flushed_quadrant", &GDN_TheWorld_Viewer::getNumFlushedQuadrant);
 	register_method("get_num_process_not_owns_lock", &GDN_TheWorld_Viewer::getProcessNotOwnsLock);
 	register_method("get_process_duration", &GDN_TheWorld_Viewer::getProcessDuration);
 	register_method("get_refresh_quads_duration", &GDN_TheWorld_Viewer::getRefreshMapQuadDuration);
@@ -132,6 +134,8 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numQuadrant = 0;
 	m_numinitializedQuadrant = 0;
 	m_numVisibleQuadrant = 0;
+	m_numEmptyQuadrant = 0;
+	m_numFlushedQuadrant = 0;
 	m_numinitializedVisibleQuadrant = 0;
 	m_debugContentVisibility = true;
 	m_trackMouse = false;
@@ -2816,6 +2820,8 @@ void GDN_TheWorld_Viewer::refreshQuadTreeStatistics()
 	int numQuadrant = (int)m_mapQuadTree.size();
 	int numinitializedQuadrant = 0;
 	int numVisibleQuadrant = 0;
+	int numEmptyQuadrant = 0;
+	int numFlushedQuadrant = 0;
 	int numinitializedVisibleQuadrant = 0;
 
 	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
@@ -2835,6 +2841,12 @@ void GDN_TheWorld_Viewer::refreshQuadTreeStatistics()
 			numActiveChunks += itQuadTree->second->getNumActiveChunks();
 			numinitializedQuadrant++;
 		}
+
+		if (itQuadTree->second->getQuadrant()->empty())
+			numEmptyQuadrant++;
+
+		if (itQuadTree->second->getQuadrant()->getFloat16HeightsBuffer(false).size() == 0 || itQuadTree->second->getQuadrant()->getFloat32HeightsBuffer(false).size() == 0)
+			numFlushedQuadrant++;
 	}
 
 	m_numSplits = numSplits;
@@ -2844,6 +2856,8 @@ void GDN_TheWorld_Viewer::refreshQuadTreeStatistics()
 	m_numQuadrant = numQuadrant;
 	m_numinitializedQuadrant = numinitializedQuadrant;
 	m_numVisibleQuadrant = numVisibleQuadrant;
+	m_numEmptyQuadrant = numEmptyQuadrant;
+	m_numFlushedQuadrant = numFlushedQuadrant;
 	m_numinitializedVisibleQuadrant = numinitializedVisibleQuadrant;
 }
 
@@ -2886,6 +2900,16 @@ int GDN_TheWorld_Viewer::getNuminitializedQuadrant(void)
 int GDN_TheWorld_Viewer::getNumVisibleQuadrant(void)
 {
 	return m_numVisibleQuadrant;
+}
+
+int GDN_TheWorld_Viewer::getNumEmptyQuadrant(void)
+{
+	return m_numEmptyQuadrant;
+}
+
+int GDN_TheWorld_Viewer::getNumFlushedQuadrant(void)
+{
+	return m_numFlushedQuadrant;
 }
 
 int GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant(void)
@@ -2949,18 +2973,18 @@ void GDN_TheWorld_Viewer::dump()
 		Globals()->debugPrint("Quadrant busy memory : " + String(std::to_string(memoryOccupation).c_str()));
 	}
 
-	Node* node = get_node(NodePath("/root"));
-	if (node != nullptr)
-	{
-		Globals()->debugPrint("=== NODES ===========================================");
-		Globals()->debugPrint("");
-		Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
-		Globals()->debugPrint("");
-		Globals()->debugPrint(node->get_name());
-		Array nodes = node->get_children();
-		dumpRecurseIntoChildrenNodes(nodes, 1);
-		Globals()->debugPrint("=== NODES ===========================================");
-	}
+	//Node* node = get_node(NodePath("/root"));
+	//if (node != nullptr)
+	//{
+	//	Globals()->debugPrint("=== NODES ===========================================");
+	//	Globals()->debugPrint("");
+	//	Globals()->debugPrint("@@2 = res://native/GDN_TheWorld_Viewer.gdns");
+	//	Globals()->debugPrint("");
+	//	Globals()->debugPrint(node->get_name());
+	//	Array nodes = node->get_children();
+	//	dumpRecurseIntoChildrenNodes(nodes, 1);
+	//	Globals()->debugPrint("=== NODES ===========================================");
+	//}
 	
 	//{
 	//	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);

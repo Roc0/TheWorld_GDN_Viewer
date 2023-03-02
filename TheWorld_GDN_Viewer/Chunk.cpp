@@ -521,6 +521,14 @@ void Chunk::refresh(bool isVisible)
 	m_quadTree->addChunkUpdate(this);
 }
 
+void Chunk::heightsChanged(void)
+{
+	m_aabb = AABB();
+	Quad* quad = getQuad();
+	if (quad != nullptr)
+		quad->resetChachedChunkAABB();
+}
+
 void Chunk::setActive(bool b)
 {
 	m_active = b;
@@ -801,6 +809,12 @@ void ChunkDebug::refresh(bool isVisible)
 	setDebugMesh(nullptr);
 	checkAndCalcAABB();
 	m_debugMeshAABB = m_aabb;
+}
+
+void ChunkDebug::heightsChanged(void)
+{
+	Chunk::heightsChanged();
+	m_debugMeshAABB = AABB();
 }
 
 void ChunkDebug::update(bool isVisible)

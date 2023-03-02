@@ -14,7 +14,7 @@ namespace godot
 	GDN_TheWorld_Quadrant::GDN_TheWorld_Quadrant()
 	{
 		m_quadTree = nullptr;
-		m_colliderMeshInstance = nullptr;
+		//m_colliderMeshInstance = nullptr;
 		m_initialized = false;
 	}
 	
@@ -45,14 +45,14 @@ namespace godot
 		if (m_initialized)
 		{
 			m_quadTree = nullptr;
-			if (m_colliderMeshInstance)
-			{
-				Node* parent = m_colliderMeshInstance->get_parent();
-				if (parent)
-					parent->remove_child(m_colliderMeshInstance);
-				m_colliderMeshInstance->queue_free();
-				m_colliderMeshInstance = nullptr;
-			}
+			//if (m_colliderMeshInstance)
+			//{
+			//	Node* parent = m_colliderMeshInstance->get_parent();
+			//	if (parent)
+			//		parent->remove_child(m_colliderMeshInstance);
+			//	m_colliderMeshInstance->queue_free();
+			//	m_colliderMeshInstance = nullptr;
+			//}
 			m_initialized = false;
 		}
 	}
@@ -67,8 +67,8 @@ namespace godot
 
 		register_method("set_collider_transform", &GDN_TheWorld_Quadrant::setColliderTransform);
 		register_method("get_collider_transform", &GDN_TheWorld_Quadrant::getColliderTransform);
-		register_method("set_collider_mesh_transform", &GDN_TheWorld_Quadrant::setDebugColliderMeshTransform);
-		register_method("get_collider_mesh_transform", &GDN_TheWorld_Quadrant::getDebugColliderMeshTransform);
+		//register_method("set_collider_mesh_transform", &GDN_TheWorld_Quadrant::setDebugColliderMeshTransform);
+		//register_method("get_collider_mesh_transform", &GDN_TheWorld_Quadrant::getDebugColliderMeshTransform);
 		//register_method("show_collider_mesh", &GDN_TheWorld_Quadrant::showDebugColliderMesh);
 	}
 
@@ -139,25 +139,25 @@ namespace godot
 		return m_quadTree->getQuadrant()->getCollider()->getTransform();
 	}
 
-	void GDN_TheWorld_Quadrant::setDebugColliderMeshTransform(Transform t)
-	{
-		if (m_colliderMeshInstance != nullptr)
-		{
-			m_colliderMeshInstance->set_global_transform(t);
-		}
-	}
+	//void GDN_TheWorld_Quadrant::setDebugColliderMeshTransform(Transform t)
+	//{
+	//	if (m_colliderMeshInstance != nullptr)
+	//	{
+	//		m_colliderMeshInstance->set_global_transform(t);
+	//	}
+	//}
 	
-	Transform GDN_TheWorld_Quadrant::getDebugColliderMeshTransform(void)
-	{
-		Transform t;
+	//Transform GDN_TheWorld_Quadrant::getDebugColliderMeshTransform(void)
+	//{
+	//	Transform t;
 
-		if (m_colliderMeshInstance != nullptr)
-		{
-			t = m_colliderMeshInstance->get_global_transform();
-		}
+	//	if (m_colliderMeshInstance != nullptr)
+	//	{
+	//		t = m_colliderMeshInstance->get_global_transform();
+	//	}
 
-		return t;
-	}
+	//	return t;
+	//}
 
 	//void GDN_TheWorld_Quadrant::showDebugColliderMesh(bool show)
 	//{
@@ -244,16 +244,16 @@ namespace godot
 
 	void GDN_TheWorld_Quadrant::onGlobalTransformChanged(void)
 	{
-		if (m_colliderMeshInstance != nullptr)
-		{
-			float gridStepInWU = m_quadTree->getQuadrant()->getPos().getGridStepInWU();
-			//float axisScaleFactr = sqrtf(powf(gridStepInWU, (float)2.0) / (float)2.0);
-			float axisScaleFactr = gridStepInWU;
-			Transform gt = get_global_transform();
-			Transform tScaled(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)));
-			Transform t = gt * tScaled;
-			m_colliderMeshInstance->set_global_transform(t);
-		}
+		//if (m_colliderMeshInstance != nullptr)
+		//{
+		//	float gridStepInWU = m_quadTree->getQuadrant()->getPos().getGridStepInWU();
+		//	//float axisScaleFactr = sqrtf(powf(gridStepInWU, (float)2.0) / (float)2.0);
+		//	float axisScaleFactr = gridStepInWU;
+		//	Transform gt = get_global_transform();
+		//	Transform tScaled(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)));
+		//	Transform t = gt * tScaled;
+		//	m_colliderMeshInstance->set_global_transform(t);
+		//}
 	}
 
 	void GDN_Collider_MeshInstance::_register_methods()

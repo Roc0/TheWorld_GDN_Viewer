@@ -41,8 +41,8 @@ namespace godot
 		void deinit(void);
 		void setColliderTransform(Transform t);
 		Transform getColliderTransform(void);
-		void setDebugColliderMeshTransform(Transform t);
-		Transform getDebugColliderMeshTransform(void);
+		//void setDebugColliderMeshTransform(Transform t);
+		//Transform getDebugColliderMeshTransform(void);
 		//void showDebugColliderMesh(bool show = true);
 		void onGlobalTransformChanged(void);
 
@@ -62,7 +62,7 @@ namespace godot
 
 	private:
 		QuadTree* m_quadTree;
-		GDN_Collider_MeshInstance* m_colliderMeshInstance;
+		//GDN_Collider_MeshInstance* m_colliderMeshInstance;
 		Transform m_lastCameraTransform;
 		bool m_initialized;
 	};

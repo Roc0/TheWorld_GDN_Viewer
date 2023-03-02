@@ -126,6 +126,8 @@ namespace godot
 		int getNuminitializedQuadrant(void);
 		int getNumVisibleQuadrant(void);
 		int getNuminitializedVisibleQuadrant(void);
+		int getNumEmptyQuadrant(void);
+		int getNumFlushedQuadrant(void);
 		void refreshQuadTreeStatistics(void);
 		GDN_TheWorld_Globals::ChunkDebugMode getRequiredChunkDebugMode(void)
 		{
@@ -304,6 +306,8 @@ namespace godot
 		int m_numQuadrant;
 		int m_numinitializedQuadrant;
 		int m_numVisibleQuadrant;
+		int m_numEmptyQuadrant;
+		int m_numFlushedQuadrant;
 		int m_numinitializedVisibleQuadrant;
 		TheWorld_Utils::TimerMs m_streamingTime;
 		// Statistics data
