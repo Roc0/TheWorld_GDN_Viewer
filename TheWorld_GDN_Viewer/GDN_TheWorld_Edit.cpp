@@ -1736,7 +1736,7 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 			else
 				southeastQuadTree = nullptr;
 
-			bool updated = quadTree->getQuadrant()->getMeshCacheBuffer().blendQuadrant(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), true,
+			bool updated = quadTree->getQuadrant()->getMeshCacheBuffer().blendQuadrant(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), false,
 				quadrantData,
 				northQuadrantData,
 				southQuadrantData,
