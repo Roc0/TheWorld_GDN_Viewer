@@ -51,6 +51,10 @@ namespace godot {
 		void notifyActiveCameraFlag(bool active);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		Ref<ArrayMesh> DrawViewFrustum(Color c = Color(1, 1, 1));
+		float getAngleFromNorth(void)
+		{
+			return m_angleFromNorth;
+		}
 
 	private:
 
@@ -62,6 +66,7 @@ namespace godot {
 		bool m_updateCameraRequired;
 		bool m_isActive;
 		int64_t m_instanceId;
+		float m_angleFromNorth;		// 0 ==> camera points to north, 90 camera points to east, 180 camera points to south, 270 camera points to west
 
 		// Camera Movement
 		int m_numMoveStepForward;
