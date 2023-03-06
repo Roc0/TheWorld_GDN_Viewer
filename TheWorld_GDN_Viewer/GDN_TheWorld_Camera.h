@@ -6,6 +6,8 @@
 #include <InputEvent.hpp>
 #include <ArrayMesh.hpp>
 
+#include "Utils.h"
+
 #define GD_ACTIVE_CAMERA_GROUP	"ActiveCamera"
 
 namespace godot {
@@ -55,6 +57,27 @@ namespace godot {
 		{
 			return m_angleFromNorth;
 		}
+		float getYaw(bool radiant = true)
+		{
+			if (radiant)
+				return m_yawEuler;
+			else
+				return (m_yawEuler * 180) / TheWorld_Utils::kPi;
+		}
+		float getPitch(bool radiant = true)
+		{
+			if (radiant)
+				return m_pitchEuler;
+			else
+				return (m_pitchEuler * 180) / TheWorld_Utils::kPi;
+		}
+		float getRoll(bool radiant = true)
+		{
+			if (radiant)
+				return m_rollEuler;
+			else
+				return (m_rollEuler * 180) / TheWorld_Utils::kPi;
+		}
 
 	private:
 
@@ -66,7 +89,24 @@ namespace godot {
 		bool m_updateCameraRequired;
 		bool m_isActive;
 		int64_t m_instanceId;
-		float m_angleFromNorth;		// 0 ==> camera points to north, 90 camera points to east, 180 camera points to south, 270 camera points to west
+
+		float m_angleFromNorth;	// angle expressed in degrees of the projection of the camera on XZ plane: 0 ==> camera points to north, 90 camera points to east, 180 camera points to south, 270 camera points to west
+
+		float m_yawEuler;	// radiant angle of the projection of the camera on XZ plane and Z axis (-Z direction)
+							// 0 ==> projection of camera is aligned with Z axis and points to decreasing Z direction (north)
+							// PI/2 ==> projection of camera is aligned with X axis and points to increasing X direction (east)
+							// PI(/-PI) ==> projection of camera is aligned with Z axis and points to increasing Z direction (south)
+							// -PI/2 ==> projection of camera is aligned with X axis and points to decreasing X direction (west)
+							// -PI(/PI) ==> projection of camera is aligned with Z axis and points to decreasing Z direction (south)
+
+		float m_pitchEuler;	// radiant angle of the projection of the camera on YZ plane and Z axis (-Z direction)
+							// 0 ==> projection of camera is aligned with Z axis and points to decreasing Z direction (face forward to horizonth aligned with terrain)
+							// PI/2 ==> projection of camera is aligned with Y axis and points to increasing Y direction (face up perpendicularly to terrain)
+							// PI(/-PI) ==> projection of camera is aligned with Z axis and points to increasing Z direction (face backward to horizonth aligned with terrain)
+							// -PI/2 ==> projection of camera is aligned with Y axis and points to decreasing Y direction (face down perpendicularly to terrain)
+							// -PI(/PI) ==> projection of camera is aligned with Z axis and points to increasing Z direction (face backward to horizonth aligned with terrain)
+
+		float m_rollEuler;
 
 		// Camera Movement
 		int m_numMoveStepForward;

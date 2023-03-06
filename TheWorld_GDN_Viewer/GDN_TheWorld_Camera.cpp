@@ -35,6 +35,9 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	m_WorldCamera = false;
 	m_updateCameraRequired = false;
 	m_angleFromNorth = 0;
+	m_yawEuler = 0;
+	m_pitchEuler = 0;
+	m_rollEuler = 0;
 
 	// Camera Movement
 	m_numMoveStepForward = 0;
@@ -138,12 +141,12 @@ void GDN_TheWorld_Camera::_process(float _delta)
 
 	godot::Vector3 euler = get_global_transform().basis.get_euler();
 
-	float pitchEuler = euler.x;
-	float yawEuler = euler.y;	// 0 = camera aligned with z axis pointing to decresing z (north), - PI/2 = camera aligned with x axis pointing to incrasing x (east), 
+	m_pitchEuler = euler.x;
+	m_yawEuler = euler.y;		// 0 = camera aligned with z axis pointing to decresing z (north), - PI/2 = camera aligned with x axis pointing to incrasing x (east), 
 								// - PI or PI = camera aligned with z axis pointing to increasing x (south), PI/2 = camera aligned with x axis pointing to decreasing X (west)
-	float rollEuler = euler.z;
+	m_rollEuler = euler.z;
 
-	float angleFromNorth = (yawEuler < 0 ? -yawEuler : (yawEuler == 0 ? 0 : TheWorld_Utils::kPi * 2 - yawEuler));
+	float angleFromNorth = (m_yawEuler < 0 ? -m_yawEuler : (m_yawEuler == 0 ? 0 : TheWorld_Utils::kPi * 2 - m_yawEuler));
 	m_angleFromNorth = (angleFromNorth * 180) / TheWorld_Utils::kPi;		// transform angle from radiant to degree
 }
 
