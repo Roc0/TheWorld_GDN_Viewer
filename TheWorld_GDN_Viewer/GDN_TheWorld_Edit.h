@@ -137,6 +137,7 @@ namespace godot
 	private:
 		bool m_initialized;
 		GDN_TheWorld_Viewer* m_viewer;
+		std::recursive_mutex m_mtxUI;
 
 		map<TheWorld_Utils::WorldModifierPos, std::unique_ptr<TheWorld_Utils::WorldModifier>> m_wms;
 		

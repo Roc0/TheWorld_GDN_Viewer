@@ -308,10 +308,10 @@ namespace godot
 			virtual void exec(Chunk* chunk)
 			{
 				chunk->heightsChanged();
-				if (!m_isVisible)
-					chunk->refresh(m_isVisible);
-				else
-					chunk->refresh(m_isVisible);
+				//if (!m_isVisible)
+				//	chunk->refresh(m_isVisible);
+				//else
+				//	chunk->refresh(m_isVisible);
 			}
 		private:
 			bool m_isVisible;

@@ -973,6 +973,8 @@ float GDN_TheWorld_Edit::maxHeight(void)
 
 void GDN_TheWorld_Edit::setElapsed(size_t elapsed, bool onGoing)
 {
+	std::lock_guard<std::recursive_mutex> lock(m_mtxUI);
+
 	if (onGoing)
 	{
 		if (!m_onGoingElapsedLabel)
@@ -1479,6 +1481,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_size(size);
 
 	Chunk::HeightsChangedChunkAction action(m_viewer->is_visible_in_tree());
+	m_viewer->m_refreshRequired = true;
 	quadTreeSel->ForAllChunk(action);
 
 	m_mapQuadToSave[quadrantSelPos] = "";
@@ -1926,6 +1929,7 @@ void GDN_TheWorld_Edit::manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::Ca
 		quadTree->getQuadrant()->getGlobalCoordAABB().set_size(size);
 
 		Chunk::HeightsChangedChunkAction action(m_viewer->is_visible_in_tree());
+		m_viewer->m_refreshRequired = true;
 		quadTree->ForAllChunk(action);
 
 		quadTree->materialParamsNeedReset(true);
