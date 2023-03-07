@@ -259,9 +259,6 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 			//TheWorld_Viewer_Utils::TimerMs clock("GDN_TheWorld_Viewer::replyFromServer", "CLIENT SIDE", false, true);
 			
-			//clock.headerMsg("MapManager::getVertices - Acq input");
-			//clock.tick();
-
 			if (reply.getNumReplyParams() < 3)
 			{
 				std::string m = std::string("Reply MapManager::getVertices error (not enough params replied)");
@@ -368,13 +365,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 			QuadrantPos quadrantPos(lowerXGridVertex, lowerZGridVertex, level, numVerticesPerSize, gridStepInWU);
 
-			//clock.tock();
-
-			//clock.headerMsg("MapManager::getVertices - Lock m_mtxQuadTree");
-			//clock.tick();
-			//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
 			m_mtxQuadTreeAndMainProcessing.lock();
-			//clock.tock();
 			if (m_mapQuadTree.contains(quadrantPos) && !m_mapQuadTree[quadrantPos]->statusToErase())
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1 ") + __FUNCTION__, "Elab. quadrant");
@@ -382,11 +373,8 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 				m_mtxQuadTreeAndMainProcessing.unlock();
 				if (quadTree->statusGetTerrainDataInProgress() || quadTree->statusRefreshTerrainDataInProgress())
 				{
-					//clock.headerMsg("MapManager::getVertices - Lock quadrantMutex");
-					//clock.tick();
 					std::recursive_mutex& quadrantMutex = quadTree->getQuadrantMutex();
 					std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
-					//clock.tock();
 
 					std::string meshIdFromBuffer;
 					{
@@ -396,16 +384,12 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 						quadTree->getQuadrant()->refreshGridVerticesFromServer(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer, true);
 					}
 					
-					//clock.headerMsg("MapManager::getVertices - resetMaterialParams");
-					//clock.tick();
 					{
 						// ATTENZIONE
 						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-						//quadTree->materialParamsNeedReset(true);
-						quadTree->resetMaterialParams(true);
+						quadTree->materialParamsNeedReset(true);
+						//quadTree->resetMaterialParams(true);
 					}
-					//clock.tock();
-					//Globals()->debugPrint(String("ELAPSED - QUADRANT ") + quadTree->getQuadrant()->getPos().getId().c_str() + " TAG=" + quadTree->getQuadrant()->getPos().getTag().c_str() + " - GDN_TheWorld_Viewer::replyFromServer MapManager::getVertices (resetMaterialParams) " + std::to_string(clock2.duration().count()).c_str() + " ms");
 
 					if (setCamera)
 					{
@@ -435,8 +419,6 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 					}
 
 					quadTree->setStatus(QuadrantStatus::initialized);
-					
-					//forceRefreshMapQuadTree();
 				}
 			}
 			else
@@ -542,7 +524,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 		{
 			m_mouseQuadrantHitName = "";
 
-			QuadTree* quadTree = nullptr;
+			QuadTree* quadTreeSel = nullptr;
 			if (m_quadrantSelPos.empty())
 			{
 				if (!m_quadrantHitPos.empty())
@@ -554,7 +536,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 						MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
 						if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 						{
-							quadTree = it->second.get();
+							quadTreeSel = it->second.get();
 							it->second->setEditModeSel(true);
 							it->second->getQuadrant()->setColorsUpdated(true);
 							it->second->materialParamsNeedReset(true);
@@ -594,37 +576,39 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 					editModeUIControl->setMouseQuadSelLabelText("");
 					editModeUIControl->setMouseQuadSelPosLabelText("");
 					editModeUIControl->setEmptyTerrainEditValues();
-					//editModeUIControl->setSeed(0);
-					//editModeUIControl->setFrequency(0.0f);
-					//editModeUIControl->setOctaves(0);
-					//editModeUIControl->setLacunarity(0.0f);
-					//editModeUIControl->setGain(0.0f);
-					//editModeUIControl->setWeightedStrength(0.0f);
-					//editModeUIControl->setPingPongStrength(0.0f);
-					//editModeUIControl->setAmplitude(0);
-					//editModeUIControl->setMinHeight(0.0f);
-					//editModeUIControl->setMaxHeight(0.0f);
 					editModeUIControl->setElapsed(0, false);
 				}
 				else
 				{
 					editModeUIControl->setMouseQuadSelLabelText(m_quadrantSelPos.getName() + " " + m_quadrantSelPos.getTag());
 					editModeUIControl->setMouseQuadSelPosLabelText(std::string("X=") + std::to_string(m_quadrantSelPos.getLowerXGridVertex()) + " Z=" + std::to_string(m_quadrantSelPos.getLowerZGridVertex()) + " " + std::to_string(m_quadrantSelPos.getSizeInWU()));
-					if (quadTree != nullptr)
+					if (quadTreeSel != nullptr)
 					{
-						TheWorld_Utils::TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
+						TheWorld_Utils::TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
+						
+						TheWorld_Utils::TerrainEdit* northSideTerrainEdit = nullptr;
+						QuadrantPos pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::NorthZMinus);
+						QuadTree* q = getQuadTree(pos);
+						if (q != nullptr && !q->getQuadrant()->empty())
+							northSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+						TheWorld_Utils::TerrainEdit* southSideTerrainEdit = nullptr;
+						pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::SouthZPlus);
+						q = getQuadTree(pos);
+						if (q != nullptr && !q->getQuadrant()->empty())
+							southSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+						TheWorld_Utils::TerrainEdit* westSideTerrainEdit = nullptr;
+						pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::WestXMinus);
+						q = getQuadTree(pos);
+						if (q != nullptr && !q->getQuadrant()->empty())
+							westSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+						TheWorld_Utils::TerrainEdit* eastSideTerrainEdit = nullptr;
+						pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::EastXPlus);
+						q = getQuadTree(pos);
+						if (q != nullptr && !q->getQuadrant()->empty())
+							eastSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+						terrainEdit->adjustValues(northSideTerrainEdit, southSideTerrainEdit, westSideTerrainEdit, eastSideTerrainEdit);
+
 						editModeUIControl->setTerrainEditValues(*terrainEdit);
-						//editModeUIControl->setSeed(terrainEdit->noiseSeed);
-						//editModeUIControl->setFrequency(terrainEdit->frequency);
-						//editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
-						//editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
-						//editModeUIControl->setGain(terrainEdit->fractalGain);
-						//editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
-						//editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
-						//editModeUIControl->setAmplitude(terrainEdit->amplitude);
-						//editModeUIControl->setMinHeight(terrainEdit->minHeight);
-						//editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
-						////editModeUIControl->setElapsed(0);
 					}
 				}
 			}
@@ -1906,7 +1890,7 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
 			bool reset = false;
-			//reset = itQuadTree->second->resetMaterialParams();
+			reset = itQuadTree->second->resetMaterialParams();
 			bool updated = itQuadTree->second->updateMaterialParams();
 				
 			if (reset || updated)
@@ -2548,15 +2532,21 @@ QuadrantPos GDN_TheWorld_Viewer::getQuadrantSelForEdit(QuadTree** quadTreeSel)
 		return ret;
 
 	{
-		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-		MapQuadTree::iterator it = m_mapQuadTree.find(ret);
-		if (it == m_mapQuadTree.end() || it->second->statusToErase())
+		*quadTreeSel = getQuadTree(ret);
+		if (*quadTreeSel == nullptr)
 			return QuadrantPos();
 		else
-		{
-			*quadTreeSel = it->second.get();
 			return ret;
-		}
+
+		//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+		//MapQuadTree::iterator it = m_mapQuadTree.find(ret);
+		//if (it == m_mapQuadTree.end() || it->second->statusToErase())
+		//	return QuadrantPos();
+		//else
+		//{
+		//	*quadTreeSel = it->second.get();
+		//	return ret;
+		//}
 	}
 }
 
@@ -3060,7 +3050,7 @@ void GDN_TheWorld_Viewer::streamer(void)
 						for (MapQuadTree::iterator it = m_mapQuadTree.begin(); it != m_mapQuadTree.end(); it++)
 						{
 							bool reset = false;
-							reset = it->second->resetMaterialParams();
+							//reset = it->second->resetMaterialParams();
 
 							if (it->second->statusToErase())
 							{

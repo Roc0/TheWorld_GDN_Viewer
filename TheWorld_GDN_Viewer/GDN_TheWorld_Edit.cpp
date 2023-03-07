@@ -73,6 +73,8 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_mouseQuadHitPosLabel = nullptr;
 	m_mouseQuadSelLabel = nullptr;
 	m_mouseQuadSelPosLabel = nullptr;
+	m_numQuadrantToSaveLabel = nullptr;
+	m_numQuadrantToUploadLabel = nullptr;
 	m_genAllNormals = nullptr;
 	m_allItems = 0;
 	m_completedItems = 0;
@@ -337,11 +339,15 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::unknown).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::unknown);
 					m_terrTypeOptionButton->add_separator();
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::campaign_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::campaign_1);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::plateau_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::plateau_1);
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_hills).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_hills);
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_hills).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_hills);
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_mountains).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_mountains);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_mountains_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_mountains_grow);
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1_grow);
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2);
+					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2_grow);
 					m_terrTypeOptionButton->add_separator();
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::noise_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::noise_1);
 
@@ -658,6 +664,40 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
 				hBoxContainer = godot::HBoxContainer::_new();
 				marginContainer->add_child(hBoxContainer);
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Quads to save");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					label->connect("mouse_entered", this, "mouse_entered_main_panel");
+					label->connect("mouse_exited", this, "mouse_exited_main_panel");
+					m_numQuadrantToSaveLabel = godot::Label::_new();
+					hBoxContainer->add_child(m_numQuadrantToSaveLabel);
+					m_numQuadrantToSaveLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+					m_numQuadrantToSaveLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+					m_numQuadrantToSaveLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+					label = godot::Label::_new();
+					hBoxContainer->add_child(label);
+					label->set_text("Quads to upload");
+					label->set_align(godot::Label::Align::ALIGN_LEFT);
+					label->connect("mouse_entered", this, "mouse_entered_main_panel");
+					label->connect("mouse_exited", this, "mouse_exited_main_panel");
+					m_numQuadrantToUploadLabel = godot::Label::_new();
+					hBoxContainer->add_child(m_numQuadrantToUploadLabel);
+					m_numQuadrantToUploadLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+					m_numQuadrantToUploadLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+					m_numQuadrantToUploadLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+
+			separator = HSeparator::_new();
+			mainVBoxContainer->add_child(separator);
+			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
+			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+
+			marginContainer = godot::MarginContainer::_new();
+			mainVBoxContainer->add_child(marginContainer);
+			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
+			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
+				hBoxContainer = godot::HBoxContainer::_new();
+				marginContainer->add_child(hBoxContainer);
 					button = godot::Button::_new();
 					hBoxContainer->add_child(button);
 					button->set_text("Save");
@@ -692,6 +732,10 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+
+			size_t numToSave = 0;
+			size_t numToUpload = 0;
+			refreshNumToSaveUpload(numToSave, numToUpload);
 
 			m_tp.Start("EditModeWorker", 1, this);
 }
@@ -1005,6 +1049,38 @@ void GDN_TheWorld_Edit::setMouseQuadSelPosLabelText(std::string text)
 	m_mouseQuadSelPosLabel->set_text(text.c_str());
 }
 
+void GDN_TheWorld_Edit::setNumQuadrantToSave(size_t num)
+{
+	m_numQuadrantToSaveLabel->set_text(std::to_string(num).c_str());
+}
+
+void GDN_TheWorld_Edit::setNumQuadrantToUpload(size_t num)
+{
+	m_numQuadrantToUploadLabel->set_text(std::to_string(num).c_str());
+}
+
+void GDN_TheWorld_Edit::refreshNumToSaveUpload(size_t& numToSave, size_t& numToUpload)
+{
+	numToSave = m_mapQuadToSave.size();
+
+	numToUpload = 0;
+
+	std::vector<QuadrantPos> allQuandrantPos;
+	m_viewer->getAllQuadrantPos(allQuandrantPos);
+
+	for (auto& pos : allQuandrantPos)
+	{
+		QuadTree* q = m_viewer->getQuadTree(pos);
+		if (q != nullptr && q->getQuadrant()->getTerrainEdit()->needUploadToServer)
+			numToUpload++;
+
+	}
+
+	setNumQuadrantToSave(numToSave);
+	setNumQuadrantToUpload(numToUpload);
+
+}
+
 void GDN_TheWorld_Edit::_init(void)
 {
 	//Godot::print("GDN_Template::Init");
@@ -1153,6 +1229,10 @@ void GDN_TheWorld_Edit::editModeSave(void)
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
 
+	size_t numToSave = 0;
+	size_t numToUpload = 0;
+	refreshNumToSaveUpload(numToSave, numToUpload);
+
 	m_actionInProgress = false;
 }
 
@@ -1254,6 +1334,10 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
+
+	size_t numToSave = 0;
+	size_t numToUpload = 0;
+	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	m_actionInProgress = false;
 }
@@ -1394,7 +1478,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_position(startPosition);
 	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_size(size);
 
-	Chunk::HeightsChangedChunkAction action;
+	Chunk::HeightsChangedChunkAction action(m_viewer->is_visible_in_tree());
 	quadTreeSel->ForAllChunk(action);
 
 	m_mapQuadToSave[quadrantSelPos] = "";
@@ -1423,6 +1507,10 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
 
+	size_t numToSave = 0;
+	size_t numToUpload = 0;
+	refreshNumToSaveUpload(numToSave, numToUpload);
+
 	m_actionInProgress = false;
 }
 
@@ -1450,19 +1538,12 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 
 	m_actionClock.tick();
 
-	QuadTree* quadTreeSel = nullptr;
-	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
-
-	if (quadrantSelPos.empty())
-	{
-		m_actionClock.tock();
-		m_actionInProgress = false;
-		return;
-	}
-
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1 ") + __FUNCTION__, "ALL");
 
 	bool genAllNormals = m_genAllNormals->is_pressed();
+
+	QuadTree* quadTreeSel = nullptr;
+	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
 
 	if (!genAllNormals && quadrantSelPos.empty())
 	{
@@ -1490,311 +1571,311 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 		}
 	}
 
-	m_completedItems = 0;
 	m_elapsedCompleted = 0;
 	m_lastElapsed = 0;
 	m_allItems = quandrantPos.size();
 
-	for (auto& pos : quandrantPos)
+	size_t numRounds = 2;
+	for (size_t round = 0; round < numRounds; round++)
 	{
-		if (m_actionStopRequested)
+		m_completedItems = 0;
+
+		for (auto& pos : quandrantPos)
 		{
-			m_actionStopRequested = false;
-			break;
-		}
-
-		QuadTree* quadTree = m_viewer->getQuadTree(pos);
-		if (quadTree != nullptr)
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1 ") + __FUNCTION__, "Single QuadTree");
-
-			quadTree->getQuadrant()->lockInternalData();
-
-			TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
-			TheWorld_Utils::MemoryBuffer heights16Buffer;
-			TheWorld_Utils::MemoryBuffer heights32Buffer;
-			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData quadrantData;
-			quadTree->getQuadrant()->getTerrainEdit()->serialize(terrainEditValuesBuffer);
-			//terrainEditValuesBuffer.set((BYTE*)quadTree->getQuadrant()->getTerrainEdit(), quadTree->getQuadrant()->getTerrainEdit()->size);
-			heights16Buffer.copyFrom(quadTree->getQuadrant()->getFloat16HeightsBuffer());
-			heights32Buffer.copyFrom(quadTree->getQuadrant()->getFloat32HeightsBuffer());
-			
-			quadrantData.meshId = quadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-			quadrantData.terrainEditValues = &terrainEditValuesBuffer;
-			quadrantData.minHeight = quadTree->getQuadrant()->getTerrainEdit()->minHeight;
-			quadrantData.maxHeight = quadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-			quadrantData.heights16Buffer = &heights16Buffer;
-			quadrantData.heights32Buffer = &heights32Buffer;
-			quadrantData.normalsBuffer = nullptr;
-
-			TheWorld_Utils::MemoryBuffer northTerrainEditValuesBuffer;
-			TheWorld_Utils::MemoryBuffer northHeights16Buffer;
-			TheWorld_Utils::MemoryBuffer northHeights32Buffer;
-			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData northQuadrantData;
-			QuadrantPos p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
-			QuadTree* northQuadTree = m_viewer->getQuadTree(p);
-			if (northQuadTree != nullptr)
+			if (m_actionStopRequested)
 			{
-				northQuadTree->getQuadrant()->lockInternalData();
-
-				northQuadTree->getQuadrant()->getTerrainEdit()->serialize(northTerrainEditValuesBuffer);
-				//northTerrainEditValuesBuffer.set((BYTE*)northQuadTree->getQuadrant()->getTerrainEdit(), northQuadTree->getQuadrant()->getTerrainEdit()->size);
-				northHeights16Buffer.copyFrom(northQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-				northHeights32Buffer.copyFrom(northQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-				northQuadrantData.meshId = northQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-				northQuadrantData.terrainEditValues = &northTerrainEditValuesBuffer;
-				northQuadrantData.minHeight = northQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-				northQuadrantData.maxHeight = northQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-				northQuadrantData.heights16Buffer = &northHeights16Buffer;
-				northQuadrantData.heights32Buffer = &northHeights32Buffer;
-				northQuadrantData.normalsBuffer = nullptr;
-			}
-			else
-				northQuadTree = nullptr;
-
-			TheWorld_Utils::MemoryBuffer southTerrainEditValuesBuffer;
-			TheWorld_Utils::MemoryBuffer southHeights16Buffer;
-			TheWorld_Utils::MemoryBuffer southHeights32Buffer;
-			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData southQuadrantData;
-			p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
-			QuadTree* southQuadTree = m_viewer->getQuadTree(p);
-			if (southQuadTree != nullptr)
-			{
-				southQuadTree->getQuadrant()->lockInternalData();
-
-				southQuadTree->getQuadrant()->getTerrainEdit()->serialize(southTerrainEditValuesBuffer);
-				//southTerrainEditValuesBuffer.set((BYTE*)southQuadTree->getQuadrant()->getTerrainEdit(), southQuadTree->getQuadrant()->getTerrainEdit()->size);
-				southHeights16Buffer.copyFrom(southQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-				southHeights32Buffer.copyFrom(southQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-				
-				southQuadrantData.meshId = southQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-				southQuadrantData.terrainEditValues = &southTerrainEditValuesBuffer;
-				southQuadrantData.minHeight = southQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-				southQuadrantData.maxHeight = southQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-				southQuadrantData.heights16Buffer = &southHeights16Buffer;
-				southQuadrantData.heights32Buffer = &southHeights32Buffer;
-				southQuadrantData.normalsBuffer = nullptr;
-			}
-			else
-				southQuadTree = nullptr;
-
-			TheWorld_Utils::MemoryBuffer westTerrainEditValuesBuffer;
-			TheWorld_Utils::MemoryBuffer westHeights16Buffer;
-			TheWorld_Utils::MemoryBuffer westHeights32Buffer;
-			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData westQuadrantData;
-			p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
-			QuadTree* westQuadTree = m_viewer->getQuadTree(p);
-			if (westQuadTree != nullptr)
-			{
-				westQuadTree->getQuadrant()->lockInternalData();
-
-				westQuadTree->getQuadrant()->getTerrainEdit()->serialize(westTerrainEditValuesBuffer);
-				//westTerrainEditValuesBuffer.set((BYTE*)westQuadTree->getQuadrant()->getTerrainEdit(), westQuadTree->getQuadrant()->getTerrainEdit()->size);
-				westHeights16Buffer.copyFrom(westQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-				westHeights32Buffer.copyFrom(westQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-				
-				westQuadrantData.meshId = westQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-				westQuadrantData.terrainEditValues = &westTerrainEditValuesBuffer;
-				westQuadrantData.minHeight = westQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-				westQuadrantData.maxHeight = westQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-				westQuadrantData.heights16Buffer = &westHeights16Buffer;
-				westQuadrantData.heights32Buffer = &westHeights32Buffer;
-				westQuadrantData.normalsBuffer = nullptr;
-			}
-			else
-				westQuadTree = nullptr;
-
-			TheWorld_Utils::MemoryBuffer eastTerrainEditValuesBuffer;
-			TheWorld_Utils::MemoryBuffer eastHeights16Buffer;
-			TheWorld_Utils::MemoryBuffer eastHeights32Buffer;
-			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData eastQuadrantData;
-			p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
-			QuadTree* eastQuadTree = m_viewer->getQuadTree(p);
-			if (eastQuadTree != nullptr)
-			{
-				eastQuadTree->getQuadrant()->lockInternalData();
-
-				eastQuadTree->getQuadrant()->getTerrainEdit()->serialize(eastTerrainEditValuesBuffer);
-				//eastTerrainEditValuesBuffer.set((BYTE*)eastQuadTree->getQuadrant()->getTerrainEdit(), eastQuadTree->getQuadrant()->getTerrainEdit()->size);
-				eastHeights16Buffer.copyFrom(eastQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-				eastHeights32Buffer.copyFrom(eastQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-				
-				eastQuadrantData.meshId = eastQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-				eastQuadrantData.terrainEditValues = &eastTerrainEditValuesBuffer;
-				eastQuadrantData.minHeight = eastQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-				eastQuadrantData.maxHeight = eastQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-				eastQuadrantData.heights16Buffer = &eastHeights16Buffer;
-				eastQuadrantData.heights32Buffer = &eastHeights32Buffer;
-				eastQuadrantData.normalsBuffer = nullptr;
-			}
-			else
-				eastQuadTree = nullptr;
-
-			TheWorld_Utils::MemoryBuffer northwestTerrainEditValuesBuffer;
-			TheWorld_Utils::MemoryBuffer northwestHeights16Buffer;
-			TheWorld_Utils::MemoryBuffer northwestHeights32Buffer;
-			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData northwestQuadrantData;
-			p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinusXMinus);
-			QuadTree* northwestQuadTree = m_viewer->getQuadTree(p);
-			if (northwestQuadTree != nullptr)
-			{
-				northwestQuadTree->getQuadrant()->lockInternalData();
-
-				northwestQuadTree->getQuadrant()->getTerrainEdit()->serialize(northwestTerrainEditValuesBuffer);
-				//northwestTerrainEditValuesBuffer.set((BYTE*)northwestQuadTree->getQuadrant()->getTerrainEdit(), northwestQuadTree->getQuadrant()->getTerrainEdit()->size);
-				northwestHeights16Buffer.copyFrom(northwestQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-				northwestHeights32Buffer.copyFrom(northwestQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-				
-				northwestQuadrantData.meshId = northwestQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-				northwestQuadrantData.terrainEditValues = &northwestTerrainEditValuesBuffer;
-				northwestQuadrantData.minHeight = northwestQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-				northwestQuadrantData.maxHeight = northwestQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-				northwestQuadrantData.heights16Buffer = &northwestHeights16Buffer;
-				northwestQuadrantData.heights32Buffer = &northwestHeights32Buffer;
-				northwestQuadrantData.normalsBuffer = nullptr;
-			}
-			else
-				northwestQuadTree = nullptr;
-
-			TheWorld_Utils::MemoryBuffer northeastTerrainEditValuesBuffer;
-			TheWorld_Utils::MemoryBuffer northeastHeights16Buffer;
-			TheWorld_Utils::MemoryBuffer northeastHeights32Buffer;
-			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData northeastQuadrantData;
-			p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinusXPlus);
-			QuadTree* northeastQuadTree = m_viewer->getQuadTree(p);
-			if (northeastQuadTree != nullptr)
-			{
-				northeastQuadTree->getQuadrant()->lockInternalData();
-
-				northeastQuadTree->getQuadrant()->getTerrainEdit()->serialize(northeastTerrainEditValuesBuffer);
-				//northeastTerrainEditValuesBuffer.set((BYTE*)northeastQuadTree->getQuadrant()->getTerrainEdit(), northeastQuadTree->getQuadrant()->getTerrainEdit()->size);
-				northeastHeights16Buffer.copyFrom(northeastQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-				northeastHeights32Buffer.copyFrom(northeastQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-				
-				northeastQuadrantData.meshId = northeastQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-				northeastQuadrantData.terrainEditValues = &northeastTerrainEditValuesBuffer;
-				northeastQuadrantData.minHeight = northeastQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-				northeastQuadrantData.maxHeight = northeastQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-				northeastQuadrantData.heights16Buffer = &northeastHeights16Buffer;
-				northeastQuadrantData.heights32Buffer = &northeastHeights32Buffer;
-				northeastQuadrantData.normalsBuffer = nullptr;
-			}
-			else
-				northeastQuadTree = nullptr;
-
-			TheWorld_Utils::MemoryBuffer southwestTerrainEditValuesBuffer;
-			TheWorld_Utils::MemoryBuffer southwestHeights16Buffer;
-			TheWorld_Utils::MemoryBuffer southwestHeights32Buffer;
-			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData southwestQuadrantData;
-			p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlusXMinus);
-			QuadTree* southwestQuadTree = m_viewer->getQuadTree(p);
-			if (southwestQuadTree != nullptr)
-			{
-				southwestQuadTree->getQuadrant()->lockInternalData();
-
-				southwestQuadTree->getQuadrant()->getTerrainEdit()->serialize(southwestTerrainEditValuesBuffer);
-				//southwestTerrainEditValuesBuffer.set((BYTE*)southwestQuadTree->getQuadrant()->getTerrainEdit(), southwestQuadTree->getQuadrant()->getTerrainEdit()->size);
-				southwestHeights16Buffer.copyFrom(southwestQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-				southwestHeights32Buffer.copyFrom(southwestQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-				
-				southwestQuadrantData.meshId = southwestQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-				southwestQuadrantData.terrainEditValues = &southwestTerrainEditValuesBuffer;
-				southwestQuadrantData.minHeight = southwestQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-				southwestQuadrantData.maxHeight = southwestQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-				southwestQuadrantData.heights16Buffer = &southwestHeights16Buffer;
-				southwestQuadrantData.heights32Buffer = &southwestHeights32Buffer;
-				southwestQuadrantData.normalsBuffer = nullptr;
-			}
-			else
-				southwestQuadTree = nullptr;
-
-			TheWorld_Utils::MemoryBuffer southeastTerrainEditValuesBuffer;
-			TheWorld_Utils::MemoryBuffer southeastHeights16Buffer;
-			TheWorld_Utils::MemoryBuffer southeastHeights32Buffer;
-
-			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData southeastQuadrantData;
-			p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlusXMinus);
-			QuadTree* southeastQuadTree = m_viewer->getQuadTree(p);
-			if (southeastQuadTree != nullptr)
-			{
-				southeastQuadTree->getQuadrant()->lockInternalData();
-
-				southeastQuadTree->getQuadrant()->getTerrainEdit()->serialize(southeastTerrainEditValuesBuffer);
-				//southeastTerrainEditValuesBuffer.set((BYTE*)southeastQuadTree->getQuadrant()->getTerrainEdit(), southeastQuadTree->getQuadrant()->getTerrainEdit()->size);
-				southeastHeights16Buffer.copyFrom(southeastQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-				southeastHeights32Buffer.copyFrom(southeastQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-				
-				southeastQuadrantData.meshId = southeastQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-				southeastQuadrantData.terrainEditValues = &southeastTerrainEditValuesBuffer;
-				southeastQuadrantData.minHeight = southeastQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-				southeastQuadrantData.maxHeight = southeastQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-				southeastQuadrantData.heights16Buffer = &southeastHeights16Buffer;
-				southeastQuadrantData.heights32Buffer = &southeastHeights32Buffer;
-				southeastQuadrantData.normalsBuffer = nullptr;
-			}
-			else
-				southeastQuadTree = nullptr;
-
-			bool updated = quadTree->getQuadrant()->getMeshCacheBuffer().blendQuadrant(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), false,
-				quadrantData,
-				northQuadrantData,
-				southQuadrantData,
-				westQuadrantData,
-				eastQuadrantData,
-				northwestQuadrantData,
-				northeastQuadrantData,
-				southwestQuadrantData,
-				southeastQuadrantData);
-
-			manageUpdatedHeights(quadrantData, quadTree, terrainEditValuesBuffer, heights16Buffer, heights32Buffer);
-			quadTree->getQuadrant()->unlockInternalData();
-
-			if (northQuadTree != nullptr)
-			{
-				manageUpdatedHeights(northQuadrantData, northQuadTree, northTerrainEditValuesBuffer, northHeights16Buffer, northHeights32Buffer);
-				northQuadTree->getQuadrant()->unlockInternalData();
-			}
-			if (southQuadTree != nullptr)
-			{
-				manageUpdatedHeights(southQuadrantData, southQuadTree, southTerrainEditValuesBuffer, southHeights16Buffer, southHeights32Buffer);
-				southQuadTree->getQuadrant()->unlockInternalData();
-			}
-			if (westQuadTree != nullptr)
-			{
-				manageUpdatedHeights(westQuadrantData, westQuadTree, westTerrainEditValuesBuffer, westHeights16Buffer, westHeights32Buffer);
-				westQuadTree->getQuadrant()->unlockInternalData();
-			}
-			if (eastQuadTree != nullptr)
-			{
-				manageUpdatedHeights(eastQuadrantData, eastQuadTree, eastTerrainEditValuesBuffer, eastHeights16Buffer, eastHeights32Buffer);
-				eastQuadTree->getQuadrant()->unlockInternalData();
-			}
-			if (northwestQuadTree != nullptr)
-			{
-				manageUpdatedHeights(northwestQuadrantData, northwestQuadTree, northwestTerrainEditValuesBuffer, northwestHeights16Buffer, northwestHeights32Buffer);
-				northwestQuadTree->getQuadrant()->unlockInternalData();
-			}
-			if (northeastQuadTree != nullptr)
-			{
-				manageUpdatedHeights(northeastQuadrantData, northeastQuadTree, northeastTerrainEditValuesBuffer, northeastHeights16Buffer, northeastHeights32Buffer);
-				northeastQuadTree->getQuadrant()->unlockInternalData();
-			}
-			if (southwestQuadTree != nullptr)
-			{
-				manageUpdatedHeights(southwestQuadrantData, southwestQuadTree, southwestTerrainEditValuesBuffer, southwestHeights16Buffer, southwestHeights32Buffer);
-				southwestQuadTree->getQuadrant()->unlockInternalData();
-			}
-			if (southeastQuadTree != nullptr)
-			{
-				manageUpdatedHeights(southeastQuadrantData, southeastQuadTree, southeastTerrainEditValuesBuffer, southeastHeights16Buffer, southeastHeights32Buffer);
-				southeastQuadTree->getQuadrant()->unlockInternalData();
+				m_actionStopRequested = false;
+				break;
 			}
 
-			m_completedItems++;
-			size_t partialCount = m_actionClock.partialDuration().count();
-			m_lastElapsed = partialCount - m_elapsedCompleted;
-			m_elapsedCompleted = partialCount;
+			QuadTree* quadTree = m_viewer->getQuadTree(pos);
+			if (quadTree != nullptr)
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1 ") + __FUNCTION__, "Single QuadTree");
+
+				quadTree->getQuadrant()->lockInternalData();
+
+				TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+				TheWorld_Utils::MemoryBuffer heights16Buffer;
+				TheWorld_Utils::MemoryBuffer heights32Buffer;
+				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData quadrantData;
+				quadTree->getQuadrant()->getTerrainEdit()->serialize(terrainEditValuesBuffer);
+				heights16Buffer.copyFrom(quadTree->getQuadrant()->getFloat16HeightsBuffer());
+				heights32Buffer.copyFrom(quadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+				quadrantData.meshId = quadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+				quadrantData.terrainEditValues = &terrainEditValuesBuffer;
+				quadrantData.minHeight = quadTree->getQuadrant()->getTerrainEdit()->minHeight;
+				quadrantData.maxHeight = quadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+				quadrantData.heights16Buffer = &heights16Buffer;
+				quadrantData.heights32Buffer = &heights32Buffer;
+				quadrantData.normalsBuffer = nullptr;
+
+				TheWorld_Utils::MemoryBuffer northTerrainEditValuesBuffer;
+				TheWorld_Utils::MemoryBuffer northHeights16Buffer;
+				TheWorld_Utils::MemoryBuffer northHeights32Buffer;
+				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData northQuadrantData;
+				QuadrantPos p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
+				QuadTree* northQuadTree = m_viewer->getQuadTree(p);
+				if (northQuadTree != nullptr)
+				{
+					northQuadTree->getQuadrant()->lockInternalData();
+
+					northQuadTree->getQuadrant()->getTerrainEdit()->serialize(northTerrainEditValuesBuffer);
+					northHeights16Buffer.copyFrom(northQuadTree->getQuadrant()->getFloat16HeightsBuffer());
+					northHeights32Buffer.copyFrom(northQuadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+					northQuadrantData.meshId = northQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+					northQuadrantData.terrainEditValues = &northTerrainEditValuesBuffer;
+					northQuadrantData.minHeight = northQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
+					northQuadrantData.maxHeight = northQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+					northQuadrantData.heights16Buffer = &northHeights16Buffer;
+					northQuadrantData.heights32Buffer = &northHeights32Buffer;
+					northQuadrantData.normalsBuffer = nullptr;
+				}
+				else
+					northQuadTree = nullptr;
+
+				TheWorld_Utils::MemoryBuffer southTerrainEditValuesBuffer;
+				TheWorld_Utils::MemoryBuffer southHeights16Buffer;
+				TheWorld_Utils::MemoryBuffer southHeights32Buffer;
+				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData southQuadrantData;
+				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
+				QuadTree* southQuadTree = m_viewer->getQuadTree(p);
+				if (southQuadTree != nullptr)
+				{
+					southQuadTree->getQuadrant()->lockInternalData();
+
+					southQuadTree->getQuadrant()->getTerrainEdit()->serialize(southTerrainEditValuesBuffer);
+					southHeights16Buffer.copyFrom(southQuadTree->getQuadrant()->getFloat16HeightsBuffer());
+					southHeights32Buffer.copyFrom(southQuadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+					southQuadrantData.meshId = southQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+					southQuadrantData.terrainEditValues = &southTerrainEditValuesBuffer;
+					southQuadrantData.minHeight = southQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
+					southQuadrantData.maxHeight = southQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+					southQuadrantData.heights16Buffer = &southHeights16Buffer;
+					southQuadrantData.heights32Buffer = &southHeights32Buffer;
+					southQuadrantData.normalsBuffer = nullptr;
+				}
+				else
+					southQuadTree = nullptr;
+
+				TheWorld_Utils::MemoryBuffer westTerrainEditValuesBuffer;
+				TheWorld_Utils::MemoryBuffer westHeights16Buffer;
+				TheWorld_Utils::MemoryBuffer westHeights32Buffer;
+				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData westQuadrantData;
+				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
+				QuadTree* westQuadTree = m_viewer->getQuadTree(p);
+				if (westQuadTree != nullptr)
+				{
+					westQuadTree->getQuadrant()->lockInternalData();
+
+					westQuadTree->getQuadrant()->getTerrainEdit()->serialize(westTerrainEditValuesBuffer);
+					westHeights16Buffer.copyFrom(westQuadTree->getQuadrant()->getFloat16HeightsBuffer());
+					westHeights32Buffer.copyFrom(westQuadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+					westQuadrantData.meshId = westQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+					westQuadrantData.terrainEditValues = &westTerrainEditValuesBuffer;
+					westQuadrantData.minHeight = westQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
+					westQuadrantData.maxHeight = westQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+					westQuadrantData.heights16Buffer = &westHeights16Buffer;
+					westQuadrantData.heights32Buffer = &westHeights32Buffer;
+					westQuadrantData.normalsBuffer = nullptr;
+				}
+				else
+					westQuadTree = nullptr;
+
+				TheWorld_Utils::MemoryBuffer eastTerrainEditValuesBuffer;
+				TheWorld_Utils::MemoryBuffer eastHeights16Buffer;
+				TheWorld_Utils::MemoryBuffer eastHeights32Buffer;
+				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData eastQuadrantData;
+				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
+				QuadTree* eastQuadTree = m_viewer->getQuadTree(p);
+				if (eastQuadTree != nullptr)
+				{
+					eastQuadTree->getQuadrant()->lockInternalData();
+
+					eastQuadTree->getQuadrant()->getTerrainEdit()->serialize(eastTerrainEditValuesBuffer);
+					eastHeights16Buffer.copyFrom(eastQuadTree->getQuadrant()->getFloat16HeightsBuffer());
+					eastHeights32Buffer.copyFrom(eastQuadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+					eastQuadrantData.meshId = eastQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+					eastQuadrantData.terrainEditValues = &eastTerrainEditValuesBuffer;
+					eastQuadrantData.minHeight = eastQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
+					eastQuadrantData.maxHeight = eastQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+					eastQuadrantData.heights16Buffer = &eastHeights16Buffer;
+					eastQuadrantData.heights32Buffer = &eastHeights32Buffer;
+					eastQuadrantData.normalsBuffer = nullptr;
+				}
+				else
+					eastQuadTree = nullptr;
+
+				TheWorld_Utils::MemoryBuffer northwestTerrainEditValuesBuffer;
+				TheWorld_Utils::MemoryBuffer northwestHeights16Buffer;
+				TheWorld_Utils::MemoryBuffer northwestHeights32Buffer;
+				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData northwestQuadrantData;
+				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinusXMinus);
+				QuadTree* northwestQuadTree = m_viewer->getQuadTree(p);
+				if (northwestQuadTree != nullptr)
+				{
+					northwestQuadTree->getQuadrant()->lockInternalData();
+
+					northwestQuadTree->getQuadrant()->getTerrainEdit()->serialize(northwestTerrainEditValuesBuffer);
+					northwestHeights16Buffer.copyFrom(northwestQuadTree->getQuadrant()->getFloat16HeightsBuffer());
+					northwestHeights32Buffer.copyFrom(northwestQuadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+					northwestQuadrantData.meshId = northwestQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+					northwestQuadrantData.terrainEditValues = &northwestTerrainEditValuesBuffer;
+					northwestQuadrantData.minHeight = northwestQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
+					northwestQuadrantData.maxHeight = northwestQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+					northwestQuadrantData.heights16Buffer = &northwestHeights16Buffer;
+					northwestQuadrantData.heights32Buffer = &northwestHeights32Buffer;
+					northwestQuadrantData.normalsBuffer = nullptr;
+				}
+				else
+					northwestQuadTree = nullptr;
+
+				TheWorld_Utils::MemoryBuffer northeastTerrainEditValuesBuffer;
+				TheWorld_Utils::MemoryBuffer northeastHeights16Buffer;
+				TheWorld_Utils::MemoryBuffer northeastHeights32Buffer;
+				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData northeastQuadrantData;
+				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinusXPlus);
+				QuadTree* northeastQuadTree = m_viewer->getQuadTree(p);
+				if (northeastQuadTree != nullptr)
+				{
+					northeastQuadTree->getQuadrant()->lockInternalData();
+
+					northeastQuadTree->getQuadrant()->getTerrainEdit()->serialize(northeastTerrainEditValuesBuffer);
+					northeastHeights16Buffer.copyFrom(northeastQuadTree->getQuadrant()->getFloat16HeightsBuffer());
+					northeastHeights32Buffer.copyFrom(northeastQuadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+					northeastQuadrantData.meshId = northeastQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+					northeastQuadrantData.terrainEditValues = &northeastTerrainEditValuesBuffer;
+					northeastQuadrantData.minHeight = northeastQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
+					northeastQuadrantData.maxHeight = northeastQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+					northeastQuadrantData.heights16Buffer = &northeastHeights16Buffer;
+					northeastQuadrantData.heights32Buffer = &northeastHeights32Buffer;
+					northeastQuadrantData.normalsBuffer = nullptr;
+				}
+				else
+					northeastQuadTree = nullptr;
+
+				TheWorld_Utils::MemoryBuffer southwestTerrainEditValuesBuffer;
+				TheWorld_Utils::MemoryBuffer southwestHeights16Buffer;
+				TheWorld_Utils::MemoryBuffer southwestHeights32Buffer;
+				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData southwestQuadrantData;
+				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlusXMinus);
+				QuadTree* southwestQuadTree = m_viewer->getQuadTree(p);
+				if (southwestQuadTree != nullptr)
+				{
+					southwestQuadTree->getQuadrant()->lockInternalData();
+
+					southwestQuadTree->getQuadrant()->getTerrainEdit()->serialize(southwestTerrainEditValuesBuffer);
+					southwestHeights16Buffer.copyFrom(southwestQuadTree->getQuadrant()->getFloat16HeightsBuffer());
+					southwestHeights32Buffer.copyFrom(southwestQuadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+					southwestQuadrantData.meshId = southwestQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+					southwestQuadrantData.terrainEditValues = &southwestTerrainEditValuesBuffer;
+					southwestQuadrantData.minHeight = southwestQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
+					southwestQuadrantData.maxHeight = southwestQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+					southwestQuadrantData.heights16Buffer = &southwestHeights16Buffer;
+					southwestQuadrantData.heights32Buffer = &southwestHeights32Buffer;
+					southwestQuadrantData.normalsBuffer = nullptr;
+				}
+				else
+					southwestQuadTree = nullptr;
+
+				TheWorld_Utils::MemoryBuffer southeastTerrainEditValuesBuffer;
+				TheWorld_Utils::MemoryBuffer southeastHeights16Buffer;
+				TheWorld_Utils::MemoryBuffer southeastHeights32Buffer;
+
+				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData southeastQuadrantData;
+				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlusXPlus);
+				QuadTree* southeastQuadTree = m_viewer->getQuadTree(p);
+				if (southeastQuadTree != nullptr)
+				{
+					southeastQuadTree->getQuadrant()->lockInternalData();
+
+					southeastQuadTree->getQuadrant()->getTerrainEdit()->serialize(southeastTerrainEditValuesBuffer);
+					southeastHeights16Buffer.copyFrom(southeastQuadTree->getQuadrant()->getFloat16HeightsBuffer());
+					southeastHeights32Buffer.copyFrom(southeastQuadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+					southeastQuadrantData.meshId = southeastQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+					southeastQuadrantData.terrainEditValues = &southeastTerrainEditValuesBuffer;
+					southeastQuadrantData.minHeight = southeastQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
+					southeastQuadrantData.maxHeight = southeastQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+					southeastQuadrantData.heights16Buffer = &southeastHeights16Buffer;
+					southeastQuadrantData.heights32Buffer = &southeastHeights32Buffer;
+					southeastQuadrantData.normalsBuffer = nullptr;
+				}
+				else
+					southeastQuadTree = nullptr;
+
+				bool lastPhase = false;
+				if (round == numRounds - 1)
+					lastPhase = true;
+				;
+				bool updated = quadTree->getQuadrant()->getMeshCacheBuffer().blendQuadrant(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), lastPhase,
+					quadrantData,
+					northQuadrantData,
+					southQuadrantData,
+					westQuadrantData,
+					eastQuadrantData,
+					northwestQuadrantData,
+					northeastQuadrantData,
+					southwestQuadrantData,
+					southeastQuadrantData);
+
+				manageUpdatedHeights(quadrantData, quadTree, terrainEditValuesBuffer, heights16Buffer, heights32Buffer);
+				quadTree->getQuadrant()->unlockInternalData();
+
+				if (northQuadTree != nullptr)
+				{
+					manageUpdatedHeights(northQuadrantData, northQuadTree, northTerrainEditValuesBuffer, northHeights16Buffer, northHeights32Buffer);
+					northQuadTree->getQuadrant()->unlockInternalData();
+				}
+				if (southQuadTree != nullptr)
+				{
+					manageUpdatedHeights(southQuadrantData, southQuadTree, southTerrainEditValuesBuffer, southHeights16Buffer, southHeights32Buffer);
+					southQuadTree->getQuadrant()->unlockInternalData();
+				}
+				if (westQuadTree != nullptr)
+				{
+					manageUpdatedHeights(westQuadrantData, westQuadTree, westTerrainEditValuesBuffer, westHeights16Buffer, westHeights32Buffer);
+					westQuadTree->getQuadrant()->unlockInternalData();
+				}
+				if (eastQuadTree != nullptr)
+				{
+					manageUpdatedHeights(eastQuadrantData, eastQuadTree, eastTerrainEditValuesBuffer, eastHeights16Buffer, eastHeights32Buffer);
+					eastQuadTree->getQuadrant()->unlockInternalData();
+				}
+				if (northwestQuadTree != nullptr)
+				{
+					manageUpdatedHeights(northwestQuadrantData, northwestQuadTree, northwestTerrainEditValuesBuffer, northwestHeights16Buffer, northwestHeights32Buffer);
+					northwestQuadTree->getQuadrant()->unlockInternalData();
+				}
+				if (northeastQuadTree != nullptr)
+				{
+					manageUpdatedHeights(northeastQuadrantData, northeastQuadTree, northeastTerrainEditValuesBuffer, northeastHeights16Buffer, northeastHeights32Buffer);
+					northeastQuadTree->getQuadrant()->unlockInternalData();
+				}
+				if (southwestQuadTree != nullptr)
+				{
+					manageUpdatedHeights(southwestQuadrantData, southwestQuadTree, southwestTerrainEditValuesBuffer, southwestHeights16Buffer, southwestHeights32Buffer);
+					southwestQuadTree->getQuadrant()->unlockInternalData();
+				}
+				if (southeastQuadTree != nullptr)
+				{
+					manageUpdatedHeights(southeastQuadrantData, southeastQuadTree, southeastTerrainEditValuesBuffer, southeastHeights16Buffer, southeastHeights32Buffer);
+					southeastQuadTree->getQuadrant()->unlockInternalData();
+				}
+
+				m_completedItems++;
+				size_t partialCount = m_actionClock.partialDuration().count();
+				m_lastElapsed = partialCount - m_elapsedCompleted;
+				m_elapsedCompleted = partialCount;
+			}
 		}
 	}
 
@@ -1808,6 +1889,10 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
+
+	size_t numToSave = 0;
+	size_t numToUpload = 0;
+	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	m_actionInProgress = false;
 }
@@ -1840,7 +1925,7 @@ void GDN_TheWorld_Edit::manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::Ca
 		quadTree->getQuadrant()->getGlobalCoordAABB().set_position(startPosition);
 		quadTree->getQuadrant()->getGlobalCoordAABB().set_size(size);
 
-		Chunk::HeightsChangedChunkAction action;
+		Chunk::HeightsChangedChunkAction action(m_viewer->is_visible_in_tree());
 		quadTree->ForAllChunk(action);
 
 		quadTree->materialParamsNeedReset(true);
@@ -1975,5 +2060,34 @@ void GDN_TheWorld_Edit::editModeSelectTerrainTypeAction(int64_t index)
 	std::string s = TheWorld_Utils::TerrainEdit::terrainTypeString(terrainType);
 
 	TheWorld_Utils::TerrainEdit terrainEdit(terrainType);
+
+	QuadTree* selectedQuadTree = nullptr;
+	QuadrantPos selectedQuadrantPos = m_viewer->getQuadrantSelForEdit(&selectedQuadTree);
+	if (!selectedQuadrantPos.empty() && selectedQuadTree != nullptr)
+	{
+		TheWorld_Utils::TerrainEdit* northSideTerrainEdit = nullptr;
+		QuadrantPos pos = selectedQuadrantPos.getQuadrantPos(QuadrantPos::DirectionSlot::NorthZMinus);
+		QuadTree* q = m_viewer->getQuadTree(pos);
+		if (q != nullptr && !q->getQuadrant()->empty())
+			northSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+		TheWorld_Utils::TerrainEdit* southSideTerrainEdit = nullptr;
+		pos = selectedQuadrantPos.getQuadrantPos(QuadrantPos::DirectionSlot::SouthZPlus);
+		q = m_viewer->getQuadTree(pos);
+		if (q != nullptr && !q->getQuadrant()->empty())
+			southSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+		TheWorld_Utils::TerrainEdit* westSideTerrainEdit = nullptr;
+		pos = selectedQuadrantPos.getQuadrantPos(QuadrantPos::DirectionSlot::WestXMinus);
+		q = m_viewer->getQuadTree(pos);
+		if (q != nullptr && !q->getQuadrant()->empty())
+			westSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+		TheWorld_Utils::TerrainEdit* eastSideTerrainEdit = nullptr;
+		pos = selectedQuadrantPos.getQuadrantPos(QuadrantPos::DirectionSlot::EastXPlus);
+		q = m_viewer->getQuadTree(pos);
+		if (q != nullptr && !q->getQuadrant()->empty())
+			eastSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+		terrainEdit.adjustValues(northSideTerrainEdit, southSideTerrainEdit, westSideTerrainEdit, eastSideTerrainEdit);
+
+	}
+
 	setTerrainEditValues(terrainEdit);
 }

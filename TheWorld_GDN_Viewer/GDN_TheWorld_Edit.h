@@ -124,6 +124,11 @@ namespace godot
 		void setMouseQuadSelLabelText(std::string text);
 		void setMouseQuadSelPosLabelText(std::string text);
 
+		void setNumQuadrantToSave(size_t num);
+		void setNumQuadrantToUpload(size_t num);
+
+		void refreshNumToSaveUpload(size_t& numToSave, size_t& numToUpload);
+
 		//std::map<QuadrantPos, bool>& getMapQuadToSave(void)
 		//{
 		//	return m_mapQuadToSave;
@@ -172,6 +177,9 @@ namespace godot
 		godot::Label* m_mouseQuadHitPosLabel;
 		godot::Label* m_mouseQuadSelLabel;
 		godot::Label* m_mouseQuadSelPosLabel;
+
+		godot::Label* m_numQuadrantToSaveLabel;
+		godot::Label* m_numQuadrantToUploadLabel;
 
 		godot::CheckBox* m_genAllNormals;
 		godot::OptionButton* m_terrTypeOptionButton;

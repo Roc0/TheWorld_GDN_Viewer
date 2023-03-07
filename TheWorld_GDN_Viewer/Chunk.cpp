@@ -730,6 +730,8 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 	m_debugMeshInstanceRID = RID();
 	m_debugMeshRID = RID();
 	m_debugMeshInstance = nullptr;
+	m_debugWirecubeMeshNeedRegen = false;
+	m_debugWiresquareMeshNeedRegen = false;
 
 	if (m_useVisualServer)
 	{
@@ -815,6 +817,8 @@ void ChunkDebug::heightsChanged(void)
 {
 	Chunk::heightsChanged();
 	m_debugMeshAABB = AABB();
+	m_debugWirecubeMeshNeedRegen = true;
+	m_debugWiresquareMeshNeedRegen = true;
 }
 
 void ChunkDebug::update(bool isVisible)
@@ -1072,6 +1076,14 @@ void ChunkDebug::applyDebugMesh()
 		{
 			// reset normal Wirecube
 			string metaNameMesh = DEBUG_WIRECUBE_MESH + to_string(m_lod);
+			
+			if (m_debugWirecubeMeshNeedRegen)
+			{
+				if (m_viewer->has_meta(metaNameMesh.c_str()))
+					m_viewer->remove_meta(metaNameMesh.c_str());
+				m_debugWirecubeMeshNeedRegen = false;
+			}
+
 			if (!m_viewer->has_meta(metaNameMesh.c_str()))
 			{
 				Color wiredMeshColor;
@@ -1128,6 +1140,14 @@ void ChunkDebug::applyDebugMesh()
 		{
 			// reset normal Wirecube
 			string metaNameMesh = DEBUG_WIRESQUARE_MESH + to_string(m_lod);
+
+			if (m_debugWiresquareMeshNeedRegen)
+			{
+				if (m_viewer->has_meta(metaNameMesh.c_str()))
+					m_viewer->remove_meta(metaNameMesh.c_str());
+				m_debugWiresquareMeshNeedRegen = false;
+			}
+
 			if (!m_viewer->has_meta(metaNameMesh.c_str()))
 			{
 				Color wiredMeshColor;

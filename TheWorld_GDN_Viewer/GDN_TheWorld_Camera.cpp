@@ -24,6 +24,9 @@ void GDN_TheWorld_Camera::_register_methods()
 	register_method("is_active_camera", &GDN_TheWorld_Camera::isActiveCamera);
 	register_method("get_active_camera", &GDN_TheWorld_Camera::getActiveCamera);
 	register_method("get_angle_from_north", &GDN_TheWorld_Camera::getAngleFromNorth);
+	register_method("get_yaw", &GDN_TheWorld_Camera::getYaw);
+	register_method("get_pitch", &GDN_TheWorld_Camera::getPitch);
+	register_method("get_roll", &GDN_TheWorld_Camera::getRoll);
 }
 
 GDN_TheWorld_Camera::GDN_TheWorld_Camera()

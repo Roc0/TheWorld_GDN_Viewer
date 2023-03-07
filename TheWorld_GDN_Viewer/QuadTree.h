@@ -32,47 +32,55 @@ namespace godot
 	public:
 		enum class DirectionSlot
 		{
-			Center = -1,
+			Center = -1
 
 			//
 			// - o
 			//
-			XMinus = 0,
+			, XMinus = 0
+			, WestXMinus = 0
 
 			//
 			//   o -
 			//
-			XPlus = 1,
+			, XPlus = 1
+			, EastXPlus = 1
 
 			//   -
 			//   o
 			//
-			ZMinus = 2,
+			, ZMinus = 2
+			, NorthZMinus = 2
 
 			//
 			//   o
 			//   -
-			ZPlus = 3,
+			, ZPlus = 3
+			, SouthZPlus = 3
 
 			// - 
 			//   o
 			//   
-			ZMinusXMinus = 4,
+			, ZMinusXMinus = 4
+			, NorthwestZMinusXMinus = 4
 
 			//     - 
 			//   o
 			//   
-			ZMinusXPlus = 5,
+			, ZMinusXPlus = 5
+			, NortheastZMinusXPlus = 5
 
 			//     
 			//   o
 			// -    
-			ZPlusXMinus = 6,
+			, ZPlusXMinus = 6
+			, SouthwestZPlusXMinus = 6
 
 			//      
 			//   o
 			//     -
-			ZPlusXPlus = 7
+			, ZPlusXPlus = 7
+			, SoutheastZPlusXPlus = 7
 		};
 
 		QuadrantPos()

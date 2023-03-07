@@ -300,13 +300,21 @@ namespace godot
 		class HeightsChangedChunkAction : public ChunkAction
 		{
 		public:
-			HeightsChangedChunkAction(void)	{}
+			HeightsChangedChunkAction(bool isVisible)
+			{
+				m_isVisible = isVisible;
+			}
 			virtual ~HeightsChangedChunkAction() {}
 			virtual void exec(Chunk* chunk)
 			{
 				chunk->heightsChanged();
+				if (!m_isVisible)
+					chunk->refresh(m_isVisible);
+				else
+					chunk->refresh(m_isVisible);
 			}
 		private:
+			bool m_isVisible;
 		};
 
 		class ChunkPos
@@ -632,5 +640,7 @@ namespace godot
 		Ref<Mesh> m_debugMesh;
 		AABB m_debugMeshAABB;
 		Transform m_debugGlobaTransformApplied;
+		bool m_debugWirecubeMeshNeedRegen;
+		bool m_debugWiresquareMeshNeedRegen;
 	};
 }
