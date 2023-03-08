@@ -3052,7 +3052,7 @@ void GDN_TheWorld_Viewer::streamer(void)
 							bool reset = false;
 							//reset = it->second->resetMaterialParams();
 
-							if (it->second->statusToErase())
+							if (it->second->statusToErase() && !it->second->getQuadrant()->internalDataLocked())
 							{
 								m_toErase.push_back(it->first);
 								break;

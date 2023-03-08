@@ -1410,8 +1410,10 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	float lowerXGridVertex = quadrantSelPos.getLowerXGridVertex();
 	float lowerZGridVertex = quadrantSelPos.getLowerZGridVertex();
 	
+	// 1. Lock internal data to prevent shader using them while they are incomplete 
 	quadTreeSel->getQuadrant()->lockInternalData();
 
+	// 2. generate new heights
 	std::vector<float> vectGridHeights;
 	TheWorld_Utils::MeshCacheBuffer& cache = quadTreeSel->getQuadrant()->getMeshCacheBuffer();
 	{
@@ -1424,7 +1426,16 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 		}
 	}
 
+	// 3. remember quadrant has to be saved and uploaded
 	quadTreeSel->getQuadrant()->setNeedUploadToServer(true);
+	terrainEdit->needUploadToServer = true;
+	m_mapQuadToSave[quadrantSelPos] = "";
+
+	// 4. refresh new heights on internal datas 16-bit heights (for shader), 32-bit heigths (for collider), terrain data for editing
+	terrainEdit->northSideZMinus.needBlend = true;
+	terrainEdit->southSideZPlus.needBlend = true;
+	terrainEdit->westSideXMinus.needBlend = true;
+	terrainEdit->eastSideXPlus.needBlend = true;
 
 	TheWorld_Utils::MemoryBuffer& heights16Buffer = quadTreeSel->getQuadrant()->getFloat16HeightsBuffer(false);
 	size_t heights16BufferSize = numVertices * sizeof(uint16_t);
@@ -1454,18 +1465,13 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 
 	my_assert((BYTE*)movingHeights16Buffer - heights16Buffer.ptr() == heights16BufferSize);
 	heights16Buffer.adjustSize(heights16BufferSize);
-
-	//my_assert((BYTE*)movingHeights32Buffer - heights32Buffer.ptr() == heights32BufferSize);
 	heights32Buffer.adjustSize(heights32BufferSize);
 
+	// 5. invalidata normals has heigths have been chamged
 	quadTreeSel->getQuadrant()->getNormalsBuffer(false).clear();
 	terrainEdit->normalsNeedRegen = true;
 
-	terrainEdit->northSideZMinus.needBlend = true;
-	terrainEdit->southSideZPlus.needBlend = true;
-	terrainEdit->westSideXMinus.needBlend = true;
-	terrainEdit->eastSideXPlus.needBlend = true;
-
+	// 6. prepare new heigths for collider (PoolRealArray)
 	{
 		PoolRealArray& heightsForCollider = quadTreeSel->getQuadrant()->getHeightsForCollider();
 		heightsForCollider.resize((int)numVertices);
@@ -1473,26 +1479,28 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 		memcpy((char*)w.ptr(), heights32Buffer.ptr(), heights32Buffer.size());
 	}
 
+
+	// 7. calc new quadrant AABB for collider
 	Vector3 startPosition(lowerXGridVertex, terrainEdit->minHeight, lowerZGridVertex);
 	Vector3 endPosition(startPosition.x + sizeInWU, terrainEdit->maxHeight, startPosition.z + sizeInWU);
 	Vector3 size = endPosition - startPosition;
-
 	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_position(startPosition);
 	quadTreeSel->getQuadrant()->getGlobalCoordAABB().set_size(size);
 
+	
+	// 8. notify all chunk of the quadrant that heigths have been changed (invalidates all cached chunk and quad AABB)
 	Chunk::HeightsChangedChunkAction action(m_viewer->is_visible_in_tree());
 	m_viewer->m_refreshRequired = true;
 	quadTreeSel->ForAllChunk(action);
 
-	m_mapQuadToSave[quadrantSelPos] = "";
-	terrainEdit->needUploadToServer = true;
-
+	// 9. update quadrant flags
 	quadTreeSel->getQuadrant()->setEmpty(false);
 	quadTreeSel->getQuadrant()->setHeightsUpdated(true);
 	quadTreeSel->getQuadrant()->setColorsUpdated(true);
 	quadTreeSel->getQuadrant()->setNormalsUpdated(true);
 	quadTreeSel->materialParamsNeedReset(true);
 
+	// 10. unlock internal datas so that they can be passed to the shader/collider
 	quadTreeSel->getQuadrant()->unlockInternalData();
 
 	setMinHeight(terrainEdit->minHeight);
@@ -2054,6 +2062,10 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
+
+	size_t numToSave = 0;
+	size_t numToUpload = 0;
+	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	m_actionInProgress = false;
 }
