@@ -1172,6 +1172,7 @@ void ShaderTerrainData::updateMaterialParams(void)
 		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));	// DEBUGRIC
 		m_material->set_shader_param(SHADER_PARAM_INVERSE_TRANSFORM, t);
 
+		// This is needed to properly transform normals if the terrain is scaled
 		Basis b = globalTransform.basis.inverse().transposed();
 		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));	// DEBUGRIC
 		m_material->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
