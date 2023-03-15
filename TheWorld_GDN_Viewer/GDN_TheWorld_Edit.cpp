@@ -1431,7 +1431,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	terrainEdit->needUploadToServer = true;
 	m_mapQuadToSave[quadrantSelPos] = "";
 
-	// 4. refresh new heights on internal datas 16-bit heights (for shader), 32-bit heigths (for collider), terrain data for editing
+	// 4. refresh new heights on internal datas 16-bit heights (for shader), 32-bit heigths (for collider), terrain data for editing and set flag according (new heigths have to be passed to shader)
 	terrainEdit->northSideZMinus.needBlend = true;
 	terrainEdit->southSideZPlus.needBlend = true;
 	terrainEdit->westSideXMinus.needBlend = true;
@@ -1466,10 +1466,12 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	my_assert((BYTE*)movingHeights16Buffer - heights16Buffer.ptr() == heights16BufferSize);
 	heights16Buffer.adjustSize(heights16BufferSize);
 	heights32Buffer.adjustSize(heights32BufferSize);
+	quadTreeSel->getQuadrant()->setHeightsUpdated(true);
 
-	// 5. invalidata normals has heigths have been chamged
+	// 5. invalidata normals as heigths have been changed and set flags according (normals need regen and empty normals have to be passed to shader)
 	quadTreeSel->getQuadrant()->getNormalsBuffer(false).clear();
 	terrainEdit->normalsNeedRegen = true;
+	quadTreeSel->getQuadrant()->setNormalsUpdated(true);
 
 	// 6. prepare new heigths for collider (PoolRealArray)
 	{
@@ -1495,9 +1497,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 
 	// 9. update quadrant flags
 	quadTreeSel->getQuadrant()->setEmpty(false);
-	quadTreeSel->getQuadrant()->setHeightsUpdated(true);
 	quadTreeSel->getQuadrant()->setColorsUpdated(true);
-	quadTreeSel->getQuadrant()->setNormalsUpdated(true);
 	quadTreeSel->materialParamsNeedReset(true);
 
 	// 10. unlock internal datas so that they can be passed to the shader/collider
@@ -1923,6 +1923,10 @@ void GDN_TheWorld_Edit::manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::Ca
 
 		quadTree->getQuadrant()->setHeightsUpdated(true);
 
+		quadTree->getQuadrant()->getNormalsBuffer(false).clear();
+		quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;
+		quadTree->getQuadrant()->setNormalsUpdated(true);
+
 		{
 			PoolRealArray& heightsForCollider = quadTree->getQuadrant()->getHeightsForCollider(false);
 			heightsForCollider.resize((int)(quadTree->getQuadrant()->getPos().getNumVerticesPerSize() * quadTree->getQuadrant()->getPos().getNumVerticesPerSize()));
@@ -1982,6 +1986,9 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 		return;
 	}
 
+	if (quadTreeSel != nullptr)
+		quadTreeSel->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;
+
 	std::vector<QuadrantPos> allQuandrantPos;
 	m_viewer->getAllQuadrantPos(allQuandrantPos);
 
@@ -1991,8 +1998,9 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 		QuadTree* quadTree = m_viewer->getQuadTree(pos);
 		if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
 		{
+			//quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;		// SUPERDEBUGRIC: force to generate normals
 			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
-			if (normalsBuffer.size() == 0)
+			if (normalsBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
 			{
 				if (genAllNormals || pos == quadrantSelPos)
 				{
@@ -2024,7 +2032,7 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 			quadTree->getQuadrant()->lockInternalData();
 
 			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
-			if (normalsBuffer.size() == 0)
+			if (normalsBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("EditGenMesh 1.1 ") + __FUNCTION__, "Single QuadTree");
 
@@ -2032,17 +2040,40 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 				TheWorld_Utils::MemoryBuffer& heightsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
 				size_t numElements = heightsBuffer.size() / sizeof(float);
 				my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
-				//std::vector<float> vectGridHeights((float*)heightsBuffer.ptr(), (float*)heightsBuffer.ptr() + numElements);
-				std::vector<float> vectGridHeights;
-				heightsBuffer.populateFloatVector(vectGridHeights);
-				cache.generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
+
+				TheWorld_Utils::MemoryBuffer emptyHeights32Buffer;
+				TheWorld_Utils::MemoryBuffer* eastHeights32Buffer = &emptyHeights32Buffer;
+				QuadrantPos p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::EastXPlus);
+				QuadTree* eastQuadTree = m_viewer->getQuadTree(p);
+				if (eastQuadTree != nullptr)
+				{
+					eastQuadTree->getQuadrant()->lockInternalData();
+					eastHeights32Buffer = &eastQuadTree->getQuadrant()->getFloat32HeightsBuffer();
+				}
+				TheWorld_Utils::MemoryBuffer* southHeights32Buffer = &emptyHeights32Buffer;
+				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::SouthZPlus);
+				QuadTree* southQuadTree = m_viewer->getQuadTree(p);
+				if (southQuadTree != nullptr)
+				{
+					southQuadTree->getQuadrant()->lockInternalData();
+					southHeights32Buffer = &southQuadTree->getQuadrant()->getFloat32HeightsBuffer();
+				}
+				TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer(true);
+				cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer);
+				if (eastQuadTree != nullptr)
+					eastQuadTree->getQuadrant()->unlockInternalData();
+				if (southQuadTree != nullptr)
+					southQuadTree->getQuadrant()->unlockInternalData();
+
+				//std::vector<float> vectGridHeights;
+				//heightsBuffer.populateFloatVector(vectGridHeights);
+				//cache.deprecated_generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
 				
 				m_mapQuadToSave[pos] = "";
-				TheWorld_Utils::TerrainEdit* terrainEdit = quadTree->getQuadrant()->getTerrainEdit();
-				terrainEdit->needUploadToServer = true;
+				quadTree->getQuadrant()->getTerrainEdit()->needUploadToServer = true;
 				quadTree->getQuadrant()->setNeedUploadToServer(true);
 				
-				terrainEdit->normalsNeedRegen = false;
+				quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen = false;
 				quadTree->getQuadrant()->setNormalsUpdated(true);
 				quadTree->materialParamsNeedReset(true);
 
