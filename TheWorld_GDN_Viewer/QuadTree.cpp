@@ -938,8 +938,8 @@ void ShaderTerrainData::init(void)
 	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
 	m_viewer->getMainProcessingMutex().unlock();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-	String shaderPath = "res://shaders/lookdev.shader";
-	//String shaderPath = "res://shaders/test.shader";		// SUPERDEBUGRIC
+	String shaderPath = "res://shaders/terrain.shader";
+	//String shaderPath = "res://shaders/lookdev.shader";		// SUPERDEBUGRIC
 	Ref<Shader> shader = resLoader->load(shaderPath);
 	mat->set_shader(shader);
 

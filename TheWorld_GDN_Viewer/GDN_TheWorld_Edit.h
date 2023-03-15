@@ -58,6 +58,8 @@ namespace godot
 		//	return String("Test, {0} {1} {2}!").format(Array::make(target1, target2, target3)); 
 		//};
 
+		void editModeNoisePanel(void);
+
 		void resizeUI(void);
 		void editModeGenerateAction(void);
 		void editModeBlendAction(void);
@@ -144,6 +146,7 @@ namespace godot
 		bool m_actionInProgress;
 		bool m_actionStopRequested;
 		TheWorld_Utils::TimerMs m_actionClock;
+		TheWorld_Utils::TimerMs m_refreshUI;
 		bool m_onGoingElapsedLabel;
 		Color m_elapsedLabelNormalColor;
 		size_t m_completedItems;
@@ -155,6 +158,10 @@ namespace godot
 
 		godot::PanelContainer* m_mainPanelContainer;
 		godot::TabContainer* m_mainTabContainer;
+
+		godot::Control* m_noiseVBoxContainer;
+		//bool m_noiseContainerShowing;
+		godot::Button* m_noiseButton;
 		
 		godot::LineEdit* m_seed;
 		godot::LineEdit* m_frequency;

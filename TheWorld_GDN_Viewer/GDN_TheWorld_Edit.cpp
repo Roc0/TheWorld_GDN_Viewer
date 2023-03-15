@@ -1,7 +1,7 @@
 //#include "pch.h"
 #include <Godot.hpp>
 #include <Node.hpp>
-#include <MarginContainer.hpp>
+//#include <MarginContainer.hpp>
 #include <TabContainer.hpp>
 #include <PanelContainer.hpp>
 #include <VBoxContainer.hpp>
@@ -32,6 +32,8 @@ void GDN_TheWorld_Edit::_register_methods()
 	register_method("_input", &GDN_TheWorld_Edit::_input);
 	register_method("_notification", &GDN_TheWorld_Edit::_notification);
 
+	register_method("edit_mode_noise_panel", &GDN_TheWorld_Edit::editModeNoisePanel);
+
 	//register_method("hello", &GDN_TheWorld_Edit::hello);
 	register_method("edit_mode_generate", &GDN_TheWorld_Edit::editModeGenerateAction);
 	register_method("edit_mode_blend", &GDN_TheWorld_Edit::editModeBlendAction);
@@ -52,6 +54,9 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_onGoingElapsedLabel = false;
 	m_viewer = nullptr;
 	m_mainPanelContainer = nullptr;
+	m_noiseVBoxContainer = nullptr;
+	m_noiseButton = nullptr;
+	//m_noiseContainerShowing = false;
 	m_mainTabContainer = nullptr;
 	m_seed = nullptr;
 	m_frequency = nullptr;
@@ -245,7 +250,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	set_name(THEWORLD_EDIT_MODE_UI_CONTROL_NAME);
 	resizeUI();
 
-	godot::Control* marginContainer = nullptr;
+	//godot::Control* marginContainer = nullptr;
 	//godot::Control* vBoxContainer = nullptr;
 	godot::Control* hBoxContainer = nullptr;
 	godot::Control* separator = nullptr;
@@ -281,54 +286,56 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					button = godot::Button::_new();
-					hBoxContainer->add_child(button);
-					button->set_text("Generate");
-					button->connect("pressed", this, "edit_mode_generate");
-					button->connect("mouse_entered", this, "mouse_entered_main_panel");
-					button->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
-					separator = VSeparator::_new();
-					hBoxContainer->add_child(separator);
-					separator->connect("mouse_entered", this, "mouse_entered_main_panel");
-					separator->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button = godot::Button::_new();
-					hBoxContainer->add_child(button);
-					button->set_text("Blend");
-					button->connect("pressed", this, "edit_mode_blend");
-					button->connect("mouse_entered", this, "mouse_entered_main_panel");
-					button->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
-					separator = VSeparator::_new();
-					hBoxContainer->add_child(separator);
-					separator->connect("mouse_entered", this, "mouse_entered_main_panel");
-					separator->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button = godot::Button::_new();
-					hBoxContainer->add_child(button);
-					button->set_text("Gen. Normals");
-					button->connect("pressed", this, "edit_mode_gen_normals");
-					button->connect("mouse_entered", this, "mouse_entered_main_panel");
-					button->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
-					m_genAllNormals = godot::CheckBox::_new();
-					hBoxContainer->add_child(m_genAllNormals);
-					m_genAllNormals->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_genAllNormals->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_genAllNormals->set_text("All");
-					m_genAllNormals->set_toggle_mode(true);
-
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
 			hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
+			mainVBoxContainer->add_child(hBoxContainer);
+				button = godot::Button::_new();
+				hBoxContainer->add_child(button);
+				button->set_text("Blend");
+				button->connect("pressed", this, "edit_mode_blend");
+				button->connect("mouse_entered", this, "mouse_entered_main_panel");
+				button->connect("mouse_exited", this, "mouse_exited_main_panel");
+				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+				separator = VSeparator::_new();
+				hBoxContainer->add_child(separator);
+				separator->connect("mouse_entered", this, "mouse_entered_main_panel");
+				separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+				button = godot::Button::_new();
+				hBoxContainer->add_child(button);
+				button->set_text("Gen. Normals");
+				button->connect("pressed", this, "edit_mode_gen_normals");
+				button->connect("mouse_entered", this, "mouse_entered_main_panel");
+				button->connect("mouse_exited", this, "mouse_exited_main_panel");
+				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+				m_genAllNormals = godot::CheckBox::_new();
+				hBoxContainer->add_child(m_genAllNormals);
+				m_genAllNormals->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_genAllNormals->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_genAllNormals->set_text("All");
+				m_genAllNormals->set_toggle_mode(true);
+
+			separator = HSeparator::_new();
+			mainVBoxContainer->add_child(separator);
+			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
+			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+
+			m_noiseButton = godot::Button::_new();
+			mainVBoxContainer->add_child(m_noiseButton);
+			//m_noiseButton->set_flat(true);
+			m_noiseButton->set_text_align(godot::Button::ALIGN_LEFT);
+			m_noiseButton->set_text("> Noise");
+			m_noiseButton->connect("pressed", this, "edit_mode_noise_panel");
+			m_noiseButton->connect("mouse_entered", this, "mouse_entered_main_panel");
+			m_noiseButton->connect("mouse_exited", this, "mouse_exited_main_panel");
+			m_noiseButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+
+			m_noiseVBoxContainer = godot::VBoxContainer::_new();
+			m_noiseVBoxContainer->set_name("Noise");
+			mainVBoxContainer->add_child(m_noiseVBoxContainer);
+			m_noiseVBoxContainer->hide();
+			//m_noiseContainerShowing = false;
+
+				hBoxContainer = godot::HBoxContainer::_new();
+				m_noiseVBoxContainer->add_child(hBoxContainer);
 					m_terrTypeOptionButton = godot::OptionButton::_new();
 					hBoxContainer->add_child(m_terrTypeOptionButton);
 					//optionButton->connect("pressed", this, "edit_mode_sel_terr_type");
@@ -350,13 +357,20 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2_grow);
 					m_terrTypeOptionButton->add_separator();
 					m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::noise_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::noise_1);
+					separator = VSeparator::_new();
+					hBoxContainer->add_child(separator);
+					separator->connect("mouse_entered", this, "mouse_entered_main_panel");
+					separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+					button = godot::Button::_new();
+					hBoxContainer->add_child(button);
+					button->set_text("Generate");
+					button->connect("pressed", this, "edit_mode_generate");
+					button->connect("mouse_entered", this, "mouse_entered_main_panel");
+					button->connect("mouse_exited", this, "mouse_exited_main_panel");
+					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
 				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
+				m_noiseVBoxContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
 					label->set_text("Seed");
@@ -391,12 +405,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalGain->connect("mouse_entered", this, "mouse_entered_main_panel");
 					m_fractalGain->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
 				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
+				m_noiseVBoxContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
 					label->set_text("Octaves");
@@ -420,12 +430,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalLacunarity->connect("mouse_entered", this, "mouse_entered_main_panel");
 					m_fractalLacunarity->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
 				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
+				m_noiseVBoxContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
 					label->set_text("Amplitude");
@@ -460,12 +466,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_desideredMinHeightLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
 					m_desideredMinHeightLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
 				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
+				m_noiseVBoxContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
 					label->set_text("Weighted Strength");
@@ -478,12 +480,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalWeightedStrength->connect("mouse_entered", this, "mouse_entered_main_panel");
 					m_fractalWeightedStrength->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
 				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
+				m_noiseVBoxContainer->add_child(hBoxContainer);
 					label = godot::Label::_new();
 					hBoxContainer->add_child(label);
 					label->set_text("Ping Pong Strength");
@@ -501,232 +499,196 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Min");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_minHeightLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_minHeightLabel);
-					m_minHeightLabel->set_align(godot::Label::Align::ALIGN_LEFT);
-					m_minHeightLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_minHeightLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Max");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_maxHeightLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_maxHeightLabel);
-					m_maxHeightLabel->set_align(godot::Label::Align::ALIGN_LEFT);
-					m_maxHeightLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_maxHeightLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Min");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_minHeightLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_minHeightLabel);
+				m_minHeightLabel->set_align(godot::Label::Align::ALIGN_LEFT);
+				m_minHeightLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_minHeightLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Max");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_maxHeightLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_maxHeightLabel);
+				m_maxHeightLabel->set_align(godot::Label::Align::ALIGN_LEFT);
+				m_maxHeightLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_maxHeightLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Elapsed");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_elapsedLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_elapsedLabel);
-					m_elapsedLabel->set_align(godot::Label::Align::ALIGN_LEFT);
-					m_elapsedLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_elapsedLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_counterLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_counterLabel);
-					m_counterLabel->set_align(godot::Label::Align::ALIGN_LEFT);
-					m_counterLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_counterLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_note1Label = godot::Label::_new();
-					hBoxContainer->add_child(m_note1Label);
-					m_note1Label->set_align(godot::Label::Align::ALIGN_LEFT);
-					m_note1Label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_note1Label->connect("mouse_exited", this, "mouse_exited_main_panel");
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Elapsed");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_elapsedLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_elapsedLabel);
+				m_elapsedLabel->set_align(godot::Label::Align::ALIGN_LEFT);
+				m_elapsedLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_elapsedLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_counterLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_counterLabel);
+				m_counterLabel->set_align(godot::Label::Align::ALIGN_LEFT);
+				m_counterLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_counterLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_note1Label = godot::Label::_new();
+				hBoxContainer->add_child(m_note1Label);
+				m_note1Label->set_align(godot::Label::Align::ALIGN_LEFT);
+				m_note1Label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_note1Label->connect("mouse_exited", this, "mouse_exited_main_panel");
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Hit");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_mouseHitLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_mouseHitLabel);
-					m_mouseHitLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
-					m_mouseHitLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_mouseHitLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Hit");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_mouseHitLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_mouseHitLabel);
+				m_mouseHitLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+				m_mouseHitLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_mouseHitLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Quad Hit");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_mouseQuadHitLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_mouseQuadHitLabel);
-					m_mouseQuadHitLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
-					m_mouseQuadHitLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_mouseQuadHitLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Quad Hit");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_mouseQuadHitLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_mouseQuadHitLabel);
+				m_mouseQuadHitLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+				m_mouseQuadHitLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_mouseQuadHitLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Pos Hit");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_mouseQuadHitPosLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_mouseQuadHitPosLabel);
-					m_mouseQuadHitPosLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
-					m_mouseQuadHitPosLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_mouseQuadHitPosLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Pos Hit");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_mouseQuadHitPosLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_mouseQuadHitPosLabel);
+				m_mouseQuadHitPosLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+				m_mouseQuadHitPosLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_mouseQuadHitPosLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Quad Sel");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_mouseQuadSelLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_mouseQuadSelLabel);
-					m_mouseQuadSelLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
-					m_mouseQuadSelLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_mouseQuadSelLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Quad Sel");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_mouseQuadSelLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_mouseQuadSelLabel);
+				m_mouseQuadSelLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+				m_mouseQuadSelLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_mouseQuadSelLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Pos Sel");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_mouseQuadSelPosLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_mouseQuadSelPosLabel);
-					m_mouseQuadSelPosLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
-					m_mouseQuadSelPosLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_mouseQuadSelPosLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Pos Sel");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_mouseQuadSelPosLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_mouseQuadSelPosLabel);
+				m_mouseQuadSelPosLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+				m_mouseQuadSelPosLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_mouseQuadSelPosLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Quads to save");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_numQuadrantToSaveLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_numQuadrantToSaveLabel);
-					m_numQuadrantToSaveLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
-					m_numQuadrantToSaveLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_numQuadrantToSaveLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
-					label = godot::Label::_new();
-					hBoxContainer->add_child(label);
-					label->set_text("Quads to upload");
-					label->set_align(godot::Label::Align::ALIGN_LEFT);
-					label->connect("mouse_entered", this, "mouse_entered_main_panel");
-					label->connect("mouse_exited", this, "mouse_exited_main_panel");
-					m_numQuadrantToUploadLabel = godot::Label::_new();
-					hBoxContainer->add_child(m_numQuadrantToUploadLabel);
-					m_numQuadrantToUploadLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
-					m_numQuadrantToUploadLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
-					m_numQuadrantToUploadLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Quads to save");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_numQuadrantToSaveLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_numQuadrantToSaveLabel);
+				m_numQuadrantToSaveLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+				m_numQuadrantToSaveLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_numQuadrantToSaveLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
+				label = godot::Label::_new();
+				hBoxContainer->add_child(label);
+				label->set_text("Quads to upload");
+				label->set_align(godot::Label::Align::ALIGN_LEFT);
+				label->connect("mouse_entered", this, "mouse_entered_main_panel");
+				label->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_numQuadrantToUploadLabel = godot::Label::_new();
+				hBoxContainer->add_child(m_numQuadrantToUploadLabel);
+				m_numQuadrantToUploadLabel->set_align(godot::Label::Align::ALIGN_RIGHT);
+				m_numQuadrantToUploadLabel->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_numQuadrantToUploadLabel->connect("mouse_exited", this, "mouse_exited_main_panel");
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
 
-			marginContainer = godot::MarginContainer::_new();
-			mainVBoxContainer->add_child(marginContainer);
-			marginContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
-			marginContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
-				hBoxContainer = godot::HBoxContainer::_new();
-				marginContainer->add_child(hBoxContainer);
-					button = godot::Button::_new();
-					hBoxContainer->add_child(button);
-					button->set_text("Save");
-					button->connect("pressed", this, "edit_mode_save");
-					button->connect("mouse_entered", this, "mouse_entered_main_panel");
-					button->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
-					separator = VSeparator::_new();
-					hBoxContainer->add_child(separator);
-					separator->connect("mouse_entered", this, "mouse_entered_main_panel");
-					separator->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button = godot::Button::_new();
-					hBoxContainer->add_child(button);
-					button->set_text("Upload");
-					button->connect("pressed", this, "edit_mode_upload");
-					button->connect("mouse_entered", this, "mouse_entered_main_panel");
-					button->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
-					separator = VSeparator::_new();
-					hBoxContainer->add_child(separator);
-					separator->connect("mouse_entered", this, "mouse_entered_main_panel");
-					separator->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button = godot::Button::_new();
-					hBoxContainer->add_child(button);
-					button->set_text("Stop");
-					button->connect("pressed", this, "edit_mode_stop");
-					button->connect("mouse_entered", this, "mouse_entered_main_panel");
-					button->connect("mouse_exited", this, "mouse_exited_main_panel");
-					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				button = godot::Button::_new();
+				hBoxContainer->add_child(button);
+				button->set_text("Save");
+				button->connect("pressed", this, "edit_mode_save");
+				button->connect("mouse_entered", this, "mouse_entered_main_panel");
+				button->connect("mouse_exited", this, "mouse_exited_main_panel");
+				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+				separator = VSeparator::_new();
+				hBoxContainer->add_child(separator);
+				separator->connect("mouse_entered", this, "mouse_entered_main_panel");
+				separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+				button = godot::Button::_new();
+				hBoxContainer->add_child(button);
+				button->set_text("Upload");
+				button->connect("pressed", this, "edit_mode_upload");
+				button->connect("mouse_entered", this, "mouse_entered_main_panel");
+				button->connect("mouse_exited", this, "mouse_exited_main_panel");
+				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+				separator = VSeparator::_new();
+				hBoxContainer->add_child(separator);
+				separator->connect("mouse_entered", this, "mouse_entered_main_panel");
+				separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+				button = godot::Button::_new();
+				hBoxContainer->add_child(button);
+				button->set_text("Stop");
+				button->connect("pressed", this, "edit_mode_stop");
+				button->connect("mouse_entered", this, "mouse_entered_main_panel");
+				button->connect("mouse_exited", this, "mouse_exited_main_panel");
+				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -1129,6 +1091,14 @@ void GDN_TheWorld_Edit::_process(float _delta)
 	//	viewportTransform = m_mainTabContainer->get_viewport_transform();
 	//}
 
+	if (m_viewer->editMode() && (!m_refreshUI.counterStarted() || m_refreshUI.partialDuration().count() > 1000))
+	{
+		m_refreshUI.tick();
+
+		size_t numToSave = 0, numToUpload = 0;
+		refreshNumToSaveUpload(numToSave, numToUpload);
+	}
+
 	if (m_requiredUIAcceptFocus != m_UIAcceptingFocus)
 	{
 		setUIAcceptFocus(m_requiredUIAcceptFocus);
@@ -1142,6 +1112,22 @@ void GDN_TheWorld_Edit::_process(float _delta)
 			setCounter(m_completedItems, m_allItems);
 			setNote1(m_lastElapsed);
 		}
+	}
+}
+
+void GDN_TheWorld_Edit::editModeNoisePanel(void)
+{
+	if (m_noiseVBoxContainer->is_visible())
+	{
+		m_noiseVBoxContainer->hide();
+		m_noiseButton->set_text("> Noise");
+		//m_noiseContainerShowing = false;
+	}
+	else
+	{
+		m_noiseVBoxContainer->show();
+		m_noiseButton->set_text("- Noise");
+		//m_noiseContainerShowing = true;
 	}
 }
 
