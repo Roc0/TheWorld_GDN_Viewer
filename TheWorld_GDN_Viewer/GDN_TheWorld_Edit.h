@@ -68,6 +68,7 @@ namespace godot
 		void editModeUploadAction(void);
 		void editModeStopAction(void);
 		void editModeSelectTerrainTypeAction(int64_t index);
+		void editModeSelectLookDevAction(int64_t index);
 
 		void editModeGenerate(void);
 		void editModeBlend(void);
@@ -191,6 +192,7 @@ namespace godot
 
 		godot::CheckBox* m_genAllNormals;
 		godot::OptionButton* m_terrTypeOptionButton;
+		godot::OptionButton* m_lookDevOptionButton;
 
 		std::map<QuadrantPos, std::string> m_mapQuadToSave;
 

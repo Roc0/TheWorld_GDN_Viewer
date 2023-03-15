@@ -42,6 +42,7 @@ void GDN_TheWorld_Edit::_register_methods()
 	register_method("edit_mode_upload", &GDN_TheWorld_Edit::editModeUploadAction);
 	register_method("edit_mode_stop", &GDN_TheWorld_Edit::editModeStopAction);
 	register_method("edit_mode_sel_terr_type", &GDN_TheWorld_Edit::editModeSelectTerrainTypeAction);
+	register_method("edit_mode_sel_lookdev", &GDN_TheWorld_Edit::editModeSelectLookDevAction);
 	register_method("mouse_entered_main_panel", &GDN_TheWorld_Edit::editModeMouseEnteredMainPanel);
 	register_method("mouse_exited_main_panel", &GDN_TheWorld_Edit::editModeMouseExitedMainPanel);
 }
@@ -86,6 +87,7 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_elapsedCompleted = 0;
 	m_lastElapsed = 0;
 	m_terrTypeOptionButton = nullptr;
+	m_lookDevOptionButton = nullptr;
 	m_UIAcceptingFocus = false;
 	m_requiredUIAcceptFocus = false;
 }
@@ -338,7 +340,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_noiseVBoxContainer->add_child(hBoxContainer);
 					m_terrTypeOptionButton = godot::OptionButton::_new();
 					hBoxContainer->add_child(m_terrTypeOptionButton);
-					//optionButton->connect("pressed", this, "edit_mode_sel_terr_type");
 					m_terrTypeOptionButton->connect("item_selected", this, "edit_mode_sel_terr_type");
 					m_terrTypeOptionButton->connect("mouse_entered", this, "mouse_entered_main_panel");
 					m_terrTypeOptionButton->connect("mouse_exited", this, "mouse_exited_main_panel");
@@ -368,6 +369,10 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					button->connect("mouse_entered", this, "mouse_entered_main_panel");
 					button->connect("mouse_exited", this, "mouse_exited_main_panel");
 					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+					separator = VSeparator::_new();
+					hBoxContainer->add_child(separator);
+					separator->connect("mouse_entered", this, "mouse_entered_main_panel");
+					separator->connect("mouse_exited", this, "mouse_exited_main_panel");
 
 				hBoxContainer = godot::HBoxContainer::_new();
 				m_noiseVBoxContainer->add_child(hBoxContainer);
@@ -493,6 +498,24 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalPingPongStrength->set_align(godot::Label::Align::ALIGN_RIGHT);
 					m_fractalPingPongStrength->connect("mouse_entered", this, "mouse_entered_main_panel");
 					m_fractalPingPongStrength->connect("mouse_exited", this, "mouse_exited_main_panel");
+
+			separator = HSeparator::_new();
+			mainVBoxContainer->add_child(separator);
+			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
+			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				m_lookDevOptionButton = godot::OptionButton::_new();
+				hBoxContainer->add_child(m_lookDevOptionButton);
+				m_lookDevOptionButton->connect("item_selected", this, "edit_mode_sel_lookdev");
+				m_lookDevOptionButton->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_lookDevOptionButton->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_lookDevOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+				m_lookDevOptionButton->add_item("Lookdev disabled", (int64_t)GDN_TheWorld_Viewer::LookDev::Disabled);
+				m_lookDevOptionButton->add_separator();
+				m_lookDevOptionButton->add_item("Lookdev heights", (int64_t)GDN_TheWorld_Viewer::LookDev::Heights);
+				m_lookDevOptionButton->add_item("Lookdev normals", (int64_t)GDN_TheWorld_Viewer::LookDev::Normals);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -2085,6 +2108,12 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	m_actionInProgress = false;
+}
+
+void GDN_TheWorld_Edit::editModeSelectLookDevAction(int64_t index)
+{
+	enum class GDN_TheWorld_Viewer::LookDev lookDev = (enum class GDN_TheWorld_Viewer::LookDev)m_lookDevOptionButton->get_item_id(index);
+	m_viewer->setLookDev(lookDev);
 }
 
 void GDN_TheWorld_Edit::editModeSelectTerrainTypeAction(int64_t index)

@@ -45,6 +45,12 @@ namespace godot
 	{
 		GODOT_CLASS(GDN_TheWorld_Viewer, Spatial)
 
+		enum class LookDev {
+			Disabled = 0
+			, Heights = 1
+			, Normals = 2
+		};
+
 		enum Margin {
 			MARGIN_LEFT,
 			MARGIN_TOP,
@@ -68,6 +74,20 @@ namespace godot
 		void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
 
 		static void _register_methods();
+
+		void setLookDev(enum class LookDev lookDev)
+		{
+			if (m_lookDev != lookDev)
+			{
+				m_lookDev = lookDev;
+				m_lookDevChanged = true;
+			}
+		}
+
+		enum class LookDev getLookDev(void)
+		{
+			return m_lookDev;
+		}
 
 		//
 		// Godot Standard Functions
@@ -271,6 +291,8 @@ namespace godot
 		bool m_dumpRequired;
 		Chunk* lastTrackedChunk;
 		//Vector3 m_mapScaleVector;
+		enum class LookDev m_lookDev;
+		bool m_lookDevChanged;
 
 		// Statistics data
 		int m_numProcessExecution;

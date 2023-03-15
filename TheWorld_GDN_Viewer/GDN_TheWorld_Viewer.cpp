@@ -87,6 +87,8 @@ void GDN_TheWorld_Viewer::_register_methods()
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_initialized = false;
+	m_lookDev = LookDev::Disabled;
+	m_lookDevChanged = false;
 	m_useVisualServer = true;
 	m_firstProcess = true;
 	m_initialWordlViewerPosSet = false;
@@ -1876,6 +1878,14 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 		}
 	}
 
+	{
+		if (m_lookDevChanged)
+		{
+			
+			m_lookDevChanged = false;
+		}
+	}
+	
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.11 ") + __FUNCTION__, "Material params stuff");
 
