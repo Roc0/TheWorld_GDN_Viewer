@@ -502,14 +502,23 @@ namespace godot
 	{
 
 		// Shader Params
-#define SHADER_PARAM_TERRAIN_HEIGHTMAP "u_terrain_heightmap"
-#define SHADER_PARAM_TERRAIN_NORMALMAP "u_terrain_normalmap"
-#define SHADER_PARAM_TERRAIN_COLORMAP "u_terrain_colormap"
-#define SHADER_PARAM_INVERSE_TRANSFORM "u_terrain_inverse_transform"
-#define SHADER_PARAM_NORMAL_BASIS "u_terrain_normal_basis"
-#define SHADER_PARAM_GRID_STEP "u_grid_step_in_wu"
+#define SHADER_PARAM_TERRAIN_HEIGHTMAP	"u_terrain_heightmap"
+#define SHADER_PARAM_TERRAIN_NORMALMAP	"u_terrain_normalmap"
+#define SHADER_PARAM_TERRAIN_COLORMAP	"u_terrain_colormap"
+#define SHADER_PARAM_LOOKDEV_MAP		"u_map"
+#define SHADER_PARAM_INVERSE_TRANSFORM	"u_terrain_inverse_transform"
+#define SHADER_PARAM_NORMAL_BASIS		"u_terrain_normal_basis"
+#define SHADER_PARAM_GRID_STEP			"u_grid_step_in_wu"
 
 	public:
+
+		enum class LookDev {
+			NotSet = 0
+			, Heights = 1
+			, Normals = 2
+		};
+
+
 		ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
 		~ShaderTerrainData();
 		void init(void);
@@ -521,7 +530,7 @@ namespace godot
 		{
 			m_materialParamsNeedReset = b;
 		}
-		void resetMaterialParams(void);
+		void resetMaterialParams(LookDev lookdev);
 		bool materialParamsNeedUpdate(void)
 		{
 			return m_materialParamsNeedUpdate;
@@ -530,11 +539,12 @@ namespace godot
 		{
 			m_materialParamsNeedUpdate = b;
 		}
-		void updateMaterialParams(void);
-		Ref<Material> getMaterial(void)
+		void updateMaterialParams(LookDev lookdev);
+		Ref<Material> getRegularMaterial(void)
 		{
-			return m_material;
+			return m_regularMaterial;
 		};
+		Ref<Material> getLookDevMaterial(void);
 
 	private:
 		//void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
@@ -543,7 +553,8 @@ namespace godot
 	private:
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
-		Ref<ShaderMaterial> m_material;
+		Ref<ShaderMaterial> m_regularMaterial;
+		Ref<ShaderMaterial> m_lookDevMaterial;
 		bool m_materialParamsNeedUpdate;
 		bool m_materialParamsNeedReset;
 
@@ -737,6 +748,9 @@ namespace godot
 		{
 			return m_worldQuadrant; 
 		}
+		void setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev);
+		void setRegularMaterial(void);
+		Ref<Material> getCurrentMaterial(void);
 		bool resetMaterialParams(bool force = false);
 		bool materialParamsNeedReset(void);
 		void materialParamsNeedReset(bool b);
@@ -865,6 +879,7 @@ namespace godot
 		std::timespec m_refreshTime;
 		GDN_TheWorld_Quadrant* m_GDN_Quadrant;
 		bool m_editModeSel;
+		enum class ShaderTerrainData::LookDev m_lookDev;
 
 		// Statistics
 		int m_numSplits;

@@ -64,6 +64,15 @@ namespace godot {
 			else
 				return (m_yawEuler * 180) / TheWorld_Utils::kPi;
 		}
+		void setYaw(float yaw, bool radiant = true)
+		{
+			float radiantYaw = radiant ? yaw : (yaw * TheWorld_Utils::kPi) / 180;
+			Transform t = get_global_transform();
+			godot::Vector3 v = t.basis.get_euler();
+			v.y = radiantYaw;
+			t.basis.set_euler(v);
+			set_global_transform(t);
+		}
 		float getPitch(bool radiant = true)
 		{
 			if (radiant)
@@ -71,12 +80,30 @@ namespace godot {
 			else
 				return (m_pitchEuler * 180) / TheWorld_Utils::kPi;
 		}
+		void setPitch(float pitch, bool radiant = true)
+		{
+			float radiantPitch = radiant ? pitch : (pitch * TheWorld_Utils::kPi) / 180;
+			Transform t = get_global_transform();
+			godot::Vector3 v = t.basis.get_euler();
+			v.x = radiantPitch;
+			t.basis.set_euler(v);
+			set_global_transform(t);
+		}
 		float getRoll(bool radiant = true)
 		{
 			if (radiant)
 				return m_rollEuler;
 			else
 				return (m_rollEuler * 180) / TheWorld_Utils::kPi;
+		}
+		void setRoll(float roll, bool radiant = true)
+		{
+			float radiantRoll = radiant ? roll : (roll * TheWorld_Utils::kPi) / 180;
+			Transform t = get_global_transform();
+			godot::Vector3 v = t.basis.get_euler();
+			v.z = radiantRoll;
+			t.basis.set_euler(v);
+			set_global_transform(t);
 		}
 
 	private:

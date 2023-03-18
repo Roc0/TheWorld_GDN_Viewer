@@ -87,8 +87,8 @@ void GDN_TheWorld_Viewer::_register_methods()
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_initialized = false;
-	m_lookDev = LookDev::Disabled;
-	m_lookDevChanged = false;
+	m_desiderdLookDev = ShaderTerrainData::LookDev::NotSet;
+	m_desideredLookDevChanged = false;
 	m_useVisualServer = true;
 	m_firstProcess = true;
 	m_initialWordlViewerPosSet = false;
@@ -1879,10 +1879,19 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 	}
 
 	{
-		if (m_lookDevChanged)
+		if (m_desideredLookDevChanged)
 		{
-			
-			m_lookDevChanged = false;
+			enum class ShaderTerrainData::LookDev desideredLookDev = getDesideredLookDev();
+
+			for (auto& it : m_mapQuadTree)
+			{
+				if (desideredLookDev == ShaderTerrainData::LookDev::NotSet)
+					it.second->setRegularMaterial();
+				else
+					it.second->setLookDevMaterial(desideredLookDev);
+			}
+
+			m_desideredLookDevChanged = false;
 		}
 	}
 	

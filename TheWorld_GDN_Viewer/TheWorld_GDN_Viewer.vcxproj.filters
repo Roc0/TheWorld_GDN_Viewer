@@ -66,6 +66,9 @@
     <ClInclude Include="GDN_TheWorld_Edit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="UnicodeDefine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">

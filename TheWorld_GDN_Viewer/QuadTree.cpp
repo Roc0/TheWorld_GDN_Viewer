@@ -101,10 +101,11 @@ void Quad::assignChunk(void)
 	
 	m_chunk = m_quadTree->getChunkAt(Chunk::ChunkPos(m_slotPosX, m_slotPosZ, m_lod));
 
+	Ref<Material> mat = m_quadTree->getCurrentMaterial();
+
 	if (m_chunk == nullptr)
 	{
 		// create chunk for current quad because this is the first time that is needed for current lod and pos
-		Ref<Material> mat = m_quadTree->getQuadrant()->getShaderTerrainData()->getMaterial();
 		if (_DEBUG_AAB)
 			m_chunk = new ChunkDebug(m_slotPosX, m_slotPosZ, m_lod, m_viewer, m_quadTree, mat);
 		else
@@ -114,6 +115,9 @@ void Quad::assignChunk(void)
 		//m_chunk->setParentGlobalTransform(m_viewer->internalTransformGlobalCoord());
 		m_quadTree->addChunk(m_chunk);
 	}
+	else
+		m_chunk->setMaterial(mat);
+
 	m_chunk->setPosInQuad(m_posInQuad, this);
 	m_quadTree->addChunkUpdate(m_chunk);
 	m_chunk->setActive(true);
@@ -144,6 +148,7 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantPos)
 	m_tag = quadrantPos.getTag();
 	int ret = timespec_get(&m_refreshTime, TIME_UTC);
 	m_editModeSel = false;
+	m_lookDev = ShaderTerrainData::LookDev::NotSet;
 }
 
 void QuadTree::refreshTerrainData(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
@@ -701,7 +706,7 @@ bool  QuadTree::updateMaterialParams(void)
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.2 ") + __FUNCTION__, "QuadTree update shader");
 
-				getQuadrant()->getShaderTerrainData()->updateMaterialParams();
+				getQuadrant()->getShaderTerrainData()->updateMaterialParams(m_lookDev);
 			}
 
 			updated = true;
@@ -720,19 +725,62 @@ bool  QuadTree::updateMaterialParams(void)
 	return updated;
 }
 
+void QuadTree::setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev)
+{
+	assert(lookDev != ShaderTerrainData::LookDev::NotSet);
+	if (lookDev == ShaderTerrainData::LookDev::NotSet)
+		return;
+
+	if (m_lookDev == lookDev)
+		return;
+
+	if (lookDev == ShaderTerrainData::LookDev::Heights)
+	{
+		getQuadrant()->setHeightsUpdated(true);
+		getQuadrant()->setNormalsUpdated(true);
+	}
+	else if (lookDev == ShaderTerrainData::LookDev::Normals)
+		getQuadrant()->setNormalsUpdated(true);
+
+	materialParamsNeedReset(true);
+	
+	Chunk::SetMaterialChunkAction action(getQuadrant()->getShaderTerrainData()->getLookDevMaterial());
+	ForAllChunk(action);
+
+	m_lookDev = lookDev;
+}
+
+void QuadTree::setRegularMaterial(void)
+{
+	materialParamsNeedReset(true);
+
+	Chunk::SetMaterialChunkAction action(getQuadrant()->getShaderTerrainData()->getRegularMaterial());
+	ForAllChunk(action);
+
+	m_lookDev = ShaderTerrainData::LookDev::NotSet;
+}
+
+Ref<Material> QuadTree::getCurrentMaterial(void)
+{
+	if (m_lookDev == ShaderTerrainData::LookDev::NotSet)
+		return getQuadrant()->getShaderTerrainData()->getRegularMaterial();
+	else
+		return getQuadrant()->getShaderTerrainData()->getLookDevMaterial();
+}
+
 bool QuadTree::resetMaterialParams(bool force)
 {
 	bool reset = false;
 
 	if (force)
 	{
-		getQuadrant()->getShaderTerrainData()->resetMaterialParams();
+		getQuadrant()->getShaderTerrainData()->resetMaterialParams(m_lookDev);
 		materialParamsNeedReset(false);
 		reset = true;
 	}
 	else if (materialParamsNeedReset() && !getQuadrant()->internalDataLocked())
 	{
-		getQuadrant()->getShaderTerrainData()->resetMaterialParams();
+		getQuadrant()->getShaderTerrainData()->resetMaterialParams(m_lookDev);
 		materialParamsNeedReset(false);
 		reset = true;
 	}
@@ -923,7 +971,8 @@ ShaderTerrainData::ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quad
 
 ShaderTerrainData::~ShaderTerrainData()
 {
-	m_material.unref();
+	m_regularMaterial.unref();
+	m_lookDevMaterial.unref();
 	//m_heightMapImage.unref();
 	m_heightMapTexture.unref();
 	//m_normalMapImage.unref();
@@ -938,17 +987,32 @@ void ShaderTerrainData::init(void)
 	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
 	m_viewer->getMainProcessingMutex().unlock();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-	String shaderPath = "res://shaders/terrain.shader";
-	//String shaderPath = "res://shaders/lookdev.shader";		// SUPERDEBUGRIC
+	String shaderPath = "res://shaders/regular.shader";
 	Ref<Shader> shader = resLoader->load(shaderPath);
 	mat->set_shader(shader);
+	m_regularMaterial = mat;
+}
 
-	m_material = mat;
+Ref<Material> ShaderTerrainData::getLookDevMaterial(void)
+{
+	if (m_lookDevMaterial == nullptr)
+	{
+		m_viewer->getMainProcessingMutex().lock();
+		Ref<ShaderMaterial> mat = ShaderMaterial::_new();
+		m_viewer->getMainProcessingMutex().unlock();
+		ResourceLoader* resLoader = ResourceLoader::get_singleton();
+		String shaderPath = "res://shaders/lookdev.shader";
+		Ref<Shader> shader = resLoader->load(shaderPath);
+		mat->set_shader(shader);
+		m_lookDevMaterial = mat;
+	}
+
+	return m_lookDevMaterial;
 }
 
 // it is expected that globals and World Datas are loaded
 // TODORIC: maybe usefull for performance reasons specify which texture need update and which rect of the texture 
-void ShaderTerrainData::resetMaterialParams(void)
+void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 {
 	TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3 ") + __FUNCTION__, "itQuadTree->second->resetMaterialParams");
 
@@ -957,6 +1021,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 	
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
 
+	// if heights updated create texture for shader (m_heightMapTexture), it will be freed we passed to the shader
 	if (m_quadTree->getQuadrant()->heightsUpdated())
 	{
 		if (m_quadTree->getQuadrant()->getFloat16HeightsBuffer().size() > 0)
@@ -1001,6 +1066,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 		m_quadTree->getQuadrant()->setHeightsUpdated(false);
 	}
 
+	// if normals updated create texture for shader (m_normalMapTexture), it will be freed we passed to the shader. If normals have not been computed we fill the texturo with 0,0,0,0
 	if (m_quadTree->getQuadrant()->normalsUpdated())
 	{
 		m_viewer->getMainProcessingMutex().lock();
@@ -1014,7 +1080,7 @@ void ShaderTerrainData::resetMaterialParams(void)
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for normals");
 			image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
-			image->fill(godot::Color(0,0,0));
+			image->fill(godot::Color(0, 0, 0, 1.0));
 		}
 		else
 		{
@@ -1046,47 +1112,10 @@ void ShaderTerrainData::resetMaterialParams(void)
 
 		image.unref();
 
-		//if (m_quadTree->getQuadrant()->getNormalsBuffer().size() > 0)
-		//{
-		//	m_viewer->getMainProcessingMutex().lock();
-		//	godot::Ref<godot::Image> image = godot::Image::_new();
-		//	m_viewer->getMainProcessingMutex().unlock();
-
-		//	{
-		//		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Image from normal buffer");
-
-		//		godot::PoolByteArray data;
-		//		size_t normalmapBufferSizeInBytes = _resolution * _resolution * sizeof(struct TheWorld_Utils::_RGB);
-		//		data.resize((int)normalmapBufferSizeInBytes);
-		//		{
-		//			godot::PoolByteArray::Write w = data.write();
-		//			size_t normalsBufferSize = m_quadTree->getQuadrant()->getNormalsBuffer().size();
-		//			assert(normalmapBufferSizeInBytes == normalsBufferSize);
-		//			memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getNormalsBuffer().ptr(), normalsBufferSize);
-		//		}
-		//		image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
-		//		//m_normalMapImage = image;
-		//	}
-
-		//	{
-		//		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from normal image");
-
-		//		m_viewer->getMainProcessingMutex().lock();
-		//		Ref<ImageTexture> tex = ImageTexture::_new();
-		//		m_viewer->getMainProcessingMutex().unlock();
-		//		//tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
-		//		tex->create_from_image(image, Texture::FLAG_FILTER);
-		//		m_normalMapTexture = tex;
-		//		m_normalMapTexModified = true;
-		//		//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
-		//	}
-
-		//	image.unref();
-		//}
-
 		m_quadTree->getQuadrant()->setNormalsUpdated(false);
 	}
 
+	// TODORIC: the shader must modify visualization for selected quad
 	if (m_quadTree->getQuadrant()->colorsUpdated())
 	{
 		m_viewer->getMainProcessingMutex().lock();
@@ -1158,10 +1187,16 @@ void ShaderTerrainData::resetMaterialParams(void)
 //	return Color(normal.x, normal.z, normal.y);
 //}
 
-void ShaderTerrainData::updateMaterialParams(void)
+void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 {
 	// Completare da _update_material_params
 	//m_viewer->Globals()->debugPrint("Updating terrain material params");
+
+	Ref<ShaderMaterial> currentMaterial;
+	if (lookdev == LookDev::NotSet)
+		currentMaterial = m_regularMaterial;
+	else
+		currentMaterial = m_lookDevMaterial;
 
 	if (m_viewer->is_inside_tree())
 	{
@@ -1170,40 +1205,51 @@ void ShaderTerrainData::updateMaterialParams(void)
 
 		Transform t = globalTransform.affine_inverse();
 		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));	// DEBUGRIC
-		m_material->set_shader_param(SHADER_PARAM_INVERSE_TRANSFORM, t);
+		currentMaterial->set_shader_param(SHADER_PARAM_INVERSE_TRANSFORM, t);
 
 		// This is needed to properly transform normals if the terrain is scaled
 		Basis b = globalTransform.basis.inverse().transposed();
 		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));	// DEBUGRIC
-		m_material->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
+		currentMaterial->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
 
 		float f = m_viewer->Globals()->gridStepInWU();
 		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));	// DEBUGRIC
-		m_material->set_shader_param(SHADER_PARAM_GRID_STEP, f);
+		currentMaterial->set_shader_param(SHADER_PARAM_GRID_STEP, f);
 
-		if (m_heightMapTexModified)
+		if (m_heightMapTexModified && m_heightMapTexture != nullptr)
 		{
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));	// DEBUGRIC
-			m_material->set_shader_param(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
+			currentMaterial->set_shader_param(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
 			m_heightMapTexModified = false;
-			m_heightMapTexture.unref();
 		}
 
-		if (m_normalMapTexModified)
+		if (m_normalMapTexModified && m_normalMapTexture != nullptr)
 		{
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));	// DEBUGRIC
-			m_material->set_shader_param(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
+			currentMaterial->set_shader_param(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
 			m_normalMapTexModified = false;
-			m_normalMapTexture.unref();
 		}
 
-		if (m_colorMapTexModified)
+		if (m_colorMapTexModified && m_colorMapTexture != nullptr)
 		{
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_COLORMAP));	// DEBUGRIC
-			m_material->set_shader_param(SHADER_PARAM_TERRAIN_COLORMAP, m_colorMapTexture);
+			currentMaterial->set_shader_param(SHADER_PARAM_TERRAIN_COLORMAP, m_colorMapTexture);
 			m_colorMapTexModified = false;
-			m_colorMapTexture.unref();
 		}
+
+		if (lookdev == LookDev::Heights && m_heightMapTexture != nullptr)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_LOOKDEV_MAP, m_heightMapTexture);
+		}
+
+		if (lookdev == LookDev::Normals && m_normalMapTexture != nullptr)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_LOOKDEV_MAP, m_normalMapTexture);
+		}
+
+		m_heightMapTexture.unref();
+		m_normalMapTexture.unref();
+		m_colorMapTexture.unref();
 
 		//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 	}

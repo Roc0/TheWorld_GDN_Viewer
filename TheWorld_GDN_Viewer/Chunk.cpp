@@ -48,7 +48,6 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Q
 	m_visible = m_quadTree->isVisible();
 	m_pendingUpdate = false;
 	m_justJoined = false;
-	m_matOverride = mat;
 
 	m_originXInWUsGlobal = m_quadTree->getQuadrant()->getPos().getLowerXGridVertex() + m_originXInWUsLocalToGrid;
 	m_originZInWUsGlobal = m_quadTree->getQuadrant()->getPos().getLowerZGridVertex() + m_originZInWUsLocalToGrid;
@@ -57,9 +56,7 @@ Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, Q
 
 	//checkAndCalcAABB();
 
-	m_useVisualServer = m_viewer->useVisualServer();
-
-	initVisual();
+	initVisual(mat);
 
 	//globals->debugPrint("Chunk::Chunk - ID: " + String(getPos().getPos().c_str()));
 }
@@ -81,7 +78,7 @@ void Chunk::checkAndCalcAABB()
 	}
 }
 
-void Chunk::initVisual(void)
+void Chunk::initVisual(Ref<Material>& mat)
 {
 	m_meshInstanceRID = RID();
 	m_meshRID = RID();
@@ -89,44 +86,29 @@ void Chunk::initVisual(void)
 
 	m_active = true;
 
-	if (m_useVisualServer)
-	{
-		VisualServer* vs = VisualServer::get_singleton();
-		m_meshInstanceRID = vs->instance_create();
+	VisualServer* vs = VisualServer::get_singleton();
+	m_meshInstanceRID = vs->instance_create();
+	
+	if (mat != nullptr)
+		vs->instance_geometry_set_material_override(m_meshInstanceRID, mat->get_rid());
 
-		if (m_matOverride != nullptr)
-			vs->instance_geometry_set_material_override(m_meshInstanceRID, m_matOverride->get_rid());
+	Ref<World> world = m_viewer->get_world();
+	if (world != nullptr && world.is_valid())
+		vs->instance_set_scenario(m_meshInstanceRID, world->get_scenario());
 
-		Ref<World> world = m_viewer->get_world();
-		if (world != nullptr && world.is_valid())
-			vs->instance_set_scenario(m_meshInstanceRID, world->get_scenario());
+	vs->instance_set_visible(m_meshInstanceRID, isVisible());
 
-		vs->instance_set_visible(m_meshInstanceRID, isVisible());
+	m_globalTransformApplied = getGlobalTransform();
 
-		m_globalTransformApplied = getGlobalTransform();
-
-		VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
-	}
+	VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
 }
 
 void Chunk::deinit(void)
 {
-	if (m_useVisualServer)
+	if (m_meshInstanceRID != RID())
 	{
-		if (m_meshInstanceRID != RID())
-		{
-			VisualServer::get_singleton()->free_rid(m_meshInstanceRID);
-			m_meshInstanceRID = RID();
-		}
-	}
-	else
-	{
-		if (m_meshInstance != nullptr)
-		{
-			m_meshInstance->remove_from_group(GD_CHUNK_MESHINSTANCE_GROUP);
-			m_meshInstance->queue_free();
-			m_meshInstance = nullptr;
-		}
+		VisualServer::get_singleton()->free_rid(m_meshInstanceRID);
+		m_meshInstanceRID = RID();
 	}
 
 	if (m_viewer->m_cameraChunk == this)
@@ -137,41 +119,24 @@ void Chunk::deinit(void)
 
 void Chunk::enterWorld(void)
 {
-	if (m_useVisualServer)
-	{
-		assert(m_meshInstanceRID != RID());
-		Ref<World> world = m_viewer->get_world();
-		if (world != nullptr && world.is_valid())
-			VisualServer::get_singleton()->instance_set_scenario(m_meshInstanceRID, world->get_scenario());
-	}
+	assert(m_meshInstanceRID != RID());
+	Ref<World> world = m_viewer->get_world();
+	if (world != nullptr && world.is_valid())
+		VisualServer::get_singleton()->instance_set_scenario(m_meshInstanceRID, world->get_scenario());
 }
 
 void Chunk::exitWorld(void)
 {
-	if (m_useVisualServer)
-	{
-		assert(m_meshInstanceRID != RID());
-		VisualServer::get_singleton()->instance_set_scenario(m_meshInstanceRID, RID());
-	}
+	assert(m_meshInstanceRID != RID());
+	VisualServer::get_singleton()->instance_set_scenario(m_meshInstanceRID, RID());
 }
 
 void Chunk::onGlobalTransformChanged(void)
 {
-	if (m_useVisualServer)
-	{
-		assert(m_meshInstanceRID != RID());
-		m_globalTransformApplied = getGlobalTransform();
-		// Set the mesh pos in global coord
-		VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
-	}
-	else
-	{
-		if (m_meshInstance != nullptr)
-		{
-			m_globalTransformApplied = getGlobalTransform();
-			m_meshInstance->set_global_transform(m_globalTransformApplied);
-		}
-	}
+	assert(m_meshInstanceRID != RID());
+	m_globalTransformApplied = getGlobalTransform();
+	// Set the mesh pos in global coord
+	VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
 }
 
 void Chunk::setVisible(bool b)
@@ -182,16 +147,8 @@ void Chunk::setVisible(bool b)
 	if (!m_quadTree->isVisible())
 		b = false;
 
-	if (m_useVisualServer)
-	{
-		assert(m_meshInstanceRID != RID());
-		VisualServer::get_singleton()->instance_set_visible(m_meshInstanceRID, b);
-	}
-	else
-	{
-		if (m_meshInstance != nullptr)
-			m_meshInstance->set_visible(b);
-	}
+	assert(m_meshInstanceRID != RID());
+	VisualServer::get_singleton()->instance_set_visible(m_meshInstanceRID, b);
 
 	m_visible = b;
 }
@@ -211,36 +168,9 @@ void Chunk::applyAABB(void)
 {
 	checkAndCalcAABB();
 	
-	if (m_useVisualServer)
-	{
-		assert(m_meshInstanceRID != RID());
-		if (m_meshRID != RID())
-			VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstanceRID, m_aabb);
-	}
-	else
-	{
-		if (m_meshInstance != nullptr)
-			if (m_meshRID != RID())
-				m_meshInstance->set_custom_aabb(m_aabb);
-	}
-}
-
-void Chunk::releaseMesh(void)
-{
-	if (m_meshInstance != nullptr)
-	{
-		String name = m_meshInstance->get_name();
-		name = "DELETED_" + name;
-		m_meshInstance->set_name(name);
-		m_meshInstance->remove_from_group(GD_CHUNK_MESHINSTANCE_GROUP);
-		m_meshInstance->queue_free();
-		m_meshInstance = nullptr;
-		m_meshRID = RID();
-	}
-}
-
-void Chunk::releaseDebugMesh(void)
-{
+	assert(m_meshInstanceRID != RID());
+	if (m_meshRID != RID())
+		VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstanceRID, m_aabb);
 }
 
 void Chunk::setMesh(Ref<Mesh> mesh)
@@ -250,38 +180,8 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 	if (meshRID == m_meshRID)
 		return;
 
-	if (m_useVisualServer)
-	{
-		assert(m_meshInstanceRID != RID());
-		VisualServer::get_singleton()->instance_set_base(m_meshInstanceRID, meshRID);
-	}
-	else
-	{
-		releaseMesh();
-
-		if (mesh != nullptr)
-		{
-			m_viewer->getMainProcessingMutex().lock();
-			m_meshInstance = GDN_Chunk_MeshInstance::_new();
-			m_viewer->getMainProcessingMutex().unlock();
-			m_meshInstance->init(this);
-			m_meshInstance->add_to_group(GD_CHUNK_MESHINSTANCE_GROUP);
-			m_meshInstance->set_mesh(mesh);
-			std::string id = TheWorld_Viewer_Utils::Utils::ReplaceString(getPos().getIdStr(), ":", "");
-			String name = String("Chunk_") + String(id.c_str());
-			m_meshInstance->set_name(name);
-			m_viewer->add_child(m_meshInstance);
-			if (isVisible())
-				m_meshInstance->set_visible(true);
-			else
-				m_meshInstance->set_visible(false);
-			Transform gt = getGlobalTransform();
-			if (gt != Transform())
-				m_meshInstance->set_global_transform(gt);
-			if (m_matOverride != nullptr)
-				m_meshInstance->set_surface_material(0, m_matOverride);
-		}
-	}
+	assert(m_meshInstanceRID != RID());
+	VisualServer::get_singleton()->instance_set_base(m_meshInstanceRID, meshRID);
 
 	m_meshRID = meshRID;
 	m_mesh = mesh;
@@ -307,6 +207,14 @@ bool Chunk::isQuadTreeVisible(void)
 //	assert(_mesh_instance != RID())
 //	VisualServer.instance_geometry_set_material_override(\
 //		_mesh_instance, material.get_rid() if material != null else RID())
+
+void Chunk::setMaterial(Ref<Material>& mat)
+{
+	assert(m_meshInstanceRID != RID());
+	assert(mat != nullptr);
+
+	VisualServer::get_singleton()->instance_geometry_set_material_override(m_meshInstanceRID, mat->get_rid());
+}
 
 void Chunk::update(bool isVisible)
 {
@@ -539,9 +447,6 @@ void Chunk::setActive(bool b)
 			m_viewer->m_cameraChunk = nullptr;
 		m_isCameraVerticalOnChunk = false;
 		m_globalCoordCameraLastPos = Vector3(0, 0, 0);
-
-		if (!m_useVisualServer)
-			releaseMesh();
 	}
 }
 
@@ -733,17 +638,14 @@ ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer*
 	m_debugWirecubeMeshNeedRegen = false;
 	m_debugWiresquareMeshNeedRegen = false;
 
-	if (m_useVisualServer)
-	{
-		VisualServer* vs = VisualServer::get_singleton();
-		m_debugMeshInstanceRID = vs->instance_create();
+	VisualServer* vs = VisualServer::get_singleton();
+	m_debugMeshInstanceRID = vs->instance_create();
 
-		Ref<World> world = m_viewer->get_world();
-		if (world != nullptr && world.is_valid())
-			vs->instance_set_scenario(m_debugMeshInstanceRID, world->get_scenario());
+	Ref<World> world = m_viewer->get_world();
+	if (world != nullptr && world.is_valid())
+		vs->instance_set_scenario(m_debugMeshInstanceRID, world->get_scenario());
 
-		vs->instance_set_visible(m_debugMeshInstanceRID, isDebugContentVisible());
-	}
+	vs->instance_set_visible(m_debugMeshInstanceRID, isDebugContentVisible());
 
 	//checkAndCalcDebugMeshAABB;
 
@@ -762,22 +664,10 @@ void ChunkDebug::checkAndCalcDebugMeshAABB()
 
 ChunkDebug::~ChunkDebug()
 {
-	if (m_useVisualServer)
+	if (m_debugMeshInstanceRID != RID())
 	{
-		if (m_debugMeshInstanceRID != RID())
-		{
-			VisualServer::get_singleton()->free_rid(m_debugMeshInstanceRID);
-			m_debugMeshInstanceRID = RID();
-		}
-	}
-	else
-	{
-		if (m_debugMeshInstance != nullptr)
-		{
-			m_debugMeshInstance->remove_from_group(GD_DEBUGCHUNK_MESHINSTANCE_GROUP);
-			m_debugMeshInstance->queue_free();
-			m_debugMeshInstance = nullptr;
-		}
+		VisualServer::get_singleton()->free_rid(m_debugMeshInstanceRID);
+		m_debugMeshInstanceRID = RID();
 	}
 }
 
@@ -785,24 +675,18 @@ void ChunkDebug::enterWorld(void)
 {
 	Chunk::enterWorld();
 
-	if (m_useVisualServer)
-	{
-		assert(m_debugMeshInstanceRID != RID());
-		Ref<World> world = m_viewer->get_world();
-		if (world != nullptr && world.is_valid())
-			VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstanceRID, world->get_scenario());
-	}
+	assert(m_debugMeshInstanceRID != RID());
+	Ref<World> world = m_viewer->get_world();
+	if (world != nullptr && world.is_valid())
+		VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstanceRID, world->get_scenario());
 }
 
 void ChunkDebug::exitWorld(void)
 {
 	Chunk::exitWorld();
 	
-	if (m_useVisualServer)
-	{
-		assert(m_debugMeshInstanceRID != RID());
-		VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstanceRID, RID());
-	}
+	assert(m_debugMeshInstanceRID != RID());
+	VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstanceRID, RID());
 }
 
 void ChunkDebug::refresh(bool isVisible)
@@ -843,16 +727,8 @@ void ChunkDebug::onGlobalTransformChanged()
 
 	Transform worldTransform = getDebugGlobalTransform();
 
-	if (m_useVisualServer)
-	{
-		assert(m_debugMeshInstanceRID != RID());
-		VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
-	}
-	else
-	{
-		if (m_debugMeshInstance != nullptr)
-			m_debugMeshInstance->set_global_transform(worldTransform);
-	}
+	assert(m_debugMeshInstanceRID != RID());
+	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
 	
 	m_debugGlobaTransformApplied = worldTransform;
 
@@ -867,12 +743,6 @@ Transform ChunkDebug::getDebugGlobalTransformApplied(void)
 void ChunkDebug::setActive(bool b)
 {
 	Chunk::setActive(b);
-
-	if (!b)
-	{
-		if (!m_useVisualServer)
-			releaseDebugMesh();
-	}
 }
 
 void ChunkDebug::setVisible(bool b)
@@ -891,32 +761,16 @@ void ChunkDebug::setVisible(bool b)
 	if (!isDebugContentVisible())
 		b = false;
 
-	if (m_useVisualServer)
-	{
-		assert(m_debugMeshInstanceRID != RID());
-		VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstanceRID, b);
-	}
-	else
-	{
-		if (m_debugMeshInstance != nullptr)
-			m_debugMeshInstance->set_visible(b);
-	}
+	assert(m_debugMeshInstanceRID != RID());
+	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstanceRID, b);
 }
 
 void ChunkDebug::setDebugContentVisible(bool b)
 {
 	Chunk::setDebugContentVisible(b);
 
-	if (m_useVisualServer)
-	{
-		assert(m_debugMeshInstanceRID != RID());
-		VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstanceRID, isDebugContentVisible());
-	}
-	else
-	{
-		if (m_debugMeshInstance != nullptr)
-			m_debugMeshInstance->set_visible(isDebugContentVisible());
-	}
+	assert(m_debugMeshInstanceRID != RID());
+	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstanceRID, isDebugContentVisible());
 }
 
 void ChunkDebug::applyAABB(void)
@@ -925,36 +779,10 @@ void ChunkDebug::applyAABB(void)
 
 	checkAndCalcDebugMeshAABB();
 
-	if (m_useVisualServer)
-	{
-		assert(m_debugMeshInstanceRID != RID());
-		if (isDebugContentVisible())
-			if (m_debugMeshRID != RID())
-				VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstanceRID, m_debugMeshAABB);
-	}
-	else
-	{
-		if (m_debugMeshInstance != nullptr)
-			if (isDebugContentVisible())
-				if (m_debugMeshRID != RID())
-					m_debugMeshInstance->set_custom_aabb(m_debugMeshAABB);
-	}
-}
-
-void ChunkDebug::releaseDebugMesh(void)
-{
-	Chunk::releaseDebugMesh();
-
-	if (m_debugMeshInstance != nullptr)
-	{
-		String name = m_debugMeshInstance->get_name();
-		name = "DELETED_" + name;
-		m_debugMeshInstance->set_name(name);
-		m_debugMeshInstance->remove_from_group(GD_DEBUGCHUNK_MESHINSTANCE_GROUP);
-		m_debugMeshInstance->queue_free();
-		m_debugMeshInstance = nullptr;
-		m_debugMeshRID = RID();
-	}
+	assert(m_debugMeshInstanceRID != RID());
+	if (isDebugContentVisible())
+		if (m_debugMeshRID != RID())
+			VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstanceRID, m_debugMeshAABB);
 }
 
 void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
@@ -970,34 +798,8 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 	//if (mesh == nullptr)
 	//	RID();
 
-	if (m_useVisualServer)
-	{
-		assert(m_debugMeshInstanceRID != RID());
-		VisualServer::get_singleton()->instance_set_base(m_debugMeshInstanceRID, meshRID);
-	}
-	else
-	{
-		releaseDebugMesh();
-		
-		if (mesh != nullptr)
-		{
-			m_viewer->getMainProcessingMutex().lock();
-			m_debugMeshInstance = MeshInstance::_new();
-			m_viewer->getMainProcessingMutex().unlock();
-			m_debugMeshInstance->add_to_group(GD_DEBUGCHUNK_MESHINSTANCE_GROUP);
-			m_debugMeshInstance->set_mesh(mesh);
-			string id = TheWorld_Viewer_Utils::Utils::ReplaceString(getPos().getIdStr(), ":", "");
-			String name = String("ChunkDebug_") + String(id.c_str());
-			m_debugMeshInstance->set_name(name);
-			m_viewer->add_child(m_debugMeshInstance);
-			if (isDebugContentVisible() && isVisible())
-				m_debugMeshInstance->set_visible(true);
-			else
-				m_debugMeshInstance->set_visible(false);
-			if (m_debugGlobaTransformApplied != Transform())
-				m_debugMeshInstance->set_global_transform(m_debugGlobaTransformApplied);
-		}
-	}
+	assert(m_debugMeshInstanceRID != RID());
+	VisualServer::get_singleton()->instance_set_base(m_debugMeshInstanceRID, meshRID);
 
 	m_debugMeshRID = meshRID;
 	m_debugMesh = mesh;
@@ -1184,12 +986,8 @@ void ChunkDebug::applyDebugMesh()
 	setDebugMesh(mesh);
 
 	Transform worldTransform = getDebugGlobalTransform();
-	if (m_useVisualServer)
-		VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
-	else
-		m_debugMeshInstance->set_global_transform(worldTransform);
+	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
 	m_debugGlobaTransformApplied = worldTransform;
-
 
 	/*GDN_TheWorld_Globals* globals = m_viewer->Globals();
 	globals->debugPrint(String("Debug Mesh - ID: ") + getPos().getPos().c_str()

@@ -22,6 +22,7 @@
 #include "Utils.h"
 #include "FastNoiseLite.h"
 #include "half.h"
+#include "UnicodeDefine.h"
 
 using namespace godot;
 
@@ -324,7 +325,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(m_noiseButton);
 			//m_noiseButton->set_flat(true);
 			m_noiseButton->set_text_align(godot::Button::ALIGN_LEFT);
-			m_noiseButton->set_text("> Noise");
+			m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" Noise").c_str());
 			m_noiseButton->connect("pressed", this, "edit_mode_noise_panel");
 			m_noiseButton->connect("mouse_entered", this, "mouse_entered_main_panel");
 			m_noiseButton->connect("mouse_exited", this, "mouse_exited_main_panel");
@@ -512,10 +513,10 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_lookDevOptionButton->connect("mouse_entered", this, "mouse_entered_main_panel");
 				m_lookDevOptionButton->connect("mouse_exited", this, "mouse_exited_main_panel");
 				m_lookDevOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
-				m_lookDevOptionButton->add_item("Lookdev disabled", (int64_t)GDN_TheWorld_Viewer::LookDev::Disabled);
+				m_lookDevOptionButton->add_item("Lookdev disabled", (int64_t)ShaderTerrainData::LookDev::NotSet);
 				m_lookDevOptionButton->add_separator();
-				m_lookDevOptionButton->add_item("Lookdev heights", (int64_t)GDN_TheWorld_Viewer::LookDev::Heights);
-				m_lookDevOptionButton->add_item("Lookdev normals", (int64_t)GDN_TheWorld_Viewer::LookDev::Normals);
+				m_lookDevOptionButton->add_item("Lookdev heights", (int64_t)ShaderTerrainData::LookDev::Heights);
+				m_lookDevOptionButton->add_item("Lookdev normals", (int64_t)ShaderTerrainData::LookDev::Normals);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -1143,13 +1144,13 @@ void GDN_TheWorld_Edit::editModeNoisePanel(void)
 	if (m_noiseVBoxContainer->is_visible())
 	{
 		m_noiseVBoxContainer->hide();
-		m_noiseButton->set_text("> Noise");
+		m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" Noise").c_str());
 		//m_noiseContainerShowing = false;
 	}
 	else
 	{
 		m_noiseVBoxContainer->show();
-		m_noiseButton->set_text("- Noise");
+		m_noiseButton->set_text((std::wstring(DOWN_ARROW) + L" Noise").c_str());
 		//m_noiseContainerShowing = true;
 	}
 }
@@ -2112,8 +2113,8 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 
 void GDN_TheWorld_Edit::editModeSelectLookDevAction(int64_t index)
 {
-	enum class GDN_TheWorld_Viewer::LookDev lookDev = (enum class GDN_TheWorld_Viewer::LookDev)m_lookDevOptionButton->get_item_id(index);
-	m_viewer->setLookDev(lookDev);
+	enum class ShaderTerrainData::LookDev lookDev = (enum class ShaderTerrainData::LookDev)m_lookDevOptionButton->get_item_id(index);
+	m_viewer->setDesideredLookDev(lookDev);
 }
 
 void GDN_TheWorld_Edit::editModeSelectTerrainTypeAction(int64_t index)

@@ -201,6 +201,22 @@ namespace godot
 			enum class GDN_TheWorld_Globals::ChunkDebugMode m_mode;
 		};
 
+		class SetMaterialChunkAction : public ChunkAction
+		{
+		public:
+			SetMaterialChunkAction(Ref<Material> mat)
+			{
+				m_material = mat;
+			}
+			virtual ~SetMaterialChunkAction() {}
+			virtual void exec(Chunk* chunk)
+			{
+				chunk->setMaterial(m_material);
+			}
+		private:
+			Ref<Material> m_material;
+		};
+
 		class EnterWorldChunkAction : public ChunkAction
 		{
 		public:
@@ -396,7 +412,7 @@ namespace godot
 		Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, Ref<Material>& mat);
 		virtual ~Chunk();
 		
-		void initVisual(void);
+		void initVisual(Ref<Material>& mat);
 		void deinit(void);
 
 		// Actions
@@ -418,6 +434,7 @@ namespace godot
 		virtual bool isDebugMeshNull(void);
 		virtual void refresh(bool isVisible);
 		virtual void heightsChanged(void);
+		virtual void setMaterial(Ref<Material>& mat);
 		virtual void update(bool isVisible);
 		virtual void setActive(bool b);
 
@@ -501,12 +518,6 @@ namespace godot
 		{
 			return m_posInQuad;
 		}
-		virtual void releaseDebugMesh(void);
-		virtual void releaseMesh(void);
-		//Ref<Mesh> getMesh()
-		//{
-		//	return m_mesh; 
-		//};
 		void getGlobalCoordAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step);
 		QuadTree* getQuadTree(void) 
 		{
@@ -551,7 +562,6 @@ namespace godot
 		void setMesh(Ref<Mesh> mesh);
 
 	protected:
-		bool m_useVisualServer;
 		GDN_Chunk_MeshInstance* m_meshInstance;
 		enum PosInQuad m_posInQuad;
 		GDN_TheWorld_Viewer* m_viewer;
@@ -589,7 +599,6 @@ namespace godot
 	private:
 		int m_slotPosX;	// express the orizzontal (X) and vertical (Z) position of the chunk in the grid of chunks
 		int m_slotPosZ;	// at the specific lod : 0 the first chunk, 1 the following to the max number of chunks on a size for the specific lod
-		Ref<Material> m_matOverride;
 
 		bool m_active;
 		bool m_visible;
@@ -625,7 +634,6 @@ namespace godot
 		virtual void refresh(bool isVisible);
 		virtual void heightsChanged(void);
 		virtual void update(bool isVisible);
-		virtual void releaseDebugMesh(void);
 		virtual void setActive(bool b);
 
 	private:
