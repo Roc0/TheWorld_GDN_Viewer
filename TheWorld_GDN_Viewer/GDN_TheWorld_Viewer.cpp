@@ -1890,11 +1890,11 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 				else
 					it.second->setLookDevMaterial(desideredLookDev);
 			}
-
-			m_desideredLookDevChanged = false;
 		}
 	}
 	
+	//m_desideredLookDevChanged = false;
+
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.11 ") + __FUNCTION__, "Material params stuff");
 
@@ -1912,10 +1912,12 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 			reset = itQuadTree->second->resetMaterialParams();
 			bool updated = itQuadTree->second->updateMaterialParams();
 				
-			if (reset || updated)
+			if ((reset || updated) && !m_desideredLookDevChanged)
 				break;
 		}
 	}
+
+	m_desideredLookDevChanged = false;
 
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.12 ") + __FUNCTION__, "Dump stuff");

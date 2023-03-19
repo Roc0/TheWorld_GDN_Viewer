@@ -372,7 +372,7 @@ namespace godot
 		{
 			if (m_normalsBuffer.empty() && reloadFromCache)
 			{
-				if (!m_terrainEdit->normalsNeedRegen)
+				if (!getTerrainEdit()->normalsNeedRegen)
 				{
 					TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
 					float minAltitude, maxAltitude;
@@ -456,7 +456,7 @@ namespace godot
 				return;
 			
 			if (!visible)
-				m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join (Quadrant::getAltitudeFromHeigthmap): it is a performance reason to keep it for visible quadrants
+				m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join (Quadrant::getAltitudeFromHeigthmap): it is kept for performance reason to keep it for visible quadrants and avoid to reload from disk for new chunks
 			m_float32HeigthsBuffer.clear();
 			m_normalsBuffer.clear();
 			m_heightsForCollider.resize(0);
@@ -509,6 +509,7 @@ namespace godot
 #define SHADER_PARAM_INVERSE_TRANSFORM	"u_terrain_inverse_transform"
 #define SHADER_PARAM_NORMAL_BASIS		"u_terrain_normal_basis"
 #define SHADER_PARAM_GRID_STEP			"u_grid_step_in_wu"
+#define SHADER_PARAM_EDITMODE_SELECTED	"u_editmode_selected"
 
 	public:
 

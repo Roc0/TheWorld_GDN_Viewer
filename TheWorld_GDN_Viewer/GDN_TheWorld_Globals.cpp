@@ -11,29 +11,29 @@ std::string getModuleLoadPath(void);
 
 // Gestire le eccezioni della comunicazione verso il server
 
-const godot::Color godot::GDN_TheWorld_Globals::g_color_white = godot::Color(255.0F / 255, 255.0F / 255, 255.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_red = godot::Color(255.0F / 255, 0.0F / 255, 0.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_dark_red = godot::Color(139.0F / 255, 0.0F / 255, 0.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_red_salmon = godot::Color(250.0F / 255, 128.0F / 255, 114.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_pink = godot::Color(255.0F / 255, 192.0F / 255, 203.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_light_pink = godot::Color(255.0F / 255, 182.0F / 255, 193.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_pink_amaranth = godot::Color(159.0F / 255, 43.0F / 255, 104.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_pink_bisque = godot::Color(242.0F / 255, 210.0F / 255, 189.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_pink_cerise = godot::Color(222.0F / 255, 49.0F / 255, 99.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_green = godot::Color(0.0F / 255, 255.0F / 255, 0.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_green1 = godot::Color(0.0F / 255, 128.0F / 255, 0.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_pale_green = godot::Color(152.0F / 255, 251.0F / 255, 152.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_light_green = godot::Color(144.0F / 255, 238.0F / 255, 144.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_darksea_green = godot::Color(143.0F / 255, 188.0F / 255, 143.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_aquamarine_green = godot::Color(127.0F / 255, 255.0F / 255, 212.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_blue = godot::Color(0.0F / 255, 0.0F / 255, 255.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_cyan = godot::Color(0.0F / 255, 255.0F / 255, 255.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_light_cyan = godot::Color(150.0F / 255, 255.0F / 255, 255.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow = godot::Color(255.0F / 255, 255.0F / 255, 0.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_almond = godot::Color(234.0F / 255, 221.0F / 255, 202.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_amber = godot::Color(255.0F / 255, 191.0F / 255, 0.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_apricot = godot::Color(251.0F / 255, 206.0F / 255, 177.0F / 255);
-const godot::Color godot::GDN_TheWorld_Globals::g_color_black = godot::Color(0.0F / 255, 0.0F / 255, 0.0F / 255);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_white = godot::Color(255.0F / 255.0F, 255.0F / 255.0F, 255.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_red = godot::Color(255.0F / 255.0F, 0.0F / 255.0F, 0.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_dark_red = godot::Color(139.0F / 255.0F, 0.0F / 255.0F, 0.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_red_salmon = godot::Color(250.0F / 255.0F, 128.0F / 255.0F, 114.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pink = godot::Color(255.0F / 255.0F, 192.0F / 255.0F, 203.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_light_pink = godot::Color(255.0F / 255.0F, 182.0F / 255.0F, 193.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pink_amaranth = godot::Color(159.0F / 255.0F, 43.0F / 255.0F, 104.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pink_bisque = godot::Color(242.0F / 255.0F, 210.0F / 255.0F, 189.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pink_cerise = godot::Color(222.0F / 255.0F, 49.0F / 255.0F, 99.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_green = godot::Color(0.0F / 255.0F, 255.0F / 255.0F, 0.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_green1 = godot::Color(0.0F / 255.0F, 128.0F / 255.0F, 0.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_pale_green = godot::Color(152.0F / 255.0F, 251.0F / 255.0F, 152.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_light_green = godot::Color(144.0F / 255.0F, 238.0F / 255.0F, 144.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_darksea_green = godot::Color(143.0F / 255.0F, 188.0F / 255.0F, 143.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_aquamarine_green = godot::Color(127.0F / 255.0F, 255.0F / 255.0F, 212.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_blue = godot::Color(0.0F / 255.0F, 0.0F / 255.0F, 255.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_cyan = godot::Color(0.0F / 255.0F, 255.0F / 255.0F, 255.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_light_cyan = godot::Color(150.0F / 255.0F, 255.0F / 255.0F, 255.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow = godot::Color(255.0F / 255.0F, 255.0F / 255.0F, 0.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_almond = godot::Color(234.0F / 255.0F, 221.0F / 255.0F, 202.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_amber = godot::Color(255.0F / 255.0F, 191.0F / 255.0F, 0.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_yellow_apricot = godot::Color(251.0F / 255.0F, 206.0F / 255.0F, 177.0F / 255.0F);
+const godot::Color godot::GDN_TheWorld_Globals::g_color_black = godot::Color(0.0F / 255.0F, 0.0F / 255.0F, 0.0F / 255.0F);
 
 // DEBUG
 //size_t godot::GDN_TheWorld_Globals::s_num = 0;

@@ -734,13 +734,8 @@ void QuadTree::setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev)
 	if (m_lookDev == lookDev)
 		return;
 
-	if (lookDev == ShaderTerrainData::LookDev::Heights)
-	{
-		getQuadrant()->setHeightsUpdated(true);
-		getQuadrant()->setNormalsUpdated(true);
-	}
-	else if (lookDev == ShaderTerrainData::LookDev::Normals)
-		getQuadrant()->setNormalsUpdated(true);
+	getQuadrant()->setHeightsUpdated(true);
+	getQuadrant()->setNormalsUpdated(true);
 
 	materialParamsNeedReset(true);
 	
@@ -1215,6 +1210,13 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 		float f = m_viewer->Globals()->gridStepInWU();
 		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));	// DEBUGRIC
 		currentMaterial->set_shader_param(SHADER_PARAM_GRID_STEP, f);
+
+		bool selected = m_quadTree->editModeSel();
+		float sel = 0.0f;
+		if (selected)
+			sel = 1.0f;
+		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_EDITMODE_SELECTED) + String(" quad_selected=") + String(std::to_string(sel).c_str()));	// DEBUGRIC
+		currentMaterial->set_shader_param(SHADER_PARAM_EDITMODE_SELECTED, sel);
 
 		if (m_heightMapTexModified && m_heightMapTexture != nullptr)
 		{
