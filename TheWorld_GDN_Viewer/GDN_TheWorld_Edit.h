@@ -190,7 +190,7 @@ namespace godot
 		godot::Label* m_numQuadrantToSaveLabel;
 		godot::Label* m_numQuadrantToUploadLabel;
 
-		godot::CheckBox* m_genAllNormals;
+		godot::CheckBox* m_allCheckBox;
 		godot::OptionButton* m_terrTypeOptionButton;
 		godot::OptionButton* m_lookDevOptionButton;
 

@@ -82,7 +82,7 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_mouseQuadSelPosLabel = nullptr;
 	m_numQuadrantToSaveLabel = nullptr;
 	m_numQuadrantToUploadLabel = nullptr;
-	m_genAllNormals = nullptr;
+	m_allCheckBox = nullptr;
 	m_allItems = 0;
 	m_completedItems = 0;
 	m_elapsedCompleted = 0;
@@ -223,7 +223,7 @@ void GDN_TheWorld_Edit::setUIAcceptFocus(bool b)
 	//else
 	//	setSeed(0);
 
-	m_genAllNormals->set_focus_mode(focusMode);
+	m_allCheckBox->set_focus_mode(focusMode);
 	m_seed->set_focus_mode(focusMode);
 	m_frequency->set_focus_mode(focusMode);
 	m_fractalOctaves->set_focus_mode(focusMode);
@@ -309,12 +309,12 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				button->connect("mouse_entered", this, "mouse_entered_main_panel");
 				button->connect("mouse_exited", this, "mouse_exited_main_panel");
 				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
-				m_genAllNormals = godot::CheckBox::_new();
-				hBoxContainer->add_child(m_genAllNormals);
-				m_genAllNormals->connect("mouse_entered", this, "mouse_entered_main_panel");
-				m_genAllNormals->connect("mouse_exited", this, "mouse_exited_main_panel");
-				m_genAllNormals->set_text("All");
-				m_genAllNormals->set_toggle_mode(true);
+				m_allCheckBox = godot::CheckBox::_new();
+				hBoxContainer->add_child(m_allCheckBox);
+				m_allCheckBox->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_allCheckBox->connect("mouse_exited", this, "mouse_exited_main_panel");
+				m_allCheckBox->set_text("All");
+				m_allCheckBox->set_toggle_mode(true);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -1561,12 +1561,12 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1 ") + __FUNCTION__, "ALL");
 
-	bool genAllNormals = m_genAllNormals->is_pressed();
+	bool allCheched = m_allCheckBox->is_pressed();
 
 	QuadTree* quadTreeSel = nullptr;
 	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
 
-	if (!genAllNormals && quadrantSelPos.empty())
+	if (!allCheched && quadrantSelPos.empty())
 	{
 		m_actionClock.tock();
 		m_actionInProgress = false;
@@ -1582,11 +1582,11 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 		QuadTree* quadTree = m_viewer->getQuadTree(pos);
 		if (quadTree != nullptr)
 		{
-			if (genAllNormals || pos == quadrantSelPos)
+			if (allCheched || pos == quadrantSelPos)
 			{
 				quandrantPos.push_back(pos);
 
-				if (!genAllNormals)
+				if (!allCheched)
 					break;
 			}
 		}
@@ -1836,7 +1836,7 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 				bool lastPhase = false;
 				if (round == numRounds - 1)
 					lastPhase = true;
-				;
+				
 				bool updated = quadTree->getQuadrant()->getMeshCacheBuffer().blendQuadrant(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), lastPhase,
 					quadrantData,
 					northQuadrantData,
@@ -1987,9 +1987,9 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	QuadTree* quadTreeSel = nullptr;
 	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
 
-	bool genAllNormals = m_genAllNormals->is_pressed();
+	bool allCheched = m_allCheckBox->is_pressed();
 
-	if (!genAllNormals && quadrantSelPos.empty())
+	if (!allCheched && quadrantSelPos.empty())
 	{
 		m_actionClock.tock();
 		m_actionInProgress = false;
@@ -2012,12 +2012,12 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
 			if (normalsBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
 			{
-				if (genAllNormals || pos == quadrantSelPos)
+				if (allCheched || pos == quadrantSelPos)
 				{
 					quandrantPos.push_back(pos);
 					quadTree->getQuadrant()->setNeedUploadToServer(true);
 
-					if (!genAllNormals)
+					if (!allCheched)
 						break;
 				}
 			}

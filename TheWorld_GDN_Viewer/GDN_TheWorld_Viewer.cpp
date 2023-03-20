@@ -1893,7 +1893,7 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 		}
 	}
 	
-	//m_desideredLookDevChanged = false;
+	m_desideredLookDevChanged = false;
 
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.11 ") + __FUNCTION__, "Material params stuff");
