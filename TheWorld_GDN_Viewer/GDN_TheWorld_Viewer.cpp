@@ -30,6 +30,15 @@ using namespace std;
 
 namespace fs = std::filesystem;
 
+// TODO
+// . passare allo shader (nuova texture ?):
+//		- 4 bit per indicare se il vertice corrispondente è sul perimetro in uno dei 4 lati
+//		- le 4 altezze nelle 4 direzioni adiacenti per:
+//			- calcolare le normali dinamicamente se la normal map presenta un vettore nullo
+//			- eseguire lo streching verso l'esterno dei vertici sul perimetro in modo da sovrapporsi con i chunk adiacenti ed evitare l'effetto "Fireflies along seams"
+// . calcolare le normali tramite uno shader applicato ad uno sprite 2D per sfruttare le capacità di calcolo della GPU (vedi: normalmap_baker.gd e bump2normal_tex.shader)
+// TODO
+
 // World Node Local Coordinate System is the same as MapManager coordinate system
 // Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 // Chunk and QuadTree coordinates are in Viewer Node local coordinate System
