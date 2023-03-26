@@ -32,10 +32,10 @@ namespace fs = std::filesystem;
 
 // TODO
 // . passare allo shader (nuova texture ?):
-//		- 4 bit per indicare se il vertice corrispondente è sul perimetro in uno dei 4 lati
-//		- le 4 altezze nelle 4 direzioni adiacenti per:
+//		- 4 bit per indicare se il vertice corrispondente è sul perimetro in uno dei 4 lati NON IMPORTA BASTA VALITARE LE COORDINATE UV e verificare se valgono 0 o 1 (o ci si approssimano)
+//		- le 4 altezze nelle 4 direzioni adiacenti per: 
 //			- calcolare le normali dinamicamente se la normal map presenta un vettore nullo
-//			- eseguire lo streching verso l'esterno dei vertici sul perimetro in modo da sovrapporsi con i chunk adiacenti ed evitare l'effetto "Fireflies along seams"
+//			- eseguire lo streching verso l'esterno dei vertici sul perimetro in modo da sovrapporsi con i chunk adiacenti ed evitare l'effetto "Fireflies along seams" SE CI LIMITIAMO A QUESTO BASTA UNA SOLA DIREZIONE PER I VERTICI SUL BORDO (NEI 4 ANGOLI PREVALE UNO DEI DUE BORDI)
 // . calcolare le normali tramite uno shader applicato ad uno sprite 2D per sfruttare le capacità di calcolo della GPU (vedi: normalmap_baker.gd e bump2normal_tex.shader)
 // TODO
 

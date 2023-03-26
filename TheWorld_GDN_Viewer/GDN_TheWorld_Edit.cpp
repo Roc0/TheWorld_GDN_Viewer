@@ -509,6 +509,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(hBoxContainer);
 				m_lookDevOptionButton = godot::OptionButton::_new();
 				hBoxContainer->add_child(m_lookDevOptionButton);
+				m_lookDevOptionButton->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+				m_lookDevOptionButton->set_toggle_mode(true);
 				m_lookDevOptionButton->connect("item_selected", this, "edit_mode_sel_lookdev");
 				m_lookDevOptionButton->connect("mouse_entered", this, "mouse_entered_main_panel");
 				m_lookDevOptionButton->connect("mouse_exited", this, "mouse_exited_main_panel");
