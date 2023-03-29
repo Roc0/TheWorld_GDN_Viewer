@@ -982,7 +982,8 @@ void ShaderTerrainData::init(void)
 	Ref<ShaderMaterial> mat = ShaderMaterial::_new();
 	m_viewer->getMainProcessingMutex().unlock();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-	String shaderPath = "res://shaders/regularChunk.shader";
+	//String shaderPath = "res://shaders/regularChunk.shader";
+	String shaderPath = "res://shaders/simple4.shader";
 	Ref<Shader> shader = resLoader->load(shaderPath);
 	mat->set_shader(shader);
 	m_regularMaterial = mat;
