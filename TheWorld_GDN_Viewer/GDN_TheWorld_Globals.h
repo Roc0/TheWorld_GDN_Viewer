@@ -355,7 +355,7 @@ namespace godot
 		// Number of vertices of the side of the heightmap (-1) with the elevations which is fixed and is a multiple of the number of vertices of the side of a chunk (numVerticesPerChuckSide) and is for this a multiple of 2 too
 		int heightmapResolution(void)
 		{ 
-			return m_heightmapResolution; /* m_heightmapResolution = 1024 con THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10 */
+			return m_heightmapResolution; /* m_heightmapResolution = 1024 con THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10, m_heightmapResolution = 2048 con THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 11 */
 		}	// Resolution of the heightmap = num point of the heightmap -1;
 		// Size of the heightmap in WUs
 		float heightmapSizeInWUs(void) 
@@ -366,7 +366,7 @@ namespace godot
 		// Max value of the lod index (numLods - 1)
 		int lodMaxDepth(void)
 		{	
-			return m_lodMaxDepth; /* m_lodMaxDepth = 5 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 e THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10 */
+			return m_lodMaxDepth; /* m_lodMaxDepth = 5 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 e THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 10,  m_lodMaxDepth = 6 con THEWORLD_VIEWER_CHUNK_SIZE_SHIFT = 5 e THEWORLD_VIEWER_HEIGHTMAP_RESOLUTION_SHIFT = 11 */
 		}
 
 		// Max number of quad split that can be done until the the granularity of the vertices is the same of the World Grid map and of the heightmap (lodMaxDepth + 1)

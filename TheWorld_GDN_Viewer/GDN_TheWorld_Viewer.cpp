@@ -32,10 +32,15 @@ namespace fs = std::filesystem;
 
 // TODO
 // . passare allo shader (nuova texture ?):
-//		- 4 bit per indicare se il vertice corrispondente è sul perimetro in uno dei 4 lati NON IMPORTA BASTA VALITARE LE COORDINATE UV e verificare se valgono 0 o 1 (o ci si approssimano)
+//		- il numero dei vertici di un quad (u_num_vertices_per_chunk_side=32)
 //		- le 4 altezze nelle 4 direzioni adiacenti per: 
 //			- calcolare le normali dinamicamente se la normal map presenta un vettore nullo
-//			- eseguire lo streching verso l'esterno dei vertici sul perimetro in modo da sovrapporsi con i chunk adiacenti ed evitare l'effetto "Fireflies along seams" SE CI LIMITIAMO A QUESTO BASTA UNA SOLA DIREZIONE PER I VERTICI SUL BORDO (NEI 4 ANGOLI PREVALE UNO DEI DUE BORDI)
+//			- eseguire lo streching verso l'esterno dei vertici sul perimetro in modo da sovrapporsi con i chunk adiacenti ed evitare l'effetto "Fireflies along seams" --SE CI LIMITIAMO A QUESTO BASTA UNA SOLA DIREZIONE PER I VERTICI SUL BORDO(NEI 4 ANGOLI PREVALE UNO DEI DUE BORDI)--
+// . nello shader calcolare il LOD in base alla distanza dalla camera
+// . in base al LOD corrente verificare se il VERTEX è sul perimetro del chunk: si verifica se le coordinate sono 0 o vicine ad esso oppure se sono pari allo step in WU (u_grid_step_in_wu) * il numero di vertici della grid 
+//		che separano vertici aidacenti della mesh al lod corrente (da calcolare in base al lod) per il numero dei vertici di una mesh (u_num_vertices_per_chunk_side)
+// . eseguire lo streching verso l'esterno dei vertici sul perimetro in modo da sovrapporsi con i chunk adiacenti ed evitare l'effetto "Fireflies along seams" --SE CI LIMITIAMO A QUESTO BASTA UNA SOLA DIREZIONE PER I VERTICI SUL BORDO(NEI 4 ANGOLI PREVALE UNO DEI DUE BORDI)--
+//		la quantità dello stretching dipende dal lod corrente (maggiore per lod minori ovvero per risoluzioni maggiori)
 // . calcolare le normali tramite uno shader applicato ad uno sprite 2D per sfruttare le capacità di calcolo della GPU (vedi: normalmap_baker.gd e bump2normal_tex.shader)
 // TODO
 
