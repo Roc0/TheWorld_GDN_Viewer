@@ -51,6 +51,7 @@ namespace godot
 		char* s = userPath.alloc_c_string();
 		std::string dir = std::string(s) + "\\TheWorld";
 		godot::api->godot_free(s);
+
 		return dir;
 	}
 
