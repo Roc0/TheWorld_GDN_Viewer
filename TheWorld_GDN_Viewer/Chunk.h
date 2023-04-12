@@ -44,7 +44,7 @@ namespace godot
 		void _init(void); // our initializer called by Godot
 		void _ready(void);
 		void _process(float _delta);
-		void _input(const Ref<InputEvent> event);
+		void _input(const godot::Ref<godot::InputEvent> event);
 
 		int getLod(void);
 		int getSlotPosX(void);

@@ -127,7 +127,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0;..\..\TheWorld_Utils</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0;..\..\TheWorld_Utils;..\..\eigen-3.3.9</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>
@@ -149,7 +149,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0;..\..\TheWorld_Utils;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\include\gen;$(MSBuildProjectDirectory)\..\godot-cpp\include\core;$(MSBuildProjectDirectory)\..\godot-cpp\include;$(MSBuildProjectDirectory)\..\godot-cpp\godot-headers;$(MSBuildProjectDirectory)\..\..\TheWorld_MapManager;$(MSBuildProjectDirectory)\..\..\GSL\include;$(MSBuildProjectDirectory)\..\plog\include;$(MSBuildProjectDirectory)\..\..\boost_1_74_0;..\..\TheWorld_Utils;..\..\eigen-3.3.9;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <LanguageStandard_C>stdc11</LanguageStandard_C>
     </ClCompile>

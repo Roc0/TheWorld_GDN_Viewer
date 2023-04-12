@@ -16,7 +16,7 @@
 
 using namespace godot;
 
-Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, Ref<Material>& mat)
+Chunk::Chunk(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, godot::Ref<godot::Material>& mat)
 {
 	m_distanceFromCamera = 0;
 	m_slotPosX = slotPosX;
@@ -78,7 +78,7 @@ void Chunk::checkAndCalcAABB()
 	}
 }
 
-void Chunk::initVisual(Ref<Material>& mat)
+void Chunk::initVisual(godot::Ref<godot::Material>& mat)
 {
 	m_meshInstanceRID = RID();
 	m_meshRID = RID();
@@ -86,13 +86,13 @@ void Chunk::initVisual(Ref<Material>& mat)
 
 	m_active = true;
 
-	VisualServer* vs = VisualServer::get_singleton();
+	godot::VisualServer* vs = godot::VisualServer::get_singleton();
 	m_meshInstanceRID = vs->instance_create();
 	
 	if (mat != nullptr)
 		vs->instance_geometry_set_material_override(m_meshInstanceRID, mat->get_rid());
 
-	Ref<World> world = m_viewer->get_world();
+	godot::Ref<godot::World> world = m_viewer->get_world();
 	if (world != nullptr && world.is_valid())
 		vs->instance_set_scenario(m_meshInstanceRID, world->get_scenario());
 
@@ -100,15 +100,15 @@ void Chunk::initVisual(Ref<Material>& mat)
 
 	m_globalTransformApplied = getGlobalTransform();
 
-	VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
+	godot::VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
 }
 
 void Chunk::deinit(void)
 {
-	if (m_meshInstanceRID != RID())
+	if (m_meshInstanceRID != godot::RID())
 	{
-		VisualServer::get_singleton()->free_rid(m_meshInstanceRID);
-		m_meshInstanceRID = RID();
+		godot::VisualServer::get_singleton()->free_rid(m_meshInstanceRID);
+		m_meshInstanceRID = godot::RID();
 	}
 
 	if (m_viewer->m_cameraChunk == this)
@@ -119,24 +119,24 @@ void Chunk::deinit(void)
 
 void Chunk::enterWorld(void)
 {
-	assert(m_meshInstanceRID != RID());
-	Ref<World> world = m_viewer->get_world();
+	assert(m_meshInstanceRID != godot::RID());
+	godot::Ref<godot::World> world = m_viewer->get_world();
 	if (world != nullptr && world.is_valid())
-		VisualServer::get_singleton()->instance_set_scenario(m_meshInstanceRID, world->get_scenario());
+		godot::VisualServer::get_singleton()->instance_set_scenario(m_meshInstanceRID, world->get_scenario());
 }
 
 void Chunk::exitWorld(void)
 {
-	assert(m_meshInstanceRID != RID());
-	VisualServer::get_singleton()->instance_set_scenario(m_meshInstanceRID, RID());
+	assert(m_meshInstanceRID != godot::RID());
+	godot::VisualServer::get_singleton()->instance_set_scenario(m_meshInstanceRID, godot::RID());
 }
 
 void Chunk::onGlobalTransformChanged(void)
 {
-	assert(m_meshInstanceRID != RID());
+	assert(m_meshInstanceRID != godot::RID());
 	m_globalTransformApplied = getGlobalTransform();
 	// Set the mesh pos in global coord
-	VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
+	godot::VisualServer::get_singleton()->instance_set_transform(m_meshInstanceRID, m_globalTransformApplied);		// World coordinates
 }
 
 void Chunk::setVisible(bool b)
@@ -147,8 +147,8 @@ void Chunk::setVisible(bool b)
 	if (!m_quadTree->isVisible())
 		b = false;
 
-	assert(m_meshInstanceRID != RID());
-	VisualServer::get_singleton()->instance_set_visible(m_meshInstanceRID, b);
+	assert(m_meshInstanceRID != godot::RID());
+	godot::VisualServer::get_singleton()->instance_set_visible(m_meshInstanceRID, b);
 
 	m_visible = b;
 }
@@ -168,20 +168,20 @@ void Chunk::applyAABB(void)
 {
 	checkAndCalcAABB();
 	
-	assert(m_meshInstanceRID != RID());
+	assert(m_meshInstanceRID != godot::RID());
 	if (m_meshRID != RID())
-		VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstanceRID, m_aabb);
+		godot::VisualServer::get_singleton()->instance_set_custom_aabb(m_meshInstanceRID, m_aabb);
 }
 
 void Chunk::setMesh(Ref<Mesh> mesh)
 {
-	RID meshRID = (mesh != nullptr ? mesh->get_rid() : RID());
+	godot::RID meshRID = (mesh != nullptr ? mesh->get_rid() : godot::RID());
 
 	if (meshRID == m_meshRID)
 		return;
 
-	assert(m_meshInstanceRID != RID());
-	VisualServer::get_singleton()->instance_set_base(m_meshInstanceRID, meshRID);
+	assert(m_meshInstanceRID != godot::RID());
+	godot::VisualServer::get_singleton()->instance_set_base(m_meshInstanceRID, meshRID);
 
 	m_meshRID = meshRID;
 	m_mesh = mesh;
@@ -189,7 +189,7 @@ void Chunk::setMesh(Ref<Mesh> mesh)
 
 bool Chunk::isMeshNull(void)
 {
-	return (m_meshRID == RID() ? true : false);
+	return (m_meshRID == godot::RID() ? true : false);
 }
 
 bool Chunk::isDebugMeshNull(void)
@@ -208,12 +208,12 @@ bool Chunk::isQuadTreeVisible(void)
 //	VisualServer.instance_geometry_set_material_override(\
 //		_mesh_instance, material.get_rid() if material != null else RID())
 
-void Chunk::setMaterial(Ref<Material>& mat)
+void Chunk::setMaterial(godot::Ref<godot::Material>& mat)
 {
-	assert(m_meshInstanceRID != RID());
+	assert(m_meshInstanceRID != godot::RID());
 	assert(mat != nullptr);
 
-	VisualServer::get_singleton()->instance_geometry_set_material_override(m_meshInstanceRID, mat->get_rid());
+	godot::VisualServer::get_singleton()->instance_geometry_set_material_override(m_meshInstanceRID, mat->get_rid());
 }
 
 void Chunk::update(bool isVisible)
@@ -629,7 +629,7 @@ void Chunk::dump(void)
 	globals->debugPrint(String("t: ") + getGlobalTransformApplied() + String(" - t (debug): ") + getDebugGlobalTransformApplied());
 }
 
-ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, Ref<Material>& mat)
+ChunkDebug::ChunkDebug(int slotPosX, int slotPosZ, int lod, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree, godot::Ref<godot::Material>& mat)
 	: Chunk(slotPosX, slotPosZ, lod, viewer, quadTree, mat)
 {
 	m_debugMeshInstanceRID = RID();
@@ -664,10 +664,10 @@ void ChunkDebug::checkAndCalcDebugMeshAABB()
 
 ChunkDebug::~ChunkDebug()
 {
-	if (m_debugMeshInstanceRID != RID())
+	if (m_debugMeshInstanceRID != godot::RID())
 	{
-		VisualServer::get_singleton()->free_rid(m_debugMeshInstanceRID);
-		m_debugMeshInstanceRID = RID();
+		godot::VisualServer::get_singleton()->free_rid(m_debugMeshInstanceRID);
+		m_debugMeshInstanceRID = godot::RID();
 	}
 }
 
@@ -675,18 +675,18 @@ void ChunkDebug::enterWorld(void)
 {
 	Chunk::enterWorld();
 
-	assert(m_debugMeshInstanceRID != RID());
-	Ref<World> world = m_viewer->get_world();
+	assert(m_debugMeshInstanceRID != godot::RID());
+	godot::Ref<godot::World> world = m_viewer->get_world();
 	if (world != nullptr && world.is_valid())
-		VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstanceRID, world->get_scenario());
+		godot::VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstanceRID, world->get_scenario());
 }
 
 void ChunkDebug::exitWorld(void)
 {
 	Chunk::exitWorld();
 	
-	assert(m_debugMeshInstanceRID != RID());
-	VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstanceRID, RID());
+	assert(m_debugMeshInstanceRID != godot::RID());
+	godot::VisualServer::get_singleton()->instance_set_scenario(m_debugMeshInstanceRID, godot::RID());
 }
 
 void ChunkDebug::refresh(bool isVisible)
@@ -710,10 +710,10 @@ void ChunkDebug::update(bool isVisible)
 	Chunk::update(isVisible);
 }
 
-Transform ChunkDebug::getDebugGlobalTransform(void)
+godot::Transform ChunkDebug::getDebugGlobalTransform(void)
 {
 	checkAndCalcAABB();
-	Transform worldTransform = getGlobalTransformApplied() * Transform(Basis().scaled(m_aabb.size));
+	Transform worldTransform = getGlobalTransformApplied() * godot::Transform(Basis().scaled(m_aabb.size));
 
 	if (m_debugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
 		worldTransform.origin.y = 0;
@@ -725,10 +725,10 @@ void ChunkDebug::onGlobalTransformChanged()
 {
 	Chunk::onGlobalTransformChanged();
 
-	Transform worldTransform = getDebugGlobalTransform();
+	godot::Transform worldTransform = getDebugGlobalTransform();
 
-	assert(m_debugMeshInstanceRID != RID());
-	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
+	assert(m_debugMeshInstanceRID != godot::RID());
+	godot::VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
 	
 	m_debugGlobaTransformApplied = worldTransform;
 
@@ -761,16 +761,16 @@ void ChunkDebug::setVisible(bool b)
 	if (!isDebugContentVisible())
 		b = false;
 
-	assert(m_debugMeshInstanceRID != RID());
-	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstanceRID, b);
+	assert(m_debugMeshInstanceRID != godot::RID());
+	godot::VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstanceRID, b);
 }
 
 void ChunkDebug::setDebugContentVisible(bool b)
 {
 	Chunk::setDebugContentVisible(b);
 
-	assert(m_debugMeshInstanceRID != RID());
-	VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstanceRID, isDebugContentVisible());
+	assert(m_debugMeshInstanceRID != godot::RID());
+	godot::VisualServer::get_singleton()->instance_set_visible(m_debugMeshInstanceRID, isDebugContentVisible());
 }
 
 void ChunkDebug::applyAABB(void)
@@ -779,18 +779,18 @@ void ChunkDebug::applyAABB(void)
 
 	checkAndCalcDebugMeshAABB();
 
-	assert(m_debugMeshInstanceRID != RID());
+	assert(m_debugMeshInstanceRID != godot::RID());
 	if (isDebugContentVisible())
-		if (m_debugMeshRID != RID())
-			VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstanceRID, m_debugMeshAABB);
+		if (m_debugMeshRID != godot::RID())
+			godot::VisualServer::get_singleton()->instance_set_custom_aabb(m_debugMeshInstanceRID, m_debugMeshAABB);
 }
 
-void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
+void ChunkDebug::setDebugMesh(godot::Ref<godot::Mesh> mesh)
 {
 	if (m_isCameraVerticalOnChunk)
-		RID();
+		godot::RID();
 	
-	RID meshRID = (mesh != nullptr ? mesh->get_rid() : RID());
+	godot::RID meshRID = (mesh != nullptr ? mesh->get_rid() : godot::RID());
 
 	if (m_debugMeshRID == meshRID)
 		return;
@@ -798,8 +798,8 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 	//if (mesh == nullptr)
 	//	RID();
 
-	assert(m_debugMeshInstanceRID != RID());
-	VisualServer::get_singleton()->instance_set_base(m_debugMeshInstanceRID, meshRID);
+	assert(m_debugMeshInstanceRID != godot::RID());
+	godot::VisualServer::get_singleton()->instance_set_base(m_debugMeshInstanceRID, meshRID);
 
 	m_debugMeshRID = meshRID;
 	m_debugMesh = mesh;
@@ -807,7 +807,7 @@ void ChunkDebug::setDebugMesh(Ref<Mesh> mesh)
 
 bool ChunkDebug::isDebugMeshNull(void)
 {
-	return (m_debugMeshRID == RID() ? true : false);
+	return (m_debugMeshRID == godot::RID() ? true : false);
 }
 
 void ChunkDebug::setCameraPos(Vector3 globalCoordCameraLastPos)
@@ -864,13 +864,13 @@ void ChunkDebug::applyDebugMesh()
 		if (isCameraVerticalOnChunk())
 		{
 			// set special Wirecube
-			Ref<Mesh> _mesh = createWireCubeMesh(GDN_TheWorld_Globals::g_color_blue);
+			godot::Ref<godot::Mesh> _mesh = createWireCubeMesh(GDN_TheWorld_Globals::g_color_blue);
 			m_viewer->getMainProcessingMutex().lock();
-			SpatialMaterial* mat = SpatialMaterial::_new();
+			godot::SpatialMaterial* mat = godot::SpatialMaterial::_new();
 			m_viewer->getMainProcessingMutex().unlock();
-			mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
-			mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
-			mat->set_albedo(GDN_TheWorld_Globals::g_color_blue);
+			mat->set_flag(godot::SpatialMaterial::Flags::FLAG_UNSHADED, true);
+			mat->set_flag(godot::SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+			mat->set_albedo(godot::GDN_TheWorld_Globals::g_color_blue);
 			_mesh->surface_set_material(0, mat);
 			mesh = _mesh;
 		}
@@ -888,7 +888,7 @@ void ChunkDebug::applyDebugMesh()
 
 			if (!m_viewer->has_meta(metaNameMesh.c_str()))
 			{
-				Color wiredMeshColor;
+				godot::Color wiredMeshColor;
 				if (m_lod == 0)
 					wiredMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
 				else if (m_lod == 1)
@@ -902,12 +902,12 @@ void ChunkDebug::applyDebugMesh()
 				else
 					wiredMeshColor = GDN_TheWorld_Globals::g_color_red;
 
-				Ref<ArrayMesh> _mesh = createWireCubeMesh(wiredMeshColor);
+				godot::Ref<godot::ArrayMesh> _mesh = createWireCubeMesh(wiredMeshColor);
 				m_viewer->getMainProcessingMutex().lock();
-				SpatialMaterial* mat = SpatialMaterial::_new();
+				godot::SpatialMaterial* mat = godot::SpatialMaterial::_new();
 				m_viewer->getMainProcessingMutex().unlock();
-				mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
-				mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+				mat->set_flag(godot::SpatialMaterial::Flags::FLAG_UNSHADED, true);
+				mat->set_flag(godot::SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 				mat->set_albedo(wiredMeshColor);
 				_mesh->surface_set_material(0, mat);
 				mesh = _mesh;
@@ -927,13 +927,13 @@ void ChunkDebug::applyDebugMesh()
 		if (isCameraVerticalOnChunk())
 		{
 			// set special Wirecube
-			Color wiredMeshColor = GDN_TheWorld_Globals::g_color_blue;
-			Ref<Mesh> _mesh = createWireSquareMesh(wiredMeshColor);
+			godot::Color wiredMeshColor = GDN_TheWorld_Globals::g_color_blue;
+			godot::Ref<godot::Mesh> _mesh = createWireSquareMesh(wiredMeshColor);
 			m_viewer->getMainProcessingMutex().lock();
-			SpatialMaterial* mat = SpatialMaterial::_new();
+			godot::SpatialMaterial* mat = godot::SpatialMaterial::_new();
 			m_viewer->getMainProcessingMutex().unlock();
-			mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
-			mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+			mat->set_flag(godot::SpatialMaterial::Flags::FLAG_UNSHADED, true);
+			mat->set_flag(godot::SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 			mat->set_albedo(wiredMeshColor);
 			_mesh->surface_set_material(0, mat);
 			mesh = _mesh;
@@ -952,7 +952,7 @@ void ChunkDebug::applyDebugMesh()
 
 			if (!m_viewer->has_meta(metaNameMesh.c_str()))
 			{
-				Color wiredMeshColor;
+				godot::Color wiredMeshColor;
 				if (m_lod == 0)
 					wiredMeshColor = GDN_TheWorld_Globals::g_color_yellow_apricot;
 				else if (m_lod == 1)
@@ -966,12 +966,12 @@ void ChunkDebug::applyDebugMesh()
 				else
 					wiredMeshColor = GDN_TheWorld_Globals::g_color_red;
 
-				Ref<ArrayMesh> _mesh = createWireSquareMesh(wiredMeshColor);
+				godot::Ref<godot::ArrayMesh> _mesh = createWireSquareMesh(wiredMeshColor);
 				m_viewer->getMainProcessingMutex().lock();
-				SpatialMaterial* mat = SpatialMaterial::_new();
+				godot::SpatialMaterial* mat = godot::SpatialMaterial::_new();
 				m_viewer->getMainProcessingMutex().unlock();
-				mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
-				mat->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+				mat->set_flag(godot::SpatialMaterial::Flags::FLAG_UNSHADED, true);
+				mat->set_flag(godot::SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 				mat->set_albedo(wiredMeshColor);
 				_mesh->surface_set_material(0, mat);
 				mesh = _mesh;
@@ -985,8 +985,8 @@ void ChunkDebug::applyDebugMesh()
 	setDebugMesh(nullptr);
 	setDebugMesh(mesh);
 
-	Transform worldTransform = getDebugGlobalTransform();
-	VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
+	godot::Transform worldTransform = getDebugGlobalTransform();
+	godot::VisualServer::get_singleton()->instance_set_transform(m_debugMeshInstanceRID, worldTransform);
 	m_debugGlobaTransformApplied = worldTransform;
 
 	/*GDN_TheWorld_Globals* globals = m_viewer->Globals();
@@ -997,20 +997,20 @@ void ChunkDebug::applyDebugMesh()
 		+ (isCameraVerticalOnChunk() ? "CAMERA" : ""));*/
 }
 
-Ref<ArrayMesh> ChunkDebug::createWireCubeMesh(Color c)
+godot::Ref<godot::ArrayMesh> ChunkDebug::createWireCubeMesh(Color c)
 {
-	PoolVector3Array positions;
-	PoolColorArray colors;
-	PoolIntArray indices;
+	godot::PoolVector3Array positions;
+	godot::PoolColorArray colors;
+	godot::PoolIntArray indices;
 
-	positions.append(Vector3(0, 0, 0));		colors.append(c);
-	positions.append(Vector3(1, 0, 0));		colors.append(c);
-	positions.append(Vector3(1, 0, 1));		colors.append(c);
-	positions.append(Vector3(0, 0, 1));		colors.append(c);
-	positions.append(Vector3(0, 1, 0));		colors.append(c);
-	positions.append(Vector3(1, 1, 0));		colors.append(c);
-	positions.append(Vector3(1, 1, 1));		colors.append(c);
-	positions.append(Vector3(0, 1, 1));		colors.append(c);
+	positions.append(godot::Vector3(0, 0, 0));		colors.append(c);
+	positions.append(godot::Vector3(1, 0, 0));		colors.append(c);
+	positions.append(godot::Vector3(1, 0, 1));		colors.append(c);
+	positions.append(godot::Vector3(0, 0, 1));		colors.append(c);
+	positions.append(godot::Vector3(0, 1, 0));		colors.append(c);
+	positions.append(godot::Vector3(1, 1, 0));		colors.append(c);
+	positions.append(godot::Vector3(1, 1, 1));		colors.append(c);
+	positions.append(godot::Vector3(0, 1, 1));		colors.append(c);
 
 	// lower face quad
 	indices.append(0); indices.append(1);
@@ -1032,29 +1032,29 @@ Ref<ArrayMesh> ChunkDebug::createWireCubeMesh(Color c)
 	indices.append(1); indices.append(3);
 
 	godot::Array arrays;
-	arrays.resize(ArrayMesh::ARRAY_MAX);
-	arrays[ArrayMesh::ARRAY_VERTEX] = positions;
-	arrays[ArrayMesh::ARRAY_COLOR] = colors;
-	arrays[ArrayMesh::ARRAY_INDEX] = indices;
+	arrays.resize(godot::ArrayMesh::ARRAY_MAX);
+	arrays[godot::ArrayMesh::ARRAY_VERTEX] = positions;
+	arrays[godot::ArrayMesh::ARRAY_COLOR] = colors;
+	arrays[godot::ArrayMesh::ARRAY_INDEX] = indices;
 
 	m_viewer->getMainProcessingMutex().lock();
-	Ref<ArrayMesh> mesh = ArrayMesh::_new();
+	godot::Ref<godot::ArrayMesh> mesh = godot::ArrayMesh::_new();
 	m_viewer->getMainProcessingMutex().unlock();
-	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
+	mesh->add_surface_from_arrays(godot::Mesh::PRIMITIVE_LINES, arrays);
 	
 	return mesh;
 }
 
-Ref<ArrayMesh> ChunkDebug::createWireSquareMesh(Color c)
+godot::Ref<godot::ArrayMesh> ChunkDebug::createWireSquareMesh(Color c)
 {
-	PoolVector3Array positions;
-	PoolColorArray colors;
-	PoolIntArray indices;
+	godot::PoolVector3Array positions;
+	godot::PoolColorArray colors;
+	godot::PoolIntArray indices;
 
-	positions.append(Vector3(0, 0, 0));		colors.append(c);
-	positions.append(Vector3(1, 0, 0));		colors.append(c);
-	positions.append(Vector3(1, 0, 1));		colors.append(c);
-	positions.append(Vector3(0, 0, 1));		colors.append(c);
+	positions.append(godot::Vector3(0, 0, 0));		colors.append(c);
+	positions.append(godot::Vector3(1, 0, 0));		colors.append(c);
+	positions.append(godot::Vector3(1, 0, 1));		colors.append(c);
+	positions.append(godot::Vector3(0, 0, 1));		colors.append(c);
 
 	// square
 	indices.append(0); indices.append(1);
@@ -1066,15 +1066,15 @@ Ref<ArrayMesh> ChunkDebug::createWireSquareMesh(Color c)
 	indices.append(1); indices.append(3);
 
 	godot::Array arrays;
-	arrays.resize(ArrayMesh::ARRAY_MAX);
-	arrays[ArrayMesh::ARRAY_VERTEX] = positions;
-	arrays[ArrayMesh::ARRAY_COLOR] = colors;
-	arrays[ArrayMesh::ARRAY_INDEX] = indices;
+	arrays.resize(godot::ArrayMesh::ARRAY_MAX);
+	arrays[godot::ArrayMesh::ARRAY_VERTEX] = positions;
+	arrays[godot::ArrayMesh::ARRAY_COLOR] = colors;
+	arrays[godot::ArrayMesh::ARRAY_INDEX] = indices;
 
 	m_viewer->getMainProcessingMutex().lock();
-	Ref<ArrayMesh> mesh = ArrayMesh::_new();
+	godot::Ref<godot::ArrayMesh> mesh = godot::ArrayMesh::_new();
 	m_viewer->getMainProcessingMutex().unlock();
-	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);
+	mesh->add_surface_from_arrays(godot::Mesh::PRIMITIVE_LINES, arrays);
 
 	return mesh;
 }
@@ -1170,4 +1170,3 @@ String GDN_Chunk_MeshInstance::getIdStr(void)
 {
 	return m_chunk->getIdStr().c_str();
 }
-

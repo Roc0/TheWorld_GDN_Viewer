@@ -39,6 +39,7 @@ void GDN_TheWorld_Edit::_register_methods()
 	register_method("edit_mode_generate", &GDN_TheWorld_Edit::editModeGenerateAction);
 	register_method("edit_mode_blend", &GDN_TheWorld_Edit::editModeBlendAction);
 	register_method("edit_mode_gen_normals", &GDN_TheWorld_Edit::editModeGenNormalsAction);
+	register_method("edit_mode_set_textures", &GDN_TheWorld_Edit::editModeSetTexturesAction);
 	register_method("edit_mode_save", &GDN_TheWorld_Edit::editModeSaveAction);
 	register_method("edit_mode_upload", &GDN_TheWorld_Edit::editModeUploadAction);
 	register_method("edit_mode_stop", &GDN_TheWorld_Edit::editModeStopAction);
@@ -309,6 +310,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				button->connect("mouse_entered", this, "mouse_entered_main_panel");
 				button->connect("mouse_exited", this, "mouse_exited_main_panel");
 				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+				button = godot::Button::_new();
+				hBoxContainer->add_child(button);
+				button->set_text("Set Texs");
+				button->connect("pressed", this, "edit_mode_set_textures");
+				button->connect("mouse_entered", this, "mouse_entered_main_panel");
+				button->connect("mouse_exited", this, "mouse_exited_main_panel");
+				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 				m_allCheckBox = godot::CheckBox::_new();
 				hBoxContainer->add_child(m_allCheckBox);
 				m_allCheckBox->connect("mouse_entered", this, "mouse_entered_main_panel");
@@ -519,6 +527,9 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_lookDevOptionButton->add_separator();
 				m_lookDevOptionButton->add_item("Lookdev heights", (int64_t)ShaderTerrainData::LookDev::Heights);
 				m_lookDevOptionButton->add_item("Lookdev normals", (int64_t)ShaderTerrainData::LookDev::Normals);
+				m_lookDevOptionButton->add_item("Lookdev splatmap", (int64_t)ShaderTerrainData::LookDev::Splat);
+				m_lookDevOptionButton->add_item("Lookdev colors", (int64_t)ShaderTerrainData::LookDev::Color);
+				m_lookDevOptionButton->add_item("Lookdev globalmap", (int64_t)ShaderTerrainData::LookDev::Global);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -715,6 +726,19 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				button->connect("mouse_entered", this, "mouse_entered_main_panel");
 				button->connect("mouse_exited", this, "mouse_exited_main_panel");
 				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+
+			separator = HSeparator::_new();
+			mainVBoxContainer->add_child(separator);
+			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
+			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+
+			hBoxContainer = godot::HBoxContainer::_new();
+			mainVBoxContainer->add_child(hBoxContainer);
+				m_message = godot::Label::_new();
+				hBoxContainer->add_child(m_message);
+				m_message->set_align(godot::Label::Align::ALIGN_LEFT);
+				m_message->connect("mouse_entered", this, "mouse_entered_main_panel");
+				m_message->connect("mouse_exited", this, "mouse_exited_main_panel");
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
@@ -1187,6 +1211,8 @@ void GDN_TheWorld_Edit::editModeSave(void)
 		return;
 	}
 
+	setMessage(godot::String("Saving..."));
+
 	m_actionClock.tick();
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditSave 1 ") + __FUNCTION__, "ALL");
@@ -1221,6 +1247,9 @@ void GDN_TheWorld_Edit::editModeSave(void)
 			cacheQuadrantData.heights16Buffer = &quadToSave->getQuadrant()->getFloat16HeightsBuffer(false);
 			cacheQuadrantData.heights32Buffer = &quadToSave->getQuadrant()->getFloat32HeightsBuffer(false);
 			cacheQuadrantData.normalsBuffer = &quadToSave->getQuadrant()->getNormalsBuffer(false);
+			cacheQuadrantData.splatmapBuffer = &quadToSave->getQuadrant()->getSplatmapBuffer(false);
+			cacheQuadrantData.colormapBuffer = &quadToSave->getQuadrant()->getColormapBuffer(false);
+			cacheQuadrantData.globalmapBuffer = &quadToSave->getQuadrant()->getGlobalmapBuffer(false);
 			QuadrantPos quadrantPos = item.first;
 			TheWorld_Utils::MemoryBuffer buffer;
 			cache.setBufferFromCacheQuadrantData(quadrantPos.getNumVerticesPerSize(), cacheQuadrantData, buffer);
@@ -1246,6 +1275,8 @@ void GDN_TheWorld_Edit::editModeSave(void)
 	size_t numToSave = 0;
 	size_t numToUpload = 0;
 	refreshNumToSaveUpload(numToSave, numToUpload);
+
+	setMessage(godot::String("Completed!"), true);
 
 	m_actionInProgress = false;
 }
@@ -1273,6 +1304,8 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 		m_actionInProgress = false;
 		return;
 	}
+
+	setMessage(godot::String("Uploading..."));
 
 	m_actionClock.tick();
 
@@ -1323,6 +1356,9 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 			cacheQuadrantData.heights16Buffer = &quadTree->getQuadrant()->getFloat16HeightsBuffer(false);
 			cacheQuadrantData.heights32Buffer = &quadTree->getQuadrant()->getFloat32HeightsBuffer(false);
 			cacheQuadrantData.normalsBuffer = &quadTree->getQuadrant()->getNormalsBuffer(false);
+			cacheQuadrantData.splatmapBuffer = &quadTree->getQuadrant()->getSplatmapBuffer(false);
+			cacheQuadrantData.colormapBuffer = &quadTree->getQuadrant()->getColormapBuffer(false);
+			cacheQuadrantData.globalmapBuffer = &quadTree->getQuadrant()->getGlobalmapBuffer(false);
 			std::string buffer;
 			cache.setBufferFromCacheQuadrantData(pos.getNumVerticesPerSize(), cacheQuadrantData, buffer);
 			
@@ -1353,6 +1389,8 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	size_t numToUpload = 0;
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
+	setMessage(godot::String("Completed!"), true);
+
 	m_actionInProgress = false;
 }
 
@@ -1378,6 +1416,8 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 		return;
 	}
 
+	setMessage(godot::String("Generating heights..."));
+
 	m_actionClock.tick();
 
 	QuadTree* quadTreeSel = nullptr;
@@ -1387,6 +1427,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	{
 		m_actionClock.tock();
 		m_actionInProgress = false;
+		setMessage(godot::String("Completed!"), true);
 		return;
 	}
 
@@ -1480,10 +1521,11 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	heights32Buffer.adjustSize(heights32BufferSize);
 	quadTreeSel->getQuadrant()->setHeightsUpdated(true);
 
-	// 5. invalidata normals as heigths have been changed and set flags according (normals need regen and empty normals have to be passed to shader)
-	quadTreeSel->getQuadrant()->getNormalsBuffer(false).clear();
-	terrainEdit->normalsNeedRegen = true;
-	quadTreeSel->getQuadrant()->setNormalsUpdated(true);
+	// 5. invalidata normals and textures as heigths have been changed and set flags according (normals need regen and empty normals have to be passed to shader)
+	quadTreeSel->getQuadrant()->resetNormalsBuffer();
+	quadTreeSel->getQuadrant()->resetSplatmapBuffer();
+	quadTreeSel->getQuadrant()->resetColormapBuffer();
+	quadTreeSel->getQuadrant()->resetGlobalmapBuffer();
 
 	// 6. prepare new heigths for collider (PoolRealArray)
 	{
@@ -1534,6 +1576,8 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	size_t numToUpload = 0;
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
+	setMessage(godot::String("Completed!"), true);
+
 	m_actionInProgress = false;
 }
 
@@ -1559,6 +1603,8 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 		return;
 	}
 
+	setMessage(godot::String("Blending heigths..."));
+	
 	m_actionClock.tick();
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1 ") + __FUNCTION__, "ALL");
@@ -1572,6 +1618,7 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 	{
 		m_actionClock.tock();
 		m_actionInProgress = false;
+		setMessage(godot::String("Completed!"), true);
 		return;
 	}
 
@@ -1633,6 +1680,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 				quadrantData.heights16Buffer = &heights16Buffer;
 				quadrantData.heights32Buffer = &heights32Buffer;
 				quadrantData.normalsBuffer = nullptr;
+				quadrantData.splatmapBuffer = nullptr;
+				quadrantData.colormapBuffer = nullptr;
+				quadrantData.globalmapBuffer = nullptr;
 
 				TheWorld_Utils::MemoryBuffer northTerrainEditValuesBuffer;
 				TheWorld_Utils::MemoryBuffer northHeights16Buffer;
@@ -1655,6 +1705,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 					northQuadrantData.heights16Buffer = &northHeights16Buffer;
 					northQuadrantData.heights32Buffer = &northHeights32Buffer;
 					northQuadrantData.normalsBuffer = nullptr;
+					northQuadrantData.splatmapBuffer = nullptr;
+					northQuadrantData.colormapBuffer = nullptr;
+					northQuadrantData.globalmapBuffer = nullptr;
 				}
 				else
 					northQuadTree = nullptr;
@@ -1680,6 +1733,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 					southQuadrantData.heights16Buffer = &southHeights16Buffer;
 					southQuadrantData.heights32Buffer = &southHeights32Buffer;
 					southQuadrantData.normalsBuffer = nullptr;
+					southQuadrantData.splatmapBuffer = nullptr;
+					southQuadrantData.colormapBuffer = nullptr;
+					southQuadrantData.globalmapBuffer = nullptr;
 				}
 				else
 					southQuadTree = nullptr;
@@ -1705,6 +1761,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 					westQuadrantData.heights16Buffer = &westHeights16Buffer;
 					westQuadrantData.heights32Buffer = &westHeights32Buffer;
 					westQuadrantData.normalsBuffer = nullptr;
+					westQuadrantData.splatmapBuffer = nullptr;
+					westQuadrantData.colormapBuffer = nullptr;
+					westQuadrantData.globalmapBuffer = nullptr;
 				}
 				else
 					westQuadTree = nullptr;
@@ -1730,6 +1789,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 					eastQuadrantData.heights16Buffer = &eastHeights16Buffer;
 					eastQuadrantData.heights32Buffer = &eastHeights32Buffer;
 					eastQuadrantData.normalsBuffer = nullptr;
+					eastQuadrantData.splatmapBuffer = nullptr;
+					eastQuadrantData.colormapBuffer = nullptr;
+					eastQuadrantData.globalmapBuffer = nullptr;
 				}
 				else
 					eastQuadTree = nullptr;
@@ -1755,6 +1817,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 					northwestQuadrantData.heights16Buffer = &northwestHeights16Buffer;
 					northwestQuadrantData.heights32Buffer = &northwestHeights32Buffer;
 					northwestQuadrantData.normalsBuffer = nullptr;
+					northwestQuadrantData.splatmapBuffer = nullptr;
+					northwestQuadrantData.colormapBuffer = nullptr;
+					northwestQuadrantData.globalmapBuffer = nullptr;
 				}
 				else
 					northwestQuadTree = nullptr;
@@ -1780,6 +1845,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 					northeastQuadrantData.heights16Buffer = &northeastHeights16Buffer;
 					northeastQuadrantData.heights32Buffer = &northeastHeights32Buffer;
 					northeastQuadrantData.normalsBuffer = nullptr;
+					northeastQuadrantData.splatmapBuffer = nullptr;
+					northeastQuadrantData.colormapBuffer = nullptr;
+					northeastQuadrantData.globalmapBuffer = nullptr;
 				}
 				else
 					northeastQuadTree = nullptr;
@@ -1805,6 +1873,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 					southwestQuadrantData.heights16Buffer = &southwestHeights16Buffer;
 					southwestQuadrantData.heights32Buffer = &southwestHeights32Buffer;
 					southwestQuadrantData.normalsBuffer = nullptr;
+					southwestQuadrantData.splatmapBuffer = nullptr;
+					southwestQuadrantData.colormapBuffer = nullptr;
+					southwestQuadrantData.globalmapBuffer = nullptr;
 				}
 				else
 					southwestQuadTree = nullptr;
@@ -1831,6 +1902,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 					southeastQuadrantData.heights16Buffer = &southeastHeights16Buffer;
 					southeastQuadrantData.heights32Buffer = &southeastHeights32Buffer;
 					southeastQuadrantData.normalsBuffer = nullptr;
+					southeastQuadrantData.splatmapBuffer = nullptr;
+					southeastQuadrantData.colormapBuffer = nullptr;
+					southeastQuadrantData.globalmapBuffer = nullptr;
 				}
 				else
 					southeastQuadTree = nullptr;
@@ -1917,6 +1991,8 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 	size_t numToUpload = 0;
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
+	setMessage(godot::String("Completed!"), true);
+
 	m_actionInProgress = false;
 }
 
@@ -1935,9 +2011,12 @@ void GDN_TheWorld_Edit::manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::Ca
 
 		quadTree->getQuadrant()->setHeightsUpdated(true);
 
-		quadTree->getQuadrant()->getNormalsBuffer(false).clear();
-		quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;
-		quadTree->getQuadrant()->setNormalsUpdated(true);
+		quadTree->getQuadrant()->resetNormalsBuffer();
+
+		quadTree->getQuadrant()->resetSplatmapBuffer();
+
+		quadTree->getQuadrant()->resetGlobalmapBuffer();
+
 
 		{
 			PoolRealArray& heightsForCollider = quadTree->getQuadrant()->getHeightsForCollider(false);
@@ -1976,14 +2055,21 @@ void GDN_TheWorld_Edit::editModeGenNormalsAction(void)
 
 void GDN_TheWorld_Edit::editModeGenNormals(void)
 {
+	editModeGenNormals_1(true);
+}
+
+void GDN_TheWorld_Edit::editModeGenNormals_1(bool force)
+{
 	if (m_actionClock.counterStarted())
 	{
 		m_actionInProgress = false;
 		return;
 	}
 
-	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenMesh 1 ") + __FUNCTION__, "ALL");
+	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1 ") + __FUNCTION__, "ALL");
 
+	setMessage(godot::String("Generating normals..."));
+	
 	m_actionClock.tick();
 
 	QuadTree* quadTreeSel = nullptr;
@@ -1995,10 +2081,11 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	{
 		m_actionClock.tock();
 		m_actionInProgress = false;
+		setMessage(godot::String("Completed!"), true);
 		return;
 	}
 
-	if (quadTreeSel != nullptr)
+	if (quadTreeSel != nullptr && force)
 		quadTreeSel->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;
 
 	std::vector<QuadrantPos> allQuandrantPos;
@@ -2046,7 +2133,7 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
 			if (normalsBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("EditGenMesh 1.1 ") + __FUNCTION__, "Single QuadTree");
+				TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.1 ") + __FUNCTION__, "Single QuadTree");
 
 				TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
 				TheWorld_Utils::MemoryBuffer& heightsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
@@ -2087,6 +2174,11 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 				
 				quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen = false;
 				quadTree->getQuadrant()->setNormalsUpdated(true);
+
+				quadTree->getQuadrant()->resetSplatmapBuffer();
+
+				quadTree->getQuadrant()->resetGlobalmapBuffer();
+
 				quadTree->materialParamsNeedReset(true);
 
 				m_completedItems++;
@@ -2109,6 +2201,158 @@ void GDN_TheWorld_Edit::editModeGenNormals(void)
 	size_t numToSave = 0;
 	size_t numToUpload = 0;
 	refreshNumToSaveUpload(numToSave, numToUpload);
+
+	setMessage(godot::String("Completed!"), true);
+
+	m_actionInProgress = false;
+}
+
+void GDN_TheWorld_Edit::editModeSetTexturesAction(void)
+{
+	if (m_actionInProgress)
+		return;
+
+	m_actionInProgress = true;
+	m_allItems = 0;
+	setElapsed(0, true);
+	setNote1(0);
+
+	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeSetTextures, this);
+	m_tp.QueueJob(f);
+}
+
+void GDN_TheWorld_Edit::editModeSetTextures(void)
+{
+	if (m_actionClock.counterStarted())
+	{
+		m_actionInProgress = false;
+		return;
+	}
+
+	editModeGenNormals_1(false);
+
+	m_actionInProgress = true;
+
+	TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1 ") + __FUNCTION__, "ALL");
+
+	setMessage(godot::String("Applying textures..."));
+
+	m_actionClock.tick();
+
+	QuadTree* quadTreeSel = nullptr;
+	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
+
+	bool allCheched = m_allCheckBox->is_pressed();
+
+	if (!allCheched && quadrantSelPos.empty())
+	{
+		m_actionClock.tock();
+		m_actionInProgress = false;
+		setMessage(godot::String("Completed!"), true);
+		return;
+	}
+
+	if (quadTreeSel != nullptr)
+		quadTreeSel->getQuadrant()->getTerrainEdit()->extraValues.texturesNeedRegen = true;
+
+	std::vector<QuadrantPos> allQuandrantPos;
+	m_viewer->getAllQuadrantPos(allQuandrantPos);
+
+	std::vector<QuadrantPos> quandrantPos;
+	for (auto& pos : allQuandrantPos)
+	{
+		QuadTree* quadTree = m_viewer->getQuadTree(pos);
+		if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
+		{
+			//quadTree->getQuadrant()->getTerrainEdit()->extraValues.texturesNeedRegen = true;		// SUPERDEBUGRIC: force to generate textures
+			TheWorld_Utils::MemoryBuffer& splatmapBuffer = quadTree->getQuadrant()->getSplatmapBuffer(true);
+			if (splatmapBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->extraValues.texturesNeedRegen)
+			{
+				if (allCheched || pos == quadrantSelPos)
+				{
+					quandrantPos.push_back(pos);
+					quadTree->getQuadrant()->setNeedUploadToServer(true);
+
+					if (!allCheched)
+						break;
+				}
+			}
+		}
+	}
+
+	m_completedItems = 0;
+	m_elapsedCompleted = 0;
+	m_lastElapsed = 0;
+	m_allItems = quandrantPos.size();
+	for (auto& pos : quandrantPos)
+	{
+		if (m_actionStopRequested)
+		{
+			m_actionStopRequested = false;
+			break;
+		}
+
+		QuadTree* quadTree = m_viewer->getQuadTree(pos);
+		if (quadTree != nullptr)
+		{
+			quadTree->getQuadrant()->lockInternalData();
+
+			TheWorld_Utils::MemoryBuffer& splatmapBuffer = quadTree->getQuadrant()->getSplatmapBuffer(true);
+			if (splatmapBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->extraValues.texturesNeedRegen)
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.1 ") + __FUNCTION__, "Single QuadTree");
+
+				
+				TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
+				
+				TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
+				TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
+				TheWorld_Utils::MemoryBuffer& splatmapBuffer = quadTree->getQuadrant()->getSplatmapBuffer();
+				size_t numElements = float32HeigthsBuffer.size() / sizeof(float);
+				my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
+
+				cache.setSplatmap(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), quadTree->getQuadrant()->getTerrainEdit(), float32HeigthsBuffer, normalsBuffer, splatmapBuffer);
+
+				m_mapQuadToSave[pos] = "";
+				quadTree->getQuadrant()->getTerrainEdit()->needUploadToServer = true;
+				quadTree->getQuadrant()->setNeedUploadToServer(true);
+
+				quadTree->getQuadrant()->getTerrainEdit()->extraValues.texturesNeedRegen = false;
+				quadTree->getQuadrant()->setSplatmapUpdated(true);
+
+				quadTree->getQuadrant()->resetGlobalmapBuffer();
+
+				quadTree->materialParamsNeedReset(true);
+
+				{
+					quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
+					quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::highElevation);
+					quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::dirt);
+					quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::rocks);
+				}
+
+				m_completedItems++;
+				size_t partialCount = m_actionClock.partialDuration().count();
+				m_lastElapsed = partialCount - m_elapsedCompleted;
+				m_elapsedCompleted = partialCount;
+			}
+
+			quadTree->getQuadrant()->unlockInternalData();
+		}
+	}
+
+	m_actionClock.tock();
+
+	size_t duration = m_actionClock.duration().count();
+	setElapsed(duration, false);
+	setCounter(m_completedItems, m_allItems);
+	setNote1(m_lastElapsed);
+
+	size_t numToSave = 0;
+	size_t numToUpload = 0;
+	refreshNumToSaveUpload(numToSave, numToUpload);
+
+	setMessage(godot::String("Completed!"), true);
 
 	m_actionInProgress = false;
 }
@@ -2155,4 +2399,22 @@ void GDN_TheWorld_Edit::editModeSelectTerrainTypeAction(int64_t index)
 	}
 
 	setTerrainEditValues(terrainEdit);
+}
+
+void GDN_TheWorld_Edit::setMessage(std::string text, bool add)
+{
+	setMessage(godot::String(text.c_str()), add);
+}
+
+void GDN_TheWorld_Edit::setMessage(godot::String text, bool add)
+{
+	if (add)
+	{
+		godot::String t = m_message->get_text();
+		t += " ";
+		t += text;
+		m_message->set_text(t);
+	}
+	else
+		m_message->set_text(text);
 }

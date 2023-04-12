@@ -64,6 +64,7 @@ namespace godot
 		void editModeGenerateAction(void);
 		void editModeBlendAction(void);
 		void editModeGenNormalsAction(void);
+		void editModeSetTexturesAction(void);
 		void editModeSaveAction(void);
 		void editModeUploadAction(void);
 		void editModeStopAction(void);
@@ -73,6 +74,8 @@ namespace godot
 		void editModeGenerate(void);
 		void editModeBlend(void);
 		void editModeGenNormals(void);
+		void editModeGenNormals_1(bool force);
+		void editModeSetTextures(void);
 		void editModeSave(void);
 		void editModeUpload(void);
 
@@ -132,6 +135,9 @@ namespace godot
 
 		void refreshNumToSaveUpload(size_t& numToSave, size_t& numToUpload);
 
+		void setMessage(std::string text, bool add = false);
+		void setMessage(godot::String text, bool add = false);
+
 		//std::map<QuadrantPos, bool>& getMapQuadToSave(void)
 		//{
 		//	return m_mapQuadToSave;
@@ -189,6 +195,8 @@ namespace godot
 
 		godot::Label* m_numQuadrantToSaveLabel;
 		godot::Label* m_numQuadrantToUploadLabel;
+
+		godot::Label* m_message;
 
 		godot::CheckBox* m_allCheckBox;
 		godot::OptionButton* m_terrTypeOptionButton;

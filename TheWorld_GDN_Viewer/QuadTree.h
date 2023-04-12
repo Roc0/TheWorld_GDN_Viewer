@@ -283,6 +283,9 @@ namespace godot
 			m_heightsUpdated = false;
 			m_normalsUpdated = false;
 			m_colorsUpdated = false;
+			m_splatmapUpdated = false;
+			m_globalmapUpdated = false;
+			m_texturesUpdated = false;
 			//m_terrainValuesCanBeCleared = false;
 			m_needUploadToServer = false;
 			m_internalDataLocked = false;
@@ -352,7 +355,7 @@ namespace godot
 			{
 				TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
 				float minAltitude, maxAltitude;
-				bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+				bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer);
 			}
 			return m_float16HeigthsBuffer;
 		}
@@ -363,7 +366,7 @@ namespace godot
 			{
 				TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
 				float minAltitude, maxAltitude;
-				bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+				bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer);
 			}
 			return m_float32HeigthsBuffer;
 		}
@@ -376,10 +379,95 @@ namespace godot
 				{
 					TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
 					float minAltitude, maxAltitude;
-					bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+					bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer);
 				}
 			}
 			return m_normalsBuffer;
+		}
+
+		TheWorld_Utils::MemoryBuffer& getSplatmapBuffer(bool reloadFromCache = true)
+		{
+			if (m_splatmapBuffer.empty() && reloadFromCache)
+			{
+				if (!getTerrainEdit()->extraValues.texturesNeedRegen)
+				{
+					TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+					float minAltitude, maxAltitude;
+					bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer);
+				}
+			}
+			return m_splatmapBuffer;
+		}
+
+		TheWorld_Utils::MemoryBuffer& getColormapBuffer(bool reloadFromCache = true)
+		{
+			if (m_colormapBuffer.empty() && reloadFromCache)
+			{
+				if (!getTerrainEdit()->extraValues.emptyColormap)
+				{
+					TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+					float minAltitude, maxAltitude;
+					bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer);
+				}
+			}
+			return m_colormapBuffer;
+		}
+
+		TheWorld_Utils::MemoryBuffer& getGlobalmapBuffer(bool reloadFromCache = true)
+		{
+			if (m_globalmapBuffer.empty() && reloadFromCache)
+			{
+				if (!getTerrainEdit()->extraValues.emptyGlobalmap)
+				{
+					TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+					float minAltitude, maxAltitude;
+					bool ok = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), m_meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer);
+				}
+			}
+			return m_globalmapBuffer;
+		}
+
+		void resetHeightsBuffer(void)
+		{
+			getFloat16HeightsBuffer(false).clear();
+			getFloat32HeightsBuffer(false).clear();
+			setEmpty(true);
+			setHeightsUpdated(true);
+
+			resetNormalsBuffer();
+			resetColormapBuffer();
+		}
+
+		void resetNormalsBuffer(void)
+		{
+			getNormalsBuffer(false).clear();
+			getTerrainEdit()->normalsNeedRegen = true;
+			setNormalsUpdated(true);
+
+			resetSplatmapBuffer();
+		}
+
+		void resetSplatmapBuffer(void)
+		{
+			getSplatmapBuffer(false).clear();
+			getTerrainEdit()->extraValues.texturesNeedRegen = true;
+			setSplatmapUpdated(true);
+			
+			resetGlobalmapBuffer();
+		}
+
+		void resetColormapBuffer(void)
+		{
+			getColormapBuffer(false).clear();
+			getTerrainEdit()->extraValues.emptyColormap = true;
+			setColorsUpdated(true);
+		}
+
+		void resetGlobalmapBuffer(void)
+		{
+			getGlobalmapBuffer(false).clear();
+			getTerrainEdit()->extraValues.emptyGlobalmap = true;
+			setGlobalmapUpdated(true);
 		}
 
 		TheWorld_Utils::TerrainEdit* getTerrainEdit()
@@ -420,6 +508,11 @@ namespace godot
 		void setHeightsUpdated(bool b)
 		{
 			m_heightsUpdated = b;
+			if (b)
+			{
+				m_splatmapUpdated = true;
+				m_texturesUpdated = true;
+			}
 		}
 		bool heightsUpdated(void)
 		{
@@ -433,6 +526,14 @@ namespace godot
 		{
 			return m_normalsUpdated;
 		}
+		void setSplatmapUpdated(bool b)
+		{
+			m_splatmapUpdated = b;
+		}
+		bool splatmapUpdated(void)
+		{
+			return m_splatmapUpdated;
+		}
 		void setColorsUpdated(bool b)
 		{
 			m_colorsUpdated = b;
@@ -440,6 +541,22 @@ namespace godot
 		bool colorsUpdated(void)
 		{
 			return m_colorsUpdated;
+		}
+		void setGlobalmapUpdated(bool b)
+		{
+			m_globalmapUpdated = b;
+		}
+		bool globalmapUpdated(void)
+		{
+			return m_globalmapUpdated;
+		}
+		void setTextureUpdated(bool b)
+		{
+			m_texturesUpdated = b;
+		}
+		bool textureUpdated(void)
+		{
+			return m_texturesUpdated;
 		}
 		void setEmpty(bool b)
 		{
@@ -459,12 +576,15 @@ namespace godot
 				m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join (Quadrant::getAltitudeFromHeigthmap): it is kept for performance reason to keep it for visible quadrants and avoid to reload from disk for new chunks
 			m_float32HeigthsBuffer.clear();
 			m_normalsBuffer.clear();
+			m_splatmapBuffer.clear();
+			m_colormapBuffer.clear();
+			m_globalmapBuffer.clear();
 			m_heightsForCollider.resize(0);
 		}
 
 		size_t calcMemoryOccupation(void)
 		{
-			size_t occupation = m_float16HeigthsBuffer.reserved() + m_float32HeigthsBuffer.reserved() + m_normalsBuffer.reserved() + (m_terrainEdit == nullptr ? 0 : m_terrainEdit->size) + m_heightsForCollider.size() * sizeof(real_t);
+			size_t occupation = m_float16HeigthsBuffer.reserved() + m_float32HeigthsBuffer.reserved() + m_normalsBuffer.reserved() + m_splatmapBuffer.reserved() + m_colormapBuffer.reserved() + m_globalmapBuffer.reserved() + (m_terrainEdit == nullptr ? 0 : m_terrainEdit->size) + m_heightsForCollider.size() * sizeof(real_t);
 			return occupation;
 		}
 
@@ -488,28 +608,62 @@ namespace godot
 		TheWorld_Utils::MemoryBuffer m_float16HeigthsBuffer;	// each height is expressed as a 16-bit float (image with FORMAT_RH) and are serialized line by line (each line from x=0 to x=numVertexPerQuadrant, first line ==> z=0, last line z=numVertexPerQuadrant)
 		TheWorld_Utils::MemoryBuffer m_float32HeigthsBuffer;	// each height is expressed as a 32-bit and are serialized as above
 		TheWorld_Utils::MemoryBuffer m_normalsBuffer;			// each normal is expressed as a three bytes color (r=normal x, g=normal z, b=normal y) and are serialized in the same order as heights
+		TheWorld_Utils::MemoryBuffer m_splatmapBuffer;			// for each vertex there is a four bytes color (r=lowElevationTex %, g=dirtTex %, b=highElevationTex %, a=slope %) and are serialized in the same order as heights
+		TheWorld_Utils::MemoryBuffer m_colormapBuffer;			// Vertices color
+		TheWorld_Utils::MemoryBuffer m_globalmapBuffer;
 		std::unique_ptr<TheWorld_Utils::TerrainEdit> m_terrainEdit;
 		godot::PoolRealArray m_heightsForCollider;
 		// Terrain Values
 
 		bool m_heightsUpdated;
 		bool m_normalsUpdated;
+		bool m_splatmapUpdated;
 		bool m_colorsUpdated;
+		bool m_globalmapUpdated;
+		bool m_texturesUpdated;
 		//bool m_terrainValuesCanBeCleared;
 	};
 
 	class ShaderTerrainData
 	{
+	public:
+		class GroundTextures
+		{
+		public:
+			GroundTextures()
+			{
+				//m_albedo_bump_tex = nullptr;
+				//m_normal_roughness_tex = nullptr;
+			}
+		
+		public:
+			Ref<ImageTexture> m_albedo_bump_tex;
+			Ref<ImageTexture> m_normal_roughness_tex;
+		};
 
 		// Shader Params
 #define SHADER_PARAM_TERRAIN_HEIGHTMAP	"u_terrain_heightmap"
 #define SHADER_PARAM_TERRAIN_NORMALMAP	"u_terrain_normalmap"
+#define SHADER_PARAM_TERRAIN_SPLATMAP	"u_terrain_splatmap"
 #define SHADER_PARAM_TERRAIN_COLORMAP	"u_terrain_colormap"
-#define SHADER_PARAM_LOOKDEV_MAP		"u_map"
+#define SHADER_PARAM_TERRAIN_GLOBALMAP	"u_terrain_globalmap"
+
 #define SHADER_PARAM_INVERSE_TRANSFORM	"u_terrain_inverse_transform"
 #define SHADER_PARAM_NORMAL_BASIS		"u_terrain_normal_basis"
 #define SHADER_PARAM_GRID_STEP			"u_grid_step_in_wu"
 #define SHADER_PARAM_EDITMODE_SELECTED	"u_editmode_selected"
+
+#define SHADER_PARAM_GROUND_ALBEDO_BUMP_0		"u_ground_albedo_bump_0"
+#define SHADER_PARAM_GROUND_ALBEDO_BUMP_1		"u_ground_albedo_bump_1"
+#define SHADER_PARAM_GROUND_ALBEDO_BUMP_2		"u_ground_albedo_bump_2"
+#define SHADER_PARAM_GROUND_ALBEDO_BUMP_3		"u_ground_albedo_bump_3"
+
+#define SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_0	"u_ground_normal_roughness_0"
+#define SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_1	"u_ground_normal_roughness_1"
+#define SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_2	"u_ground_normal_roughness_2"
+#define SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_3	"u_ground_normal_roughness_3"
+
+#define SHADER_PARAM_LOOKDEV_MAP		"u_map"
 
 	public:
 
@@ -517,12 +671,16 @@ namespace godot
 			NotSet = 0
 			, Heights = 1
 			, Normals = 2
+			, Splat = 3
+			, Color = 4
+			, Global = 5
 		};
-
 
 		ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
 		~ShaderTerrainData();
 		void init(void);
+		godot::Ref<godot::Image> readGroundTexture(godot::String fileName, bool& ok);
+		void getGroundTextures(godot::String fileName, GroundTextures* groundTextures);
 		bool materialParamsNeedReset(void)
 		{
 			return m_materialParamsNeedReset;
@@ -559,21 +717,22 @@ namespace godot
 		bool m_materialParamsNeedUpdate;
 		bool m_materialParamsNeedReset;
 
-		//Ref<Image> m_heightMapImage;
 		Ref<Texture> m_heightMapTexture;
 		bool m_heightMapTexModified;
 
-		//Ref<Image> m_normalMapImage;
 		Ref<Texture> m_normalMapTexture;
 		bool m_normalMapTexModified;
 
-		//Ref<Image> m_splat1MapImage;
-		//Ref<Texture> m_splat1MapTexture;
-		//bool m_splat1MapTexModified;
+		Ref<Texture> m_splatMapTexture;
+		bool m_splatMapTexModified;
 
-		//Ref<Image> m_colorMapImage;
 		Ref<Texture> m_colorMapTexture;
 		bool m_colorMapTexModified;
+
+		Ref<Texture> m_globalMapTexture;
+		bool m_globalMapTexModified;
+
+		static std::map<std::string, std::unique_ptr<GroundTextures>> s_groundTextures;
 	};
 	
 	class Quad

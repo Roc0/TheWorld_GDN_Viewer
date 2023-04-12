@@ -736,6 +736,7 @@ void QuadTree::setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev)
 
 	getQuadrant()->setHeightsUpdated(true);
 	getQuadrant()->setNormalsUpdated(true);
+	getQuadrant()->setSplatmapUpdated(true);
 
 	materialParamsNeedReset(true);
 	
@@ -960,8 +961,9 @@ ShaderTerrainData::ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quad
 	m_materialParamsNeedReset = false;
 	m_heightMapTexModified = false;
 	m_normalMapTexModified = false;
-	//m_splat1MapTexModified = false;
+	m_splatMapTexModified = false;
 	m_colorMapTexModified = false;
+	m_globalMapTexModified = false;
 }
 
 ShaderTerrainData::~ShaderTerrainData()
@@ -1006,6 +1008,90 @@ Ref<Material> ShaderTerrainData::getLookDevMaterial(void)
 	return m_lookDevMaterial;
 }
 
+std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTextures>> ShaderTerrainData::s_groundTextures;
+
+godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String fileName, bool& ok)
+{
+	ok = true;
+	
+	char* s = fileName.alloc_c_string();
+	std::string _fileName = std::string(s);
+	godot::api->godot_free(s);
+
+	m_viewer->getMainProcessingMutex().lock();
+	godot::Ref<godot::Image> image = godot::Image::_new();
+	godot::File* file = godot::File::_new();
+	m_viewer->getMainProcessingMutex().unlock();
+
+	godot::Error e = file->open(fileName, godot::File::READ);
+	if (e != godot::Error::OK)
+		throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Error reading file ") + _fileName + " error " + std::to_string(int(e))).c_str()));
+	
+	int64_t fileSize = file->get_len();
+	size_t imageSize = (size_t)sqrt(fileSize / sizeof(struct TheWorld_Utils::_RGBA));
+	assert(imageSize * imageSize * sizeof(struct TheWorld_Utils::_RGBA) == fileSize);
+	if (imageSize * imageSize * sizeof(struct TheWorld_Utils::_RGBA) != fileSize)
+		throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Wrong image size ") + std::to_string(imageSize) + " file size " + std::to_string(fileSize)).c_str()));
+
+	image->create(imageSize, imageSize, true, godot::Image::FORMAT_RGBA8);
+
+	godot::PoolByteArray imageRowBuffer;
+	size_t imageRowSize = imageSize * sizeof(struct TheWorld_Utils::_RGBA);
+
+	image->lock();
+	for (size_t y = 0; y < imageSize; y++)
+	{
+		imageRowBuffer = file->get_buffer(imageRowSize);
+		assert(imageRowBuffer.size() == imageRowSize);
+		
+		size_t idx = 0;
+		for (size_t x = 0; x < imageSize; x++)
+		{
+			godot::Color c;
+			c.r = float(imageRowBuffer[int(idx)]) / 255;
+			c.g = float(imageRowBuffer[int(idx) + 1]) / 255;
+			c.b = float(imageRowBuffer[int(idx) + 2]) / 255;
+			c.a = float(imageRowBuffer[int(idx) + 3]) / 255;
+			idx += 4;
+			image->set_pixel(x, y, c);
+		}
+	}
+	image->unlock();
+
+	file->close();
+
+	image->generate_mipmaps();
+
+	return image;
+}
+
+void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainData::GroundTextures* groundTextures)
+{
+	try
+	{
+		bool ok;
+		godot::Ref<godot::Image> image = readGroundTexture(fileName + "_albedo_bump.ground", ok);
+		m_viewer->getMainProcessingMutex().lock();
+		Ref<godot::ImageTexture> tex = godot::ImageTexture::_new();
+		m_viewer->getMainProcessingMutex().unlock();
+		tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
+		groundTextures->m_albedo_bump_tex = tex;
+	}
+	catch (...) {}
+
+	try
+	{
+		bool ok;
+		godot::Ref<godot::Image> image = readGroundTexture(fileName + "_normal_roughness.ground", ok);
+		m_viewer->getMainProcessingMutex().lock();
+		Ref<godot::ImageTexture> tex = godot::ImageTexture::_new();
+		m_viewer->getMainProcessingMutex().unlock();
+		tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
+		groundTextures->m_normal_roughness_tex = tex;
+	}
+	catch (...) {}
+}
+
 // it is expected that globals and World Datas are loaded
 // TODORIC: maybe usefull for performance reasons specify which texture need update and which rect of the texture 
 void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
@@ -1016,6 +1102,65 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 	std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
 	
 	int _resolution = m_viewer->Globals()->heightmapResolution() + 1;
+
+	TheWorld_Utils::TerrainEdit* terrainEdit = m_quadTree->getQuadrant()->getTerrainEdit();
+
+	std::string lowElevationTexName = terrainEdit->extraValues.lowElevationTexName_r;
+	if (lowElevationTexName.size() == 0)
+	{
+		terrainEdit->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
+		lowElevationTexName = TheWorld_Utils::TerrainEdit::getTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
+	}
+	std::string highElevationTexName = terrainEdit->extraValues.highElevationTexName_g;
+	if (highElevationTexName.size() == 0)
+	{
+		terrainEdit->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::highElevation);
+		highElevationTexName = TheWorld_Utils::TerrainEdit::getTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::highElevation);
+	}
+	std::string dirtTexName = terrainEdit->extraValues.dirtTexName_b;
+	if (dirtTexName.size() == 0)
+	{
+		terrainEdit->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::dirt);
+		dirtTexName = TheWorld_Utils::TerrainEdit::getTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::dirt);
+	}
+	std::string rocksTexName = terrainEdit->extraValues.rocksTexName_a;
+	if (rocksTexName.size() == 0)
+	{
+		terrainEdit->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::rocks);
+		rocksTexName = TheWorld_Utils::TerrainEdit::getTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::rocks);
+	}
+
+	m_viewer->getMainProcessingMutex().lock();
+	
+	if (!s_groundTextures.contains(lowElevationTexName))
+	{
+		s_groundTextures[lowElevationTexName] = std::make_unique<ShaderTerrainData::GroundTextures>();
+		ShaderTerrainData::GroundTextures* groundTextures = s_groundTextures[lowElevationTexName].get();
+		getGroundTextures(godot::String("res://assets/textures/ground/") + lowElevationTexName.c_str(), groundTextures);
+	}
+	
+	if (!s_groundTextures.contains(highElevationTexName))
+	{
+		s_groundTextures[highElevationTexName] = std::make_unique<ShaderTerrainData::GroundTextures>();
+		ShaderTerrainData::GroundTextures* groundTextures = s_groundTextures[highElevationTexName].get();
+		getGroundTextures(godot::String("res://assets/textures/ground/") + highElevationTexName.c_str(), groundTextures);
+	}
+
+	if (!s_groundTextures.contains(dirtTexName))
+	{
+		s_groundTextures[dirtTexName] = std::make_unique<ShaderTerrainData::GroundTextures>();
+		ShaderTerrainData::GroundTextures* groundTextures = s_groundTextures[dirtTexName].get();
+		getGroundTextures(godot::String("res://assets/textures/ground/") + dirtTexName.c_str(), groundTextures);
+	}
+
+	if (!s_groundTextures.contains(rocksTexName))
+	{
+		s_groundTextures[rocksTexName] = std::make_unique<ShaderTerrainData::GroundTextures>();
+		ShaderTerrainData::GroundTextures* groundTextures = s_groundTextures[rocksTexName].get();
+		getGroundTextures(godot::String("res://assets/textures/ground/") + rocksTexName.c_str(), groundTextures);
+	}
+
+	m_viewer->getMainProcessingMutex().unlock();
 
 	// if heights updated create texture for shader (m_heightMapTexture), it will be freed we passed to the shader
 	if (m_quadTree->getQuadrant()->heightsUpdated())
@@ -1040,20 +1185,18 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 					memcpy((char*)w.ptr(), m_quadTree->getQuadrant()->getFloat16HeightsBuffer().ptr(), heightsBufferSize);
 				}
 				image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, data);
-				//m_heightMapImage = image;
 			}
 
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Texture from heights image");
 
 				m_viewer->getMainProcessingMutex().lock();
-				Ref<ImageTexture> tex = ImageTexture::_new();
+				Ref<godot::ImageTexture> tex = godot::ImageTexture::_new();
 				m_viewer->getMainProcessingMutex().unlock();
-				//tex->create_from_image(m_heightMapImage, Texture::FLAG_FILTER);
-				tex->create_from_image(image, Texture::FLAG_FILTER);
+				tex->create_from_image(image, godot::Texture::FLAG_FILTER);
 				m_heightMapTexture = tex;
 				m_heightMapTexModified = true;
-				//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);	// DEBUGRIC
+				//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
 			}
 
 			image.unref();
@@ -1091,19 +1234,28 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 				memcpy((char*)w.ptr(), normalsBuffer.ptr(), normalsBufferSize);
 			}
 			image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
+
+			//{
+			//	struct TheWorld_Utils::_RGB* rgb = (struct TheWorld_Utils::_RGB*)normalsBuffer.ptr();
+			//	image->lock();
+			//	Color c = image->get_pixel(0, 0);
+			//	size_t c_r = (size_t)(c.r * 255);
+			//	size_t c_g = (size_t)(c.g * 255);
+			//	size_t c_b = (size_t)(c.b * 255);
+			//	image->unlock();
+			//}
 		}
 
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from normal image");
 
 			m_viewer->getMainProcessingMutex().lock();
-			Ref<ImageTexture> tex = ImageTexture::_new();
+			Ref<godot::ImageTexture> tex = godot::ImageTexture::_new();
 			m_viewer->getMainProcessingMutex().unlock();
-			//tex->create_from_image(m_normalMapImage, Texture::FLAG_FILTER);
-			tex->create_from_image(image, Texture::FLAG_FILTER);
+			tex->create_from_image(image, godot::Texture::FLAG_FILTER);
 			m_normalMapTexture = tex;
 			m_normalMapTexModified = true;
-			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);	// DEBUGRIC
+			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
 		}
 
 		image.unref();
@@ -1111,63 +1263,150 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 		m_quadTree->getQuadrant()->setNormalsUpdated(false);
 	}
 
-	// TODORIC: the shader must modify visualization for selected quad
+	if (m_quadTree->getQuadrant()->splatmapUpdated())
+	{
+		m_viewer->getMainProcessingMutex().lock();
+		Ref<Image> image = Image::_new();
+		m_viewer->getMainProcessingMutex().unlock();
+
+		TheWorld_Utils::MemoryBuffer& splatmapBuffer = m_quadTree->getQuadrant()->getSplatmapBuffer();
+		size_t splatmapBufferSize = splatmapBuffer.size();
+
+		//splatmapBufferSize = 0;
+		if (splatmapBufferSize == 0)
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for splatmap");
+			image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+			image->fill(godot::Color(1.0f, 0.0f, 0.0f, 0.0f));
+			//image->fill(godot::Color(0.0f, 1.0f, 0.0f, 0.0f));
+			//image->fill(godot::Color(0.0f, 0.0f, 1.0f, 0.0f));
+			//image->fill(godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
+		}
+		else
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Image from splatmap buffer");
+
+			godot::PoolByteArray data;
+			size_t splatmapBufferSizeInBytes = _resolution * _resolution * sizeof(struct TheWorld_Utils::_RGBA);
+			data.resize((int)splatmapBufferSizeInBytes);
+			assert(splatmapBufferSizeInBytes == splatmapBufferSize);
+			{
+				godot::PoolByteArray::Write w = data.write();
+				memcpy((char*)w.ptr(), splatmapBuffer.ptr(), splatmapBufferSizeInBytes);
+			}
+			image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGBA8, data);
+		}
+
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from splatmap image");
+
+			m_viewer->getMainProcessingMutex().lock();
+			Ref<godot::ImageTexture> tex = godot::ImageTexture::_new();
+			m_viewer->getMainProcessingMutex().unlock();
+			tex->create_from_image(image, godot::Texture::FLAG_FILTER);
+			m_splatMapTexture = tex;
+			m_splatMapTexModified = true;
+			//debugPrintTexture(SHADER_PARAM_TERRAIN_SPLATMAP, m_splatMapTexture);
+		}
+
+		image.unref();
+
+		m_quadTree->getQuadrant()->setSplatmapUpdated(false);
+	}
+
 	if (m_quadTree->getQuadrant()->colorsUpdated())
 	{
 		m_viewer->getMainProcessingMutex().lock();
 		Ref<Image> image = Image::_new();
 		m_viewer->getMainProcessingMutex().unlock();
 
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.5 ") + __FUNCTION__, "Create color image");
+		TheWorld_Utils::MemoryBuffer& colormapBuffer = m_quadTree->getQuadrant()->getColormapBuffer();
+		size_t colormapBufferSize = colormapBuffer.size();
 
-			// Creating Color Map Texture
+		if (colormapBufferSize == 0)
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for colors");
 			image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-			//image->fill(Color(1, 1, 1, 1));
-			// Filling Color Map Texture
-			if (m_quadTree->editModeSel())
-				image->fill(godot::GDN_TheWorld_Globals::g_color_yellow_amber);
-			else
-				image->fill(godot::GDN_TheWorld_Globals::g_color_white);
-			//m_colorMapImage = image;
+			image->fill(godot::Color(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+		else
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Image from colormap buffer");
+
+			godot::PoolByteArray data;
+			size_t colormapBufferSizeInBytes = _resolution * _resolution * sizeof(struct TheWorld_Utils::_RGBA);
+			data.resize((int)colormapBufferSizeInBytes);
+			assert(colormapBufferSizeInBytes == colormapBufferSize);
+			{
+				godot::PoolByteArray::Write w = data.write();
+				memcpy((char*)w.ptr(), colormapBuffer.ptr(), colormapBufferSizeInBytes);
+			}
+			image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGBA8, data);
 		}
 
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.6 ") + __FUNCTION__, "Create Texture from color image");
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from colormap image");
 
 			m_viewer->getMainProcessingMutex().lock();
-			Ref<ImageTexture> tex = ImageTexture::_new();
+			Ref<godot::ImageTexture> tex = godot::ImageTexture::_new();
 			m_viewer->getMainProcessingMutex().unlock();
-			//tex->create_from_image(m_colorMapImage, Texture::FLAG_FILTER);
-			tex->create_from_image(image, Texture::FLAG_FILTER);
+			tex->create_from_image(image, godot::Texture::FLAG_FILTER);
 			m_colorMapTexture = tex;
 			m_colorMapTexModified = true;
+			//debugPrintTexture(SHADER_PARAM_TERRAIN_COLORMAP, m_colorMapTexture);
 		}
 
-		m_quadTree->getQuadrant()->setColorsUpdated(false);
-
 		image.unref();
+
+		m_quadTree->getQuadrant()->setColorsUpdated(false);
 	}
 
-	// Creating Splat Map Texture
-	//{
-	//	m_viewer->getMainProcessingMutex().lock();
-	//	Ref<Image> image = Image::_new();
-	//	m_viewer->getMainProcessingMutex().unlock();
-	//	image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
-	//	image->fill(Color(1, 0, 0, 0));
-	//	m_splat1MapImage = image;
-	//}
+	if (m_quadTree->getQuadrant()->globalmapUpdated())
+	{
+		m_viewer->getMainProcessingMutex().lock();
+		Ref<Image> image = Image::_new();
+		m_viewer->getMainProcessingMutex().unlock();
 
-	// Filling Splat Map Texture
-	//{
-	//	m_viewer->getMainProcessingMutex().lock();
-	//	Ref<ImageTexture> tex = ImageTexture::_new();
-	//	m_viewer->getMainProcessingMutex().unlock();
-	//	tex->create_from_image(m_splat1MapImage, Texture::FLAG_FILTER);
-	//	m_splat1MapTexture = tex;
-	//	m_splat1MapImageModified = true;
-	//}
+		TheWorld_Utils::MemoryBuffer& globalmapBuffer = m_quadTree->getQuadrant()->getGlobalmapBuffer();
+		size_t globalmapBufferSize = globalmapBuffer.size();
+
+		if (globalmapBufferSize == 0)
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for globalmap");
+			image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+			image->fill(godot::Color(1.0f, 1.0f, 1.0f, 1.0f));
+		}
+		else
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create Image from globalmap buffer");
+
+			godot::PoolByteArray data;
+			size_t globalmapBufferSizeInBytes = _resolution * _resolution * sizeof(struct TheWorld_Utils::_RGB);
+			data.resize((int)globalmapBufferSizeInBytes);
+			assert(globalmapBufferSizeInBytes == globalmapBufferSize);
+			{
+				godot::PoolByteArray::Write w = data.write();
+				memcpy((char*)w.ptr(), globalmapBuffer.ptr(), globalmapBufferSizeInBytes);
+			}
+			image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
+		}
+
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from globalmap image");
+
+			m_viewer->getMainProcessingMutex().lock();
+			Ref<godot::ImageTexture> tex = godot::ImageTexture::_new();
+			m_viewer->getMainProcessingMutex().unlock();
+			tex->create_from_image(image, godot::Texture::FLAG_FILTER | godot::Texture::FLAG_MIPMAPS);
+			m_globalMapTexture = tex;
+			m_globalMapTexModified = true;
+			//debugPrintTexture(SHADER_PARAM_TERRAIN_COLORMAP, m_colorMapTexture);
+		}
+
+		image.unref();
+
+		m_quadTree->getQuadrant()->setGlobalmapUpdated(false);
+	}
 
 	// _update_all_vertical_bounds ???	// TODORIC
 	//	# RGF image where R is min heightand G is max height
@@ -1196,48 +1435,129 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 
 	if (m_viewer->is_inside_tree())
 	{
+		// u_terrain_colormap=Color(1,1,1,1) u_terrain_splatmap u_ground_albedo_bump_0/4 u_ground_normal_roughness_0/4
+		
 		Transform globalTransform = m_quadTree->getInternalGlobalTransform();
-		//m_viewer->Globals()->debugPrint("getInternalGlobalTransform" + String(" t=") + String(globalTransform));	// DEBUGRIC
+		//m_viewer->Globals()->debugPrint("getInternalGlobalTransform" + String(" t=") + String(globalTransform));
 
 		Transform t = globalTransform.affine_inverse();
-		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));	// DEBUGRIC
+		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));
 		currentMaterial->set_shader_param(SHADER_PARAM_INVERSE_TRANSFORM, t);
 
 		// This is needed to properly transform normals if the terrain is scaled
 		Basis b = globalTransform.basis.inverse().transposed();
-		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));	// DEBUGRIC
+		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));
 		currentMaterial->set_shader_param(SHADER_PARAM_NORMAL_BASIS, b);
 
 		float f = m_viewer->Globals()->gridStepInWU();
-		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));	// DEBUGRIC
+		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));
 		currentMaterial->set_shader_param(SHADER_PARAM_GRID_STEP, f);
 
 		bool selected = m_quadTree->editModeSel();
 		float sel = 0.0f;
 		if (selected)
 			sel = 1.0f;
-		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_EDITMODE_SELECTED) + String(" quad_selected=") + String(std::to_string(sel).c_str()));	// DEBUGRIC
+		//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_EDITMODE_SELECTED) + String(" quad_selected=") + String(std::to_string(sel).c_str()));
 		currentMaterial->set_shader_param(SHADER_PARAM_EDITMODE_SELECTED, sel);
+
+		TheWorld_Utils::TerrainEdit* terrainEdit = m_quadTree->getQuadrant()->getTerrainEdit();
+
+		m_viewer->getMainProcessingMutex().lock();
+		if (m_quadTree->getQuadrant()->textureUpdated())
+		{
+			godot::Ref<godot::ImageTexture> lowElevation_albedo_bump_tex = s_groundTextures[terrainEdit->extraValues.lowElevationTexName_r]->m_albedo_bump_tex;
+			if(lowElevation_albedo_bump_tex != nullptr)
+			{
+				//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GROUND_ALBEDO_BUMP_0));
+				currentMaterial->set_shader_param(SHADER_PARAM_GROUND_ALBEDO_BUMP_0, lowElevation_albedo_bump_tex);
+			}
+
+			godot::Ref<godot::ImageTexture> lowElevation_normal_roughness_tex = s_groundTextures[terrainEdit->extraValues.lowElevationTexName_r]->m_normal_roughness_tex;
+			if (lowElevation_normal_roughness_tex != nullptr)
+			{
+				//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_0));
+				currentMaterial->set_shader_param(SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_0, lowElevation_normal_roughness_tex);
+			}
+
+			godot::Ref<godot::ImageTexture> highElevation_albedo_bump_tex = s_groundTextures[terrainEdit->extraValues.highElevationTexName_g]->m_albedo_bump_tex;
+			if (highElevation_albedo_bump_tex != nullptr)
+			{
+				//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GROUND_ALBEDO_BUMP_1));
+				currentMaterial->set_shader_param(SHADER_PARAM_GROUND_ALBEDO_BUMP_1, highElevation_albedo_bump_tex);
+			}
+
+			godot::Ref<godot::ImageTexture> highElevation_normal_roughness_tex = s_groundTextures[terrainEdit->extraValues.highElevationTexName_g]->m_normal_roughness_tex;
+			if (highElevation_normal_roughness_tex != nullptr)
+			{
+				//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_1));
+				currentMaterial->set_shader_param(SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_1, highElevation_normal_roughness_tex);
+			}
+
+			godot::Ref<godot::ImageTexture> dirt_albedo_bump_tex = s_groundTextures[terrainEdit->extraValues.dirtTexName_b]->m_albedo_bump_tex;
+			if (dirt_albedo_bump_tex != nullptr)
+			{
+				//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GROUND_ALBEDO_BUMP_2));
+				currentMaterial->set_shader_param(SHADER_PARAM_GROUND_ALBEDO_BUMP_2, dirt_albedo_bump_tex);
+			}
+
+			godot::Ref<godot::ImageTexture> dirt_normal_roughness_tex = s_groundTextures[terrainEdit->extraValues.dirtTexName_b]->m_normal_roughness_tex;
+			if (dirt_normal_roughness_tex != nullptr)
+			{
+				//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_2));
+				currentMaterial->set_shader_param(SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_2, dirt_normal_roughness_tex);
+			}
+
+			godot::Ref<godot::ImageTexture> rocks_albedo_bump_tex = s_groundTextures[terrainEdit->extraValues.rocksTexName_a]->m_albedo_bump_tex;
+			if (rocks_albedo_bump_tex != nullptr)
+			{
+				//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GROUND_ALBEDO_BUMP_3));
+				currentMaterial->set_shader_param(SHADER_PARAM_GROUND_ALBEDO_BUMP_3, rocks_albedo_bump_tex);
+			}
+
+			godot::Ref<godot::ImageTexture> rocks_normal_roughness_tex = s_groundTextures[terrainEdit->extraValues.rocksTexName_a]->m_normal_roughness_tex;
+			if (rocks_normal_roughness_tex != nullptr)
+			{
+				//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_3));
+				currentMaterial->set_shader_param(SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_3, rocks_normal_roughness_tex);
+			}
+
+			m_quadTree->getQuadrant()->setTextureUpdated(false);
+		}
+		m_viewer->getMainProcessingMutex().unlock();
 
 		if (m_heightMapTexModified && m_heightMapTexture != nullptr)
 		{
-			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));	// DEBUGRIC
+			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_HEIGHTMAP));
 			currentMaterial->set_shader_param(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
 			m_heightMapTexModified = false;
 		}
 
 		if (m_normalMapTexModified && m_normalMapTexture != nullptr)
 		{
-			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));	// DEBUGRIC
+			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_NORMALMAP));
 			currentMaterial->set_shader_param(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
 			m_normalMapTexModified = false;
 		}
 
+		if (m_splatMapTexModified && m_splatMapTexture != nullptr)
+		{
+			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_SPLATMAP));
+			currentMaterial->set_shader_param(SHADER_PARAM_TERRAIN_SPLATMAP, m_splatMapTexture);
+			m_splatMapTexModified = false;
+		}
+		
 		if (m_colorMapTexModified && m_colorMapTexture != nullptr)
 		{
-			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_COLORMAP));	// DEBUGRIC
+			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_COLORMAP));
 			currentMaterial->set_shader_param(SHADER_PARAM_TERRAIN_COLORMAP, m_colorMapTexture);
 			m_colorMapTexModified = false;
+		}
+
+		if (m_globalMapTexModified && m_globalMapTexture != nullptr)
+		{
+			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_GLOBALMAP));
+			currentMaterial->set_shader_param(SHADER_PARAM_TERRAIN_GLOBALMAP, m_globalMapTexture);
+			m_globalMapTexModified = false;
 		}
 
 		if (lookdev == LookDev::Heights && m_heightMapTexture != nullptr)
@@ -1250,9 +1570,26 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 			currentMaterial->set_shader_param(SHADER_PARAM_LOOKDEV_MAP, m_normalMapTexture);
 		}
 
+		if (lookdev == LookDev::Splat && m_splatMapTexture != nullptr)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_LOOKDEV_MAP, m_splatMapTexture);
+		}
+
+		if (lookdev == LookDev::Color && m_colorMapTexture != nullptr)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_LOOKDEV_MAP, m_colorMapTexture);
+		}
+
+		if (lookdev == LookDev::Global && m_globalMapTexture != nullptr)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_LOOKDEV_MAP, m_globalMapTexture);
+		}
+
 		m_heightMapTexture.unref();
 		m_normalMapTexture.unref();
+		m_splatMapTexture.unref();
 		m_colorMapTexture.unref();
+		m_globalMapTexture.unref();
 
 		//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 	}
@@ -1474,7 +1811,7 @@ void Quadrant::refreshGridVerticesFromServer(std::string& buffer, std::string me
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.1 ") + __FUNCTION__, "m_cache.refreshMapsFromBuffer");
 
 		TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
-		m_cache.refreshMapsFromBuffer(buffer, meshIdFromBuffer, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, updateCache);
+		m_cache.refreshMapsFromBuffer(buffer, meshIdFromBuffer, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer, updateCache);
 		if (terrainEditValuesBuffer.size() > 0)
 			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 	}
@@ -1493,7 +1830,7 @@ void Quadrant::refreshGridVerticesFromServer(std::string& buffer, std::string me
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
 
-		bool empty = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer);
+		bool empty = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer);
 		if (terrainEditValuesBuffer.size() > 0)
 			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 
@@ -1531,10 +1868,19 @@ void Quadrant::refreshGridVerticesFromServer(std::string& buffer, std::string me
 		setNeedUploadToServer(false);
 
 	setHeightsUpdated(true);
-	setColorsUpdated(true);
+	//setColorsUpdated(true);
 
 	if (m_normalsBuffer.size() > 0)
 		setNormalsUpdated(true);
+
+	if (m_splatmapBuffer.size() > 0)
+		setSplatmapUpdated(true);
+
+	if (m_colormapBuffer.size() > 0)
+		setColorsUpdated(true);
+
+	if (m_globalmapBuffer.size() > 0)
+		setGlobalmapUpdated(true);
 
 	int areaSize = (m_viewer->Globals()->heightmapResolution() + 1) * (m_viewer->Globals()->heightmapResolution() + 1);
 
@@ -1547,12 +1893,17 @@ void Quadrant::refreshGridVerticesFromServer(std::string& buffer, std::string me
 	size_t numFloat16Heights = m_float16HeigthsBuffer.size() / uint16_t_size;
 	size_t numFloat32Heights = m_float32HeigthsBuffer.size() / float_size;
 	size_t numNormals = m_normalsBuffer.size() / sizeof(struct TheWorld_Utils::_RGB);
+	size_t numSplatmapVertices = m_splatmapBuffer.size() / sizeof(struct TheWorld_Utils::_RGBA);
+	size_t numColorVertices = m_colormapBuffer.size() / sizeof(struct TheWorld_Utils::_RGBA);
+	size_t numGlobalmapVertices = m_globalmapBuffer.size() / sizeof(struct TheWorld_Utils::_RGB);
 
 	assert(numFloat16Heights == numFloat32Heights);
-	if (numNormals > 0)
-		assert(numFloat16Heights == numNormals);
+	assert(numNormals == 0 || numFloat16Heights == numNormals);
+	assert(numSplatmapVertices == 0 || numFloat16Heights == numSplatmapVertices);
+	assert(numColorVertices == 0 || numFloat16Heights == numColorVertices);
+	assert(numGlobalmapVertices == 0 || numFloat16Heights == numGlobalmapVertices);
 	assert(numFloat16Heights == areaSize);
-	if (numFloat16Heights != numFloat32Heights || (numNormals > 0 && numFloat16Heights != numNormals) || numFloat16Heights != areaSize)
+	if (numFloat16Heights != numFloat32Heights || (numNormals > 0 && numFloat16Heights != numNormals) || (numSplatmapVertices > 0 && numFloat16Heights != numSplatmapVertices) || (numColorVertices > 0 && numFloat16Heights != numColorVertices) || (numGlobalmapVertices > 0 && numFloat16Heights != numGlobalmapVertices) || numFloat16Heights != areaSize)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Grid Vertices not of the correct size").c_str()));
 
 	{
