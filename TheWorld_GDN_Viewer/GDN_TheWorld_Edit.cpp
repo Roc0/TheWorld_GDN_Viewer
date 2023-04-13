@@ -92,6 +92,8 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_lookDevOptionButton = nullptr;
 	m_UIAcceptingFocus = false;
 	m_requiredUIAcceptFocus = false;
+	m_message = nullptr;
+	m_lastMessageChanged = false;
 }
 
 GDN_TheWorld_Edit::~GDN_TheWorld_Edit()
@@ -1163,6 +1165,17 @@ void GDN_TheWorld_Edit::_process(float _delta)
 			setNote1(m_lastElapsed);
 		}
 	}
+
+	if (m_lastMessageChanged)
+	{
+		std::lock_guard<std::recursive_mutex> lock(m_mtxUI);
+
+		if (m_lastMessageChanged)
+		{
+			m_message->set_text(m_lastMessage);
+			m_lastMessageChanged = false;
+		}
+	}
 }
 
 void GDN_TheWorld_Edit::editModeNoisePanel(void)
@@ -1267,6 +1280,8 @@ void GDN_TheWorld_Edit::editModeSave(void)
 
 	m_actionClock.tock();
 
+	m_actionInProgress = false;
+
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
@@ -1277,8 +1292,6 @@ void GDN_TheWorld_Edit::editModeSave(void)
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
-
-	m_actionInProgress = false;
 }
 
 void GDN_TheWorld_Edit::editModeUploadAction(void)
@@ -1380,6 +1393,8 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	
 	m_actionClock.tock();
 
+	m_actionInProgress = false;
+
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
@@ -1390,8 +1405,6 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
-
-	m_actionInProgress = false;
 }
 
 void GDN_TheWorld_Edit::editModeGenerateAction(void)
@@ -1567,6 +1580,8 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 
 	m_actionClock.tock();
 
+	m_actionInProgress = false;
+
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
@@ -1577,8 +1592,6 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
-
-	m_actionInProgress = false;
 }
 
 void GDN_TheWorld_Edit::editModeBlendAction(void)
@@ -1982,6 +1995,8 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 
 	m_actionClock.tock();
 
+	m_actionInProgress = false;
+
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
@@ -1992,8 +2007,6 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
-
-	m_actionInProgress = false;
 }
 
 void GDN_TheWorld_Edit::manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData& quadrantData, QuadTree* quadTree, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer& heights16Buffer, TheWorld_Utils::MemoryBuffer& heights32Buffer)
@@ -2193,6 +2206,8 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool force)
 
 	m_actionClock.tock();
 
+	m_actionInProgress = false;
+
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
@@ -2203,8 +2218,6 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool force)
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
-
-	m_actionInProgress = false;
 }
 
 void GDN_TheWorld_Edit::editModeSetTexturesAction(void)
@@ -2343,6 +2356,8 @@ void GDN_TheWorld_Edit::editModeSetTextures(void)
 
 	m_actionClock.tock();
 
+	m_actionInProgress = false;
+
 	size_t duration = m_actionClock.duration().count();
 	setElapsed(duration, false);
 	setCounter(m_completedItems, m_allItems);
@@ -2354,7 +2369,6 @@ void GDN_TheWorld_Edit::editModeSetTextures(void)
 
 	setMessage(godot::String("Completed!"), true);
 
-	m_actionInProgress = false;
 }
 
 void GDN_TheWorld_Edit::editModeSelectLookDevAction(int64_t index)
@@ -2408,13 +2422,19 @@ void GDN_TheWorld_Edit::setMessage(std::string text, bool add)
 
 void GDN_TheWorld_Edit::setMessage(godot::String text, bool add)
 {
+	std::lock_guard<std::recursive_mutex> lock(m_mtxUI);
+
 	if (add)
 	{
 		godot::String t = m_message->get_text();
 		t += " ";
 		t += text;
-		m_message->set_text(t);
+		m_lastMessage = t;
+		//m_message->set_text(t);
 	}
 	else
-		m_message->set_text(text);
+		m_lastMessage = text;
+		//m_message->set_text(text);
+
+	m_lastMessageChanged = true;
 }

@@ -197,6 +197,8 @@ namespace godot
 		godot::Label* m_numQuadrantToUploadLabel;
 
 		godot::Label* m_message;
+		godot::String m_lastMessage;
+		bool m_lastMessageChanged;
 
 		godot::CheckBox* m_allCheckBox;
 		godot::OptionButton* m_terrTypeOptionButton;
