@@ -389,10 +389,10 @@ namespace godot
 }
 
 //	/root
-//		/Main										created in Godot editor
-//			/GDN_TheWorld_MainNode					Only to startup the viewer
-//			/GDN_TheWorld_Globals
+//		...											created in Godot editor
 //			/TheWorld_Main							created in Godot editor
+//				/GDN_TheWorld_MainNode				Only to startup the viewer and globals
+//				/GDN_TheWorld_Globals
 //				/GDN_TheWorld_Viewer
 //				/GDN_TheWorld_Camera
 //				/EditModeUI

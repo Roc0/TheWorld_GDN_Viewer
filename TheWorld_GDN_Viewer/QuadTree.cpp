@@ -1060,6 +1060,8 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 
 	file->close();
 
+	file->free();
+
 	image->generate_mipmaps();
 
 	return image;

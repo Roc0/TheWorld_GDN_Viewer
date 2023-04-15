@@ -69,18 +69,18 @@ void GDN_TheWorld_MainNode::_process(float _delta)
 	//Globals()->debugPrint("GDN_TheWorld_MainNode::_process");
 }
 
-bool GDN_TheWorld_MainNode::init(Node* pMainNode, Spatial* pWorldMainNode)
+bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 {
-	// Must exist: a Node acting as Main and a Node acting as the world; globals will be child of the first and the viewer will be a child of this second
-	if (!pWorldMainNode || !pMainNode)
+	// Must exist a Spatial Node acting as the world; globals and the viewer will be a child of it
+	if (!pWorldMainNode)
 		return false;
 
-	pMainNode->add_child(this);
+	pWorldMainNode->add_child(this);
 
 	GDN_TheWorld_Globals* globals = GDN_TheWorld_Globals::_new();
 	if (globals)
 	{
-		pMainNode->add_child(globals);
+		pWorldMainNode->add_child(globals);
 		globals->set_name(THEWORLD_GLOBALS_NODE_NAME);
 		globals->init();
 		//m_globals = globals;
@@ -203,7 +203,6 @@ GDN_TheWorld_Globals* GDN_TheWorld_MainNode::Globals(bool useCache)
 		if (!root)
 			return NULL;
 		m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
-		//m_globals = Object::cast_to<GDN_TheWorld_Globals>(get_tree()->get_root()->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
 	}
 
 	return m_globals;

@@ -306,11 +306,6 @@ namespace godot
 			godot::api->godot_free(m);
 		}
 
-		//TheWorld_MapManager::MapManager* mapManager(void) 
-		//{
-		//	return m_mapManager;
-		//};
-
 		// WORLD GRID
 		// The world is rapresented by a grid map (World Grid) streamed from external source which defines also the distance of each vertex of the grid map in WUs. Such a grid is a flat grid of vertices whose elevations
 		//		are contained in a heightmap.

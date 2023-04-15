@@ -16,7 +16,7 @@ namespace godot
 	public:
 		GDN_TheWorld_MainNode();
 		~GDN_TheWorld_MainNode();
-		bool init(Node* pMainNode, Spatial* pWorldMainNode);
+		bool init(Spatial* pWorldMainNode);
 		void preDeinit(void);
 		bool canDeinit(void);
 		void deinit(void);

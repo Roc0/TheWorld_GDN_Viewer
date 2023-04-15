@@ -130,22 +130,6 @@ namespace godot
 		}
 	}
 
-	/*GDN_TheWorld_Globals* GDN_TheWorld_Globals_Client::Globals(bool useCache)
-	{
-		if (m_globals == NULL || !useCache)
-		{
-			SceneTree* scene = get_tree();
-			if (!scene)
-				return NULL;
-			Viewport* root = scene->get_root();
-			if (!root)
-				return NULL;
-			m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
-		}
-
-		return m_globals;
-	}*/
-
 	GDN_TheWorld_Globals::GDN_TheWorld_Globals()
 	{
 		m_initialized = false;
