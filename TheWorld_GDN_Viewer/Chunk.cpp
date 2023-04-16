@@ -82,7 +82,7 @@ void Chunk::initVisual(godot::Ref<godot::Material>& mat)
 {
 	m_meshInstanceRID = RID();
 	m_meshRID = RID();
-	m_meshInstance = nullptr;
+	//m_meshInstance = nullptr;
 
 	m_active = true;
 
@@ -1094,79 +1094,79 @@ void ChunkDebug::dump(void)
 		+ (m_isCameraVerticalOnChunk ? " - CAMERA" : ""));
 }
 
-void GDN_Chunk_MeshInstance::_register_methods()
-{
-	register_method("_ready", &GDN_Chunk_MeshInstance::_ready);
-	register_method("_process", &GDN_Chunk_MeshInstance::_process);
-	register_method("_input", &GDN_Chunk_MeshInstance::_input);
-
-	register_method("get_lod", &GDN_Chunk_MeshInstance::getLod);
-	register_method("get_slot_pos_x", &GDN_Chunk_MeshInstance::getSlotPosX);
-	register_method("get_slot_pos_z", &GDN_Chunk_MeshInstance::getSlotPosZ);
-	register_method("get_id", &GDN_Chunk_MeshInstance::getIdStr);
-}
-
-GDN_Chunk_MeshInstance::GDN_Chunk_MeshInstance()
-{
-	m_initialized = false;
-	m_chunk = nullptr;
-}
-
-GDN_Chunk_MeshInstance::~GDN_Chunk_MeshInstance()
-{
-	deinit();
-}
-
-void GDN_Chunk_MeshInstance::init(Chunk* chunk)
-{
-	m_chunk = chunk;
-}
-
-void GDN_Chunk_MeshInstance::deinit(void)
-{
-	if (m_initialized)
-	{
-		m_initialized = false;
-	}
-}
-
-void GDN_Chunk_MeshInstance::_init(void)
-{
-	//Godot::print("GDN_Template::Init");
-}
-
-void GDN_Chunk_MeshInstance::_ready(void)
-{
-	//Godot::print("GDN_Template::_ready");
-	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
-}
-
-void GDN_Chunk_MeshInstance::_input(const Ref<InputEvent> event)
-{
-}
-
-void GDN_Chunk_MeshInstance::_process(float _delta)
-{
-	// To activate _process method add this Node to a Godot Scene
-	//Godot::print("GDN_Template::_process");
-}
-
-int GDN_Chunk_MeshInstance::getLod(void)
-{
-	return m_chunk->getLod();
-}
-
-int GDN_Chunk_MeshInstance::getSlotPosX(void)
-{
-	return m_chunk->getSlotPosX();
-}
-
-int GDN_Chunk_MeshInstance::getSlotPosZ(void)
-{
-	return m_chunk->getSlotPosZ();
-}
-
-String GDN_Chunk_MeshInstance::getIdStr(void)
-{
-	return m_chunk->getIdStr().c_str();
-}
+//void GDN_Chunk_MeshInstance::_register_methods()
+//{
+//	register_method("_ready", &GDN_Chunk_MeshInstance::_ready);
+//	register_method("_process", &GDN_Chunk_MeshInstance::_process);
+//	register_method("_input", &GDN_Chunk_MeshInstance::_input);
+//
+//	register_method("get_lod", &GDN_Chunk_MeshInstance::getLod);
+//	register_method("get_slot_pos_x", &GDN_Chunk_MeshInstance::getSlotPosX);
+//	register_method("get_slot_pos_z", &GDN_Chunk_MeshInstance::getSlotPosZ);
+//	register_method("get_id", &GDN_Chunk_MeshInstance::getIdStr);
+//}
+//
+//GDN_Chunk_MeshInstance::GDN_Chunk_MeshInstance()
+//{
+//	m_initialized = false;
+//	m_chunk = nullptr;
+//}
+//
+//GDN_Chunk_MeshInstance::~GDN_Chunk_MeshInstance()
+//{
+//	deinit();
+//}
+//
+//void GDN_Chunk_MeshInstance::init(Chunk* chunk)
+//{
+//	m_chunk = chunk;
+//}
+//
+//void GDN_Chunk_MeshInstance::deinit(void)
+//{
+//	if (m_initialized)
+//	{
+//		m_initialized = false;
+//	}
+//}
+//
+//void GDN_Chunk_MeshInstance::_init(void)
+//{
+//	//Godot::print("GDN_Template::Init");
+//}
+//
+//void GDN_Chunk_MeshInstance::_ready(void)
+//{
+//	//Godot::print("GDN_Template::_ready");
+//	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
+//}
+//
+//void GDN_Chunk_MeshInstance::_input(const Ref<InputEvent> event)
+//{
+//}
+//
+//void GDN_Chunk_MeshInstance::_process(float _delta)
+//{
+//	// To activate _process method add this Node to a Godot Scene
+//	//Godot::print("GDN_Template::_process");
+//}
+//
+//int GDN_Chunk_MeshInstance::getLod(void)
+//{
+//	return m_chunk->getLod();
+//}
+//
+//int GDN_Chunk_MeshInstance::getSlotPosX(void)
+//{
+//	return m_chunk->getSlotPosX();
+//}
+//
+//int GDN_Chunk_MeshInstance::getSlotPosZ(void)
+//{
+//	return m_chunk->getSlotPosZ();
+//}
+//
+//String GDN_Chunk_MeshInstance::getIdStr(void)
+//{
+//	return m_chunk->getIdStr().c_str();
+//}

@@ -36,6 +36,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_initInProgress;
 
 		// Node cache
 		GDN_TheWorld_Globals* m_globals;

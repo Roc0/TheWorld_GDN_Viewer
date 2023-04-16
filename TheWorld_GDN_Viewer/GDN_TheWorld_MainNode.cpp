@@ -23,6 +23,7 @@ void GDN_TheWorld_MainNode::_register_methods()
 GDN_TheWorld_MainNode::GDN_TheWorld_MainNode()
 {
 	m_initialized = false;
+	m_initInProgress = false;
 	m_globals = NULL;
 	//m_temp = NULL;
 }
@@ -69,15 +70,51 @@ void GDN_TheWorld_MainNode::_process(float _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Globals()->debugPrint("GDN_TheWorld_MainNode::_process");
+
+	//if (!m_initialized && m_initInProgress)
+	//{
+	//	godot::Spatial* pWorldMainNode = (Spatial*)get_parent();
+	//	
+	//	GDN_TheWorld_Globals* globals = GDN_TheWorld_Globals::_new();
+	//	if (globals)
+	//	{
+	//		//Node* parent = globals->get_parent();
+	//		pWorldMainNode->add_child(globals);
+	//		globals->set_name(THEWORLD_GLOBALS_NODE_NAME);
+	//		globals->init();
+	//		//m_globals = globals;
+	//	}
+
+	//	PLOGI << "TheWorld Main Node Initializing...";
+
+	//	GDN_TheWorld_Viewer* viewer = GDN_TheWorld_Viewer::_new();
+	//	if (viewer)
+	//	{
+	//		pWorldMainNode->add_child(viewer);
+	//		viewer->set_name(THEWORLD_VIEWER_NODE_NAME);
+	//		Transform gt = pWorldMainNode->get_global_transform();
+	//		viewer->set_global_transform(gt);
+	//		//viewer->init();
+	//	}
+
+	//	m_initialized = true;
+	//	m_initInProgress = false;
+
+	//	PLOGI << "TheWorld Main Node Initialized!";
+	//}
 }
 
 bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 {
+	assert(!m_initialized);
+	
 	// Must exist a Spatial Node acting as the world; globals and the viewer will be a child of it
 	if (!pWorldMainNode)
 		return false;
 
 	pWorldMainNode->add_child(this);
+
+	m_initInProgress = true;
 
 	GDN_TheWorld_Globals* globals = GDN_TheWorld_Globals::_new();
 	if (globals)
@@ -105,6 +142,7 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 	else
 		return false;
 
+	m_initInProgress = false;
 	m_initialized = true;
 	PLOGI << "TheWorld Main Node Initialized!";
 

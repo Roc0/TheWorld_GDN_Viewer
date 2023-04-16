@@ -26,35 +26,35 @@ namespace godot
 	class Quad;
 	class QuadTree;
 
-	class GDN_Chunk_MeshInstance : public MeshInstance
-	{
-		GODOT_CLASS(GDN_Chunk_MeshInstance, MeshInstance)
+	//class GDN_Chunk_MeshInstance : public MeshInstance
+	//{
+	//	GODOT_CLASS(GDN_Chunk_MeshInstance, MeshInstance)
 
-	public:
-		GDN_Chunk_MeshInstance();
-		~GDN_Chunk_MeshInstance();
-		void init(Chunk* chunk);
-		void deinit(void);
+	//public:
+	//	GDN_Chunk_MeshInstance();
+	//	~GDN_Chunk_MeshInstance();
+	//	void init(Chunk* chunk);
+	//	void deinit(void);
 
-		static void _register_methods();
+	//	static void _register_methods();
 
-		//
-		// Godot Standard Functions
-		//
-		void _init(void); // our initializer called by Godot
-		void _ready(void);
-		void _process(float _delta);
-		void _input(const godot::Ref<godot::InputEvent> event);
+	//	//
+	//	// Godot Standard Functions
+	//	//
+	//	void _init(void); // our initializer called by Godot
+	//	void _ready(void);
+	//	void _process(float _delta);
+	//	void _input(const godot::Ref<godot::InputEvent> event);
 
-		int getLod(void);
-		int getSlotPosX(void);
-		int getSlotPosZ(void);
-		String getIdStr(void);
+	//	int getLod(void);
+	//	int getSlotPosX(void);
+	//	int getSlotPosZ(void);
+	//	String getIdStr(void);
 
-	private:
-		bool m_initialized;
-		Chunk* m_chunk;
-	};
+	//private:
+	//	bool m_initialized;
+	//	Chunk* m_chunk;
+	//};
 
 	enum class PosInQuad
 	{
@@ -562,7 +562,7 @@ namespace godot
 		void setMesh(Ref<Mesh> mesh);
 
 	protected:
-		GDN_Chunk_MeshInstance* m_meshInstance;
+		//GDN_Chunk_MeshInstance* m_meshInstance;
 		enum PosInQuad m_posInQuad;
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
