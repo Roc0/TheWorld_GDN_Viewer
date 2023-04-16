@@ -138,6 +138,9 @@
       <AdditionalLibraryDirectories>$(MSBuildProjectDirectory)\..\godot-cpp\bin;$(SolutionDir)x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>libgodot-cpp.windows.debug.64.lib;TheWorld_MapManager_d.lib;TheWorld_Utils_d.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y ..\x64\*.dll ..\..\TheWorld_Viewer\godot_proj\addons\twviewer\native</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>

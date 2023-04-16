@@ -40,7 +40,9 @@ void GDN_TheWorld_MainNode::_init(void)
 
 void GDN_TheWorld_MainNode::_ready(void)
 {
-	Globals()->debugPrint("GDN_TheWorld_MainNode::_ready");
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals != nullptr)
+		globals->debugPrint("GDN_TheWorld_MainNode::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 }
 
@@ -80,6 +82,7 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 	GDN_TheWorld_Globals* globals = GDN_TheWorld_Globals::_new();
 	if (globals)
 	{
+		Node* parent = globals->get_parent();
 		pWorldMainNode->add_child(globals);
 		globals->set_name(THEWORLD_GLOBALS_NODE_NAME);
 		globals->init();
