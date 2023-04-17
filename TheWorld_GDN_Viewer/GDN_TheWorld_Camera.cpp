@@ -11,6 +11,7 @@
 #include <InputEventMouseMotion.hpp>
 #include <Viewport.hpp>
 #include <ArrayMesh.hpp>
+#include <Engine.hpp>
 
 using namespace godot;
 
@@ -196,20 +197,23 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	else
 		m_shiftVertCameraOn = false;
 
-	if (input->is_action_pressed("ui_shift"))
-		m_shiftPressed = true;
-	else
-		m_shiftPressed = false;
-	
-	if (input->is_action_pressed("ui_ctrl"))
-		m_ctrlPressed = true;
-	else
-		m_ctrlPressed = false;
+	if (!godot::Engine::get_singleton()->is_editor_hint())
+	{
+		if (input->is_action_pressed("ui_shift"))
+			m_shiftPressed = true;
+		else
+			m_shiftPressed = false;
 
-	if (input->is_action_pressed("ui_alt"))
-		m_altPressed = true;
-	else
-		m_altPressed = false;
+		if (input->is_action_pressed("ui_ctrl"))
+			m_ctrlPressed = true;
+		else
+			m_ctrlPressed = false;
+
+		if (input->is_action_pressed("ui_alt"))
+			m_altPressed = true;
+		else
+			m_altPressed = false;
+	}
 
 	if (input->is_action_pressed("ui_forward") /* && !m_altPressed*/)
 	{

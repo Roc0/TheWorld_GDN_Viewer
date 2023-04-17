@@ -2050,20 +2050,23 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 
 	Input* input = Input::get_singleton();
 
-	if (input->is_action_pressed("ui_shift"))
-		m_shiftPressed = true;
-	else
-		m_shiftPressed = false;
+	if (!godot::Engine::get_singleton()->is_editor_hint())
+	{
+		if (input->is_action_pressed("ui_shift"))
+			m_shiftPressed = true;
+		else
+			m_shiftPressed = false;
 
-	if (input->is_action_pressed("ui_ctrl"))
-		m_ctrlPressed = true;
-	else
-		m_ctrlPressed = false;
+		if (input->is_action_pressed("ui_ctrl"))
+			m_ctrlPressed = true;
+		else
+			m_ctrlPressed = false;
 
-	if (input->is_action_pressed("ui_alt"))
-		m_altPressed = true;
-	else
-		m_altPressed = false;
+		if (input->is_action_pressed("ui_alt"))
+			m_altPressed = true;
+		else
+			m_altPressed = false;
+	}
 }
 
 void GDN_TheWorld_Viewer::getAllQuadrantPos(std::vector<QuadrantPos>& allQuandrantPos)
