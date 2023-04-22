@@ -329,7 +329,8 @@ namespace godot
 	void GDN_TheWorld_Globals::disconnectFromServer(void)
 	{
 		if ((int)status() < (int)TheWorldStatus::connectedToServer)
-			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Disconnect from server failed: not valid status, status=") + std::to_string((size_t)status())).c_str()));
+			return;
+			//throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Disconnect from server failed: not valid status, status=") + std::to_string((size_t)status())).c_str()));
 
 		if (m_client == nullptr)
 			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Disconnect from server failed: pointer to client is null").c_str())));

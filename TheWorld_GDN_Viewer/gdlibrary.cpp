@@ -29,6 +29,6 @@ extern "C" void GDN_EXPORT godot_nativescript_init(void* handle)
 	godot::register_tool_class<godot::GDN_TheWorld_Camera>();
 	//godot::register_class<godot::GDN_Chunk_MeshInstance>();
 	godot::register_tool_class<godot::GDN_TheWorld_Quadrant>();
-	godot::register_tool_class<godot::GDN_Collider_MeshInstance>();
+	//godot::register_tool_class<godot::GDN_Collider_MeshInstance>();
 	godot::register_tool_class<godot::GDN_TheWorld_Edit>();
 }

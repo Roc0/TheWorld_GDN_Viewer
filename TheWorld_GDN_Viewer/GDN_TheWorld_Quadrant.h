@@ -7,29 +7,29 @@ namespace godot
 {
 	class QuadTree;
 
-	class GDN_Collider_MeshInstance : public MeshInstance
-	{
-		GODOT_CLASS(GDN_Collider_MeshInstance, MeshInstance)
+	//class GDN_Collider_MeshInstance : public MeshInstance
+	//{
+	//	GODOT_CLASS(GDN_Collider_MeshInstance, MeshInstance)
 
-	public:
-		GDN_Collider_MeshInstance();
-		~GDN_Collider_MeshInstance();
-		void init(void);
-		void deinit(void);
+	//public:
+	//	GDN_Collider_MeshInstance();
+	//	~GDN_Collider_MeshInstance();
+	//	void init(void);
+	//	void deinit(void);
 
-		static void _register_methods();
+	//	static void _register_methods();
 
-		//
-		// Godot Standard Functions
-		//
-		void _init(void); // our initializer called by Godot
-		void _ready(void);
-		void _process(float _delta);
-		void _input(const Ref<InputEvent> event);
+	//	//
+	//	// Godot Standard Functions
+	//	//
+	//	void _init(void); // our initializer called by Godot
+	//	void _ready(void);
+	//	void _process(float _delta);
+	//	void _input(const Ref<InputEvent> event);
 
-	private:
-		bool m_initialized;
-	};
+	//private:
+	//	bool m_initialized;
+	//};
 
 	class GDN_TheWorld_Quadrant : public Spatial
 	{

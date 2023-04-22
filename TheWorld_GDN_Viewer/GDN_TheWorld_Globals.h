@@ -27,6 +27,7 @@
 #define DEFAULT_DEBUG_ENABLED			true
 
 #define THEWORLD_EDIT_MODE_UI_CONTROL_NAME	"EditModeUI"
+#define THEWORLD_MAIN_NODE_NAME				"GDN_TheWorld_Main"
 #define THEWORLD_GLOBALS_NODE_NAME			"GDN_TheWorld_Globals"
 #define THEWORLD_VIEWER_NODE_NAME			"GDN_TheWorld_Viewer"
 
@@ -176,6 +177,8 @@ namespace godot
 			register_method("get_grid_step_in_wu", &GDN_TheWorld_Globals::gridStepInHeightmapWUs);
 
 			register_method("viewer", &GDN_TheWorld_Globals::Viewer);
+
+			register_signal<GDN_TheWorld_Globals>((char*)"tw_status_changed", "old_value", GODOT_VARIANT_TYPE_INT, "new_value", GODOT_VARIANT_TYPE_INT);
 		}
 
 		enum class TheWorldStatus status(void)
@@ -191,13 +194,15 @@ namespace godot
 			if (m_statusChangeClock.counterStarted() && statusChanged)
 			{
 				m_statusChangeClock.tock();
-				infoPrint((std::string("Status changed: ") + statusStr(m_status) + std::string(" ==> ") + statusStr(status) + std::string(" (") + std::to_string(m_statusChangeClock.duration().count()) + std::string(" ms)")).c_str());
+				infoPrint((std::string("Status changed: ") + statusStr(m_status) + std::string("(") + std::to_string((int)m_status) + std::string(") ==> ") + statusStr(status) + std::string("(") + std::to_string((int)status) + std::string(") (") + std::to_string(m_statusChangeClock.duration().count()) + std::string(" ms)")).c_str());
 			}
 			
-			m_status = status;
-			
 			if (statusChanged)
+			{
+				emit_signal("tw_status_changed", (int)m_status, (int)status);
+				m_status = status;
 				m_statusChangeClock.tick();
+			}
 		}
 		int get_status(void)
 		{

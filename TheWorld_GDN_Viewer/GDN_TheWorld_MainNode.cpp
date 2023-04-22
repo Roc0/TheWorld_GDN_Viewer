@@ -25,7 +25,6 @@ GDN_TheWorld_MainNode::GDN_TheWorld_MainNode()
 	m_initialized = false;
 	m_initInProgress = false;
 	m_globals = NULL;
-	//m_temp = NULL;
 }
 
 GDN_TheWorld_MainNode::~GDN_TheWorld_MainNode()
@@ -113,6 +112,15 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 		return false;
 
 	pWorldMainNode->add_child(this);
+	set_name(THEWORLD_MAIN_NODE_NAME);
+
+	SceneTree* scene = get_tree();
+	Node* sceneRoot = nullptr;
+	if (scene != nullptr)
+		sceneRoot = scene->get_edited_scene_root();
+
+	if (sceneRoot != nullptr)
+		set_owner(sceneRoot);
 
 	m_initInProgress = true;
 
@@ -123,7 +131,8 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 		pWorldMainNode->add_child(globals);
 		globals->set_name(THEWORLD_GLOBALS_NODE_NAME);
 		globals->init();
-		//m_globals = globals;
+		if (sceneRoot != nullptr)
+			globals->set_owner(sceneRoot);
 	}
 	else
 		return false;
@@ -137,7 +146,8 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 		viewer->set_name(THEWORLD_VIEWER_NODE_NAME);
 		Transform gt = pWorldMainNode->get_global_transform();
 		viewer->set_global_transform(gt);
-		//viewer->init();
+		if (sceneRoot != nullptr)
+			viewer->set_owner(sceneRoot);
 	}
 	else
 		return false;
@@ -188,37 +198,27 @@ void GDN_TheWorld_MainNode::deinit(void)
 	{
 		PLOGI << "TheWorld Main Node Deinitializing...";
 
-		//if (m_temp)
-		//{
-		//	Node* parent = m_temp->get_parent();
-		//	if (parent)
-		//		parent->remove_child(m_temp);
-		//	m_temp->deinit();
-		//	m_temp->queue_free();
-		//	m_temp = NULL;
-		//}
-
 		GDN_TheWorld_Globals* globals = Globals();
 		if (globals)
 		{
 			GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
 			if (viewer)
 			{
+				viewer->deinit();
 				Node* parent = viewer->get_parent();
 				if (parent)
 					parent->remove_child(viewer);
-				viewer->deinit();
+				viewer->set_owner(nullptr);
 				viewer->queue_free();
-				//viewer->call_deferred("free");
 			}
 			PLOGI << "TheWorld Main Node Deinitialized!";
 
+			globals->deinit();
 			Node* parent = globals->get_parent();
 			if (parent)
 				parent->remove_child(globals);
-			globals->deinit();
+			globals->set_owner(nullptr);
 			globals->queue_free();
-			//globals->call_deferred("free");
 		}
 
 		m_initialized = false;
@@ -230,6 +230,7 @@ void GDN_TheWorld_MainNode::deinit(void)
 		{
 			parent->remove_child(this);
 		}
+		set_owner(nullptr);
 	}
 }
 

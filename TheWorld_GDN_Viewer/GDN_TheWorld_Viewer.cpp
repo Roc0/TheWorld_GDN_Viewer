@@ -8,6 +8,7 @@
 #include <Engine.hpp>
 #include <World.hpp>
 #include <OS.hpp>
+#include <EditorInterface.hpp>
 #include <Input.hpp>
 #include <VisualServer.hpp>
 #include <ResourceLoader.hpp>
@@ -56,6 +57,12 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("_input", &GDN_TheWorld_Viewer::_input);
 	register_method("_notification", &GDN_TheWorld_Viewer::_notification);
 
+	register_method("debug_print", &GDN_TheWorld_Viewer::debugPrint);
+	register_method("error_print", &GDN_TheWorld_Globals::errorPrint);
+	register_method("warning_print", &GDN_TheWorld_Globals::warningPrint);
+	register_method("info_print", &GDN_TheWorld_Globals::infoPrint);
+	register_method("print", &GDN_TheWorld_Globals::print);
+	register_method("set_editor_interface", &GDN_TheWorld_Viewer::setEditorInterface);
 	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
 	register_method("initial_world_viewer_pos_set", &GDN_TheWorld_Viewer::initialWordlViewerPosSet);
 	register_method("dump_required", &GDN_TheWorld_Viewer::setDumpRequired);
@@ -175,6 +182,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numVisibleQuadrantOnPerimeter = -1;
 	m_numCacheQuadrantOnPerimeter = 0;
 	m_recalcQuadrantsInViewNeeded = false;
+	m_editorInterface = nullptr;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -489,14 +497,17 @@ void GDN_TheWorld_Viewer::_ready(void)
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 
 	// Camera stuff
-	if (WorldCamera())
+	if (!godot::Engine::get_singleton()->is_editor_hint())
 	{
-		WorldCamera()->deactivateCamera();
-		WorldCamera()->queue_free();
+		if (WorldCamera())
+		{
+			WorldCamera()->deactivateCamera();
+			WorldCamera()->queue_free();
+		}
+		assignWorldCamera(GDN_TheWorld_Camera::_new());
+		//getWorldNode()->add_child(WorldCamera());		// Viewer and WorldCamera are at the same level : both child of WorldNode
+		getWorldNode()->call_deferred("add_child", WorldCamera());
 	}
-	assignWorldCamera(GDN_TheWorld_Camera::_new());
-	//getWorldNode()->add_child(WorldCamera());		// Viewer and WorldCamera are at the same level : both child of WorldNode
-	getWorldNode()->call_deferred("add_child", WorldCamera());
 
 	//{
 	//	// Test performance memcpy
@@ -853,6 +864,13 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	vector<QuadrantPos> quadrantPosNeeded;
 	quadrantPosNeeded.push_back(cameraQuadrant);
 
+	if (godot::Engine::get_singleton()->is_editor_hint())
+	{
+		m_numVisibleQuadrantOnPerimeter = 1;
+		m_numCacheQuadrantOnPerimeter = 0;
+		return;
+	}
+	
 	//{
 	//	// calculate minimum distance of camera from quad tree borders
 	//	float minimunDistanceOfCameraFromBordersOfQuadrant = cameraPosGlobalCoord.x - cameraQuadrant.getLowerXGridVertex();
@@ -877,7 +895,7 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	//}
 	{
 		m_numVisibleQuadrantOnPerimeter = 3;
-		m_numCacheQuadrantOnPerimeter = 4;
+		m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter + 1;
 
 		//m_numVisibleQuadrantOnPerimeter = 0;	// SUPERDEBUGRIC only camera quadrant
 		//m_numCacheQuadrantOnPerimeter = 0;		// SUPERDEBUGRIC only camera quadrant
@@ -2041,6 +2059,9 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 
 void GDN_TheWorld_Viewer::_physics_process(float _delta)
 {
+	if (godot::Engine::get_singleton()->is_editor_hint())
+		return;
+
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
 		return;
@@ -2050,23 +2071,20 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 
 	Input* input = Input::get_singleton();
 
-	if (!godot::Engine::get_singleton()->is_editor_hint())
-	{
-		if (input->is_action_pressed("ui_shift"))
-			m_shiftPressed = true;
-		else
-			m_shiftPressed = false;
+	if (input->is_action_pressed("ui_shift"))
+		m_shiftPressed = true;
+	else
+		m_shiftPressed = false;
 
-		if (input->is_action_pressed("ui_ctrl"))
-			m_ctrlPressed = true;
-		else
-			m_ctrlPressed = false;
+	if (input->is_action_pressed("ui_ctrl"))
+		m_ctrlPressed = true;
+	else
+		m_ctrlPressed = false;
 
-		if (input->is_action_pressed("ui_alt"))
-			m_altPressed = true;
-		else
-			m_altPressed = false;
-	}
+	if (input->is_action_pressed("ui_alt"))
+		m_altPressed = true;
+	else
+		m_altPressed = false;
 }
 
 void GDN_TheWorld_Viewer::getAllQuadrantPos(std::vector<QuadrantPos>& allQuandrantPos)
@@ -2556,7 +2574,14 @@ void GDN_TheWorld_Viewer::createEditModeUI(void)
 	m_mtxQuadTreeAndMainProcessing.unlock();
 	if (editModeUIControl == nullptr)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Create Control error!").c_str()));
+
 	editModeUIControl->init(this);
+	SceneTree* scene = get_tree();
+	Node* sceneRoot = nullptr;
+	if (scene != nullptr)
+		sceneRoot = scene->get_edited_scene_root();
+	if (sceneRoot != nullptr)
+		editModeUIControl->set_owner(sceneRoot);
 }
 
 QuadrantPos GDN_TheWorld_Viewer::getQuadrantSelForEdit(QuadTree** quadTreeSel)
@@ -2638,6 +2663,22 @@ bool GDN_TheWorld_Viewer::terrainShiftPermitted(void)
 
 	return true;
 	return m_numinitializedQuadrant >= m_numQuadrant;
+}
+
+godot::Camera* GDN_TheWorld_Viewer::getEditorCamera(void)
+{
+	if (!godot::Engine::get_singleton()->is_editor_hint())
+		return nullptr;
+
+	Node* editorViepoert = m_editorInterface->get_editor_viewport();
+	
+	godot::Array allNodes;
+	//godot::Array children = get_tree()->get_root()->get_children();
+	//while (!children.empty())
+	//{
+	//	godot::Array childList;
+
+	//}
 }
 
 void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift)

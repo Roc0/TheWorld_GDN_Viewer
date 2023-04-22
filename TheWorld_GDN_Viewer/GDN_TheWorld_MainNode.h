@@ -40,7 +40,6 @@ namespace godot
 
 		// Node cache
 		GDN_TheWorld_Globals* m_globals;
-		//GDN_Template* m_temp;
 	};
 
 }

@@ -4,6 +4,7 @@
 #include <ResourceLoader.hpp>
 #include <InputEvent.hpp>
 #include <Camera.hpp>
+#include <Engine.hpp>
 
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Quadrant.h"
@@ -120,7 +121,16 @@ namespace godot
 	{
 		if (m_quadTree != nullptr)
 		{
-			Transform cameraTransform = m_quadTree->Viewer()->get_tree()->get_root()->get_camera()->get_global_transform();
+			if (godot::Engine::get_singleton()->is_editor_hint())
+			{
+				godot::Camera* editorCamera = m_quadTree->Viewer()->getEditorCamera();
+				return;
+			}
+			
+			godot::Viewport* viewport = m_quadTree->Viewer()->get_tree()->get_root();
+			godot::Camera* camera = m_quadTree->Viewer()->get_tree()->get_root()->get_camera();
+			Transform cameraTransform = camera->get_global_transform();
+			//Transform cameraTransform = m_quadTree->Viewer()->get_tree()->get_root()->get_camera()->get_global_transform();
 			if (cameraTransform != m_lastCameraTransform)
 			{
 				m_lastCameraTransform = cameraTransform;
@@ -256,56 +266,56 @@ namespace godot
 		//}
 	}
 
-	void GDN_Collider_MeshInstance::_register_methods()
-	{
-		register_method("_ready", &GDN_Collider_MeshInstance::_ready);
-		register_method("_process", &GDN_Collider_MeshInstance::_process);
-		register_method("_input", &GDN_Collider_MeshInstance::_input);
-	}
-
-	GDN_Collider_MeshInstance::GDN_Collider_MeshInstance()
-	{
-		m_initialized = false;
-	}
-
-	GDN_Collider_MeshInstance::~GDN_Collider_MeshInstance()
-	{
-		deinit();
-	}
-
-	void GDN_Collider_MeshInstance::init(void)
-	{
-		m_initialized = true;
-	}
-
-	void GDN_Collider_MeshInstance::deinit(void)
-	{
-		if (m_initialized)
-		{
-			m_initialized = false;
-		}
-	}
-
-	void GDN_Collider_MeshInstance::_init(void)
-	{
-		//Godot::print("GDN_Template::Init");
-	}
-
-	void GDN_Collider_MeshInstance::_ready(void)
-	{
-		//Godot::print("GDN_Template::_ready");
-		//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
-	}
-
-	void GDN_Collider_MeshInstance::_input(const Ref<InputEvent> event)
-	{
-	}
-
-	void GDN_Collider_MeshInstance::_process(float _delta)
-	{
-		// To activate _process method add this Node to a Godot Scene
-		//Godot::print("GDN_Template::_process");
-	}
+//	void GDN_Collider_MeshInstance::_register_methods()
+//	{
+//		register_method("_ready", &GDN_Collider_MeshInstance::_ready);
+//		register_method("_process", &GDN_Collider_MeshInstance::_process);
+//		register_method("_input", &GDN_Collider_MeshInstance::_input);
+//	}
+//
+//	GDN_Collider_MeshInstance::GDN_Collider_MeshInstance()
+//	{
+//		m_initialized = false;
+//	}
+//
+//	GDN_Collider_MeshInstance::~GDN_Collider_MeshInstance()
+//	{
+//		deinit();
+//	}
+//
+//	void GDN_Collider_MeshInstance::init(void)
+//	{
+//		m_initialized = true;
+//	}
+//
+//	void GDN_Collider_MeshInstance::deinit(void)
+//	{
+//		if (m_initialized)
+//		{
+//			m_initialized = false;
+//		}
+//	}
+//
+//	void GDN_Collider_MeshInstance::_init(void)
+//	{
+//		//Godot::print("GDN_Template::Init");
+//	}
+//
+//	void GDN_Collider_MeshInstance::_ready(void)
+//	{
+//		//Godot::print("GDN_Template::_ready");
+//		//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
+//	}
+//
+//	void GDN_Collider_MeshInstance::_input(const Ref<InputEvent> event)
+//	{
+//	}
+//
+//	void GDN_Collider_MeshInstance::_process(float _delta)
+//	{
+//		// To activate _process method add this Node to a Godot Scene
+//		//Godot::print("GDN_Template::_process");
+//	}
 }
 
 void GDN_TheWorld_Quadrant_showCollider_makeIndices(godot::PoolIntArray& indices, int numVerticesPerSide)

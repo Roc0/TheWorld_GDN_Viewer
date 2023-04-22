@@ -8,6 +8,7 @@
 #include <ShaderMaterial.hpp>
 #include <Image.hpp>
 #include <Texture.hpp>
+#include <EditorPlugin.hpp>
 
 #include <map>
 #include <memory>
@@ -94,7 +95,31 @@ namespace godot
 		void _notification(int p_what);
 		void _process_impl(float _delta, GDN_TheWorld_Camera* activeCamera);
 
-
+		void debugPrint(String message)
+		{
+			Globals()->debugPrint(message);
+		}
+		void errorPrint(String message)
+		{
+			Globals()->errorPrint(message);
+		}
+		void warningPrint(String message)
+		{
+			Globals()->warningPrint(message);
+		}
+		void infoPrint(String message)
+		{
+			Globals()->infoPrint(message);
+		}
+		void print(String message)
+		{
+			Globals()->print(message);
+		}
+		void setEditorInterface(godot::Node* editorInterface)
+		{
+			m_editorInterface = (godot::EditorInterface*)editorInterface;
+		}
+		godot::Camera* getEditorCamera(void);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		godot::GDN_TheWorld_Edit* EditModeUIControl(bool useCache = true);
 		void createEditModeUI(void);
@@ -384,6 +409,9 @@ namespace godot
 		std::thread m_streamerThread;
 		bool m_streamerThreadRequiredExit;
 		bool m_streamerThreadRunning;
+
+		// Editor stuff
+		godot::EditorInterface* m_editorInterface;
 	};
 
 }
