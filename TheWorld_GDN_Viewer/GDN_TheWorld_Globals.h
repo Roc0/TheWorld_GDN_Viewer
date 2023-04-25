@@ -267,45 +267,49 @@ namespace godot
 		void _input(const Ref<InputEvent> event);
 		void _notification(int p_what);
 
-		void debugPrint(String message)
+		void debugPrint(String message, bool godotPrint = true)
 		{
 			if (m_isDebugEnabled)
 			{
 				String msg = "DEBUG - " + message;
-				Godot::print(msg);
+				if (godotPrint)
+					Godot::print(msg);
 				char* m = msg.alloc_c_string();
 				PLOGD << m;
 				godot::api->godot_free(m);
 			}
 		}
 
-		void warningPrint(String message)
+		void warningPrint(String message, bool godotPrint = true)
 		{
 			String msg = "WARNING - " + message;
-			Godot::print(msg);
+			if (godotPrint)
+				Godot::print(msg);
 			char* m = msg.alloc_c_string();
 			PLOGW << m;
 			godot::api->godot_free(m);
 		}
 
-		void errorPrint(String message)
+		void errorPrint(String message, bool godotPrint = true)
 		{
 			String msg = "ERROR - " + message;
-			Godot::print(msg);
+			if (godotPrint)
+				Godot::print(msg);
 			char* m = msg.alloc_c_string();
 			PLOGE << m;
 			godot::api->godot_free(m);
 		}
 
-		void infoPrint(String message)
+		void infoPrint(String message, bool godotPrint = true)
 		{
 			String msg = "INFO - " + message;
-			GDN_TheWorld_Globals::print(msg);
+			GDN_TheWorld_Globals::print(msg, godotPrint);
 		}
 		
-		void print(String message)
+		void print(String message, bool godotPrint = true)
 		{
-			Godot::print(message);
+			if (godotPrint)
+				Godot::print(message);
 			char* m = message.alloc_c_string();
 			PLOGI << m;
 			godot::api->godot_free(m);
