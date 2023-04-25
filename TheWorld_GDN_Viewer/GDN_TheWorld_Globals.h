@@ -5,6 +5,7 @@
 #include <InputEvent.hpp>
 #include <SceneTree.hpp>
 #include <Viewport.hpp>
+#include <Engine.hpp>
 
 #include "assert.h"
 #include "vector"
@@ -271,7 +272,10 @@ namespace godot
 		{
 			if (m_isDebugEnabled)
 			{
-				String msg = "DEBUG - " + message;
+				String editor_string = "";
+				if (godot::Engine::get_singleton()->is_editor_hint())
+					editor_string = "***EDITOR*** ";
+				String msg = "DEBUG - " + editor_string + message;
 				if (godotPrint)
 					Godot::print(msg);
 				char* m = msg.alloc_c_string();
@@ -282,7 +286,10 @@ namespace godot
 
 		void warningPrint(String message, bool godotPrint = true)
 		{
-			String msg = "WARNING - " + message;
+			String editor_string = "";
+			if (godot::Engine::get_singleton()->is_editor_hint())
+				editor_string = "***EDITOR*** ";
+			String msg = "WARNING - " + editor_string + message;
 			if (godotPrint)
 				Godot::print(msg);
 			char* m = msg.alloc_c_string();
@@ -292,7 +299,10 @@ namespace godot
 
 		void errorPrint(String message, bool godotPrint = true)
 		{
-			String msg = "ERROR - " + message;
+			String editor_string = "";
+			if (godot::Engine::get_singleton()->is_editor_hint())
+				editor_string = "***EDITOR*** ";
+			String msg = "ERROR - " + editor_string + message;
 			if (godotPrint)
 				Godot::print(msg);
 			char* m = msg.alloc_c_string();
@@ -302,7 +312,10 @@ namespace godot
 
 		void infoPrint(String message, bool godotPrint = true)
 		{
-			String msg = "INFO - " + message;
+			String editor_string = "";
+			if (godot::Engine::get_singleton()->is_editor_hint())
+				editor_string = "***EDITOR*** ";
+			String msg = "INFO - " + editor_string + message;
 			GDN_TheWorld_Globals::print(msg, godotPrint);
 		}
 		
