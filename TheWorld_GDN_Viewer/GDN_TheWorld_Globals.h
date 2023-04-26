@@ -31,6 +31,7 @@
 #define THEWORLD_MAIN_NODE_NAME				"GDN_TheWorld_Main"
 #define THEWORLD_GLOBALS_NODE_NAME			"GDN_TheWorld_Globals"
 #define THEWORLD_VIEWER_NODE_NAME			"GDN_TheWorld_Viewer"
+#define THEWORLD_CAMERA_NODE_NAME			"GDN_TheWorld_Camera"
 
 namespace godot
 {

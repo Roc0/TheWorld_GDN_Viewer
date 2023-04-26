@@ -111,43 +111,84 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 	if (!pWorldMainNode)
 		return false;
 
-	pWorldMainNode->add_child(this);
+	int64_t worldMainNodeId = pWorldMainNode->get_instance_id();
+
+	godot::Node* parent = get_parent();
+	if (parent != nullptr)
+	{
+		int64_t parentId = parent->get_instance_id();
+		if (parentId != worldMainNodeId)
+		{
+			parent->remove_child(this);
+			pWorldMainNode->add_child(this);
+		}
+	}
+	else
+		pWorldMainNode->add_child(this);
+	
 	set_name(THEWORLD_MAIN_NODE_NAME);
 
 	SceneTree* scene = get_tree();
 	Node* sceneRoot = nullptr;
-	if (scene != nullptr)
+	if (godot::Engine::get_singleton()->is_editor_hint())
 		sceneRoot = scene->get_edited_scene_root();
+	else
+		sceneRoot = scene->get_root();
 
-	if (sceneRoot != nullptr)
-		set_owner(sceneRoot);
+	//if (sceneRoot != nullptr)	// outside the editor get_edited_scene_root returns null
+	//	set_owner(sceneRoot);
+
+	set_owner(sceneRoot);
 
 	m_initInProgress = true;
 
-	GDN_TheWorld_Globals* globals = GDN_TheWorld_Globals::_new();
+	GDN_TheWorld_Globals* globals = Globals(false);
+	if (globals == nullptr)
+		globals = GDN_TheWorld_Globals::_new();
 	if (globals)
 	{
 		Node* parent = globals->get_parent();
-		pWorldMainNode->add_child(globals);
+		if (parent != nullptr)
+		{
+			int64_t parentId = parent->get_instance_id();
+			if (parentId != worldMainNodeId)
+			{
+				parent->remove_child(globals);
+				pWorldMainNode->add_child(globals);
+			}
+		}
+		else
+			pWorldMainNode->add_child(globals);
 		globals->set_name(THEWORLD_GLOBALS_NODE_NAME);
 		globals->init();
-		if (sceneRoot != nullptr)
-			globals->set_owner(sceneRoot);
+		globals->set_owner(sceneRoot);
 	}
 	else
 		return false;
 
 	PLOGI << "TheWorld Main Node Initializing...";
 
-	GDN_TheWorld_Viewer* viewer = GDN_TheWorld_Viewer::_new();
+	GDN_TheWorld_Viewer* viewer = globals->Viewer(false);
+	if (viewer == nullptr)
+		viewer = GDN_TheWorld_Viewer::_new();
 	if (viewer)
 	{
-		pWorldMainNode->add_child(viewer);
+		Node* parent = viewer->get_parent();
+		if (parent != nullptr)
+		{
+			int64_t parentId = parent->get_instance_id();
+			if (parentId != worldMainNodeId)
+			{
+				parent->remove_child(viewer);
+				pWorldMainNode->add_child(viewer);
+			}
+		}
+		else
+			pWorldMainNode->add_child(viewer);
 		viewer->set_name(THEWORLD_VIEWER_NODE_NAME);
 		Transform gt = pWorldMainNode->get_global_transform();
 		viewer->set_global_transform(gt);
-		if (sceneRoot != nullptr)
-			viewer->set_owner(sceneRoot);
+		viewer->set_owner(sceneRoot);
 	}
 	else
 		return false;
@@ -209,7 +250,7 @@ void GDN_TheWorld_MainNode::deinit(void)
 				if (parent)
 					parent->remove_child(viewer);
 				viewer->set_owner(nullptr);
-				viewer->queue_free();
+				//viewer->queue_free();
 			}
 			PLOGI << "TheWorld Main Node Deinitialized!";
 
@@ -218,7 +259,7 @@ void GDN_TheWorld_MainNode::deinit(void)
 			if (parent)
 				parent->remove_child(globals);
 			globals->set_owner(nullptr);
-			globals->queue_free();
+			//globals->queue_free();
 		}
 
 		m_initialized = false;
@@ -227,9 +268,7 @@ void GDN_TheWorld_MainNode::deinit(void)
 
 		Node* parent = get_parent();
 		if (parent)
-		{
 			parent->remove_child(this);
-		}
 		set_owner(nullptr);
 	}
 }
