@@ -96,6 +96,7 @@ void GDN_TheWorld_Camera::_init()
 	//Godot::print("GDN_TheWorld_Camera::_init");
 
 	m_instanceId = get_instance_id();
+	set_name(THEWORLD_CAMERA_NODE_NAME);
 }
 
 void GDN_TheWorld_Camera::_ready()

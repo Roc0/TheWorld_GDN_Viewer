@@ -286,6 +286,7 @@ namespace godot
 	void GDN_TheWorld_Globals::_init(void)
 	{
 		//debugPrint("GDN_TheWorld_Globals::_init");
+		set_name(THEWORLD_GLOBALS_NODE_NAME);
 	}
 
 	void GDN_TheWorld_Globals::connectToServer(void)

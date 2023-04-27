@@ -27,11 +27,11 @@
 #define VISUAL_SERVER_WIREFRAME_MODE	true
 #define DEFAULT_DEBUG_ENABLED			true
 
-#define THEWORLD_EDIT_MODE_UI_CONTROL_NAME	"EditModeUI"
-#define THEWORLD_MAIN_NODE_NAME				"GDN_TheWorld_Main"
-#define THEWORLD_GLOBALS_NODE_NAME			"GDN_TheWorld_Globals"
-#define THEWORLD_VIEWER_NODE_NAME			"GDN_TheWorld_Viewer"
-#define THEWORLD_CAMERA_NODE_NAME			"GDN_TheWorld_Camera"
+#define THEWORLD_MAIN_NODE_NAME				"GDN_TW_Main"
+#define THEWORLD_GLOBALS_NODE_NAME			"GDN_TW_Globals"
+#define THEWORLD_VIEWER_NODE_NAME			"GDN_TW_Viewer"
+#define THEWORLD_CAMERA_NODE_NAME			"GDN_TW_Camera"
+#define THEWORLD_EDIT_MODE_UI_CONTROL_NAME	"GDN_TW_EditModeUI"
 
 namespace godot
 {

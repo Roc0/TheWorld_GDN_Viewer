@@ -1100,6 +1100,7 @@ void GDN_TheWorld_Edit::refreshNumToSaveUpload(size_t& numToSave, size_t& numToU
 void GDN_TheWorld_Edit::_init(void)
 {
 	//Godot::print("GDN_Template::Init");
+	set_name(THEWORLD_EDIT_MODE_UI_CONTROL_NAME);
 }
 
 void GDN_TheWorld_Edit::_ready(void)

@@ -479,6 +479,8 @@ void GDN_TheWorld_Viewer::_init(void)
 
 	if (VISUAL_SERVER_WIREFRAME_MODE)
 		VisualServer::get_singleton()->set_debug_generate_wireframes(true);
+
+	set_name(THEWORLD_VIEWER_NODE_NAME);
 }
 
 void GDN_TheWorld_Viewer::_ready(void)

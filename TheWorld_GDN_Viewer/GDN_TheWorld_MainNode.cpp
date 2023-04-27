@@ -36,6 +36,7 @@ void GDN_TheWorld_MainNode::_init(void)
 {
 	//Cannot find Globals pointer as current node is not yet in the scene
 	//Godot::print("GDN_TheWorld_MainNode::Init");
+	set_name(THEWORLD_MAIN_NODE_NAME);
 }
 
 void GDN_TheWorld_MainNode::_ready(void)
