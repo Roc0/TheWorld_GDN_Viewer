@@ -178,7 +178,8 @@ namespace godot
 		if (!m_initialized)
 			return;
 
-		m_cameraGlobalTranform = m_quadTree->Viewer()->get_tree()->get_root()->get_camera()->get_global_transform();
+		//m_cameraGlobalTranform = m_quadTree->Viewer()->get_tree()->get_root()->get_camera()->get_global_transform();
+		m_cameraGlobalTranform = m_quadTree->Viewer()->getCamera()->get_global_transform();
 		float colliderAltitude = getColliderAltitude();
 		Transform t = getTransform();
 		t.origin.y = colliderAltitude;
@@ -207,7 +208,7 @@ namespace godot
 		Transform igt = m_quadTree->getInternalGlobalTransform();
 		//float axisScaleFactr = sqrtf(powf(gridStepInWU, (float)2.0) / (float)2.0);
 		float axisScaleFactr = gridStepInWU;
-		Camera* cam = m_quadTree->Viewer()->get_tree()->get_root()->get_camera();
+		Camera* cam = m_quadTree->Viewer()->getCamera();
 		m_cameraGlobalTranform = cam->get_global_transform();
 		float colliderAltitude = getColliderAltitude();
 		//Vector3 centerOfQuadrant = igt.origin + 0.5 * Vector3(sizeInWU, 0, sizeInWU);

@@ -119,8 +119,10 @@ namespace godot
 		{
 			m_editorInterface = (godot::EditorInterface*)editorInterface;
 		}
-		godot::Camera* getEditorCamera(void);
+		godot::Camera* getCamera(void);
+		godot::Camera* getCameraInEditor(void);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
+		GDN_TheWorld_Camera* CameraNode(bool useCache = true);
 		godot::GDN_TheWorld_Edit* EditModeUIControl(bool useCache = true);
 		void createEditModeUI(void);
 		void resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift);
@@ -283,7 +285,16 @@ namespace godot
 			return m_mtxQuadTreeAndMainProcessing;
 		}
 
+		std::string to_string(godot::String s)
+		{
+			char* str = s.alloc_c_string();
+			std::string ret = str;
+			godot::api->godot_free(str);
+			return ret;
+		}
+
 	private:
+		void _findChildNodes(godot::Array& foundNodes, godot::Array& searchNodes, String searchClass);
 		void onTransformChanged(void);
 		GDN_TheWorld_Camera* WorldCamera(bool useCache = true)
 		{ 

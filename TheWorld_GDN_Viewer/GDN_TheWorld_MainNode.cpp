@@ -136,9 +136,6 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 	else
 		sceneRoot = scene->get_root();
 
-	//if (sceneRoot != nullptr)	// outside the editor get_edited_scene_root returns null
-	//	set_owner(sceneRoot);
-
 	set_owner(sceneRoot);
 
 	m_initInProgress = true;

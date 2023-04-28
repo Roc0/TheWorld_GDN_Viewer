@@ -369,6 +369,9 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 
 void GDN_TheWorld_Camera::activateCamera(void)
 {
+	if (godot::Engine::get_singleton()->is_editor_hint())
+		return;
+
 	if (!isActiveCamera())
 	{
 		GDN_TheWorld_Camera* activeCamera = (GDN_TheWorld_Camera*)getActiveCamera();
@@ -393,6 +396,9 @@ void GDN_TheWorld_Camera::activateCamera(void)
 
 void GDN_TheWorld_Camera::deactivateCamera(void)
 {
+	if (godot::Engine::get_singleton()->is_editor_hint())
+		return;
+
 	if (isActiveCamera())
 	{
 		clear_current(true);
@@ -458,7 +464,7 @@ bool GDN_TheWorld_Camera::initOtherEntityCamera(void)
 
 bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 {
-	set_name("WorldCamera");
+	//set_name("WorldCamera");
 
 	activateCamera();
 

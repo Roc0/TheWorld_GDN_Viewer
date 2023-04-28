@@ -121,14 +121,8 @@ namespace godot
 	{
 		if (m_quadTree != nullptr)
 		{
-			if (godot::Engine::get_singleton()->is_editor_hint())
-			{
-				godot::Camera* editorCamera = m_quadTree->Viewer()->getEditorCamera();
-				return;
-			}
-			
-			godot::Viewport* viewport = m_quadTree->Viewer()->get_tree()->get_root();
-			godot::Camera* camera = m_quadTree->Viewer()->get_tree()->get_root()->get_camera();
+			//godot::Viewport* viewport = m_quadTree->Viewer()->get_tree()->get_root();
+			godot::Camera* camera = m_quadTree->Viewer()->getCamera();
 			Transform cameraTransform = camera->get_global_transform();
 			//Transform cameraTransform = m_quadTree->Viewer()->get_tree()->get_root()->get_camera()->get_global_transform();
 			if (cameraTransform != m_lastCameraTransform)

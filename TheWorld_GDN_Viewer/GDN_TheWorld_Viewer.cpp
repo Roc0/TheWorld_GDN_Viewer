@@ -499,16 +499,32 @@ void GDN_TheWorld_Viewer::_ready(void)
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 
 	// Camera stuff
-	if (!godot::Engine::get_singleton()->is_editor_hint())
+	//if (!godot::Engine::get_singleton()->is_editor_hint())
 	{
-		if (WorldCamera())
-		{
-			WorldCamera()->deactivateCamera();
-			WorldCamera()->queue_free();
-		}
-		assignWorldCamera(GDN_TheWorld_Camera::_new());
+		//if (WorldCamera())
+		//{
+		//	WorldCamera()->deactivateCamera();
+		//	WorldCamera()->queue_free();
+		//}
+		//assignWorldCamera(GDN_TheWorld_Camera::_new());
+		
+		GDN_TheWorld_Camera* camera = CameraNode(false);
+		if (camera == nullptr)
+			camera = GDN_TheWorld_Camera::_new();
+		camera->set_name(THEWORLD_CAMERA_NODE_NAME);
+		assignWorldCamera(camera);
+
+		SceneTree* scene = get_tree();
+		Node* sceneRoot = nullptr;
+		if (godot::Engine::get_singleton()->is_editor_hint())
+			sceneRoot = scene->get_edited_scene_root();
+		else
+			sceneRoot = scene->get_root();
+
+		getWorldNode()->call_deferred("add_child", camera);
+		camera->call_deferred("set_owner", sceneRoot);
 		//getWorldNode()->add_child(WorldCamera());		// Viewer and WorldCamera are at the same level : both child of WorldNode
-		getWorldNode()->call_deferred("add_child", WorldCamera());
+		//set_owner(sceneRoot);
 	}
 
 	//{
@@ -2645,6 +2661,22 @@ GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
 	return m_globals;
 }
 
+GDN_TheWorld_Camera* GDN_TheWorld_Viewer::CameraNode(bool useCache)
+{
+	if (m_worldCamera == NULL || !useCache)
+	{
+		SceneTree* scene = get_tree();
+		if (!scene)
+			return NULL;
+		Viewport* root = scene->get_root();
+		if (!root)
+			return NULL;
+		m_worldCamera = Object::cast_to<GDN_TheWorld_Camera>(root->find_node(THEWORLD_CAMERA_NODE_NAME, true, false));
+	}
+
+	return m_worldCamera;
+}
+
 bool GDN_TheWorld_Viewer::terrainShiftPermitted(void)
 {
 	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
@@ -2667,20 +2699,50 @@ bool GDN_TheWorld_Viewer::terrainShiftPermitted(void)
 	return m_numinitializedQuadrant >= m_numQuadrant;
 }
 
-godot::Camera* GDN_TheWorld_Viewer::getEditorCamera(void)
+godot::Camera* GDN_TheWorld_Viewer::getCamera(void)
+{
+	if (godot::Engine::get_singleton()->is_editor_hint())
+		return getCameraInEditor();
+	else
+		return get_tree()->get_root()->get_camera();
+}
+
+godot::Camera* GDN_TheWorld_Viewer::getCameraInEditor(void)
 {
 	if (!godot::Engine::get_singleton()->is_editor_hint())
 		return nullptr;
 
+	godot::Camera* editorCamera = nullptr;
+
 	Node* editorViepoert = m_editorInterface->get_editor_viewport();
 	
-	godot::Array allNodes;
-	//godot::Array children = get_tree()->get_root()->get_children();
-	//while (!children.empty())
-	//{
-	//	godot::Array childList;
+	godot::Array foundNodes;
+	godot::Array children = get_tree()->get_edited_scene_root()->get_children();
+	int ___size = children.size();	// DEBUG
+	if (!children.empty())
+		_findChildNodes(foundNodes, children, "Camera");
 
-	//}
+	___size = foundNodes.size();	// DEBUG
+	if (!foundNodes.empty())
+		editorCamera = foundNodes[0];
+
+	return editorCamera;
+}
+
+void GDN_TheWorld_Viewer::_findChildNodes(godot::Array& foundNodes, godot::Array& searchNodes, String searchClass)
+{
+	for (int i = 0; i < searchNodes.size(); i++)
+	{
+		String className = ((Node*)searchNodes[i])->get_class();
+		std::string ___classsName = to_string(className);		// DEBUG
+		std::string ___nodeName = to_string(((Node*)searchNodes[i])->get_name());	// DEBUG
+		if (className == searchClass)
+			foundNodes.push_back(searchNodes[i]);
+		godot::Array children = ((Node*)searchNodes[i])->get_children();
+		int ___size = children.size();	// DEBUG
+		if (!children.empty())
+			_findChildNodes(foundNodes, children, searchClass);
+	}
 }
 
 void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift)
