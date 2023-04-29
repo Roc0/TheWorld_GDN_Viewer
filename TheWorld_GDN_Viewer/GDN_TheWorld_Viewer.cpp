@@ -521,10 +521,24 @@ void GDN_TheWorld_Viewer::_ready(void)
 		else
 			sceneRoot = scene->get_root();
 
-		getWorldNode()->call_deferred("add_child", camera);
+		int64_t worldMainNodeId = getWorldNode()->get_instance_id();
+
+		Node* parent = camera->get_parent();
+		if (parent != nullptr)
+		{
+			int64_t parentId = parent->get_instance_id();
+			if (parentId != worldMainNodeId)
+			{
+				parent->remove_child(camera);
+				getWorldNode()->call_deferred("add_child", camera);
+			}
+		}
+		else
+			getWorldNode()->call_deferred("add_child", camera);
+
 		camera->call_deferred("set_owner", sceneRoot);
-		//getWorldNode()->add_child(WorldCamera());		// Viewer and WorldCamera are at the same level : both child of WorldNode
-		//set_owner(sceneRoot);
+		//getWorldNode()->add_child(camera);		// Viewer and WorldCamera are at the same level : both child of WorldNode
+		//camera->set_owner(sceneRoot);
 	}
 
 	//{
@@ -1090,6 +1104,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	GDN_TheWorld_Camera* activeCamera = WorldCamera()->getActiveCamera();
 	if (!activeCamera)
 		return;
+
+	//return;
 
 	//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
 	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing, std::try_to_lock);
