@@ -228,7 +228,11 @@ namespace godot
 
 	void GDN_TheWorld_Globals::init(void)
 	{
-		string logPath = getModuleLoadPath() + "\\TheWorld_Viewer_log.txt";
+		string logPath;
+		if (godot::Engine::get_singleton()->is_editor_hint())
+			logPath = getModuleLoadPath() + "\\TheWorld_Viewer_EDITOR_log.txt";
+		else
+			logPath = getModuleLoadPath() + "\\TheWorld_Viewer_log.txt";
 		plog::Severity sev = PLOG_DEFAULT_LEVEL;
 		if (m_isDebugEnabled)
 			sev = PLOG_DEBUG_LEVEL;
@@ -239,13 +243,13 @@ namespace godot
 
 		TheWorld_Utils::Utils::plogInit(sev, plog::get());
 
-		PLOGI << "TheWorld Globals Initializing...";
+		PLOG_INFO << "TheWorld Globals Initializing...";
 
 		//setDebugEnabled(m_isDebugEnabled);
 
 		m_initialized = true;
 		setStatus(TheWorldStatus::initialized);
-		PLOGI << "TheWorld Globals Initialized!";
+		PLOG_INFO << "TheWorld Globals Initialized!";
 	}
 
 	void GDN_TheWorld_Globals::preDeinit(void)
@@ -261,9 +265,9 @@ namespace godot
 	{
 		if (m_initialized)
 		{
-			PLOGI << "TheWorld Globals Deinitializing...";
+			PLOG_INFO << "TheWorld Globals Deinitializing...";
 
-			PLOGI << "TheWorld Globals Deinitialized!";
+			PLOG_INFO << "TheWorld Globals Deinitialized!";
 
 			PLOG(plog::get()->getMaxSeverity()) << "*****************";
 			PLOG(plog::get()->getMaxSeverity()) << "Log Terminated!";

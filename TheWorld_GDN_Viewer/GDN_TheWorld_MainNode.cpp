@@ -85,7 +85,7 @@ void GDN_TheWorld_MainNode::_process(float _delta)
 	//		//m_globals = globals;
 	//	}
 
-	//	PLOGI << "TheWorld Main Node Initializing...";
+	//	PLOG_INFO << "TheWorld Main Node Initializing...";
 
 	//	GDN_TheWorld_Viewer* viewer = GDN_TheWorld_Viewer::_new();
 	//	if (viewer)
@@ -100,7 +100,7 @@ void GDN_TheWorld_MainNode::_process(float _delta)
 	//	m_initialized = true;
 	//	m_initInProgress = false;
 
-	//	PLOGI << "TheWorld Main Node Initialized!";
+	//	PLOG_INFO << "TheWorld Main Node Initialized!";
 	//}
 }
 
@@ -164,7 +164,7 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 	else
 		return false;
 
-	PLOGI << "TheWorld Main Node Initializing...";
+	PLOG_INFO << "TheWorld Main Node Initializing...";
 
 	GDN_TheWorld_Viewer* viewer = globals->Viewer(false);
 	if (viewer == nullptr)
@@ -193,7 +193,7 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 
 	m_initInProgress = false;
 	m_initialized = true;
-	PLOGI << "TheWorld Main Node Initialized!";
+	PLOG_INFO << "TheWorld Main Node Initialized!";
 
 	return true;
 }
@@ -235,7 +235,7 @@ void GDN_TheWorld_MainNode::deinit(void)
 {
 	if (m_initialized)
 	{
-		PLOGI << "TheWorld Main Node Deinitializing...";
+		PLOG_INFO << "TheWorld Main Node Deinitializing...";
 
 		GDN_TheWorld_Globals* globals = Globals();
 		if (globals)
@@ -250,7 +250,7 @@ void GDN_TheWorld_MainNode::deinit(void)
 				viewer->set_owner(nullptr);
 				//viewer->queue_free();
 			}
-			PLOGI << "TheWorld Main Node Deinitialized!";
+			PLOG_INFO << "TheWorld Main Node Deinitialized!";
 
 			globals->deinit();
 			Node* parent = globals->get_parent();

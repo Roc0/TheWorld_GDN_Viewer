@@ -192,7 +192,7 @@ GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
 
 bool GDN_TheWorld_Viewer::init(void)
 {
-	PLOGI << "TheWorld Viewer Initializing...";
+	PLOG_INFO << "TheWorld Viewer Initializing...";
 
 	m_meshCache = make_unique<MeshCache>(this);
 	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
@@ -202,7 +202,7 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_streamerThread = std::thread(&GDN_TheWorld_Viewer::streamer, this);
 
 	m_initialized = true;
-	PLOGI << "TheWorld Viewer Initialized!";
+	PLOG_INFO << "TheWorld Viewer Initialized!";
 
 	return true;
 }
@@ -223,7 +223,7 @@ void GDN_TheWorld_Viewer::deinit(void)
 {
 	if (m_initialized)
 	{
-		PLOGI << "TheWorld Viewer Deinitializing...";
+		PLOG_INFO << "TheWorld Viewer Deinitializing...";
 
 		m_streamerThreadRequiredExit = true;
 		if (m_streamerThread.joinable())
@@ -256,7 +256,7 @@ void GDN_TheWorld_Viewer::deinit(void)
 		}
 
 		m_initialized = false;
-		PLOGI << "TheWorld Viewer Deinitialized!";
+		PLOG_INFO << "TheWorld Viewer Deinitialized!";
 		
 		Globals()->debugPrint("GDN_TheWorld_Viewer::deinit DONE!");
 	}
@@ -494,6 +494,8 @@ void GDN_TheWorld_Viewer::_ready(void)
 
 	globals->debugPrint("GDN_TheWorld_Viewer::_ready");
 
+	set_notify_transform(true);
+	
 	//get_tree()->get_root()->connect("size_changed", this, "viewport_resizing");
 	
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
@@ -898,9 +900,8 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 
 	if (godot::Engine::get_singleton()->is_editor_hint())
 	{
-		m_numVisibleQuadrantOnPerimeter = 1;
+		m_numVisibleQuadrantOnPerimeter = 0;
 		m_numCacheQuadrantOnPerimeter = 0;
-		return;
 	}
 	
 	//{
@@ -925,6 +926,7 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	//			m_numVisibleQuadrantOnPerimeter = 3;
 	//	}
 	//}
+	if (!godot::Engine::get_singleton()->is_editor_hint())
 	{
 		m_numVisibleQuadrantOnPerimeter = 3;
 		m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter + 1;
@@ -1101,12 +1103,20 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	if (!WorldCamera() || !m_initialWordlViewerPosSet)
 		return;
 
-	GDN_TheWorld_Camera* activeCamera = WorldCamera()->getActiveCamera();
+	//GDN_TheWorld_Camera* activeCamera = nullptr;
+	godot::Camera* activeCamera = nullptr;
+	if (godot::Engine::get_singleton()->is_editor_hint())
+	{
+		activeCamera = getCamera();
+	}
+	else
+	{
+		activeCamera = WorldCamera()->getActiveCamera();
+	}
 	if (!activeCamera)
 		return;
 
-	//return;
-
+	
 	//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
 	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing, std::try_to_lock);
 	if (!lock.owns_lock())
@@ -1122,7 +1132,7 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	_process_impl(_delta, activeCamera);
 }
 
-void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activeCamera)
+void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 {
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
@@ -1981,6 +1991,8 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, GDN_TheWorld_Camera* activ
 		}
 	}
 
+	//return;
+
 	m_desideredLookDevChanged = false;
 
 	{
@@ -2730,10 +2742,11 @@ godot::Camera* GDN_TheWorld_Viewer::getCameraInEditor(void)
 
 	godot::Camera* editorCamera = nullptr;
 
-	Node* editorViepoert = m_editorInterface->get_editor_viewport();
+	Node* editorViewport = m_editorInterface->get_editor_viewport();
 	
 	godot::Array foundNodes;
-	godot::Array children = get_tree()->get_edited_scene_root()->get_children();
+	//godot::Array children = get_tree()->get_edited_scene_root()->get_children();
+	godot::Array children = editorViewport->get_children();
 	int ___size = children.size();	// DEBUG
 	if (!children.empty())
 		_findChildNodes(foundNodes, children, "Camera");
@@ -3304,7 +3317,7 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 
 		if (allQuadrantInitialized)
 		{
-			if (Globals()->status() == TheWorldStatus::worldDeployInProgress && ((m_numVisibleQuadrantOnPerimeter == 0 && m_mapQuadTree.size() == 1) || m_mapQuadTree.size() > 1))
+			if (Globals()->status() == TheWorldStatus::worldDeployInProgress && ((m_numVisibleQuadrantOnPerimeter == 1 && m_mapQuadTree.size() == 1) || m_mapQuadTree.size() > 1))
 				Globals()->setStatus(TheWorldStatus::worldDeployed);
 
 			if (m_streamingTime.counterStarted())

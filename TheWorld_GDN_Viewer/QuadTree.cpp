@@ -776,9 +776,15 @@ bool QuadTree::resetMaterialParams(bool force)
 	}
 	else if (materialParamsNeedReset() && !getQuadrant()->internalDataLocked())
 	{
-		getQuadrant()->getShaderTerrainData()->resetMaterialParams(m_lookDev);
-		materialParamsNeedReset(false);
-		reset = true;
+		if (status() == QuadrantStatus::getTerrainDataInProgress || status() == QuadrantStatus::uninitialized)
+		{
+		}
+		else
+		{
+			getQuadrant()->getShaderTerrainData()->resetMaterialParams(m_lookDev);
+			materialParamsNeedReset(false);
+			reset = true;
+		}
 	}
 
 	return reset;

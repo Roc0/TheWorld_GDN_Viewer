@@ -280,7 +280,7 @@ namespace godot
 				if (godotPrint)
 					Godot::print(msg);
 				char* m = msg.alloc_c_string();
-				PLOGD << m;
+				PLOG_DEBUG << m;
 				godot::api->godot_free(m);
 			}
 		}
@@ -294,7 +294,7 @@ namespace godot
 			if (godotPrint)
 				Godot::print(msg);
 			char* m = msg.alloc_c_string();
-			PLOGW << m;
+			PLOG_WARNING << m;
 			godot::api->godot_free(m);
 		}
 
@@ -307,7 +307,7 @@ namespace godot
 			if (godotPrint)
 				Godot::print(msg);
 			char* m = msg.alloc_c_string();
-			PLOGE << m;
+			PLOG_ERROR << m;
 			godot::api->godot_free(m);
 		}
 
@@ -325,7 +325,7 @@ namespace godot
 			if (godotPrint)
 				Godot::print(message);
 			char* m = message.alloc_c_string();
-			PLOGI << m;
+			PLOG_INFO << m;
 			godot::api->godot_free(m);
 		}
 
