@@ -178,7 +178,6 @@ namespace godot
 		if (!m_initialized)
 			return;
 
-		//m_cameraGlobalTranform = m_quadTree->Viewer()->get_tree()->get_root()->get_camera()->get_global_transform();
 		m_cameraGlobalTranform = m_quadTree->Viewer()->getCamera()->get_global_transform();
 		float colliderAltitude = getColliderAltitude();
 		Transform t = getTransform();

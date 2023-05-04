@@ -63,6 +63,11 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("info_print", &GDN_TheWorld_Globals::infoPrint);
 	register_method("print", &GDN_TheWorld_Globals::print);
 	register_method("set_editor_interface", &GDN_TheWorld_Viewer::setEditorInterface);
+	register_method("set_editor_camera", &GDN_TheWorld_Viewer::setEditorCamera);
+	register_method("set_depth_quad", &GDN_TheWorld_Viewer::setDepthQuadOnPerimeter);
+	register_method("get_depth_quad", &GDN_TheWorld_Viewer::getDepthQuadOnPerimeter);
+	register_method("set_cache_quad", &GDN_TheWorld_Viewer::setCacheQuadOnPerimeter);
+	register_method("get_cache_quad", &GDN_TheWorld_Viewer::getCacheQuadOnPerimeter);
 	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
 	register_method("initial_world_viewer_pos_set", &GDN_TheWorld_Viewer::initialWordlViewerPosSet);
 	register_method("dump_required", &GDN_TheWorld_Viewer::setDumpRequired);
@@ -183,6 +188,17 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numCacheQuadrantOnPerimeter = 0;
 	m_recalcQuadrantsInViewNeeded = false;
 	m_editorInterface = nullptr;
+	m_editorCamera = nullptr;
+	if (godot::Engine::get_singleton()->is_editor_hint())
+	{
+		m_depthQuadOnPerimeter = 1;
+		m_cacheQuadOnPerimeter = 1;
+	}
+	else
+	{
+		m_depthQuadOnPerimeter = 3;
+		m_cacheQuadOnPerimeter = 1;
+	}
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -889,6 +905,34 @@ String GDN_TheWorld_Viewer::getChunkDebugModeStr(void)
 		return "";
 }
 
+void GDN_TheWorld_Viewer::setDepthQuadOnPerimeter(int depth)
+{
+	if (depth >= 0 && depth <= MAX_DEPTH_ON_PERIMETER)
+	{
+		m_depthQuadOnPerimeter = depth;
+		m_recalcQuadrantsInViewNeeded = true;
+	}
+}
+
+int GDN_TheWorld_Viewer::getDepthQuadOnPerimeter(void)
+{
+	return (int)m_depthQuadOnPerimeter;
+}
+
+void GDN_TheWorld_Viewer::setCacheQuadOnPerimeter(int cache)
+{
+	if (cache >= 0 && cache <= MAX_CACHE_ON_PERIMETER)
+	{
+		m_cacheQuadOnPerimeter = cache;
+		m_recalcQuadrantsInViewNeeded = true;
+	}
+}
+
+int GDN_TheWorld_Viewer::getCacheQuadOnPerimeter(void)
+{
+	return (int)m_cacheQuadOnPerimeter;
+}
+
 void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 {
 	TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
@@ -900,8 +944,14 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 
 	if (godot::Engine::get_singleton()->is_editor_hint())
 	{
-		m_numVisibleQuadrantOnPerimeter = 0;
-		m_numCacheQuadrantOnPerimeter = 0;
+		m_numVisibleQuadrantOnPerimeter = getDepthQuadOnPerimeter();
+		m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter + getCacheQuadOnPerimeter();
+
+		//m_numVisibleQuadrantOnPerimeter = 0;	// SUPERDEBUGRIC only camera quadrant
+		//m_numCacheQuadrantOnPerimeter = 0;		// SUPERDEBUGRIC only camera quadrant
+
+		//m_numVisibleQuadrantOnPerimeter = 1;	// SUPERDEBUGRIC only camera quadrant & 1 surrounding
+		//m_numCacheQuadrantOnPerimeter = 1;		// SUPERDEBUGRIC only camera quadrant & 1 surrounding
 	}
 	
 	//{
@@ -928,8 +978,11 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	//}
 	if (!godot::Engine::get_singleton()->is_editor_hint())
 	{
-		m_numVisibleQuadrantOnPerimeter = 3;
-		m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter + 1;
+		m_numVisibleQuadrantOnPerimeter = getDepthQuadOnPerimeter();
+		m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter + getCacheQuadOnPerimeter();
+
+		//m_numVisibleQuadrantOnPerimeter = 3;
+		//m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter + 1;
 
 		//m_numVisibleQuadrantOnPerimeter = 0;	// SUPERDEBUGRIC only camera quadrant
 		//m_numCacheQuadrantOnPerimeter = 0;		// SUPERDEBUGRIC only camera quadrant
@@ -2735,11 +2788,19 @@ godot::Camera* GDN_TheWorld_Viewer::getCamera(void)
 		return get_tree()->get_root()->get_camera();
 }
 
+void GDN_TheWorld_Viewer::setEditorCamera(godot::Camera* editorCamera)
+{
+	m_editorCamera = editorCamera;
+}
+
 godot::Camera* GDN_TheWorld_Viewer::getCameraInEditor(void)
 {
 	if (!godot::Engine::get_singleton()->is_editor_hint())
 		return nullptr;
 
+	if (m_editorCamera != nullptr)
+		return m_editorCamera;
+	
 	godot::Camera* editorCamera = nullptr;
 
 	Node* editorViewport = m_editorInterface->get_editor_viewport();

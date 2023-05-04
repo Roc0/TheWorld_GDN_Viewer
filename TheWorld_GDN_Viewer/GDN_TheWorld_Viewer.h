@@ -18,6 +18,9 @@
 #include "QuadTree.h"
 //#include <MapManager.h>
 
+#define MAX_DEPTH_ON_PERIMETER	3
+#define MAX_CACHE_ON_PERIMETER	2
+
 namespace godot
 {
 	class MeshCache;
@@ -121,6 +124,11 @@ namespace godot
 		}
 		godot::Camera* getCamera(void);
 		godot::Camera* getCameraInEditor(void);
+		void setEditorCamera(godot::Camera* editorCamera);
+		void setDepthQuadOnPerimeter(int depth);
+		int getDepthQuadOnPerimeter(void);
+		void setCacheQuadOnPerimeter(int cache);
+		int getCacheQuadOnPerimeter(void);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		GDN_TheWorld_Camera* CameraNode(bool useCache = true);
 		godot::GDN_TheWorld_Edit* EditModeUIControl(bool useCache = true);
@@ -308,6 +316,7 @@ namespace godot
 		void streamer(void);
 		void streamingQuadrantStuff(void);
 		QuadrantPos getQuadrantSelForEdit(QuadTree** quadTreeSel);
+		godot::Camera* m_editorCamera;
 
 	private:
 		bool m_initialized;
@@ -423,6 +432,8 @@ namespace godot
 
 		// Editor stuff
 		godot::EditorInterface* m_editorInterface;
+		size_t m_depthQuadOnPerimeter;
+		size_t m_cacheQuadOnPerimeter;
 	};
 
 }
