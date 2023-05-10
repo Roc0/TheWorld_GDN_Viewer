@@ -47,6 +47,7 @@ void GDN_TheWorld_Edit::_register_methods()
 	register_method("edit_mode_sel_lookdev", &GDN_TheWorld_Edit::editModeSelectLookDevAction);
 	register_method("mouse_entered_main_panel", &GDN_TheWorld_Edit::editModeMouseEnteredMainPanel);
 	register_method("mouse_exited_main_panel", &GDN_TheWorld_Edit::editModeMouseExitedMainPanel);
+	register_method("mouse_exited_main_panel", &GDN_TheWorld_Edit::control_need_resize);
 }
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
@@ -795,8 +796,24 @@ void GDN_TheWorld_Edit::setSizeUI(void)
 	set_anchor(GDN_TheWorld_Edit::Margin::MARGIN_RIGHT, 1.0);
 	set_margin(GDN_TheWorld_Edit::Margin::MARGIN_RIGHT, 0.0);
 	set_margin(GDN_TheWorld_Edit::Margin::MARGIN_TOP, 0.0);
-	set_margin(GDN_TheWorld_Edit::Margin::MARGIN_LEFT, get_viewport()->get_size().x - 350);
 	set_margin(GDN_TheWorld_Edit::Margin::MARGIN_BOTTOM, 0.0);
+
+	if (godot::Engine::get_singleton()->is_editor_hint())
+	{
+		std::string classsName;
+		godot::Node* parent = get_parent();
+		if (parent != nullptr)
+		{
+			godot::String s = parent->get_class();
+			classsName = m_viewer->to_string(s);
+		}
+		if (classsName == "Control")
+			set_margin(GDN_TheWorld_Edit::Margin::MARGIN_LEFT, ((godot::Control*)get_parent())->get_size().x - 350);
+		else
+			set_margin(GDN_TheWorld_Edit::Margin::MARGIN_LEFT, get_viewport()->get_size().x - 350);
+	}
+	else
+		set_margin(GDN_TheWorld_Edit::Margin::MARGIN_LEFT, get_viewport()->get_size().x - 350);
 }
 
 void GDN_TheWorld_Edit::setEmptyTerrainEditValues(void)
@@ -1134,6 +1151,13 @@ void GDN_TheWorld_Edit::_ready(void)
 {
 	//Godot::print("GDN_Template::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
+
+	//get_tree()->get_root()->connect("size_changed", this, "control_need_resize");
+}
+
+void GDN_TheWorld_Edit::control_need_resize(void)
+{
+	setSizeUI();
 }
 
 void GDN_TheWorld_Edit::_input(const Ref<InputEvent> event)
@@ -1144,6 +1168,22 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 {
 	switch (p_what)
 	{
+	case NOTIFICATION_ENTER_TREE:
+	{
+		std::string classsName;
+		godot::Node* parent = get_parent();
+		if (parent != nullptr)
+		{
+			godot::String s = parent->get_class();
+			classsName = m_viewer->to_string(s);
+		}
+		if (godot::Engine::get_singleton()->is_editor_hint())
+		{
+			if (classsName == "Control")
+				parent->connect("size_changed", this, "control_need_resize");
+		}
+	}
+	break;
 	case NOTIFICATION_RESIZED:
 	{
 		setSizeUI();

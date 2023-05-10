@@ -62,6 +62,7 @@ namespace godot
 		{
 			return m_initialized;
 		}
+		void control_need_resize(void);
 		void editModeNoisePanel(void);
 		void setSizeUI(void);
 		void editModeGenerateAction(void);
