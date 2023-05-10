@@ -243,7 +243,6 @@ void GDN_TheWorld_Edit::setUIAcceptFocus(bool b)
 
 void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 {
-	m_initialized = true;
 	m_viewer = viewer;
 
 	//TheWorld_Utils::WorldModifierPos pos(0, 4096, 4096, TheWorld_Utils::WMType::elevator, 0);
@@ -252,9 +251,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 
 	std::lock_guard<std::recursive_mutex> lock(m_viewer->getMainProcessingMutex());
 
+	//if (!godot::Engine::get_singleton()->is_editor_hint())
 	m_viewer->add_child(this);
 	set_name(THEWORLD_EDIT_MODE_UI_CONTROL_NAME);
-	resizeUI();
+	//setSizeUI();
+
+	//const Color self_modulate = get_self_modulate();
+	const Color self_modulate(1.0f, 1.0f, 1.0f, 0.5f);
 
 	//godot::Control* marginContainer = nullptr;
 	//godot::Control* vBoxContainer = nullptr;
@@ -270,12 +273,15 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	add_child(m_mainPanelContainer);
 	m_mainPanelContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
 	m_mainPanelContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
+	//m_mainPanelContainer->set_self_modulate(Color(1.0f, 1.0f, 1.0f, 0.5f));
+	m_mainPanelContainer->set_self_modulate(self_modulate);
 
 	m_mainTabContainer = godot::TabContainer::_new();
 	m_mainTabContainer->set_name("EditModeTab");
 	m_mainPanelContainer->add_child(m_mainTabContainer);
 	m_mainTabContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
 	m_mainTabContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
+	m_mainTabContainer->set_self_modulate(self_modulate);
 
 	//godot::Control* mainPanelContainer = godot::PanelContainer::_new();
 	//mainPanelContainer->set_name("Terrain");
@@ -286,11 +292,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_mainTabContainer->add_child(mainVBoxContainer);
 		//mainVBoxContainer->connect("mouse_entered", this, "mouse_entered_main_panel");
 		//mainVBoxContainer->connect("mouse_exited", this, "mouse_exited_main_panel");
+		mainVBoxContainer->set_self_modulate(self_modulate);
 
 			separator = HSeparator::_new();
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = godot::HBoxContainer::_new();
 			mainVBoxContainer->add_child(hBoxContainer);
@@ -302,9 +310,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				button->connect("mouse_exited", this, "mouse_exited_main_panel");
 				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 				separator = VSeparator::_new();
+				separator->set_self_modulate(self_modulate);
 				hBoxContainer->add_child(separator);
 				separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 				separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+				separator->set_self_modulate(self_modulate);
 				button = godot::Button::_new();
 				hBoxContainer->add_child(button);
 				button->set_text("Gen. Normals");
@@ -330,6 +340,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+			separator->set_self_modulate(self_modulate);
 
 			m_noiseButton = godot::Button::_new();
 			mainVBoxContainer->add_child(m_noiseButton);
@@ -373,6 +384,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					hBoxContainer->add_child(separator);
 					separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 					separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+					separator->set_self_modulate(self_modulate);
 					button = godot::Button::_new();
 					hBoxContainer->add_child(button);
 					button->set_text("Generate");
@@ -381,9 +393,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					button->connect("mouse_exited", this, "mouse_exited_main_panel");
 					button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 					separator = VSeparator::_new();
+					separator->set_self_modulate(self_modulate);
 					hBoxContainer->add_child(separator);
 					separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 					separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+					separator->set_self_modulate(self_modulate);
 
 				hBoxContainer = godot::HBoxContainer::_new();
 				m_noiseVBoxContainer->add_child(hBoxContainer);
@@ -514,6 +528,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = godot::HBoxContainer::_new();
 			mainVBoxContainer->add_child(hBoxContainer);
@@ -537,6 +552,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = godot::HBoxContainer::_new();
 			mainVBoxContainer->add_child(hBoxContainer);
@@ -591,6 +607,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = godot::HBoxContainer::_new();
 			mainVBoxContainer->add_child(hBoxContainer);
@@ -666,6 +683,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = godot::HBoxContainer::_new();
 			mainVBoxContainer->add_child(hBoxContainer);
@@ -696,6 +714,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = godot::HBoxContainer::_new();
 			mainVBoxContainer->add_child(hBoxContainer);
@@ -707,9 +726,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				button->connect("mouse_exited", this, "mouse_exited_main_panel");
 				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 				separator = VSeparator::_new();
+				separator->set_self_modulate(self_modulate);
 				hBoxContainer->add_child(separator);
 				separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 				separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+				separator->set_self_modulate(self_modulate);
 				button = godot::Button::_new();
 				hBoxContainer->add_child(button);
 				button->set_text("Upload");
@@ -718,9 +739,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				button->connect("mouse_exited", this, "mouse_exited_main_panel");
 				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 				separator = VSeparator::_new();
+				separator->set_self_modulate(self_modulate);
 				hBoxContainer->add_child(separator);
 				separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 				separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+				separator->set_self_modulate(self_modulate);
 				button = godot::Button::_new();
 				hBoxContainer->add_child(button);
 				button->set_text("Stop");
@@ -733,6 +756,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = godot::HBoxContainer::_new();
 			mainVBoxContainer->add_child(hBoxContainer);
@@ -746,12 +770,15 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", this, "mouse_entered_main_panel");
 			separator->connect("mouse_exited", this, "mouse_exited_main_panel");
+			separator->set_self_modulate(self_modulate);
 
 			size_t numToSave = 0;
 			size_t numToUpload = 0;
 			refreshNumToSaveUpload(numToSave, numToUpload);
 
 			m_tp.Start("EditModeWorker", 1, this);
+
+			m_initialized = true;
 }
 
 void GDN_TheWorld_Edit::deinit(void)
@@ -763,7 +790,7 @@ void GDN_TheWorld_Edit::deinit(void)
 	}
 }
 
-void GDN_TheWorld_Edit::resizeUI(void)
+void GDN_TheWorld_Edit::setSizeUI(void)
 {
 	set_anchor(GDN_TheWorld_Edit::Margin::MARGIN_RIGHT, 1.0);
 	set_margin(GDN_TheWorld_Edit::Margin::MARGIN_RIGHT, 0.0);
@@ -1119,7 +1146,7 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 	{
 	case NOTIFICATION_RESIZED:
 	{
-		resizeUI();
+		setSizeUI();
 	}
 	break;
 	}
@@ -1143,6 +1170,9 @@ void GDN_TheWorld_Edit::_process(float _delta)
 
 	//	viewportTransform = m_mainTabContainer->get_viewport_transform();
 	//}
+
+	if (!m_initialized)
+		return;
 
 	if (m_viewer->editMode() && (!m_refreshUI.counterStarted() || m_refreshUI.partialDuration().count() > 1000))
 	{

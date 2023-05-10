@@ -58,9 +58,12 @@ namespace godot
 		//	return String("Test, {0} {1} {2}!").format(Array::make(target1, target2, target3)); 
 		//};
 
+		bool initilized(void)
+		{
+			return m_initialized;
+		}
 		void editModeNoisePanel(void);
-
-		void resizeUI(void);
+		void setSizeUI(void);
 		void editModeGenerateAction(void);
 		void editModeBlendAction(void);
 		void editModeGenNormalsAction(void);

@@ -64,6 +64,10 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("print", &GDN_TheWorld_Globals::print);
 	register_method("set_editor_interface", &GDN_TheWorld_Viewer::setEditorInterface);
 	register_method("set_editor_camera", &GDN_TheWorld_Viewer::setEditorCamera);
+	register_method("get_camera", &GDN_TheWorld_Viewer::getCamera);
+	register_method("get_or_create_edit_mode_ui_control", &GDN_TheWorld_Viewer::getOrCreateEditModeUIControl);
+	register_method("toggle_track_mouse", &GDN_TheWorld_Viewer::toggleTrackMouse);
+	register_method("toggle_edit_mode", &GDN_TheWorld_Viewer::toggleEditMode);
 	register_method("set_depth_quad", &GDN_TheWorld_Viewer::setDepthQuadOnPerimeter);
 	register_method("get_depth_quad", &GDN_TheWorld_Viewer::getDepthQuadOnPerimeter);
 	register_method("set_cache_quad", &GDN_TheWorld_Viewer::setCacheQuadOnPerimeter);
@@ -168,7 +172,6 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_debugContentVisibility = true;
 	m_trackMouse = false;
 	m_editMode = false;
-	m_editModeHudVisible = false;
 	m_timeElapsedFromLastMouseTrack = 0;
 	m_mouseQuadrantHitSize = 0;
 	m_mouseHitChunk = nullptr;
@@ -268,7 +271,7 @@ void GDN_TheWorld_Viewer::deinit(void)
 		if (editModeUIControl != nullptr)
 		{
 			editModeUIControl->deinit();
-			editModeUIControl->queue_free();
+			//editModeUIControl->queue_free();
 		}
 
 		m_initialized = false;
@@ -467,7 +470,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 		else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER)
 		{
 			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
-			if (editModeUIControl != nullptr)
+			if (editModeUIControl != nullptr && editModeUIControl->initilized())
 				editModeUIControl->replyFromServer(reply);
 		}
 		else
@@ -555,8 +558,8 @@ void GDN_TheWorld_Viewer::_ready(void)
 			getWorldNode()->call_deferred("add_child", camera);
 
 		camera->call_deferred("set_owner", sceneRoot);
-		//getWorldNode()->add_child(camera);		// Viewer and WorldCamera are at the same level : both child of WorldNode
-		//camera->set_owner(sceneRoot);
+
+		godot::Control* control = getOrCreateEditModeUIControl();
 	}
 
 	//{
@@ -636,13 +639,11 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 			}
 
 			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
-			if (editModeUIControl == nullptr)
+			if (editModeUIControl == nullptr || !editModeUIControl->initilized())
 			{
 				createEditModeUI();
 				editModeUIControl = EditModeUIControl();
 				editModeUIControl->set_visible(false);
-				m_editModeHudVisible = false;
-
 			}
 			if (editModeUIControl != nullptr /* && m_editMode*/)
 			{
@@ -692,19 +693,12 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 
 	if (event->is_action_pressed("ui_toggle_track_mouse"))
 	{
-		if (!m_editMode)
-			m_trackMouse = !m_trackMouse;
-		if (m_trackMouse)
-			m_mouseQuadrantHitName = "";
+		toggleTrackMouse();
 	}
 
 	if (event->is_action_pressed("ui_toggle_edit_mode"))
 	{
-		m_editMode = !m_editMode;
-		if (m_editMode)
-			m_trackMouse = true;
-		else
-			m_trackMouse = false;
+		toggleEditMode();
 	}
 
 	if (event->is_action_pressed("ui_toggle_debug_visibility"))
@@ -737,6 +731,23 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 	{
 		m_refreshRequired = true;
 	}
+}
+
+void GDN_TheWorld_Viewer::toggleTrackMouse(void)
+{
+	if (!m_editMode)
+		m_trackMouse = !m_trackMouse;
+	if (m_trackMouse)
+		m_mouseQuadrantHitName = "";
+}
+
+void GDN_TheWorld_Viewer::toggleEditMode(void)
+{
+	m_editMode = !m_editMode;
+	if (m_editMode)
+		m_trackMouse = true;
+	else
+		m_trackMouse = false;
 }
 
 void GDN_TheWorld_Viewer::printKeyboardMapping(void)
@@ -1185,6 +1196,23 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 	_process_impl(_delta, activeCamera);
 }
 
+godot::Control* GDN_TheWorld_Viewer::getOrCreateEditModeUIControl(void)
+{
+	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+	if (editModeUIControl == nullptr || !editModeUIControl->initilized())
+	{
+		createEditModeUI();
+		editModeUIControl = EditModeUIControl();
+
+		if (m_editMode)
+			editModeUIControl->set_visible(true);
+		else
+			editModeUIControl->set_visible(false);
+	}
+
+	return editModeUIControl;
+}
+
 void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 {
 	GDN_TheWorld_Globals* globals = Globals();
@@ -1215,27 +1243,20 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 		m_firstProcess = false;
 	}
 
-	if (m_editMode)
+	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+	if (editModeUIControl != nullptr && editModeUIControl->initilized())
 	{
-		if (!m_editModeHudVisible)
+		if (m_editMode)
 		{
-			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
-			if (editModeUIControl == nullptr)
-			{
-				createEditModeUI();
-				editModeUIControl = EditModeUIControl();
-			}
-			editModeUIControl->set_visible(true);
-			m_editModeHudVisible = true;
+			if (!editModeUIControl->is_visible())
+				editModeUIControl->set_visible(true);
+		}
+		else
+		{
+			if (editModeUIControl->is_visible())
+				editModeUIControl->set_visible(false);
 		}
 	}
-	else
-		if (m_editModeHudVisible)
-		{
-			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
-			editModeUIControl->set_visible(false);
-			m_editModeHudVisible = false;
-		}
 	
 	// erasing out-of-view quadrants
 	{
@@ -1349,7 +1370,7 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 				if (rayArray.has("position"))
 				{
 					m_mouseHit = rayArray["position"];
-					if (editModeUIControl && m_editMode)
+					if (m_editMode && editModeUIControl && editModeUIControl->initilized())
 						editModeUIControl->setMouseHitLabelText(std::string("X=") + std::to_string(m_mouseHit.x) + " Y=" + std::to_string(m_mouseHit.y) + " Z=" + std::to_string(m_mouseHit.z));
 				}
 
@@ -1382,7 +1403,7 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 							if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 								mouseQuadrantHitTag = it->second->getTag();
 
-							if (editModeUIControl != nullptr && m_editMode)
+							if (m_editMode && editModeUIControl && editModeUIControl->initilized())
 							{
 
 								editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
@@ -2158,8 +2179,8 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 
 void GDN_TheWorld_Viewer::_physics_process(float _delta)
 {
-	if (godot::Engine::get_singleton()->is_editor_hint())
-		return;
+	//if (godot::Engine::get_singleton()->is_editor_hint())
+	//	return;
 
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
@@ -2170,20 +2191,27 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 
 	Input* input = Input::get_singleton();
 
-	if (input->is_action_pressed("ui_shift"))
-		m_shiftPressed = true;
-	else
-		m_shiftPressed = false;
+	if (godot::Engine::get_singleton()->is_editor_hint())
+	{
 
-	if (input->is_action_pressed("ui_ctrl"))
-		m_ctrlPressed = true;
+	}
 	else
-		m_ctrlPressed = false;
+	{
+		if (input->is_action_pressed("ui_shift"))
+			m_shiftPressed = true;
+		else
+			m_shiftPressed = false;
 
-	if (input->is_action_pressed("ui_alt"))
-		m_altPressed = true;
-	else
-		m_altPressed = false;
+		if (input->is_action_pressed("ui_ctrl"))
+			m_ctrlPressed = true;
+		else
+			m_ctrlPressed = false;
+
+		if (input->is_action_pressed("ui_alt"))
+			m_altPressed = true;
+		else
+			m_altPressed = false;
+	}
 }
 
 void GDN_TheWorld_Viewer::getAllQuadrantPos(std::vector<QuadrantPos>& allQuandrantPos)
@@ -2664,23 +2692,26 @@ Chunk* GDN_TheWorld_Viewer::getActiveChunkAt(Chunk* chunk, enum class Chunk::Dir
 
 void GDN_TheWorld_Viewer::createEditModeUI(void)
 {
-	GDN_TheWorld_Edit* _editModeUIControl = EditModeUIControl();
-	if (_editModeUIControl != nullptr)
-		return;
-
-	m_mtxQuadTreeAndMainProcessing.lock();
-	GDN_TheWorld_Edit* editModeUIControl = GDN_TheWorld_Edit::_new();
-	m_mtxQuadTreeAndMainProcessing.unlock();
+	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
 	if (editModeUIControl == nullptr)
-		throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Create Control error!").c_str()));
+	{
+		m_mtxQuadTreeAndMainProcessing.lock();
+		editModeUIControl = GDN_TheWorld_Edit::_new();
+		m_mtxQuadTreeAndMainProcessing.unlock();
+		if (editModeUIControl == nullptr)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Create Control error!").c_str()));
+	}
 
-	editModeUIControl->init(this);
-	SceneTree* scene = get_tree();
-	Node* sceneRoot = nullptr;
-	if (scene != nullptr)
-		sceneRoot = scene->get_edited_scene_root();
-	if (sceneRoot != nullptr)
-		editModeUIControl->set_owner(sceneRoot);
+	if (!editModeUIControl->initilized())
+	{
+		editModeUIControl->init(this);
+		//SceneTree* scene = get_tree();
+		//Node* sceneRoot = nullptr;
+		//if (scene != nullptr)
+		//	sceneRoot = scene->get_edited_scene_root();
+		//if (sceneRoot != nullptr)
+		//	editModeUIControl->set_owner(sceneRoot);
+	}
 }
 
 QuadrantPos GDN_TheWorld_Viewer::getQuadrantSelForEdit(QuadTree** quadTreeSel)
@@ -2762,7 +2793,7 @@ bool GDN_TheWorld_Viewer::terrainShiftPermitted(void)
 {
 	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
 
-	if (editModeUIControl == nullptr)
+	if (editModeUIControl == nullptr || !editModeUIControl->initilized())
 		return true;
 	else
 	{

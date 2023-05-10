@@ -122,6 +122,8 @@ namespace godot
 		{
 			m_editorInterface = (godot::EditorInterface*)editorInterface;
 		}
+		void toggleTrackMouse(void);
+		void toggleEditMode(void);
 		godot::Camera* getCamera(void);
 		godot::Camera* getCameraInEditor(void);
 		void setEditorCamera(godot::Camera* editorCamera);
@@ -132,6 +134,7 @@ namespace godot
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		GDN_TheWorld_Camera* CameraNode(bool useCache = true);
 		godot::GDN_TheWorld_Edit* EditModeUIControl(bool useCache = true);
+		godot::Control* getOrCreateEditModeUIControl(void);
 		void createEditModeUI(void);
 		void resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift);
 		bool initialWordlViewerPosSet(void)
@@ -375,7 +378,6 @@ namespace godot
 
 		bool m_trackMouse;
 		bool m_editMode;
-		bool m_editModeHudVisible;
 		int64_t m_timeElapsedFromLastMouseTrack;
 		godot::Vector3 m_mouseHit;
 		std::string m_mouseQuadrantHitName;
