@@ -47,7 +47,7 @@ void GDN_TheWorld_Edit::_register_methods()
 	register_method("edit_mode_sel_lookdev", &GDN_TheWorld_Edit::editModeSelectLookDevAction);
 	register_method("mouse_entered_main_panel", &GDN_TheWorld_Edit::editModeMouseEnteredMainPanel);
 	register_method("mouse_exited_main_panel", &GDN_TheWorld_Edit::editModeMouseExitedMainPanel);
-	register_method("mouse_exited_main_panel", &GDN_TheWorld_Edit::control_need_resize);
+	register_method("control_need_resize", &GDN_TheWorld_Edit::setSizeUI);
 }
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
@@ -1152,13 +1152,13 @@ void GDN_TheWorld_Edit::_ready(void)
 	//Godot::print("GDN_Template::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 
-	//get_tree()->get_root()->connect("size_changed", this, "control_need_resize");
+	//get_tree()->get_root()->connect("size_changed", this, "setSizeUI");
 }
 
-void GDN_TheWorld_Edit::control_need_resize(void)
-{
-	setSizeUI();
-}
+//void GDN_TheWorld_Edit::controlNeedResize(void)
+//{
+//	setSizeUI();
+//}
 
 void GDN_TheWorld_Edit::_input(const Ref<InputEvent> event)
 {
@@ -1180,7 +1180,10 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 		if (godot::Engine::get_singleton()->is_editor_hint())
 		{
 			if (classsName == "Control")
-				parent->connect("size_changed", this, "control_need_resize");
+			{
+				//godot::Error e = parent->connect("size_changed", this, "setSizeUI");
+				//std::string s = "";
+			}
 		}
 	}
 	break;
