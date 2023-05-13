@@ -246,7 +246,10 @@ void GDN_TheWorld_MainNode::deinit(void)
 				viewer->deinit();
 				Node* parent = viewer->get_parent();
 				if (parent)
-					parent->remove_child(viewer);
+				{
+					parent->call_deferred("remove_child", viewer);
+					//parent->remove_child(viewer);
+				}
 				viewer->set_owner(nullptr);
 				//viewer->queue_free();
 			}
@@ -255,7 +258,10 @@ void GDN_TheWorld_MainNode::deinit(void)
 			globals->deinit();
 			Node* parent = globals->get_parent();
 			if (parent)
-				parent->remove_child(globals);
+			{
+				parent->call_deferred("remove_child", globals);
+				//parent->remove_child(globals);
+			}
 			globals->set_owner(nullptr);
 			//globals->queue_free();
 		}
@@ -266,7 +272,10 @@ void GDN_TheWorld_MainNode::deinit(void)
 
 		Node* parent = get_parent();
 		if (parent)
-			parent->remove_child(this);
+		{
+			parent->call_deferred("remove_child", this);
+			//parent->remove_child(this);
+		}
 		set_owner(nullptr);
 	}
 }

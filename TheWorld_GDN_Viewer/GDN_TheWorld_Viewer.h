@@ -124,6 +124,11 @@ namespace godot
 		}
 		void toggleTrackMouse(void);
 		void toggleEditMode(void);
+		bool getTrackMouseState(void)
+		{
+			return m_trackMouse;
+		}
+		void toggleQuadrantSelected(void);
 		godot::Camera* getCamera(void);
 		godot::Camera* getCameraInEditor(void);
 		void setEditorCamera(godot::Camera* editorCamera);

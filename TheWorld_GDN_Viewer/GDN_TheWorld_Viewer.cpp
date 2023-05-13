@@ -67,7 +67,9 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_camera", &GDN_TheWorld_Viewer::getCamera);
 	register_method("get_or_create_edit_mode_ui_control", &GDN_TheWorld_Viewer::getOrCreateEditModeUIControl);
 	register_method("toggle_track_mouse", &GDN_TheWorld_Viewer::toggleTrackMouse);
+	register_method("get_track_mouse_state", &GDN_TheWorld_Viewer::getTrackMouseState);
 	register_method("toggle_edit_mode", &GDN_TheWorld_Viewer::toggleEditMode);
+	register_method("toggle_quadrant_selected", &GDN_TheWorld_Viewer::toggleQuadrantSelected);
 	register_method("set_depth_quad", &GDN_TheWorld_Viewer::setDepthQuadOnPerimeter);
 	register_method("get_depth_quad", &GDN_TheWorld_Viewer::getDepthQuadOnPerimeter);
 	register_method("set_cache_quad", &GDN_TheWorld_Viewer::setCacheQuadOnPerimeter);
@@ -589,6 +591,99 @@ void GDN_TheWorld_Viewer::_ready(void)
 	//}
 }
 
+void GDN_TheWorld_Viewer::toggleQuadrantSelected(void)
+{
+	if (m_trackMouse)
+	{
+		m_mouseQuadrantHitName = "";
+
+		QuadTree* quadTreeSel = nullptr;
+		if (m_quadrantSelPos.empty())
+		{
+			if (!m_quadrantHitPos.empty())
+			{
+				m_quadrantSelPos = m_quadrantHitPos;
+
+				{
+					std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+					MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
+					if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+					{
+						quadTreeSel = it->second.get();
+						it->second->setEditModeSel(true);
+						it->second->materialParamsNeedReset(true);
+					}
+				}
+			}
+		}
+		else
+		{
+			{
+				std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+				MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
+				if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+				{
+					it->second->setEditModeSel(false);
+					it->second->materialParamsNeedReset(true);
+				}
+			}
+
+			m_quadrantSelPos.reset();
+		}
+
+		GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+		if (editModeUIControl == nullptr || !editModeUIControl->initilized())
+		{
+			createEditModeUI();
+			editModeUIControl = EditModeUIControl();
+			editModeUIControl->set_visible(false);
+		}
+		if (editModeUIControl != nullptr /* && m_editMode*/)
+		{
+			if (m_quadrantSelPos.empty())
+			{
+				editModeUIControl->setMouseQuadSelLabelText("");
+				editModeUIControl->setMouseQuadSelPosLabelText("");
+				editModeUIControl->setEmptyTerrainEditValues();
+				editModeUIControl->setElapsed(0, false);
+			}
+			else
+			{
+				editModeUIControl->setMouseQuadSelLabelText(m_quadrantSelPos.getName() + " " + m_quadrantSelPos.getTag());
+				editModeUIControl->setMouseQuadSelPosLabelText(std::string("X=") + std::to_string(m_quadrantSelPos.getLowerXGridVertex()) + " Z=" + std::to_string(m_quadrantSelPos.getLowerZGridVertex()) + " " + std::to_string(m_quadrantSelPos.getSizeInWU()));
+				if (quadTreeSel != nullptr)
+				{
+					TheWorld_Utils::TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
+
+					TheWorld_Utils::TerrainEdit* northSideTerrainEdit = nullptr;
+					QuadrantPos pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::NorthZMinus);
+					QuadTree* q = getQuadTree(pos);
+					if (q != nullptr && !q->getQuadrant()->empty())
+						northSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+					TheWorld_Utils::TerrainEdit* southSideTerrainEdit = nullptr;
+					pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::SouthZPlus);
+					q = getQuadTree(pos);
+					if (q != nullptr && !q->getQuadrant()->empty())
+						southSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+					TheWorld_Utils::TerrainEdit* westSideTerrainEdit = nullptr;
+					pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::WestXMinus);
+					q = getQuadTree(pos);
+					if (q != nullptr && !q->getQuadrant()->empty())
+						westSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+					TheWorld_Utils::TerrainEdit* eastSideTerrainEdit = nullptr;
+					pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::EastXPlus);
+					q = getQuadTree(pos);
+					if (q != nullptr && !q->getQuadrant()->empty())
+						eastSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
+					terrainEdit->adjustValues(northSideTerrainEdit, southSideTerrainEdit, westSideTerrainEdit, eastSideTerrainEdit);
+
+					editModeUIControl->setTerrainEditValues(*terrainEdit);
+				}
+			}
+		}
+	}
+}
+
 void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 {
 	GDN_TheWorld_Globals* globals = Globals();
@@ -600,95 +695,7 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 
 	if (event->is_action_pressed("ui_select") && m_altPressed)
 	{
-		if (m_trackMouse)
-		{
-			m_mouseQuadrantHitName = "";
-
-			QuadTree* quadTreeSel = nullptr;
-			if (m_quadrantSelPos.empty())
-			{
-				if (!m_quadrantHitPos.empty())
-				{
-					m_quadrantSelPos = m_quadrantHitPos;
-
-					{
-						std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-						MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
-						if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-						{
-							quadTreeSel = it->second.get();
-							it->second->setEditModeSel(true);
-							it->second->materialParamsNeedReset(true);
-						}
-					}
-				}
-			}
-			else
-			{
-				{
-					std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-					MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
-					if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-					{
-						it->second->setEditModeSel(false);
-						it->second->materialParamsNeedReset(true);
-					}
-				}
-
-				m_quadrantSelPos.reset();
-			}
-
-			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
-			if (editModeUIControl == nullptr || !editModeUIControl->initilized())
-			{
-				createEditModeUI();
-				editModeUIControl = EditModeUIControl();
-				editModeUIControl->set_visible(false);
-			}
-			if (editModeUIControl != nullptr /* && m_editMode*/)
-			{
-				if (m_quadrantSelPos.empty())
-				{
-					editModeUIControl->setMouseQuadSelLabelText("");
-					editModeUIControl->setMouseQuadSelPosLabelText("");
-					editModeUIControl->setEmptyTerrainEditValues();
-					editModeUIControl->setElapsed(0, false);
-				}
-				else
-				{
-					editModeUIControl->setMouseQuadSelLabelText(m_quadrantSelPos.getName() + " " + m_quadrantSelPos.getTag());
-					editModeUIControl->setMouseQuadSelPosLabelText(std::string("X=") + std::to_string(m_quadrantSelPos.getLowerXGridVertex()) + " Z=" + std::to_string(m_quadrantSelPos.getLowerZGridVertex()) + " " + std::to_string(m_quadrantSelPos.getSizeInWU()));
-					if (quadTreeSel != nullptr)
-					{
-						TheWorld_Utils::TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
-						
-						TheWorld_Utils::TerrainEdit* northSideTerrainEdit = nullptr;
-						QuadrantPos pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::NorthZMinus);
-						QuadTree* q = getQuadTree(pos);
-						if (q != nullptr && !q->getQuadrant()->empty())
-							northSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
-						TheWorld_Utils::TerrainEdit* southSideTerrainEdit = nullptr;
-						pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::SouthZPlus);
-						q = getQuadTree(pos);
-						if (q != nullptr && !q->getQuadrant()->empty())
-							southSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
-						TheWorld_Utils::TerrainEdit* westSideTerrainEdit = nullptr;
-						pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::WestXMinus);
-						q = getQuadTree(pos);
-						if (q != nullptr && !q->getQuadrant()->empty())
-							westSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
-						TheWorld_Utils::TerrainEdit* eastSideTerrainEdit = nullptr;
-						pos = m_quadrantSelPos.getQuadrantPos(QuadrantPos::DirectionSlot::EastXPlus);
-						q = getQuadTree(pos);
-						if (q != nullptr && !q->getQuadrant()->empty())
-							eastSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
-						terrainEdit->adjustValues(northSideTerrainEdit, southSideTerrainEdit, westSideTerrainEdit, eastSideTerrainEdit);
-
-						editModeUIControl->setTerrainEditValues(*terrainEdit);
-					}
-				}
-			}
-		}
+		toggleQuadrantSelected();
 	}
 
 	if (event->is_action_pressed("ui_toggle_track_mouse"))
@@ -1360,10 +1367,21 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 					});
 
 				godot::PhysicsDirectSpaceState* spaceState = get_world()->get_direct_space_state();
-				godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
-				godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
-				godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
-				godot::Dictionary rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
+				godot::Dictionary rayArray;
+				if (godot::Engine::get_singleton()->is_editor_hint() && m_editorInterface != nullptr)
+				{
+					godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
+					godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
+					godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
+					rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
+				}
+				else
+				{
+					godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
+					godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
+					godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
+					rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
+				}
 
 				GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
 
