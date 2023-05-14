@@ -21,6 +21,10 @@ namespace godot
 		bool canDeinit(void);
 		void deinit(void);
 		void _notification(int p_what);
+		bool initialized(void)
+		{
+			return m_initialized;
+		}
 
 		static void _register_methods();
 

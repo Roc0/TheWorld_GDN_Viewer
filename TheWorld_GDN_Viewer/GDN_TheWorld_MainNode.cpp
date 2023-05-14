@@ -18,6 +18,7 @@ void GDN_TheWorld_MainNode::_register_methods()
 	register_method("can_deinit", &GDN_TheWorld_MainNode::canDeinit);
 	register_method("deinit", &GDN_TheWorld_MainNode::deinit);
 	register_method("globals", &GDN_TheWorld_MainNode::Globals);
+	register_method("initialized", &GDN_TheWorld_MainNode::initialized);
 }
 
 GDN_TheWorld_MainNode::GDN_TheWorld_MainNode()
