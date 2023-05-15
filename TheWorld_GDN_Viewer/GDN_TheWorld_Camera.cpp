@@ -474,10 +474,10 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 	Vector3 lookAtGlobalCoord = lookAt + worldNodePosGlobalCoord;
 	Camera::look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
 
-	real_t z_near = Camera::get_znear();
-	real_t z_far = Camera::get_zfar();
-	real_t size = Camera::get_size();
-	Vector2 offset = Camera::get_frustum_offset();
+	//real_t z_near = Camera::get_znear();
+	//real_t z_far = Camera::get_zfar();
+	//real_t size = Camera::get_size();
+	//Vector2 offset = Camera::get_frustum_offset();
 
 	Camera::set_zfar(20000.0);
 

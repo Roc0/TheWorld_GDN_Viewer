@@ -65,6 +65,8 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("set_editor_interface", &GDN_TheWorld_Viewer::setEditorInterface);
 	register_method("set_editor_camera", &GDN_TheWorld_Viewer::setEditorCamera);
 	register_method("get_camera", &GDN_TheWorld_Viewer::getCamera);
+	register_method("get_info_camera", &GDN_TheWorld_Viewer::getInfoCamera);
+	register_method("get_camera_projection_mode", &GDN_TheWorld_Viewer::getCameraProjectionMode);
 	register_method("get_or_create_edit_mode_ui_control", &GDN_TheWorld_Viewer::getOrCreateEditModeUIControl);
 	register_method("toggle_track_mouse", &GDN_TheWorld_Viewer::toggleTrackMouse);
 	register_method("get_track_mouse_state", &GDN_TheWorld_Viewer::getTrackMouseState);
@@ -949,6 +951,41 @@ void GDN_TheWorld_Viewer::setCacheQuadOnPerimeter(int cache)
 int GDN_TheWorld_Viewer::getCacheQuadOnPerimeter(void)
 {
 	return (int)m_cacheQuadOnPerimeter;
+}
+
+String GDN_TheWorld_Viewer::getInfoCamera(void)
+{
+	godot::Camera* camera = getCamera();
+
+	if (camera == nullptr)
+		return "";
+
+	real_t z_near = camera->get_znear();
+	real_t z_far = camera->get_zfar();
+	real_t size = camera->get_size();
+	Vector2 offset = camera->get_frustum_offset();
+	real_t fov = camera->get_fov();
+	real_t h_offset = camera->get_h_offset();
+	real_t v_offset = camera->get_v_offset();
+	godot::Camera::KeepAspect keepAspect = camera->get_keep_aspect_mode();
+
+	std::string info;
+
+	info = "znear=" + std::to_string(z_near) + " zfar=" + std::to_string(z_far) + " size=" + std::to_string(size) + " offset=" + std::to_string(h_offset) + "," + std::to_string(v_offset) + " fov=" + std::to_string(fov) + " keep_aspect=" + std::to_string(int(keepAspect));
+
+	return info.c_str();
+}
+
+int GDN_TheWorld_Viewer::getCameraProjectionMode(void)
+{
+	godot::Camera* camera = getCamera();
+
+	if (camera == nullptr)
+		return -1;
+
+	godot::Camera::Projection projection = camera->get_projection();
+
+	return (int)projection;
 }
 
 void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)

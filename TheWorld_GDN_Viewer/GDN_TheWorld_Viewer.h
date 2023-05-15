@@ -136,6 +136,8 @@ namespace godot
 		int getDepthQuadOnPerimeter(void);
 		void setCacheQuadOnPerimeter(int cache);
 		int getCacheQuadOnPerimeter(void);
+		String getInfoCamera(void);
+		int getCameraProjectionMode(void);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		GDN_TheWorld_Camera* CameraNode(bool useCache = true);
 		godot::GDN_TheWorld_Edit* EditModeUIControl(bool useCache = true);
