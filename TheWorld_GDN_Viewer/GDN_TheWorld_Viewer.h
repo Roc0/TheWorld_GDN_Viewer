@@ -124,6 +124,9 @@ namespace godot
 		}
 		void toggleTrackMouse(void);
 		void toggleEditMode(void);
+		void toggleDebugVisibility(void);
+		void rotateChunkDebugMode(void);
+		void rotateDrawingMode(void);
 		bool getTrackMouseState(void)
 		{
 			return m_trackMouse;

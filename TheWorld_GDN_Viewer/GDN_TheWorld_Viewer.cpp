@@ -71,6 +71,9 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("toggle_track_mouse", &GDN_TheWorld_Viewer::toggleTrackMouse);
 	register_method("get_track_mouse_state", &GDN_TheWorld_Viewer::getTrackMouseState);
 	register_method("toggle_edit_mode", &GDN_TheWorld_Viewer::toggleEditMode);
+	register_method("toggle_debug_visibility", &GDN_TheWorld_Viewer::toggleDebugVisibility);
+	register_method("rotate_chunk_debug_mode", &GDN_TheWorld_Viewer::rotateChunkDebugMode);
+	register_method("rotate_drawing_mode", &GDN_TheWorld_Viewer::rotateDrawingMode);
 	register_method("toggle_quadrant_selected", &GDN_TheWorld_Viewer::toggleQuadrantSelected);
 	register_method("set_depth_quad", &GDN_TheWorld_Viewer::setDepthQuadOnPerimeter);
 	register_method("get_depth_quad", &GDN_TheWorld_Viewer::getDepthQuadOnPerimeter);
@@ -712,23 +715,17 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
 
 	if (event->is_action_pressed("ui_toggle_debug_visibility"))
 	{
-		m_debugContentVisibility = !m_debugContentVisibility;
-		m_updateTerrainVisibilityRequired = true;
+		toggleDebugVisibility();
 	}
 	
 	if (event->is_action_pressed("ui_rotate_chunk_debug_mode"))
 	{
-
-		m_requiredChunkDebugMode = GDN_TheWorld_Globals::rotateChunkDebugMode(m_currentChunkDebugMode);
-		m_updateDebugModeRequired = true;
+		rotateChunkDebugMode();
 	}
 	
 	if (event->is_action_pressed("ui_rotate_drawing_mode"))
 	{
-		Viewport* vp = get_viewport();
-		Viewport::DebugDraw dd = vp->get_debug_draw();
-		vp->set_debug_draw((dd + 1) % 4);
-		m_debugDraw = vp->get_debug_draw();
+		rotateDrawingMode();
 	}
 
 	if (event->is_action_pressed("ui_dump") && !m_ctrlPressed)
@@ -757,6 +754,26 @@ void GDN_TheWorld_Viewer::toggleEditMode(void)
 		m_trackMouse = true;
 	else
 		m_trackMouse = false;
+}
+
+void GDN_TheWorld_Viewer::toggleDebugVisibility(void)
+{
+	m_debugContentVisibility = !m_debugContentVisibility;
+	m_updateTerrainVisibilityRequired = true;
+}
+
+void GDN_TheWorld_Viewer::rotateChunkDebugMode(void)
+{
+	m_requiredChunkDebugMode = GDN_TheWorld_Globals::rotateChunkDebugMode(m_currentChunkDebugMode);
+	m_updateDebugModeRequired = true;
+}
+
+void GDN_TheWorld_Viewer::rotateDrawingMode(void)
+{
+	Viewport* vp = get_viewport();
+	Viewport::DebugDraw dd = vp->get_debug_draw();
+	vp->set_debug_draw((dd + 1) % 4);
+	m_debugDraw = vp->get_debug_draw();
 }
 
 void GDN_TheWorld_Viewer::printKeyboardMapping(void)
