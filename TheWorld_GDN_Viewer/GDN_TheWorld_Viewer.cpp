@@ -111,6 +111,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
 	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
 	register_method("get_mouse_hit", &GDN_TheWorld_Viewer::getMouseHit);
+	register_method("get_mouse_hit_distance_from_camera", &GDN_TheWorld_Viewer::getMouseHitDistanceFromCamera);
 	register_method("get_mouse_quadrant_hit_name", &GDN_TheWorld_Viewer::_getMouseQuadrantHitName);
 	register_method("get_mouse_quadrant_hit_tag", &GDN_TheWorld_Viewer::_getMouseQuadrantHitTag);
 	register_method("get_mouse_quadrant_hit_pos", &GDN_TheWorld_Viewer::getMouseQuadrantHitPos);
@@ -119,6 +120,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_mouse_chunk_hit_pos", &GDN_TheWorld_Viewer::getMouseChunkHitPos);
 	register_method("get_mouse_chunk_hit_size", &GDN_TheWorld_Viewer::getMouseChunkHitSize);
 	register_method("get_mouse_chunk_hit_dist_from_cam", &GDN_TheWorld_Viewer::getMouseChunkHitDistFromCam);
+	register_method("update_material_parmas_for_every_quadrant", &GDN_TheWorld_Viewer::updateMaterialParamsForEveryQuadrant);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -182,6 +184,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_timeElapsedFromLastMouseTrack = 0;
 	m_mouseQuadrantHitSize = 0;
 	m_mouseHitChunk = nullptr;
+	m_mouseTrackedOnTerrain = false;
 	//m_mouseHitQuadTree = nullptr;
 	m_updateTerrainVisibilityRequired = false;
 	m_currentChunkDebugMode = GDN_TheWorld_Globals::ChunkDebugMode::NoDebug;
@@ -1422,102 +1425,107 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 
 				godot::PhysicsDirectSpaceState* spaceState = get_world()->get_direct_space_state();
 				godot::Dictionary rayArray;
-				if (godot::Engine::get_singleton()->is_editor_hint() && m_editorInterface != nullptr)
-				{
-					godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
-					godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
-					godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
-					rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
-				}
-				else
-				{
-					godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
-					godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
-					godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
-					rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
-				}
+				godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
+				godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
+				godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
+				rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
 
 				GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
 
 				if (rayArray.has("position"))
 				{
 					m_mouseHit = rayArray["position"];
+					m_mouseTrackedOnTerrain = true;
 					if (m_editMode && editModeUIControl && editModeUIControl->initilized())
 						editModeUIControl->setMouseHitLabelText(std::string("X=") + std::to_string(m_mouseHit.x) + " Y=" + std::to_string(m_mouseHit.y) + " Z=" + std::to_string(m_mouseHit.z));
 				}
+				else
+					m_mouseTrackedOnTerrain = false;
 
-				if (rayArray.has("collider"))
+				if (m_mouseTrackedOnTerrain)
 				{
-					collider = rayArray["collider"];
-					if (collider->has_meta("QuadrantName"))
+					if (rayArray.has("collider"))
 					{
-						godot::String s = collider->get_meta("QuadrantName", "");
-						char* str = s.alloc_c_string();
-						std::string mouseQuadrantHitName = str;
-						godot::api->godot_free(str);
-						if (mouseQuadrantHitName != m_mouseQuadrantHitName)
+						collider = rayArray["collider"];
+						if (collider->has_meta("QuadrantName"))
 						{
-							/*s = collider->get_meta("QuadrantTag", "");
-							str = s.alloc_c_string();
-							std::string mouseQuadrantHitTag = str;
-							godot::api->godot_free(str);*/
-							godot::Vector3 mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
-							float mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
-							float gridStepInWu = collider->get_meta("QuadrantStep");
-							int level = collider->get_meta("QuadrantLevel");
-							int numVerticesPerSize = collider->get_meta("QuadrantNumVert");
-							QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
-							//quadrantHitPos.setTag(mouseQuadrantHitTag);
-
-							// Get current Tag
-							std::string mouseQuadrantHitTag;
-							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
-							if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-								mouseQuadrantHitTag = it->second->getTag();
-
-							if (m_editMode && editModeUIControl && editModeUIControl->initilized())
+							godot::String s = collider->get_meta("QuadrantName", "");
+							char* str = s.alloc_c_string();
+							std::string mouseQuadrantHitName = str;
+							godot::api->godot_free(str);
+							if (mouseQuadrantHitName != m_mouseQuadrantHitName)
 							{
+								/*s = collider->get_meta("QuadrantTag", "");
+								str = s.alloc_c_string();
+								std::string mouseQuadrantHitTag = str;
+								godot::api->godot_free(str);*/
+								godot::Vector3 mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
+								float mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
+								float gridStepInWu = collider->get_meta("QuadrantStep");
+								int level = collider->get_meta("QuadrantLevel");
+								int numVerticesPerSize = collider->get_meta("QuadrantNumVert");
+								QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
+								//quadrantHitPos.setTag(mouseQuadrantHitTag);
 
-								editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
-								editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
+								// Get current Tag
+								std::string mouseQuadrantHitTag;
+								MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
+								if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+									mouseQuadrantHitTag = it->second->getTag();
 
-								//// Get TerrainEdit Data from hit quadrant
-								//MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
-								//if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-								//{
-								//	TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
-								//	editModeUIControl->setSeed(terrainEdit->noiseSeed);
-								//	editModeUIControl->setFrequency(terrainEdit->frequency);
-								//	editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
-								//	editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
-								//	editModeUIControl->setGain(terrainEdit->fractalGain);
-								//	editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
-								//	editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
-								//	editModeUIControl->setAmplitude(terrainEdit->amplitude);
-								//	editModeUIControl->setMinHeight(terrainEdit->minHeight);
-								//	editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
-								//	//editModeUIControl->setElapsed(0);
-								//}
+								if (m_editMode && editModeUIControl && editModeUIControl->initilized())
+								{
+
+									editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
+									editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
+
+									//// Get TerrainEdit Data from hit quadrant
+									//MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
+									//if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+									//{
+									//	TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
+									//	editModeUIControl->setSeed(terrainEdit->noiseSeed);
+									//	editModeUIControl->setFrequency(terrainEdit->frequency);
+									//	editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
+									//	editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
+									//	editModeUIControl->setGain(terrainEdit->fractalGain);
+									//	editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
+									//	editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
+									//	editModeUIControl->setAmplitude(terrainEdit->amplitude);
+									//	editModeUIControl->setMinHeight(terrainEdit->minHeight);
+									//	editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
+									//	//editModeUIControl->setElapsed(0);
+									//}
+								}
+
+								m_mouseQuadrantHitName = mouseQuadrantHitName;
+								m_mouseQuadrantHitTag = mouseQuadrantHitTag;
+								m_mouseQuadrantHitPos = mouseQuadrantHitPos;
+								m_mouseQuadrantHitSize = mouseQuadrantHitSize;
+								m_quadrantHitPos = quadrantHitPos;
 							}
-
-							m_mouseQuadrantHitName = mouseQuadrantHitName;
-							m_mouseQuadrantHitTag = mouseQuadrantHitTag;
-							m_mouseQuadrantHitPos = mouseQuadrantHitPos;
-							m_mouseQuadrantHitSize = mouseQuadrantHitSize;
-							m_quadrantHitPos = quadrantHitPos;
 						}
+						//godot::PoolStringArray metas = collider->get_meta_list();
+						//for (int i = 0; i < metas.size(); i++)
+						//{
+						//	godot::String s = metas[i];
+						//	char* str = s.alloc_c_string();
+						//	std::string ss = str;
+						//	godot::api->godot_free(str);
+						//	godot::Variant v = collider->get_meta(s);
+						//}
+						//godot::String s = collider->get_meta("QuadrantName");
 					}
-					//godot::PoolStringArray metas = collider->get_meta_list();
-					//for (int i = 0; i < metas.size(); i++)
-					//{
-					//	godot::String s = metas[i];
-					//	char* str = s.alloc_c_string();
-					//	std::string ss = str;
-					//	godot::api->godot_free(str);
-					//	godot::Variant v = collider->get_meta(s);
-					//}
-					//godot::String s = collider->get_meta("QuadrantName");
 				}
+				else
+				{
+					m_mouseQuadrantHitName = "";
+					m_mouseQuadrantHitTag = "";
+					m_mouseQuadrantHitPos = godot::Vector3();
+					m_mouseQuadrantHitSize = 0.0f;
+					m_quadrantHitPos = QuadrantPos();
+				}
+				
 				m_timeElapsedFromLastMouseTrack = timeElapsed;
 			}
 		}
@@ -2893,6 +2901,9 @@ godot::Camera* GDN_TheWorld_Viewer::getCamera(void)
 
 void GDN_TheWorld_Viewer::setEditorCamera(godot::Camera* editorCamera)
 {
+	if (m_editorCamera == nullptr)
+		onTransformChanged();
+
 	m_editorCamera = editorCamera;
 }
 
@@ -3067,6 +3078,28 @@ void GDN_TheWorld_Viewer::onTransformChanged(void)
 		itQuadTree->second->materialParamsNeedUpdate(true);
 
 		itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
+	}
+}
+
+void GDN_TheWorld_Viewer::updateMaterialParamsForEveryQuadrant(void)
+{
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals != nullptr)
+		globals->debugPrint("updateMaterialParamsForEveryQuadrant");
+
+	if (!is_inside_tree())
+		return;
+
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (!itQuadTree->second->isValid())
+			continue;
+
+		if (!itQuadTree->second->isVisible())
+			continue;
+
+		if (itQuadTree->second->status() != QuadrantStatus::uninitialized && itQuadTree->second->status() != QuadrantStatus::toErase)
+			itQuadTree->second->materialParamsNeedUpdate(true);
 	}
 }
 
