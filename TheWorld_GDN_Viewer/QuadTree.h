@@ -244,7 +244,8 @@ namespace godot
 		void resetName(void)
 		{
 			float gridSizeInWU = (m_numVerticesPerSize - 1) * m_gridStepInWU;
-			m_name = "Quadrant-" + std::to_string((int)(m_lowerXGridVertex / gridSizeInWU)) + "-" + std::to_string((int)(m_lowerZGridVertex / gridSizeInWU));
+			//m_name = "Quadrant-" + std::to_string((int)(m_lowerXGridVertex / gridSizeInWU)) + "-" + std::to_string((int)(m_lowerZGridVertex / gridSizeInWU));
+			m_name = "Quadrant " + std::to_string((int)(m_lowerXGridVertex / gridSizeInWU)) + "," + std::to_string((int)(m_lowerZGridVertex / gridSizeInWU));
 		}
 
 	private:
