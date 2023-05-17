@@ -99,6 +99,38 @@ namespace godot
 		void _notification(int p_what);
 		void _process_impl(float _delta, Camera* activeCamera);
 
+		//Ref<Material> getRegularMaterial(void);
+		//Ref<Material> getLookDevMaterial(void);
+		godot::Plane getShaderParamGroundUVScale()
+		{
+			return m_shaderParam_groundUVScale;
+		}
+		bool getShaderParamDepthBlening()
+		{
+			return m_shaderParam_depthBlending;
+		}
+		bool getShaderParamTriplanar()
+		{
+			return m_shaderParam_triplanar;
+		}
+		godot::Plane getShaderParamTileReduction()
+		{
+			return m_shaderParam_tileReduction;
+		}
+		float getShaderParamGlobalmapBlendStart()
+		{
+			return m_shaderParam_globalmapBlendStart;
+		}
+		float getShaderParamGlobalmapBlendDistance()
+		{
+			return m_shaderParam_globalmapBlendDistance;
+		}
+		godot::Plane getShaderParamColormapOpacity()
+		{
+			return m_shaderParam_colormapOpacity;
+		}
+
+		void setShaderParam(godot::String name, godot::Variant value);
 		void debugPrint(String message)
 		{
 			Globals()->debugPrint(message);
@@ -452,6 +484,18 @@ namespace godot
 		// Node cache
 		GDN_TheWorld_Globals* m_globals;
 		GDN_TheWorld_Edit* m_editModeUIControl;
+		//Ref<ShaderMaterial> m_regularMaterial;
+		//Ref<ShaderMaterial> m_lookDevMaterial;
+		
+		// Shader parameters
+		godot::Plane m_shaderParam_groundUVScale;
+		bool m_shaderParam_depthBlending;
+		bool m_shaderParam_triplanar;
+		godot::Plane m_shaderParam_tileReduction;
+		float m_shaderParam_globalmapBlendStart;
+		float m_shaderParam_globalmapBlendDistance;
+		godot::Plane  m_shaderParam_colormapOpacity;
+		bool m_shaderParamChanged;
 
 		// streamer thread
 		std::thread m_streamerThread;

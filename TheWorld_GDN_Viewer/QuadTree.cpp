@@ -678,7 +678,7 @@ void QuadTree::clearChunkUpdate(void)
 	m_vectChunkUpdate.clear();
 }
 
-bool  QuadTree::updateMaterialParams(void)
+bool QuadTree::updateMaterialParams(void)
 {
 	bool updated = false;
 
@@ -995,6 +995,11 @@ void ShaderTerrainData::init(void)
 	Ref<Shader> shader = resLoader->load(shaderPath);
 	mat->set_shader(shader);
 	m_regularMaterial = mat;
+}
+
+Ref<Material> ShaderTerrainData::getRegularMaterial(void)
+{
+	return m_regularMaterial;
 }
 
 Ref<Material> ShaderTerrainData::getLookDevMaterial(void)
@@ -1566,6 +1571,48 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_TERRAIN_GLOBALMAP));
 			currentMaterial->set_shader_param(SHADER_PARAM_TERRAIN_GLOBALMAP, m_globalMapTexture);
 			m_globalMapTexModified = false;
+		}
+
+		godot::Plane ground_uv_scale  = m_viewer->getShaderParamGroundUVScale();
+		if (lookdev == LookDev::NotSet && ground_uv_scale.get_normal() != godot::Vector3(0.0f, 0.0f, 0.0f) && ground_uv_scale.d != 0.0f)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_GROUND_UV_SCALE_PER_TEXTURE, ground_uv_scale);
+		}
+
+		bool depthBlending = m_viewer->getShaderParamDepthBlening();
+		if (lookdev == LookDev::NotSet)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_DEPTH_BLENDING, depthBlending);
+		}
+
+		bool triplanar = m_viewer->getShaderParamTriplanar();
+		if (lookdev == LookDev::NotSet)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_TRIPLANAR, triplanar);
+		}
+
+		godot::Plane tileReduction = m_viewer->getShaderParamTileReduction();
+		if (lookdev == LookDev::NotSet)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_TILE_REDUCTION_PER_TEXTURE, tileReduction);
+		}
+
+		float globalmapBlendStart = m_viewer->getShaderParamGlobalmapBlendStart();
+		if (lookdev == LookDev::NotSet)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_GLOBALMAP_BLEND_START, globalmapBlendStart);
+		}
+
+		float globalmapBlendDistance = m_viewer->getShaderParamGlobalmapBlendDistance();
+		if (lookdev == LookDev::NotSet)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_GLOBALMAP_BLEND_DISTANCE, globalmapBlendDistance);
+		}
+
+		godot::Plane colormapOpacity = m_viewer->getShaderParamColormapOpacity();
+		if (lookdev == LookDev::NotSet)
+		{
+			currentMaterial->set_shader_param(SHADER_PARAM_COLORMAP_OPACITY_PER_TEXTURE, colormapOpacity);
 		}
 
 		if (lookdev == LookDev::Heights && m_heightMapTexture != nullptr)

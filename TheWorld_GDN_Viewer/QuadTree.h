@@ -664,6 +664,14 @@ namespace godot
 #define SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_2	"u_ground_normal_roughness_2"
 #define SHADER_PARAM_GROUND_NORMAL_ROUGHNESS_3	"u_ground_normal_roughness_3"
 
+#define SHADER_PARAM_GROUND_UV_SCALE_PER_TEXTURE	"u_ground_uv_scale_per_texture"
+#define SHADER_PARAM_DEPTH_BLENDING					"u_depth_blending"
+#define SHADER_PARAM_TRIPLANAR						"u_triplanar"
+#define SHADER_PARAM_TILE_REDUCTION_PER_TEXTURE		"u_tile_reduction_per_texture"
+#define SHADER_PARAM_GLOBALMAP_BLEND_START			"u_globalmap_blend_start"
+#define SHADER_PARAM_GLOBALMAP_BLEND_DISTANCE		"u_globalmap_blend_distance"
+#define SHADER_PARAM_COLORMAP_OPACITY_PER_TEXTURE	"u_colormap_opacity_per_texture"
+
 #define SHADER_PARAM_LOOKDEV_MAP		"u_map"
 
 	public:
@@ -700,10 +708,7 @@ namespace godot
 			m_materialParamsNeedUpdate = b;
 		}
 		void updateMaterialParams(LookDev lookdev);
-		Ref<Material> getRegularMaterial(void)
-		{
-			return m_regularMaterial;
-		};
+		Ref<Material> getRegularMaterial(void);
 		Ref<Material> getLookDevMaterial(void);
 
 	private:

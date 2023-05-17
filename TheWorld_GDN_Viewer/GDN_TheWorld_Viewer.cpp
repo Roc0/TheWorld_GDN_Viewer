@@ -121,6 +121,7 @@ void GDN_TheWorld_Viewer::_register_methods()
 	register_method("get_mouse_chunk_hit_size", &GDN_TheWorld_Viewer::getMouseChunkHitSize);
 	register_method("get_mouse_chunk_hit_dist_from_cam", &GDN_TheWorld_Viewer::getMouseChunkHitDistFromCam);
 	register_method("update_material_parmas_for_every_quadrant", &GDN_TheWorld_Viewer::updateMaterialParamsForEveryQuadrant);
+	register_method("set_shader_param", &GDN_TheWorld_Viewer::setShaderParam);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -212,12 +213,109 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 		m_depthQuadOnPerimeter = 3;
 		m_cacheQuadOnPerimeter = 1;
 	}
+	m_shaderParam_groundUVScale.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));	// if every coord is 0.0 the parameter is not passed to the shader
+	m_shaderParam_groundUVScale.d = 0.0f;
+	m_shaderParam_depthBlending = false;
+	m_shaderParam_triplanar = false;
+	m_shaderParam_tileReduction.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));
+	m_shaderParam_tileReduction.d = 0.0f;
+	m_shaderParam_globalmapBlendStart = 0.0f;
+	m_shaderParam_globalmapBlendDistance = 0.0f;
+	m_shaderParam_colormapOpacity.set_normal(godot::Vector3(1.0f, 1.0f, 1.0f));
+	m_shaderParam_colormapOpacity.d = 1.0f;
+	m_shaderParamChanged = false;
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
 {
 	deinit();
 }
+
+void GDN_TheWorld_Viewer::setShaderParam(godot::String name, godot::Variant value)
+{
+	if (name == "ground_uv_scale")
+	{
+		m_shaderParam_groundUVScale.set_normal(godot::Vector3(value, value, value));
+		m_shaderParam_groundUVScale.d = value;
+		m_shaderParamChanged = true;
+	}
+	else if (name == "depth_blending")
+	{
+		m_shaderParam_depthBlending = value;
+		m_shaderParamChanged = true;
+	}
+	else if (name == "triplanar")
+	{
+		m_shaderParam_triplanar = value;
+		m_shaderParamChanged = true;
+	}
+	else if (name == "tile_reduction")
+	{
+		bool tileReduction = value;
+		if (tileReduction)
+		{
+			m_shaderParam_tileReduction.set_normal(godot::Vector3(1.0f, 1.0f, 1.0f));
+			m_shaderParam_tileReduction.d = 1.0f;
+		}
+		else
+		{
+			m_shaderParam_tileReduction.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));
+			m_shaderParam_tileReduction.d = 0.0f;
+		}
+		m_shaderParamChanged = true;
+	}
+	else if (name == "globalmap_blend_start")
+	{
+		m_shaderParam_globalmapBlendStart = value;
+		m_shaderParamChanged = true;
+	}
+	else if (name == "globalmap_blend_distance")
+	{
+		m_shaderParam_globalmapBlendDistance = value;
+		m_shaderParamChanged = true;
+	}
+	else if (name == "colormap_opacity")
+	{
+		m_shaderParam_colormapOpacity.set_normal(godot::Vector3(value, value, value));
+		m_shaderParam_colormapOpacity.d = value;
+		m_shaderParamChanged = true;
+	}
+}
+
+//Ref<Material> GDN_TheWorld_Viewer::getRegularMaterial(void)
+//{
+//	if (m_regularMaterial == nullptr)
+//	{
+//		getMainProcessingMutex().lock();
+//		Ref<ShaderMaterial> mat = ShaderMaterial::_new();
+//		getMainProcessingMutex().unlock();
+//		ResourceLoader* resLoader = ResourceLoader::get_singleton();
+//		//String shaderPath = "res://addons/twviewer/shaders/regularChunk.shader";
+//		String shaderPath = "res://addons/twviewer/shaders/simple4.shader";
+//		Ref<Shader> shader = resLoader->load(shaderPath);
+//		mat->set_shader(shader);
+//		m_regularMaterial = mat;
+//	}
+//
+//	return m_regularMaterial;
+//}
+
+//Ref<Material> GDN_TheWorld_Viewer::getLookDevMaterial(void)
+//{
+//	if (m_lookDevMaterial == nullptr)
+//	{
+//		getMainProcessingMutex().lock();
+//		Ref<ShaderMaterial> mat = ShaderMaterial::_new();
+//		getMainProcessingMutex().unlock();
+//		ResourceLoader* resLoader = ResourceLoader::get_singleton();
+//		String shaderPath = "res://addons/twviewer/shaders/lookdevChunk.shader";
+//		Ref<Shader> shader = resLoader->load(shaderPath);
+//		mat->set_shader(shader);
+//		m_lookDevMaterial = mat;
+//	}
+//
+//	return m_lookDevMaterial;
+//}
 
 bool GDN_TheWorld_Viewer::init(void)
 {
@@ -2133,6 +2231,16 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 		this->m_numUpdateMaterialParams++;
 		this->m_updateMaterialParamsDuration += clock1.duration().count();
 			});
+
+		if (m_shaderParamChanged)
+		{
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				itQuadTree->second->getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(true);
+			}
+
+			m_shaderParamChanged = false;
+		}
 
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
