@@ -2,7 +2,10 @@
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Viewer.h"
 
-#include <SceneTree.hpp>
+#pragma warning(push, 0)
+#include <godot_cpp/classes/window.hpp>
+#include <godot_cpp/classes/os.hpp>
+#pragma warning(pop)
 
 //#include <MapManager.h>
 #include <plog/Initializers/RollingFileInitializer.h>
@@ -48,9 +51,8 @@ namespace godot
 	std::string GDN_TheWorld_Globals::getClientDataDir(void)
 	{
 		String userPath = OS::get_singleton()->get_user_data_dir();
-		char* s = userPath.alloc_c_string();
+		const char* s = userPath.utf8().get_data();
 		std::string dir = std::string(s) + "\\TheWorld";
-		godot::api->godot_free(s);
 
 		return dir;
 	}
@@ -146,11 +148,47 @@ namespace godot
 		m_gridStepInWU = 0;
 
 		m_viewer = NULL;
+
+		_init();
 	}
 
 	GDN_TheWorld_Globals::~GDN_TheWorld_Globals()
 	{
 		deinit();
+	}
+
+	void GDN_TheWorld_Globals::_bind_methods()
+	{
+		ClassDB::bind_method(D_METHOD("get_status"), &GDN_TheWorld_Globals::get_status);
+		ClassDB::bind_method(D_METHOD("set_status"), &GDN_TheWorld_Globals::set_status);
+
+		ClassDB::bind_method(D_METHOD("connect_to_server"), &GDN_TheWorld_Globals::connectToServer);
+		ClassDB::bind_method(D_METHOD("prepare_disconnect_from_server"), &GDN_TheWorld_Globals::prepareDisconnectFromServer);
+		ClassDB::bind_method(D_METHOD("disconnect_from_server"), &GDN_TheWorld_Globals::disconnectFromServer);
+
+		ClassDB::bind_method(D_METHOD("set_debug_enabled"), &GDN_TheWorld_Globals::setDebugEnabled);
+		ClassDB::bind_method(D_METHOD("is_debug_enabled"), &GDN_TheWorld_Globals::isDebugEnabled);
+		ClassDB::bind_method(D_METHOD("debug_print"), &GDN_TheWorld_Globals::debugPrint);
+		ClassDB::bind_method(D_METHOD("error_print"), &GDN_TheWorld_Globals::errorPrint);
+		ClassDB::bind_method(D_METHOD("warning_print"), &GDN_TheWorld_Globals::warningPrint);
+		ClassDB::bind_method(D_METHOD("info_print"), &GDN_TheWorld_Globals::infoPrint);
+		ClassDB::bind_method(D_METHOD("print"), &GDN_TheWorld_Globals::print);
+
+		ClassDB::bind_method(D_METHOD("set_app_in_error"), &GDN_TheWorld_Globals::setAppInError);
+		ClassDB::bind_method(D_METHOD("get_app_in_error"), &GDN_TheWorld_Globals::getAppInError);
+		ClassDB::bind_method(D_METHOD("get_app_in_error_code"), &GDN_TheWorld_Globals::getAppInErrorCode);
+		ClassDB::bind_method(D_METHOD("get_app_in_error_message"), &GDN_TheWorld_Globals::getAppInErrorMsg);
+
+		ClassDB::bind_method(D_METHOD("get_num_vertices_per_chunk_side"), &GDN_TheWorld_Globals::numVerticesPerChuckSide);
+		ClassDB::bind_method(D_METHOD("get_bitmap_resolution"), &GDN_TheWorld_Globals::heightmapResolution);
+		ClassDB::bind_method(D_METHOD("get_lod_max_depth"), &GDN_TheWorld_Globals::lodMaxDepth);
+		ClassDB::bind_method(D_METHOD("get_num_lods"), &GDN_TheWorld_Globals::numLods);
+		ClassDB::bind_method(D_METHOD("get_chunks_per_bitmap_side"), &GDN_TheWorld_Globals::numChunksPerHeightmapSide);
+		ClassDB::bind_method(D_METHOD("get_grid_step_in_wu"), &GDN_TheWorld_Globals::gridStepInHeightmapWUs);
+
+		ClassDB::bind_method(D_METHOD("viewer"), &GDN_TheWorld_Globals::Viewer);
+
+		ADD_SIGNAL(MethodInfo("tw_status_changed", PropertyInfo(Variant::INT, "old_value"), PropertyInfo(Variant::INT, "new_value")));
 	}
 
 	void GDN_TheWorld_Globals::replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply)
@@ -229,7 +267,7 @@ namespace godot
 	void GDN_TheWorld_Globals::init(void)
 	{
 		string logPath;
-		if (godot::Engine::get_singleton()->is_editor_hint())
+		if (IS_EDITOR_HINT())
 			logPath = getModuleLoadPath() + "\\TheWorld_Viewer_EDITOR_log.txt";
 		else
 			logPath = getModuleLoadPath() + "\\TheWorld_Viewer_log.txt";
@@ -359,7 +397,7 @@ namespace godot
 		//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 	}
 
-	void GDN_TheWorld_Globals::_input(const Ref<InputEvent> event)
+	void GDN_TheWorld_Globals::_input(const Ref<InputEvent>& event)
 	{
 	}
 
@@ -375,7 +413,7 @@ namespace godot
 		}
 	}
 
-	void GDN_TheWorld_Globals::_process(float _delta)
+	void GDN_TheWorld_Globals::_process(double _delta)
 	{
 		// To activate _process method add this Node to a Godot Scene
 		//debugPrint("GDN_TheWorld_Globals::_process");
@@ -391,7 +429,7 @@ namespace godot
 			Viewport* root = scene->get_root();
 			if (!root)
 				return NULL;
-			m_viewer = Object::cast_to<GDN_TheWorld_Viewer>(root->find_node(THEWORLD_VIEWER_NODE_NAME, true, false));
+			m_viewer = Object::cast_to<GDN_TheWorld_Viewer>(root->find_child(THEWORLD_VIEWER_NODE_NAME, true, false));
 		}
 
 		return m_viewer;

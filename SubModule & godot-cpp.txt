@@ -52,6 +52,8 @@ Eliminare e reinserire godot-cpp
 	git submodule update --init --recursive
 
 Compiling the bindings
+	installare python e scons vedi (Python and Scons.txt)
+	
 	cd godot-cpp	
 
 	Branch 3.5
@@ -65,11 +67,11 @@ Compiling the bindings
 	
 	Branch 4.0
 		To force rebuild exec clean first
-		* C:\Users\Riccardo\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.9_qbz5n2kfra8p0\LocalCache\local-packages\Python39\Scripts\scons --clean target=editor
-		* C:\Users\Riccardo\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.9_qbz5n2kfra8p0\LocalCache\local-packages\Python39\Scripts\scons --clean target=template_debug
-		* C:\Users\Riccardo\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.9_qbz5n2kfra8p0\LocalCache\local-packages\Python39\Scripts\scons --clean target=template_release
+		* scons --clean target=editor
+		* scons --clean target=template_debug
+		* scons --clean target=template_release
 
 		to build
-		* C:\Users\Riccardo\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.9_qbz5n2kfra8p0\LocalCache\local-packages\Python39\Scripts\scons platform=windows bits=64 -j10 target=editor
-		* C:\Users\Riccardo\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.9_qbz5n2kfra8p0\LocalCache\local-packages\Python39\Scripts\scons platform=windows bits=64 -j10 target=template_debug
-		* C:\Users\Riccardo\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.9_qbz5n2kfra8p0\LocalCache\local-packages\Python39\Scripts\scons platform=windows bits=64 -j10 target=template_release
+		* scons platform=windows -j10 target=editor optimize=none
+		* scons platform=windows -j10 target=template_debug optimize=none
+		* scons platform=windows -j10 target=template_release

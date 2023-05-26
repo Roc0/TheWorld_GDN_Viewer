@@ -1,17 +1,14 @@
 #pragma once
-#include <Godot.hpp>
-#include <Node.hpp>
-#include <VisualServer.hpp>
-#include <ArrayMesh.hpp>
-#include <AABB.hpp>
-#include <Material.hpp>
-#include <SpatialMaterial.hpp>
-#include <MeshInstance.hpp>
 
 #include <map>
 #include <string>
 
 #include "GDN_TheWorld_Globals.h"
+
+#pragma warning(push, 0)
+#include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/array_mesh.hpp>
+#pragma warning(pop)
 
 #define GD_CHUNK_MESHINSTANCE_GROUP			"ChunkMeshInstanceGroup"
 #define GD_DEBUGCHUNK_MESHINSTANCE_GROUP	"DebugChunkMeshInstanceGroup"
@@ -427,8 +424,8 @@ namespace godot
 		virtual void setCameraPos(Vector3 globalCoordCameraLastPos);
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
 		virtual void applyDebugMesh(void);
-		virtual Transform getDebugGlobalTransform(void);
-		virtual Transform getDebugGlobalTransformApplied(void);
+		virtual Transform3D getDebugGlobalTransform(void);
+		virtual Transform3D getDebugGlobalTransformApplied(void);
 		virtual AABB getDebugMeshAABB(void) { return AABB(); };
 		virtual bool isMeshNull(void);
 		virtual bool isDebugMeshNull(void);
@@ -504,8 +501,8 @@ namespace godot
 		{
 			m_isCameraVerticalOnChunk = false;
 		}
-		Transform getGlobalTransform(void);
-		virtual Transform getGlobalTransformApplied(void);
+		Transform3D getGlobalTransform(void);
+		virtual Transform3D getGlobalTransformApplied(void);
 		void setPosInQuad(enum PosInQuad posInQuad, Quad* quad = nullptr) 
 		{
 			m_posInQuad = posInQuad;
@@ -574,8 +571,8 @@ namespace godot
 		bool m_isCameraVerticalOnChunk;
 		enum class GDN_TheWorld_Globals::ChunkDebugMode m_debugMode;
 		bool m_debugContentVisible;
-		Transform m_initialGlobalTransform;
-		Transform m_globalTransformApplied;
+		Transform3D m_initialGlobalTransform;
+		Transform3D m_globalTransformApplied;
 
 		float m_distanceFromCamera;
 
@@ -627,8 +624,8 @@ namespace godot
 		virtual void setDebugMode(enum class GDN_TheWorld_Globals::ChunkDebugMode mode);
 		virtual void applyDebugMesh(void);
 		//virtual Transform getGlobalTransformOfAABB(void);
-		virtual Transform getDebugGlobalTransform(void);
-		virtual Transform getDebugGlobalTransformApplied(void);
+		virtual Transform3D getDebugGlobalTransform(void);
+		virtual Transform3D getDebugGlobalTransformApplied(void);
 		virtual AABB getDebugMeshAABB(void) { return m_debugMeshAABB; };
 		virtual bool isDebugMeshNull(void);
 		virtual void refresh(bool isVisible);
@@ -642,12 +639,12 @@ namespace godot
 		Ref<ArrayMesh> createWireSquareMesh(Color c = Color(1, 1, 1));
 
 	private:
-		MeshInstance* m_debugMeshInstance;
+		MeshInstance3D* m_debugMeshInstance;
 		RID m_debugMeshInstanceRID;
 		RID m_debugMeshRID;
 		Ref<Mesh> m_debugMesh;
 		AABB m_debugMeshAABB;
-		Transform m_debugGlobaTransformApplied;
+		Transform3D m_debugGlobaTransformApplied;
 		bool m_debugWirecubeMeshNeedRegen;
 		bool m_debugWiresquareMeshNeedRegen;
 	};

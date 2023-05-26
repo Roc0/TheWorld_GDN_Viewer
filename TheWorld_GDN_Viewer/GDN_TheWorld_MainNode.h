@@ -1,8 +1,10 @@
 #pragma once
-#include <Godot.hpp>
-#include <Spatial.hpp>
-#include <Reference.hpp>
-#include <InputEvent.hpp>
+
+#pragma warning (push, 0)
+#include <godot_cpp/classes/node3d.hpp>
+#include <godot_cpp/classes/input_event.hpp>
+#include <godot_cpp/classes/ref.hpp>
+#pragma warning (pop)
 
 namespace godot
 {
@@ -11,32 +13,33 @@ namespace godot
 
 	class GDN_TheWorld_MainNode : public Node
 	{
-		GODOT_CLASS(GDN_TheWorld_MainNode, Node)
+		GDCLASS(GDN_TheWorld_MainNode, Node)
 
 	public:
 		GDN_TheWorld_MainNode();
 		~GDN_TheWorld_MainNode();
-		bool init(Spatial* pWorldMainNode);
+		bool init(Node3D* pWorldMainNode);
 		void preDeinit(void);
 		bool canDeinit(void);
 		void deinit(void);
-		void _notification(int p_what);
 		bool initialized(void)
 		{
 			return m_initialized;
 		}
 
-		static void _register_methods();
-
 		//
 		// Godot Standard Functions
 		//
-		void _init(void); // our initializer called by Godot
-		void _ready(void);
-		void _process(float _delta);
-		void _input(const Ref<InputEvent> event);
+		virtual void _ready(void) override;
+		virtual void _process(double _delta) override;
+		virtual void _input(const Ref<InputEvent>& event) override;
 
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
+
+	protected:
+		static void _bind_methods();
+		virtual void _notification(int p_what);
+		void _init(void);
 
 	private:
 		bool m_initialized;
@@ -45,5 +48,4 @@ namespace godot
 		// Node cache
 		GDN_TheWorld_Globals* m_globals;
 	};
-
 }

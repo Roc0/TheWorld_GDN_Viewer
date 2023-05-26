@@ -1,36 +1,39 @@
 //#include "pch.h"
+#include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Camera.h"
 #include "GDN_TheWorld_Viewer.h"
-#include "GDN_TheWorld_Globals.h"
+
+#pragma warning (push, 0)
+//#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/input.hpp>
+#include <godot_cpp/classes/input_event_mouse_motion.hpp>
+#include <godot_cpp/classes/scene_tree.hpp>
+#include <godot_cpp/classes/viewport.hpp>
+#include <godot_cpp/classes/window.hpp>
+#include <godot_cpp/classes/array_mesh.hpp>
+#pragma warning (pop)
 
 #include <math.h> 
 
-#include <SceneTree.hpp>
-#include <Math.hpp>
-#include <Input.hpp>
-#include <InputEventMouseMotion.hpp>
-#include <Viewport.hpp>
-#include <ArrayMesh.hpp>
-#include <Engine.hpp>
-
 using namespace godot;
 
-void GDN_TheWorld_Camera::_register_methods()
+void GDN_TheWorld_Camera::_bind_methods()
 {
-	register_method("_ready", &GDN_TheWorld_Camera::_ready);
-	register_method("_process", &GDN_TheWorld_Camera::_process);
-	register_method("_physics_process", &GDN_TheWorld_Camera::_physics_process);
-	register_method("_input", &GDN_TheWorld_Camera::_input);
-	register_method("_notification", &GDN_TheWorld_Camera::_notification);
-	register_method("is_active_camera", &GDN_TheWorld_Camera::isActiveCamera);
-	register_method("get_active_camera", &GDN_TheWorld_Camera::getActiveCamera);
-	register_method("get_angle_from_north", &GDN_TheWorld_Camera::getAngleFromNorth);
-	register_method("get_yaw", &GDN_TheWorld_Camera::getYaw);
-	register_method("set_yaw", &GDN_TheWorld_Camera::setYaw);
-	register_method("get_pitch", &GDN_TheWorld_Camera::getPitch);
-	register_method("set_pitch", &GDN_TheWorld_Camera::setPitch);
-	register_method("get_roll", &GDN_TheWorld_Camera::getRoll);
-	register_method("set_roll", &GDN_TheWorld_Camera::setRoll);
+	ClassDB::bind_method(D_METHOD("_ready"), &GDN_TheWorld_Camera::_ready);
+	ClassDB::bind_method(D_METHOD("_process"), &GDN_TheWorld_Camera::_process);
+	ClassDB::bind_method(D_METHOD("_physics_process"), &GDN_TheWorld_Camera::_physics_process);
+	ClassDB::bind_method(D_METHOD("_input"), &GDN_TheWorld_Camera::_input);
+	ClassDB::bind_method(D_METHOD("_notification"), &GDN_TheWorld_Camera::_notification);
+	ClassDB::bind_method(D_METHOD("is_active_camera"), &GDN_TheWorld_Camera::isActiveCamera);
+	ClassDB::bind_method(D_METHOD("get_active_camera"), &GDN_TheWorld_Camera::getActiveCamera);
+	ClassDB::bind_method(D_METHOD("get_angle_from_north"), &GDN_TheWorld_Camera::getAngleFromNorth);
+	ClassDB::bind_method(D_METHOD("get_yaw"), &GDN_TheWorld_Camera::getYaw);
+	ClassDB::bind_method(D_METHOD("set_yaw"), &GDN_TheWorld_Camera::setYaw);
+	ClassDB::bind_method(D_METHOD("get_pitch"), &GDN_TheWorld_Camera::getPitch);
+	ClassDB::bind_method(D_METHOD("set_pitch"), &GDN_TheWorld_Camera::setPitch);
+	ClassDB::bind_method(D_METHOD("get_roll"), &GDN_TheWorld_Camera::getRoll);
+	ClassDB::bind_method(D_METHOD("set_roll"), &GDN_TheWorld_Camera::setRoll);
 }
 
 GDN_TheWorld_Camera::GDN_TheWorld_Camera()
@@ -84,6 +87,8 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	// Camera Rotation
 
 	m_globals = NULL;
+
+	_init();
 }
 
 GDN_TheWorld_Camera::~GDN_TheWorld_Camera()
@@ -128,7 +133,7 @@ void GDN_TheWorld_Camera::_notification(int p_what)
 	}
 }
 
-void GDN_TheWorld_Camera::_process(float _delta)
+void GDN_TheWorld_Camera::_process(double _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Globals()->debugPrint("GDN_TheWorld_Camera::_process");
@@ -158,12 +163,12 @@ void GDN_TheWorld_Camera::_process(float _delta)
 	m_angleFromNorth = (angleFromNorth * 180) / TheWorld_Utils::kPi;		// transform angle from radiant to degree
 }
 
-void GDN_TheWorld_Camera::_physics_process(float _delta)
+void GDN_TheWorld_Camera::_physics_process(double _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Globals()->debugPrint("GDN_TheWorld_Camera::_physics_process");
 
-	if (godot::Engine::get_singleton()->is_editor_hint())
+	if (IS_EDITOR_HINT())
 		return;
 
 	GDN_TheWorld_Globals* globals = Globals();
@@ -307,7 +312,7 @@ void GDN_TheWorld_Camera::_physics_process(float _delta)
 	//}
 }
 
-void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
+void GDN_TheWorld_Camera::_input(const Ref<InputEvent>& event)
 {
 	//Globals()->debugPrint("GDN_TheWorld_Camera::_input: " + event->as_text());
 
@@ -327,7 +332,7 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 		return;
 	}
 
-	InputEventMouseMotion* eventMouseMotion = cast_to<InputEventMouseMotion>(event.ptr());
+	const InputEventMouseMotion* eventMouseMotion = godot::Object::cast_to<InputEventMouseMotion>(event.ptr());
 	if (eventMouseMotion != nullptr)
 	{
 		//Globals()->debugPrint("GDN_TheWorld_Camera::_input: " + event->as_text());
@@ -369,7 +374,7 @@ void GDN_TheWorld_Camera::_input(const Ref<InputEvent> event)
 
 void GDN_TheWorld_Camera::activateCamera(void)
 {
-	if (godot::Engine::get_singleton()->is_editor_hint())
+	if (IS_EDITOR_HINT())
 		return;
 
 	if (!isActiveCamera())
@@ -396,7 +401,7 @@ void GDN_TheWorld_Camera::activateCamera(void)
 
 void GDN_TheWorld_Camera::deactivateCamera(void)
 {
-	if (godot::Engine::get_singleton()->is_editor_hint())
+	if (IS_EDITOR_HINT())
 		return;
 
 	if (isActiveCamera())
@@ -428,7 +433,7 @@ GDN_TheWorld_Camera* GDN_TheWorld_Camera::getActiveCamera(void)
 	if (scene == NULL)
 		return NULL;
 
-	Array camArray = scene->get_nodes_in_group(GD_ACTIVE_CAMERA_GROUP);
+	godot::Array camArray = scene->get_nodes_in_group(GD_ACTIVE_CAMERA_GROUP);
 
 	
 	if (camArray.size() > 1)
@@ -438,7 +443,7 @@ GDN_TheWorld_Camera* GDN_TheWorld_Camera::getActiveCamera(void)
 	}
 
 	if (camArray.size() == 1)
-		return camArray[0];
+		return godot::Object::cast_to<GDN_TheWorld_Camera>(camArray[0]);
 	else
 		return NULL;
 }
@@ -472,14 +477,14 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 	Vector3 worldNodePosGlobalCoord = Globals()->Viewer()->getWorldNode()->get_global_transform().origin;
 	Vector3 cameraPosGlobalCoord = cameraPos + worldNodePosGlobalCoord;
 	Vector3 lookAtGlobalCoord = lookAt + worldNodePosGlobalCoord;
-	Camera::look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
+	Camera3D::look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
 
 	//real_t z_near = Camera::get_znear();
 	//real_t z_far = Camera::get_zfar();
 	//real_t size = Camera::get_size();
 	//Vector2 offset = Camera::get_frustum_offset();
 
-	Camera::set_zfar(20000.0);
+	Camera3D::set_far(20000.0);
 
 	// TODORIC mah
 	//Camera::set_frustum(size / 2, offset, z_near, z_far * 100);
@@ -522,13 +527,13 @@ bool GDN_TheWorld_Camera::updateCamera()
 		m_totalYaw *= m_yaw;
 		m_totalPitch *= m_pitch;
 
-		float pitch = Math::deg2rad(-m_pitch);
+		float pitch = Math::deg_to_rad(-m_pitch);
 		if ((pitch + get_rotation().x) > kPi / 2)
 			pitch = (kPi / 2) - get_rotation().x;
 		if ((pitch + get_rotation().x) < -(kPi / 2))
 			pitch = (-(kPi / 2)) - get_rotation().x;
 
-		rotate_y(Math::deg2rad(-m_yaw));
+		rotate_y(Math::deg_to_rad(-m_yaw));
 		rotate_object_local(Vector3(1, 0, 0), pitch);
 
 		/*if (m_lastYaw != m_yaw)
@@ -632,7 +637,7 @@ bool GDN_TheWorld_Camera::updateCamera()
 
 	if (m_numMoveStepUp)
 	{
-		Transform t = get_global_transform();
+		Transform3D t = get_global_transform();
 		if (m_shiftPressed)
 		{
 			t.origin += Vector3(0, m_numMoveStepUp * m_wheelSlowVelocity, 0);
@@ -662,7 +667,7 @@ GDN_TheWorld_Globals* GDN_TheWorld_Camera::Globals(bool useCache)
 		Viewport* root = scene->get_root();
 		if (!root)
 			return NULL;
-		m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
+		m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_child(THEWORLD_GLOBALS_NODE_NAME, true, false));
 	}
 
 	return m_globals;
@@ -672,43 +677,43 @@ Ref<ArrayMesh> GDN_TheWorld_Camera::DrawViewFrustum(Color c)
 {
 	GDN_TheWorld_Viewer* viewer = Globals()->Viewer();
 
-	float m_FarOffset = Camera::get_zfar();
-	float m_NearOffset = Camera::get_znear();
-	float m_ScreenWidth = Camera::get_viewport()->get_size().x;
-	float m_ScreenHeight = Camera::get_viewport()->get_size().y;
+	float m_FarOffset = (float)godot::Camera3D::get_far();
+	float m_NearOffset = (float)godot::Camera3D::get_near();
+	float m_ScreenWidth = godot::Camera3D::get_viewport()->get_visible_rect().get_size().x;
+	float m_ScreenHeight = godot::Camera3D::get_viewport()->get_visible_rect().get_size().y;
 
 	float m_AspectRatio = (m_ScreenWidth > m_ScreenHeight) ? (m_ScreenWidth / m_ScreenHeight) : (m_ScreenHeight / m_ScreenWidth);
 
-	float m_FarHeight = 2.0f * ((float)tan(Camera::get_fov() / 2.0f)) * m_FarOffset;
+	float m_FarHeight = 2.0f * ((float)tan(godot::Camera3D::get_fov() / 2.0f)) * m_FarOffset;
 	//float m_FarWidth = m_FarOffset * m_AspectRatio;	// TODORIC mah
 	float m_FarWidth = m_FarHeight * m_AspectRatio;
 
 	m_FarHeight = m_FarHeight + ((m_FarHeight / 7) * 3);
 	m_FarWidth = m_FarWidth + ((m_FarWidth / 7) * 3);
 
-	Vector3 m_Forward = Camera::get_global_transform().origin + Vector3::FORWARD * m_FarOffset;
+	Vector3 m_Forward = godot::Camera3D::get_global_transform().origin + Vector3Forward * m_FarOffset;
 
 	//--> Near World
-	Vector3 m_NearTopLeft = Camera::project_position(Vector2(0, 0), Camera::get_znear());
-	Vector3 m_NearTopRight = Camera::project_position(Vector2(m_ScreenWidth, 0), Camera::get_znear());
-	Vector3 m_NearBottomLeft = Camera::project_position(Vector2(0, m_ScreenHeight), Camera::get_znear());
-	Vector3 m_NearBottomRight = Camera::project_position(Vector2(m_ScreenWidth, m_ScreenHeight), Camera::get_znear());
+	Vector3 m_NearTopLeft = godot::Camera3D::project_position(Vector2(0, 0), godot::Camera3D::get_near());
+	Vector3 m_NearTopRight = godot::Camera3D::project_position(Vector2(m_ScreenWidth, 0), godot::Camera3D::get_near());
+	Vector3 m_NearBottomLeft = godot::Camera3D::project_position(Vector2(0, m_ScreenHeight), godot::Camera3D::get_near());
+	Vector3 m_NearBottomRight = godot::Camera3D::project_position(Vector2(m_ScreenWidth, m_ScreenHeight), godot::Camera3D::get_near());
 	
 	//--> Far LOCAL
-	Vector3 m_FarTopLeft = m_Forward + (Vector3::UP * m_FarHeight / 2.0f) - (Vector3::RIGHT * m_FarWidth / 2.0f);
-	Vector3 m_FarTopRight = m_Forward + (Vector3::UP * m_FarHeight / 2.0f) + (Vector3::RIGHT * m_FarWidth / 2.0f);
-	Vector3 m_FarBottomLeft = m_Forward - (Vector3::UP * m_FarHeight / 2.0f) - (Vector3::RIGHT * m_FarWidth / 2.0f);
-	Vector3 m_FarBottomRight = m_Forward - (Vector3::UP * m_FarHeight / 2.0f) + (Vector3::RIGHT * m_FarWidth / 2.0f);
+	Vector3 m_FarTopLeft = m_Forward + (Vector3Up * m_FarHeight / 2.0f) - (Vector3Right * m_FarWidth / 2.0f);
+	Vector3 m_FarTopRight = m_Forward + (Vector3Up * m_FarHeight / 2.0f) + (Vector3Right * m_FarWidth / 2.0f);
+	Vector3 m_FarBottomLeft = m_Forward - (Vector3Up * m_FarHeight / 2.0f) - (Vector3Right * m_FarWidth / 2.0f);
+	Vector3 m_FarBottomRight = m_Forward - (Vector3Up * m_FarHeight / 2.0f) + (Vector3Right * m_FarWidth / 2.0f);
 
 	//--> Far WORLD
-	m_FarTopLeft = Camera::get_transform().xform(m_FarTopLeft);
-	m_FarTopRight = Camera::get_transform().xform(m_FarTopRight);
-	m_FarBottomRight = Camera::get_transform().xform(m_FarBottomRight);
-	m_FarBottomLeft = Camera::get_transform().xform(m_FarBottomLeft);
+	m_FarTopLeft = godot::Camera3D::get_transform().xform(m_FarTopLeft);
+	m_FarTopRight = godot::Camera3D::get_transform().xform(m_FarTopRight);
+	m_FarBottomRight = godot::Camera3D::get_transform().xform(m_FarBottomRight);
+	m_FarBottomLeft = godot::Camera3D::get_transform().xform(m_FarBottomLeft);
 	
-	PoolVector3Array positions;
-	PoolColorArray colors;
-	PoolIntArray indices;
+	godot::PackedVector3Array positions;
+	godot::PackedColorArray colors;
+	godot::PackedInt32Array indices;
 
 	//--> Draw lines
 	positions.append(m_FarTopLeft);			colors.append(c);	// index 0
@@ -745,7 +750,7 @@ Ref<ArrayMesh> GDN_TheWorld_Camera::DrawViewFrustum(Color c)
 
 	if (viewer != nullptr)
 		viewer->getMainProcessingMutex().lock();
-	Ref<ArrayMesh> mesh = ArrayMesh::_new();
+	Ref<ArrayMesh> mesh = memnew(ArrayMesh);
 	if (viewer != nullptr)
 		viewer->getMainProcessingMutex().unlock();
 	mesh->add_surface_from_arrays(Mesh::PRIMITIVE_LINES, arrays);

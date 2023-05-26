@@ -1,15 +1,17 @@
-//#include "pch.h"
+
 #include "GDN_Template.h"
+
+//#include <godot_cpp/core/class_db.hpp>
 
 using namespace godot;
 
-void GDN_Template::_register_methods()
+void GDN_Template::_bind_methods()
 {
-	register_method("_ready", &GDN_Template::_ready);
-	register_method("_process", &GDN_Template::_process);
-	register_method("_input", &GDN_Template::_input);
+	ClassDB::bind_method(D_METHOD("hello"), &GDN_Template::hello);
 
-	register_method("hello", &GDN_Template::hello);
+	//ClassDB::bind_method(D_METHOD("get_amplitude"), &GDExample::get_amplitude);
+	//ClassDB::bind_method(D_METHOD("set_amplitude", "p_amplitude"), &GDExample::set_amplitude);
+	//ClassDB::add_property("GDExample", PropertyInfo(Variant::FLOAT, "amplitude"), "set_amplitude", "get_amplitude");
 }
 
 GDN_Template::GDN_Template()
@@ -35,10 +37,10 @@ void GDN_Template::deinit(void)
 	}
 }
 
-void GDN_Template::_init(void)
-{
-	//Godot::print("GDN_Template::Init");
-}
+//void GDN_Template::_init(void)
+//{
+//	//Godot::print("GDN_Template::Init");
+//}
 
 void GDN_Template::_ready(void)
 {
@@ -46,11 +48,11 @@ void GDN_Template::_ready(void)
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 }
 
-void GDN_Template::_input(const Ref<InputEvent> event)
+void GDN_Template::_input(const Ref<InputEvent>& event)
 {
 }
 
-void GDN_Template::_process(float _delta)
+void GDN_Template::_process(double _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Godot::print("GDN_Template::_process");

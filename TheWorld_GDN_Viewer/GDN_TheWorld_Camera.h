@@ -1,10 +1,14 @@
 #pragma once
-#include <Godot.hpp>
-#include <Node.hpp>
-#include <Camera.hpp>
-#include <Reference.hpp>
-#include <InputEvent.hpp>
-#include <ArrayMesh.hpp>
+
+#pragma warning (push, 0)
+#include <godot_cpp/classes/camera3d.hpp>
+#include <godot_cpp/classes/input_event.hpp>
+#include <godot_cpp/classes/array_mesh.hpp>
+#include <godot_cpp/classes/ref.hpp>
+#pragma warning (pop)
+
+//#include <Reference.hpp>
+//#include <ArrayMesh.hpp>
 
 #include "Utils.h"
 
@@ -14,22 +18,24 @@ namespace godot {
 
 	class GDN_TheWorld_Globals;
 
-	class GDN_TheWorld_Camera : public Camera
+	class GDN_TheWorld_Camera : public Camera3D
 	{
-		GODOT_CLASS(GDN_TheWorld_Camera, Camera)
+		GDCLASS(GDN_TheWorld_Camera, Camera3D)
+
+	protected:
+		static void _bind_methods();
+		void _notification(int p_what);
+		void _init(void);
 
 	public:
-		static void _register_methods();
-
 		GDN_TheWorld_Camera();
 		~GDN_TheWorld_Camera();
 
-		void _init(); // our initializer called by Godot
-		void _ready();
-		void _process(float _delta);
-		void _physics_process(float _delta);
-		void _input(const Ref<InputEvent> event);
-		void _notification(int p_what);
+		virtual void _ready() override;
+		virtual void _process(double _delta) override;
+		virtual void _physics_process(double _delta) override;
+		virtual void _input(const Ref<InputEvent>& event) override;
+		
 		bool initCameraInWorld(Vector3 cameraPos, Vector3 lookAt);
 		bool initPlayerCamera(void);
 		bool initOtherEntityCamera(void);
@@ -67,7 +73,7 @@ namespace godot {
 		void setYaw(float yaw, bool radiant = true)
 		{
 			float radiantYaw = radiant ? yaw : (yaw * TheWorld_Utils::kPi) / 180;
-			Transform t = get_global_transform();
+			Transform3D t = get_global_transform();
 			godot::Vector3 v = t.basis.get_euler();
 			v.y = radiantYaw;
 			t.basis.set_euler(v);
@@ -83,7 +89,7 @@ namespace godot {
 		void setPitch(float pitch, bool radiant = true)
 		{
 			float radiantPitch = radiant ? pitch : (pitch * TheWorld_Utils::kPi) / 180;
-			Transform t = get_global_transform();
+			Transform3D t = get_global_transform();
 			godot::Vector3 v = t.basis.get_euler();
 			v.x = radiantPitch;
 			t.basis.set_euler(v);
@@ -99,7 +105,7 @@ namespace godot {
 		void setRoll(float roll, bool radiant = true)
 		{
 			float radiantRoll = radiant ? roll : (roll * TheWorld_Utils::kPi) / 180;
-			Transform t = get_global_transform();
+			Transform3D t = get_global_transform();
 			godot::Vector3 v = t.basis.get_euler();
 			v.z = radiantRoll;
 			t.basis.set_euler(v);
@@ -109,7 +115,7 @@ namespace godot {
 	private:
 
 	private:
-		Transform m_lastCameraPosInWorld;
+		Transform3D m_lastCameraPosInWorld;
 		bool m_PlayerCamera;
 		bool m_OtherEntityCamera;
 		bool m_WorldCamera;

@@ -24,12 +24,27 @@
 //#include <Vector3.hpp>
 //#include <boost/algorithm/string.hpp>
 
+#define Vector3One Vector3(1, 1, 1)
 #define Vector3Zero Vector3(0, 0, 0)
-#define Vector3UP Vector3(0, 1, 0)
+#define Vector3Up Vector3(0, 1, 0)
+#define Vector3Down Vector3(0, -1, 0)
+#define Vector3Forward Vector3(0, 0, -1)
+#define Vector3Back Vector3(0, 0, 1)
+#define Vector3Left Vector3(-1, 0, 0)
+#define Vector3Right Vector3(1, 0, 0)
 
 #define Vector3X Vector3(1, 0, 1)
 #define Vector3Y Vector3(0, 1, 0)
 #define Vector3Z Vector3(0, 0, 1)
+
+//#define TEXT(s) #s
+#define IS_EDITOR_HINT() godot::Engine::get_singleton()->is_editor_hint()
+#define SCENE_TREE() godot::Object::cast_to<SceneTree>(Engine::get_singleton()->get_main_loop())
+#define SCENE_ROOT() (SCENE_TREE()->get_root())
+#define RS() godot::RenderingServer::get_singleton()
+#define TIME() godot::Time::get_singleton()
+#define ENGINE() godot::Engine::get_singleton()
+#define OPSYS() godot::OS::get_singleton()
 
 static constexpr float kPi = 3.14159265358979323846f;
 static constexpr float kPi2 = 6.28318530717958647692f;

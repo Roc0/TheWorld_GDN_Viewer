@@ -3,19 +3,25 @@
 #include "GDN_TheWorld_Globals.h"
 #include "GDN_TheWorld_Camera.h"
 #include "GDN_TheWorld_Edit.h"
-#include <SceneTree.hpp>
-#include <Viewport.hpp>
-#include <Engine.hpp>
-#include <World.hpp>
-#include <OS.hpp>
-#include <EditorInterface.hpp>
-#include <Input.hpp>
-#include <VisualServer.hpp>
-#include <ResourceLoader.hpp>
-#include <Shader.hpp>
-#include <ImageTexture.hpp>
-#include <File.hpp>
-#include <PhysicsDirectSpaceState.hpp>
+
+#pragma warning(push, 0)
+#include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/scene_tree.hpp>
+#include <godot_cpp/classes/window.hpp>
+#include <godot_cpp/classes/world3d.hpp>
+#include <godot_cpp/classes/os.hpp>
+#include <godot_cpp/classes/editor_interface.hpp>
+#include <godot_cpp/classes/rendering_server.hpp>
+#include <godot_cpp/classes/resource_loader.hpp>
+#include <godot_cpp/classes/shader.hpp>
+#include <godot_cpp/classes/image_texture.hpp>
+#include <godot_cpp/classes/file_access.hpp>
+#include <godot_cpp/classes/physics_direct_space_state3d.hpp>
+#include <godot_cpp/classes/physics_ray_query_parameters3d.hpp>
+#include <godot_cpp/classes/time.hpp>
+#include <godot_cpp/classes/input.hpp>
+#pragma warning(pop)
+
 #include <filesystem>
 #include <limits>
 
@@ -49,79 +55,74 @@ namespace fs = std::filesystem;
 // Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 // Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 
-void GDN_TheWorld_Viewer::_register_methods()
+void GDN_TheWorld_Viewer::_bind_methods()
 {
-	register_method("_ready", &GDN_TheWorld_Viewer::_ready);
-	register_method("_process", &GDN_TheWorld_Viewer::_process);
-	register_method("_physics_process", &GDN_TheWorld_Viewer::_physics_process);
-	register_method("_input", &GDN_TheWorld_Viewer::_input);
-	register_method("_notification", &GDN_TheWorld_Viewer::_notification);
+	ClassDB::bind_method(D_METHOD("debug_print", "p_msg"), &GDN_TheWorld_Viewer::debugPrint);
+	ClassDB::bind_method(D_METHOD("error_print", "p_msg"), &GDN_TheWorld_Viewer::errorPrint);
+	ClassDB::bind_method(D_METHOD("warning_print", "p_msg"), &GDN_TheWorld_Viewer::warningPrint);
+	ClassDB::bind_method(D_METHOD("info_print", "p_msg"), &GDN_TheWorld_Viewer::infoPrint);
+	ClassDB::bind_method(D_METHOD("print", "p_msg"), &GDN_TheWorld_Viewer::print);
 
-	register_method("debug_print", &GDN_TheWorld_Viewer::debugPrint);
-	register_method("error_print", &GDN_TheWorld_Globals::errorPrint);
-	register_method("warning_print", &GDN_TheWorld_Globals::warningPrint);
-	register_method("info_print", &GDN_TheWorld_Globals::infoPrint);
-	register_method("print", &GDN_TheWorld_Globals::print);
-	register_method("set_editor_interface", &GDN_TheWorld_Viewer::setEditorInterface);
-	register_method("set_editor_camera", &GDN_TheWorld_Viewer::setEditorCamera);
-	register_method("get_camera", &GDN_TheWorld_Viewer::getCamera);
-	register_method("get_info_camera", &GDN_TheWorld_Viewer::getInfoCamera);
-	register_method("get_camera_projection_mode", &GDN_TheWorld_Viewer::getCameraProjectionMode);
-	register_method("get_or_create_edit_mode_ui_control", &GDN_TheWorld_Viewer::getOrCreateEditModeUIControl);
-	register_method("toggle_track_mouse", &GDN_TheWorld_Viewer::toggleTrackMouse);
-	register_method("get_track_mouse_state", &GDN_TheWorld_Viewer::getTrackMouseState);
-	register_method("toggle_edit_mode", &GDN_TheWorld_Viewer::toggleEditMode);
-	register_method("toggle_debug_visibility", &GDN_TheWorld_Viewer::toggleDebugVisibility);
-	register_method("rotate_chunk_debug_mode", &GDN_TheWorld_Viewer::rotateChunkDebugMode);
-	register_method("rotate_drawing_mode", &GDN_TheWorld_Viewer::rotateDrawingMode);
-	register_method("toggle_quadrant_selected", &GDN_TheWorld_Viewer::toggleQuadrantSelected);
-	register_method("set_depth_quad", &GDN_TheWorld_Viewer::setDepthQuadOnPerimeter);
-	register_method("get_depth_quad", &GDN_TheWorld_Viewer::getDepthQuadOnPerimeter);
-	register_method("set_cache_quad", &GDN_TheWorld_Viewer::setCacheQuadOnPerimeter);
-	register_method("get_cache_quad", &GDN_TheWorld_Viewer::getCacheQuadOnPerimeter);
-	register_method("reset_initial_world_viewer_pos", &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
-	register_method("initial_world_viewer_pos_set", &GDN_TheWorld_Viewer::initialWordlViewerPosSet);
-	register_method("dump_required", &GDN_TheWorld_Viewer::setDumpRequired);
-	//register_method("get_camera_chunk_global_transform_of_aabb", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB);
-	register_method("get_camera_chunk_local_aabb", &GDN_TheWorld_Viewer::getCameraChunkLocalAABB);
-	register_method("get_camera_chunk_local_debug_aabb", &GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB);
-	register_method("get_camera_chunk_global_transform_applied", &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformApplied);
-	register_method("get_camera_chunk_debug_global_transform_applied", &GDN_TheWorld_Viewer::getCameraChunkDebugGlobalTransformApplied);
-	register_method("get_camera_chunk_id", &GDN_TheWorld_Viewer::getCameraChunkId);
-	register_method("get_camera_quadrant_name", &GDN_TheWorld_Viewer::getCameraQuadrantName);
-	register_method("get_num_splits", &GDN_TheWorld_Viewer::getNumSplits);
-	register_method("get_num_joins", &GDN_TheWorld_Viewer::getNumJoins);
-	register_method("get_num_chunks", &GDN_TheWorld_Viewer::getNumChunks);
-	register_method("get_num_active_chunks", &GDN_TheWorld_Viewer::getNumActiveChunks);
-	register_method("get_num_quadrant", &GDN_TheWorld_Viewer::getNumQuadrant);
-	register_method("get_num_initialized_quadrant", &GDN_TheWorld_Viewer::getNuminitializedQuadrant);
-	register_method("get_num_visible_quadrant", &GDN_TheWorld_Viewer::getNumVisibleQuadrant);
-	register_method("get_num_initialized_visible_quadrant", &GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant);
-	register_method("get_num_empty_quadrant", &GDN_TheWorld_Viewer::getNumEmptyQuadrant);
-	register_method("get_num_flushed_quadrant", &GDN_TheWorld_Viewer::getNumFlushedQuadrant);
-	register_method("get_num_process_not_owns_lock", &GDN_TheWorld_Viewer::getProcessNotOwnsLock);
-	register_method("get_process_duration", &GDN_TheWorld_Viewer::getProcessDuration);
-	register_method("get_refresh_quads_duration", &GDN_TheWorld_Viewer::getRefreshMapQuadDuration);
-	register_method("get_update_quads1_duration", &GDN_TheWorld_Viewer::getUpdateQuads1Duration);
-	register_method("get_update_quads2_duration", &GDN_TheWorld_Viewer::getUpdateQuads2Duration);
-	register_method("get_update_quads3_duration", &GDN_TheWorld_Viewer::getUpdateQuads3Duration);
-	register_method("get_update_chunks_duration", &GDN_TheWorld_Viewer::getUpdateChunksDuration);
-	register_method("get_update_material_params_duration", &GDN_TheWorld_Viewer::getUpdateMaterialParamsDuration);
-	register_method("get_mouse_track_hit_duration", &GDN_TheWorld_Viewer::getMouseTrackHitDuration);
-	register_method("get_debug_draw_mode", &GDN_TheWorld_Viewer::getDebugDrawMode);
-	register_method("get_chunk_debug_mode", &GDN_TheWorld_Viewer::getChunkDebugModeStr);
-	register_method("get_mouse_hit", &GDN_TheWorld_Viewer::getMouseHit);
-	register_method("get_mouse_hit_distance_from_camera", &GDN_TheWorld_Viewer::getMouseHitDistanceFromCamera);
-	register_method("get_mouse_quadrant_hit_name", &GDN_TheWorld_Viewer::_getMouseQuadrantHitName);
-	register_method("get_mouse_quadrant_hit_tag", &GDN_TheWorld_Viewer::_getMouseQuadrantHitTag);
-	register_method("get_mouse_quadrant_hit_pos", &GDN_TheWorld_Viewer::getMouseQuadrantHitPos);
-	register_method("get_mouse_quadrant_hit_size", &GDN_TheWorld_Viewer::getMouseQuadrantHitSize);
-	register_method("get_mouse_chunk_hit_name", &GDN_TheWorld_Viewer::getMouseChunkHitId);
-	register_method("get_mouse_chunk_hit_pos", &GDN_TheWorld_Viewer::getMouseChunkHitPos);
-	register_method("get_mouse_chunk_hit_size", &GDN_TheWorld_Viewer::getMouseChunkHitSize);
-	register_method("get_mouse_chunk_hit_dist_from_cam", &GDN_TheWorld_Viewer::getMouseChunkHitDistFromCam);
-	register_method("update_material_parmas_for_every_quadrant", &GDN_TheWorld_Viewer::updateMaterialParamsForEveryQuadrant);
-	register_method("set_shader_param", &GDN_TheWorld_Viewer::setShaderParam);
+	ClassDB::bind_method(D_METHOD("set_editor_interface"), &GDN_TheWorld_Viewer::setEditorInterface);
+	ClassDB::bind_method(D_METHOD("set_editor_camera"), &GDN_TheWorld_Viewer::setEditorCamera);
+	ClassDB::bind_method(D_METHOD("get_camera"), &GDN_TheWorld_Viewer::getCamera);
+	ClassDB::bind_method(D_METHOD("get_info_camera"), &GDN_TheWorld_Viewer::getInfoCamera);
+	ClassDB::bind_method(D_METHOD("get_camera_projection_mode"), &GDN_TheWorld_Viewer::getCameraProjectionMode);
+	ClassDB::bind_method(D_METHOD("get_or_create_edit_mode_ui_control"), &GDN_TheWorld_Viewer::getOrCreateEditModeUIControl);
+	ClassDB::bind_method(D_METHOD("toggle_track_mouse"), &GDN_TheWorld_Viewer::toggleTrackMouse);
+	ClassDB::bind_method(D_METHOD("get_track_mouse_state"), &GDN_TheWorld_Viewer::getTrackMouseState);
+	ClassDB::bind_method(D_METHOD("toggle_edit_mode"), &GDN_TheWorld_Viewer::toggleEditMode);
+	ClassDB::bind_method(D_METHOD("toggle_debug_visibility"), &GDN_TheWorld_Viewer::toggleDebugVisibility);
+	ClassDB::bind_method(D_METHOD("rotate_chunk_debug_mode"), &GDN_TheWorld_Viewer::rotateChunkDebugMode);
+	ClassDB::bind_method(D_METHOD("rotate_drawing_mode"), &GDN_TheWorld_Viewer::rotateDrawingMode);
+	ClassDB::bind_method(D_METHOD("toggle_quadrant_selected"), &GDN_TheWorld_Viewer::toggleQuadrantSelected);
+	ClassDB::bind_method(D_METHOD("set_depth_quad"), &GDN_TheWorld_Viewer::setDepthQuadOnPerimeter);
+	ClassDB::bind_method(D_METHOD("get_depth_quad"), &GDN_TheWorld_Viewer::getDepthQuadOnPerimeter);
+	ClassDB::bind_method(D_METHOD("set_cache_quad"), &GDN_TheWorld_Viewer::setCacheQuadOnPerimeter);
+	ClassDB::bind_method(D_METHOD("get_cache_quad"), &GDN_TheWorld_Viewer::getCacheQuadOnPerimeter);
+	ClassDB::bind_method(D_METHOD("reset_initial_world_viewer_pos"), &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
+	ClassDB::bind_method(D_METHOD("initial_world_viewer_pos_set"), &GDN_TheWorld_Viewer::initialWordlViewerPosSet);
+	ClassDB::bind_method(D_METHOD("dump_required"), &GDN_TheWorld_Viewer::setDumpRequired);
+	//ClassDB::bind_method(D_METHOD("get_camera_chunk_global_transform_of_aabb"), &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB);
+	ClassDB::bind_method(D_METHOD("get_camera_chunk_local_aabb"), &GDN_TheWorld_Viewer::getCameraChunkLocalAABB);
+	ClassDB::bind_method(D_METHOD("get_camera_chunk_local_debug_aabb"), &GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB);
+	ClassDB::bind_method(D_METHOD("get_camera_chunk_global_transform_applied"), &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformApplied);
+	ClassDB::bind_method(D_METHOD("get_camera_chunk_debug_global_transform_applied"), &GDN_TheWorld_Viewer::getCameraChunkDebugGlobalTransformApplied);
+	ClassDB::bind_method(D_METHOD("get_camera_chunk_id"), &GDN_TheWorld_Viewer::getCameraChunkId);
+	ClassDB::bind_method(D_METHOD("get_camera_quadrant_name"), &GDN_TheWorld_Viewer::getCameraQuadrantName);
+	ClassDB::bind_method(D_METHOD("get_num_splits"), &GDN_TheWorld_Viewer::getNumSplits);
+	ClassDB::bind_method(D_METHOD("get_num_joins"), &GDN_TheWorld_Viewer::getNumJoins);
+	ClassDB::bind_method(D_METHOD("get_num_chunks"), &GDN_TheWorld_Viewer::getNumChunks);
+	ClassDB::bind_method(D_METHOD("get_num_active_chunks"), &GDN_TheWorld_Viewer::getNumActiveChunks);
+	ClassDB::bind_method(D_METHOD("get_num_quadrant"), &GDN_TheWorld_Viewer::getNumQuadrant);
+	ClassDB::bind_method(D_METHOD("get_num_initialized_quadrant"), &GDN_TheWorld_Viewer::getNuminitializedQuadrant);
+	ClassDB::bind_method(D_METHOD("get_num_visible_quadrant"), &GDN_TheWorld_Viewer::getNumVisibleQuadrant);
+	ClassDB::bind_method(D_METHOD("get_num_initialized_visible_quadrant"), &GDN_TheWorld_Viewer::getNuminitializedVisibleQuadrant);
+	ClassDB::bind_method(D_METHOD("get_num_empty_quadrant"), &GDN_TheWorld_Viewer::getNumEmptyQuadrant);
+	ClassDB::bind_method(D_METHOD("get_num_flushed_quadrant"), &GDN_TheWorld_Viewer::getNumFlushedQuadrant);
+	ClassDB::bind_method(D_METHOD("get_num_process_not_owns_lock"), &GDN_TheWorld_Viewer::getProcessNotOwnsLock);
+	ClassDB::bind_method(D_METHOD("get_process_duration"), &GDN_TheWorld_Viewer::getProcessDuration);
+	ClassDB::bind_method(D_METHOD("get_refresh_quads_duration"), &GDN_TheWorld_Viewer::getRefreshMapQuadDuration);
+	ClassDB::bind_method(D_METHOD("get_update_quads1_duration"), &GDN_TheWorld_Viewer::getUpdateQuads1Duration);
+	ClassDB::bind_method(D_METHOD("get_update_quads2_duration"), &GDN_TheWorld_Viewer::getUpdateQuads2Duration);
+	ClassDB::bind_method(D_METHOD("get_update_quads3_duration"), &GDN_TheWorld_Viewer::getUpdateQuads3Duration);
+	ClassDB::bind_method(D_METHOD("get_update_chunks_duration"), &GDN_TheWorld_Viewer::getUpdateChunksDuration);
+	ClassDB::bind_method(D_METHOD("get_update_material_params_duration"), &GDN_TheWorld_Viewer::getUpdateMaterialParamsDuration);
+	ClassDB::bind_method(D_METHOD("get_mouse_track_hit_duration"), &GDN_TheWorld_Viewer::getMouseTrackHitDuration);
+	ClassDB::bind_method(D_METHOD("get_debug_draw_mode"), &GDN_TheWorld_Viewer::getDebugDrawMode);
+	ClassDB::bind_method(D_METHOD("get_chunk_debug_mode"), &GDN_TheWorld_Viewer::getChunkDebugModeStr);
+	ClassDB::bind_method(D_METHOD("get_mouse_hit"), &GDN_TheWorld_Viewer::getMouseHit);
+	ClassDB::bind_method(D_METHOD("get_mouse_hit_distance_from_camera"), &GDN_TheWorld_Viewer::getMouseHitDistanceFromCamera);
+	ClassDB::bind_method(D_METHOD("get_mouse_quadrant_hit_name"), &GDN_TheWorld_Viewer::_getMouseQuadrantHitName);
+	ClassDB::bind_method(D_METHOD("get_mouse_quadrant_hit_tag"), &GDN_TheWorld_Viewer::_getMouseQuadrantHitTag);
+	ClassDB::bind_method(D_METHOD("get_mouse_quadrant_hit_pos"), &GDN_TheWorld_Viewer::getMouseQuadrantHitPos);
+	ClassDB::bind_method(D_METHOD("get_mouse_quadrant_hit_size"), &GDN_TheWorld_Viewer::getMouseQuadrantHitSize);
+	ClassDB::bind_method(D_METHOD("get_mouse_chunk_hit_name"), &GDN_TheWorld_Viewer::getMouseChunkHitId);
+	ClassDB::bind_method(D_METHOD("get_mouse_chunk_hit_pos"), &GDN_TheWorld_Viewer::getMouseChunkHitPos);
+	ClassDB::bind_method(D_METHOD("get_mouse_chunk_hit_size"), &GDN_TheWorld_Viewer::getMouseChunkHitSize);
+	ClassDB::bind_method(D_METHOD("get_mouse_chunk_hit_dist_from_cam"), &GDN_TheWorld_Viewer::getMouseChunkHitDistFromCam);
+	ClassDB::bind_method(D_METHOD("update_material_parmas_for_every_quadrant"), &GDN_TheWorld_Viewer::updateMaterialParamsForEveryQuadrant);
+	ClassDB::bind_method(D_METHOD("set_shader_param"), &GDN_TheWorld_Viewer::setShaderParam);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -203,7 +204,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_recalcQuadrantsInViewNeeded = false;
 	m_editorInterface = nullptr;
 	m_editorCamera = nullptr;
-	if (godot::Engine::get_singleton()->is_editor_hint())
+	if (IS_EDITOR_HINT())
 	{
 		m_depthQuadOnPerimeter = 1;
 		m_cacheQuadOnPerimeter = 1;
@@ -224,6 +225,8 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_shaderParam_colormapOpacity.set_normal(godot::Vector3(1.0f, 1.0f, 1.0f));
 	m_shaderParam_colormapOpacity.d = 1.0f;
 	m_shaderParamChanged = false;
+
+	_init();
 }
 
 GDN_TheWorld_Viewer::~GDN_TheWorld_Viewer()
@@ -605,7 +608,7 @@ void GDN_TheWorld_Viewer::_init(void)
 	//Godot::print("GDN_TheWorld_Viewer::_init");
 
 	if (VISUAL_SERVER_WIREFRAME_MODE)
-		VisualServer::get_singleton()->set_debug_generate_wireframes(true);
+		godot::RenderingServer::get_singleton()->set_debug_generate_wireframes(true);
 
 	set_name(THEWORLD_VIEWER_NODE_NAME);
 }
@@ -628,7 +631,7 @@ void GDN_TheWorld_Viewer::_ready(void)
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 
 	// Camera stuff
-	//if (!godot::Engine::get_singleton()->is_editor_hint())
+	//if (!IS_EDITOR_HINT())
 	{
 		//if (WorldCamera())
 		//{
@@ -639,13 +642,13 @@ void GDN_TheWorld_Viewer::_ready(void)
 		
 		GDN_TheWorld_Camera* camera = CameraNode(false);
 		if (camera == nullptr)
-			camera = GDN_TheWorld_Camera::_new();
+			camera = memnew(GDN_TheWorld_Camera);
 		camera->set_name(THEWORLD_CAMERA_NODE_NAME);
 		assignWorldCamera(camera);
 
 		SceneTree* scene = get_tree();
 		Node* sceneRoot = nullptr;
-		if (godot::Engine::get_singleton()->is_editor_hint())
+		if (IS_EDITOR_HINT())
 			sceneRoot = scene->get_edited_scene_root();
 		else
 			sceneRoot = scene->get_root();
@@ -790,7 +793,7 @@ void GDN_TheWorld_Viewer::toggleQuadrantSelected(void)
 	}
 }
 
-void GDN_TheWorld_Viewer::_input(const Ref<InputEvent> event)
+void GDN_TheWorld_Viewer::_input(const Ref<InputEvent>& event)
 {
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
@@ -871,9 +874,9 @@ void GDN_TheWorld_Viewer::rotateChunkDebugMode(void)
 
 void GDN_TheWorld_Viewer::rotateDrawingMode(void)
 {
-	Viewport* vp = get_viewport();
-	Viewport::DebugDraw dd = vp->get_debug_draw();
-	vp->set_debug_draw((dd + 1) % 4);
+	godot::Viewport* vp = get_viewport();
+	godot::Viewport::DebugDraw dd = vp->get_debug_draw();
+	vp->set_debug_draw( (godot::Viewport::DebugDraw)((dd + 1) % 4));
 	m_debugDraw = vp->get_debug_draw();
 }
 
@@ -1073,19 +1076,19 @@ int GDN_TheWorld_Viewer::getCacheQuadOnPerimeter(void)
 
 String GDN_TheWorld_Viewer::getInfoCamera(void)
 {
-	godot::Camera* camera = getCamera();
+	godot::Camera3D* camera = getCamera();
 
 	if (camera == nullptr)
 		return "";
 
-	real_t z_near = camera->get_znear();
-	real_t z_far = camera->get_zfar();
-	real_t size = camera->get_size();
+	double z_near = camera->get_near();
+	double z_far = camera->get_far();
+	double size = camera->get_size();
 	Vector2 offset = camera->get_frustum_offset();
-	real_t fov = camera->get_fov();
-	real_t h_offset = camera->get_h_offset();
-	real_t v_offset = camera->get_v_offset();
-	godot::Camera::KeepAspect keepAspect = camera->get_keep_aspect_mode();
+	double fov = camera->get_fov();
+	double h_offset = camera->get_h_offset();
+	double v_offset = camera->get_v_offset();
+	godot::Camera3D::KeepAspect keepAspect = camera->get_keep_aspect_mode();
 
 	std::string info;
 
@@ -1096,12 +1099,12 @@ String GDN_TheWorld_Viewer::getInfoCamera(void)
 
 int GDN_TheWorld_Viewer::getCameraProjectionMode(void)
 {
-	godot::Camera* camera = getCamera();
+	godot::Camera3D* camera = getCamera();
 
 	if (camera == nullptr)
 		return -1;
 
-	godot::Camera::Projection projection = camera->get_projection();
+	godot::Camera3D::ProjectionType projection = camera->get_projection();
 
 	return (int)projection;
 }
@@ -1115,7 +1118,7 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	vector<QuadrantPos> quadrantPosNeeded;
 	quadrantPosNeeded.push_back(cameraQuadrant);
 
-	if (godot::Engine::get_singleton()->is_editor_hint())
+	if (IS_EDITOR_HINT())
 	{
 		m_numVisibleQuadrantOnPerimeter = getDepthQuadOnPerimeter();
 		m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter + getCacheQuadOnPerimeter();
@@ -1149,7 +1152,7 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	//			m_numVisibleQuadrantOnPerimeter = 3;
 	//	}
 	//}
-	if (!godot::Engine::get_singleton()->is_editor_hint())
+	if (!IS_EDITOR_HINT())
 	{
 		m_numVisibleQuadrantOnPerimeter = getDepthQuadOnPerimeter();
 		m_numCacheQuadrantOnPerimeter = m_numVisibleQuadrantOnPerimeter + getCacheQuadOnPerimeter();
@@ -1312,7 +1315,7 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	quadrantToDelete.clear();
 }
 
-void GDN_TheWorld_Viewer::_process(float _delta)
+void GDN_TheWorld_Viewer::_process(double _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Godot::print("GDN_TheWorld_Viewer::_process");
@@ -1330,8 +1333,8 @@ void GDN_TheWorld_Viewer::_process(float _delta)
 		return;
 
 	//GDN_TheWorld_Camera* activeCamera = nullptr;
-	godot::Camera* activeCamera = nullptr;
-	if (godot::Engine::get_singleton()->is_editor_hint())
+	godot::Camera3D* activeCamera = nullptr;
+	if (IS_EDITOR_HINT())
 	{
 		activeCamera = getCamera();
 	}
@@ -1375,7 +1378,7 @@ godot::Control* GDN_TheWorld_Viewer::getOrCreateEditModeUIControl(void)
 	return editModeUIControl;
 }
 
-void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
+void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 {
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
@@ -1510,7 +1513,7 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 		godot::Node* collider = nullptr;
 		if (m_trackMouse)
 		{
-			int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
+			int64_t timeElapsed = TIME()->get_ticks_msec();
 			if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
 			{
 				TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Track Mouse Chunk", false, false);
@@ -1521,12 +1524,13 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 				this->m_mouseTrackHitDuration += clock1.duration().count();
 					});
 
-				godot::PhysicsDirectSpaceState* spaceState = get_world()->get_direct_space_state();
+				godot::PhysicsDirectSpaceState3D* spaceState = get_world_3d()->get_direct_space_state();
 				godot::Dictionary rayArray;
 				godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
 				godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
-				godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * activeCamera->get_zfar() * 1.5;
-				rayArray = spaceState->intersect_ray(rayOrigin, rayEnd);
+				godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * (real_t)activeCamera->get_far() * 1.5;
+				godot::Ref<godot::PhysicsRayQueryParameters3D> query = PhysicsRayQueryParameters3D::create(rayOrigin, rayEnd);
+				rayArray = spaceState->intersect_ray(query);
 
 				GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
 
@@ -1544,13 +1548,12 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 				{
 					if (rayArray.has("collider"))
 					{
-						collider = rayArray["collider"];
+						collider = godot::Object::cast_to<godot::Node>(rayArray["collider"]);
 						if (collider->has_meta("QuadrantName"))
 						{
 							godot::String s = collider->get_meta("QuadrantName", "");
-							char* str = s.alloc_c_string();
+							const char* str = s.utf8().get_data();
 							std::string mouseQuadrantHitName = str;
-							godot::api->godot_free(str);
 							if (mouseQuadrantHitName != m_mouseQuadrantHitName)
 							{
 								/*s = collider->get_meta("QuadrantTag", "");
@@ -2263,7 +2266,7 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 		// Check for Dump
 		if (TIME_INTERVAL_BETWEEN_DUMP != 0 && globals->isDebugEnabled())
 		{
-			int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
+			int64_t timeElapsed = TIME()->get_ticks_msec();
 			if (timeElapsed - m_timeElapsedFromLastDump > TIME_INTERVAL_BETWEEN_DUMP * 1000)
 			{
 				m_dumpRequired = true;
@@ -2284,7 +2287,7 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.13 ") + __FUNCTION__, "Refresh statistics");
 
-		int64_t timeElapsed = OS::get_singleton()->get_ticks_msec();
+		int64_t timeElapsed = TIME()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastStatistic > TIME_INTERVAL_BETWEEN_STATISTICS)
 		{
 			//m_numProcessNotOwnsLock = 0;
@@ -2365,9 +2368,9 @@ void GDN_TheWorld_Viewer::_process_impl(float _delta, Camera* activeCamera)
 	}
 }
 
-void GDN_TheWorld_Viewer::_physics_process(float _delta)
+void GDN_TheWorld_Viewer::_physics_process(double _delta)
 {
-	//if (godot::Engine::get_singleton()->is_editor_hint())
+	//if (IS_EDITOR_HINT())
 	//	return;
 
 	GDN_TheWorld_Globals* globals = Globals();
@@ -2379,7 +2382,7 @@ void GDN_TheWorld_Viewer::_physics_process(float _delta)
 
 	Input* input = Input::get_singleton();
 
-	if (godot::Engine::get_singleton()->is_editor_hint())
+	if (IS_EDITOR_HINT())
 	{
 
 	}
@@ -2884,7 +2887,7 @@ void GDN_TheWorld_Viewer::createEditModeUI(void)
 	if (editModeUIControl == nullptr)
 	{
 		m_mtxQuadTreeAndMainProcessing.lock();
-		editModeUIControl = GDN_TheWorld_Edit::_new();
+		editModeUIControl = memnew(GDN_TheWorld_Edit);
 		m_mtxQuadTreeAndMainProcessing.unlock();
 		if (editModeUIControl == nullptr)
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Create Control error!").c_str()));
@@ -2939,7 +2942,7 @@ godot::GDN_TheWorld_Edit* GDN_TheWorld_Viewer::EditModeUIControl(bool useCache)
 		Viewport* root = scene->get_root();
 		if (!root)
 			return NULL;
-		m_editModeUIControl = Object::cast_to<GDN_TheWorld_Edit>(root->find_node(THEWORLD_EDIT_MODE_UI_CONTROL_NAME, true, false));
+		m_editModeUIControl = Object::cast_to<GDN_TheWorld_Edit>(root->find_child(THEWORLD_EDIT_MODE_UI_CONTROL_NAME, true, false));
 	}
 
 	return m_editModeUIControl;
@@ -2955,7 +2958,7 @@ GDN_TheWorld_Globals* GDN_TheWorld_Viewer::Globals(bool useCache)
 		Viewport* root = scene->get_root();
 		if (!root)
 			return NULL;
-		m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
+		m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_child(THEWORLD_GLOBALS_NODE_NAME, true, false));
 	}
 
 	return m_globals;
@@ -2971,7 +2974,7 @@ GDN_TheWorld_Camera* GDN_TheWorld_Viewer::CameraNode(bool useCache)
 		Viewport* root = scene->get_root();
 		if (!root)
 			return NULL;
-		m_worldCamera = Object::cast_to<GDN_TheWorld_Camera>(root->find_node(THEWORLD_CAMERA_NODE_NAME, true, false));
+		m_worldCamera = Object::cast_to<GDN_TheWorld_Camera>(root->find_child(THEWORLD_CAMERA_NODE_NAME, true, false));
 	}
 
 	return m_worldCamera;
@@ -2999,15 +3002,15 @@ bool GDN_TheWorld_Viewer::terrainShiftPermitted(void)
 	return m_numinitializedQuadrant >= m_numQuadrant;
 }
 
-godot::Camera* GDN_TheWorld_Viewer::getCamera(void)
+godot::Camera3D* GDN_TheWorld_Viewer::getCamera(void)
 {
-	if (godot::Engine::get_singleton()->is_editor_hint())
+	if (IS_EDITOR_HINT())
 		return getCameraInEditor();
 	else
-		return get_tree()->get_root()->get_camera();
+		return get_tree()->get_root()->get_camera_3d();
 }
 
-void GDN_TheWorld_Viewer::setEditorCamera(godot::Camera* editorCamera)
+void GDN_TheWorld_Viewer::setEditorCamera(godot::Camera3D* editorCamera)
 {
 	if (m_editorCamera == nullptr)
 		onTransformChanged();
@@ -3015,28 +3018,28 @@ void GDN_TheWorld_Viewer::setEditorCamera(godot::Camera* editorCamera)
 	m_editorCamera = editorCamera;
 }
 
-godot::Camera* GDN_TheWorld_Viewer::getCameraInEditor(void)
+godot::Camera3D* GDN_TheWorld_Viewer::getCameraInEditor(void)
 {
-	if (!godot::Engine::get_singleton()->is_editor_hint())
+	if (!IS_EDITOR_HINT())
 		return nullptr;
 
 	if (m_editorCamera != nullptr)
 		return m_editorCamera;
 	
-	godot::Camera* editorCamera = nullptr;
+	godot::Camera3D* editorCamera = nullptr;
 
-	Node* editorViewport = m_editorInterface->get_editor_viewport();
+	Node* editorSceneRootViewport = m_editorInterface->get_edited_scene_root();
 	
 	godot::Array foundNodes;
 	//godot::Array children = get_tree()->get_edited_scene_root()->get_children();
-	godot::Array children = editorViewport->get_children();
-	int ___size = children.size();	// DEBUG
-	if (!children.empty())
-		_findChildNodes(foundNodes, children, "Camera");
+	godot::Array children = editorSceneRootViewport->get_children();
+	int64_t ___size = children.size();	// DEBUG
+	if (!children.is_empty())
+		_findChildNodes(foundNodes, children, "Camera3D");
 
 	___size = foundNodes.size();	// DEBUG
-	if (!foundNodes.empty())
-		editorCamera = foundNodes[0];
+	if (!foundNodes.is_empty())
+		editorCamera = godot::Object::cast_to<godot::Camera3D>(foundNodes[0]);
 
 	return editorCamera;
 }
@@ -3045,14 +3048,14 @@ void GDN_TheWorld_Viewer::_findChildNodes(godot::Array& foundNodes, godot::Array
 {
 	for (int i = 0; i < searchNodes.size(); i++)
 	{
-		String className = ((Node*)searchNodes[i])->get_class();
+		String className = godot::Object::cast_to<godot::Node>(searchNodes[i])->get_class();
 		std::string ___classsName = to_string(className);		// DEBUG
-		std::string ___nodeName = to_string(((Node*)searchNodes[i])->get_name());	// DEBUG
+		std::string ___nodeName = to_string(godot::Object::cast_to<godot::Node>(searchNodes[i])->get_name());	// DEBUG
 		if (className == searchClass)
 			foundNodes.push_back(searchNodes[i]);
-		godot::Array children = ((Node*)searchNodes[i])->get_children();
-		int ___size = children.size();	// DEBUG
-		if (!children.empty())
+		godot::Array children = godot::Object::cast_to<godot::Node>(searchNodes[i])->get_children();
+		int64_t ___size = children.size();	// DEBUG
+		if (!children.is_empty())
 			_findChildNodes(foundNodes, children, searchClass);
 	}
 }
@@ -3117,10 +3120,10 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 	}
 }
 
-Spatial* GDN_TheWorld_Viewer::getWorldNode(void)
+Node3D* GDN_TheWorld_Viewer::getWorldNode(void)
 {
 	// MapManager coordinates are relative to WorldNode
-	return (Spatial*)get_parent();
+	return (Node3D*)get_parent();
 }
 
 //void GDN_TheWorld_Viewer::getPartialAABB(AABB& aabb, int firstWorldVertCol, int lastWorldVertCol, int firstWorldVertRow, int lastWorldVertRow, int step)
@@ -3241,20 +3244,20 @@ AABB GDN_TheWorld_Viewer::getCameraChunkLocalDebugAABB(void)
 		return AABB();
 }
 
-Transform GDN_TheWorld_Viewer::getCameraChunkGlobalTransformApplied(void)
+Transform3D GDN_TheWorld_Viewer::getCameraChunkGlobalTransformApplied(void)
 {
 	if (m_cameraChunk && !m_cameraChunk->isMeshNull())
 		return m_cameraChunk->getGlobalTransformApplied();
 	else
-		return Transform();
+		return Transform3D();
 }
 
-Transform GDN_TheWorld_Viewer::getCameraChunkDebugGlobalTransformApplied(void)
+Transform3D GDN_TheWorld_Viewer::getCameraChunkDebugGlobalTransformApplied(void)
 {
 	if (m_cameraChunk && !m_cameraChunk->isDebugMeshNull())
 		return m_cameraChunk->getDebugGlobalTransformApplied();
 	else
-		return Transform();
+		return Transform3D();
 }
 
 
@@ -3427,7 +3430,7 @@ void GDN_TheWorld_Viewer::dump()
 	Globals()->debugPrint("*************");
 	Globals()->debugPrint("STARTING DUMP");
 
-	float f = Engine::get_singleton()->get_frames_per_second();
+	double f = Engine::get_singleton()->get_frames_per_second();
 	Globals()->debugPrint("FPS: " + String(std::to_string(f).c_str()));
 
 	{
@@ -3488,7 +3491,7 @@ void GDN_TheWorld_Viewer::dumpRecurseIntoChildrenNodes(Array nodes, int level)
 	for (int i = 0; i < nodes.size(); i++)
 	{
 		std::string header(level, '\t');
-		Node* node = nodes[i];
+		Node* node = godot::Object::cast_to<godot::Node>(nodes[i]);
 		Globals()->debugPrint(String(header.c_str()) + node->get_name());
 		Array nodes = node->get_children();
 		dumpRecurseIntoChildrenNodes(nodes, level + 1);
@@ -3634,8 +3637,8 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 	}
 }
 
-Transform GDN_TheWorld_Viewer::getInternalGlobalTransform(void)
+Transform3D GDN_TheWorld_Viewer::getInternalGlobalTransform(void)
 {
-	Transform gt = get_global_transform();
+	Transform3D gt = get_global_transform();
 	return gt;
 }

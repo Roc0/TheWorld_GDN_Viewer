@@ -4,21 +4,24 @@
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_Template.h"
 
+#pragma warning (push, 0)
+//#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/scene_tree.hpp>
+#include <godot_cpp/classes/viewport.hpp>
+#include <godot_cpp/classes/window.hpp>
+#pragma warning (pop)
+
 using namespace godot;
 
-void GDN_TheWorld_MainNode::_register_methods()
+void GDN_TheWorld_MainNode::_bind_methods()
 {
-	register_method("_ready", &GDN_TheWorld_MainNode::_ready);
-	register_method("_process", &GDN_TheWorld_MainNode::_process);
-	register_method("_input", &GDN_TheWorld_MainNode::_input);
-	register_method("_notification", &GDN_TheWorld_MainNode::_notification);
-
-	register_method("init", &GDN_TheWorld_MainNode::init);
-	register_method("pre_deinit", &GDN_TheWorld_MainNode::preDeinit);
-	register_method("can_deinit", &GDN_TheWorld_MainNode::canDeinit);
-	register_method("deinit", &GDN_TheWorld_MainNode::deinit);
-	register_method("globals", &GDN_TheWorld_MainNode::Globals);
-	register_method("initialized", &GDN_TheWorld_MainNode::initialized);
+	ClassDB::bind_method(D_METHOD("init", "p_world_main_node"), &GDN_TheWorld_MainNode::init);
+	ClassDB::bind_method(D_METHOD("pre_deinit"), &GDN_TheWorld_MainNode::preDeinit);
+	ClassDB::bind_method(D_METHOD("can_deinit"), &GDN_TheWorld_MainNode::canDeinit);
+	ClassDB::bind_method(D_METHOD("deinit"), &GDN_TheWorld_MainNode::deinit);
+	ClassDB::bind_method(D_METHOD("globals"), &GDN_TheWorld_MainNode::Globals);
+	ClassDB::bind_method(D_METHOD("initialized"), &GDN_TheWorld_MainNode::initialized);
 }
 
 GDN_TheWorld_MainNode::GDN_TheWorld_MainNode()
@@ -26,6 +29,8 @@ GDN_TheWorld_MainNode::GDN_TheWorld_MainNode()
 	m_initialized = false;
 	m_initInProgress = false;
 	m_globals = NULL;
+
+	_init();
 }
 
 GDN_TheWorld_MainNode::~GDN_TheWorld_MainNode()
@@ -62,12 +67,12 @@ void GDN_TheWorld_MainNode::_notification(int p_what)
 	}
 }
 
-void GDN_TheWorld_MainNode::_input(const Ref<InputEvent> event)
+void GDN_TheWorld_MainNode::_input(const Ref<InputEvent>& event)
 {
 	//Globals()->debugPrint("GDN_TheWorld_MainNode::_ready");
 }
 
-void GDN_TheWorld_MainNode::_process(float _delta)
+void GDN_TheWorld_MainNode::_process(double _delta)
 {
 	// To activate _process method add this Node to a Godot Scene
 	//Globals()->debugPrint("GDN_TheWorld_MainNode::_process");
@@ -105,7 +110,7 @@ void GDN_TheWorld_MainNode::_process(float _delta)
 	//}
 }
 
-bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
+bool GDN_TheWorld_MainNode::init(Node3D* pWorldMainNode)
 {
 	assert(!m_initialized);
 	
@@ -132,7 +137,7 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 
 	SceneTree* scene = get_tree();
 	Node* sceneRoot = nullptr;
-	if (godot::Engine::get_singleton()->is_editor_hint())
+	if (IS_EDITOR_HINT())
 		sceneRoot = scene->get_edited_scene_root();
 	else
 		sceneRoot = scene->get_root();
@@ -143,7 +148,7 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 
 	GDN_TheWorld_Globals* globals = Globals(false);
 	if (globals == nullptr)
-		globals = GDN_TheWorld_Globals::_new();
+		globals = memnew(GDN_TheWorld_Globals);
 	if (globals)
 	{
 		Node* parent = globals->get_parent();
@@ -169,7 +174,7 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 
 	GDN_TheWorld_Viewer* viewer = globals->Viewer(false);
 	if (viewer == nullptr)
-		viewer = GDN_TheWorld_Viewer::_new();
+		viewer = memnew(GDN_TheWorld_Viewer);
 	if (viewer)
 	{
 		Node* parent = viewer->get_parent();
@@ -185,7 +190,7 @@ bool GDN_TheWorld_MainNode::init(Spatial* pWorldMainNode)
 		else
 			pWorldMainNode->add_child(viewer);
 		viewer->set_name(THEWORLD_VIEWER_NODE_NAME);
-		Transform gt = pWorldMainNode->get_global_transform();
+		Transform3D gt = pWorldMainNode->get_global_transform();
 		viewer->set_global_transform(gt);
 		viewer->set_owner(sceneRoot);
 	}
@@ -291,7 +296,7 @@ GDN_TheWorld_Globals* GDN_TheWorld_MainNode::Globals(bool useCache)
 		Viewport* root = scene->get_root();
 		if (!root)
 			return NULL;
-		m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_node(THEWORLD_GLOBALS_NODE_NAME, true, false));
+		m_globals = Object::cast_to<GDN_TheWorld_Globals>(root->find_child(THEWORLD_GLOBALS_NODE_NAME, true, false));
 	}
 
 	return m_globals;

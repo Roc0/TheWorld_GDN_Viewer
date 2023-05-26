@@ -1,15 +1,17 @@
 #pragma once
-#include <Godot.hpp>
-#include <Node.hpp>
-#include <Spatial.hpp>
-#include <Reference.hpp>
-#include <InputEvent.hpp>
-#include <Mesh.hpp>
-#include <ShaderMaterial.hpp>
-#include <Image.hpp>
-#include <Texture.hpp>
-#include <EditorPlugin.hpp>
-#include <Camera.hpp>
+
+#pragma warning(push, 0)
+#include <godot_cpp/classes/node3d.hpp>
+#include <godot_cpp/classes/viewport.hpp>
+#include <godot_cpp/classes/input_event.hpp>
+#include <godot_cpp/classes/ref.hpp>
+#include <godot_cpp/classes/mesh.hpp>
+#include <godot_cpp/classes/shader_material.hpp>
+#include <godot_cpp/classes/image.hpp>
+#include <godot_cpp/classes/texture.hpp>
+#include <godot_cpp/classes/editor_plugin.hpp>
+#include <godot_cpp/classes/camera3d.hpp>
+#pragma warning(pop)
 
 #include <map>
 #include <memory>
@@ -46,9 +48,9 @@ namespace godot
 	// Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 	// X growing on East direction
 	// Z growing on South direction
-	class GDN_TheWorld_Viewer : public Spatial, public TheWorld_ClientServer::ClientCallback
+	class GDN_TheWorld_Viewer : public Node3D, public TheWorld_ClientServer::ClientCallback
 	{
-		GODOT_CLASS(GDN_TheWorld_Viewer, Spatial)
+		GDCLASS(GDN_TheWorld_Viewer, Node3D)
 
 		enum Margin {
 			MARGIN_LEFT,
@@ -62,6 +64,11 @@ namespace godot
 		//friend class QuadTree;
 		//friend class ShaderTerrainData;
 
+	protected:
+		static void _bind_methods();
+		void _notification(int p_what);
+		void _init(void);
+
 	public:
 		GDN_TheWorld_Viewer();
 		~GDN_TheWorld_Viewer();
@@ -71,8 +78,6 @@ namespace godot
 		void deinit(void);
 
 		void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
-
-		static void _register_methods();
 
 		void setDesideredLookDev(enum class ShaderTerrainData::LookDev desideredLookDev)
 		{
@@ -91,13 +96,12 @@ namespace godot
 		//
 		// Godot Standard Functions
 		//
-		void _init(void); // our initializer called by Godot
-		void _ready(void);
-		void _process(float _delta);
-		void _physics_process(float _delta);
-		void _input(const Ref<InputEvent> event);
-		void _notification(int p_what);
-		void _process_impl(float _delta, Camera* activeCamera);
+		virtual void _ready(void) override;
+		virtual void _process(double _delta) override;
+		virtual void _physics_process(double _delta) override;
+		virtual void _input(const Ref<InputEvent>& event) override;
+		
+		void _process_impl(double _delta, Camera3D* activeCamera);
 
 		//Ref<Material> getRegularMaterial(void);
 		//Ref<Material> getLookDevMaterial(void);
@@ -165,9 +169,9 @@ namespace godot
 			return m_trackMouse;
 		}
 		void toggleQuadrantSelected(void);
-		godot::Camera* getCamera(void);
-		godot::Camera* getCameraInEditor(void);
-		void setEditorCamera(godot::Camera* editorCamera);
+		godot::Camera3D* getCamera(void);
+		godot::Camera3D* getCameraInEditor(void);
+		void setEditorCamera(godot::Camera3D* editorCamera);
 		void setDepthQuadOnPerimeter(int depth);
 		int getDepthQuadOnPerimeter(void);
 		void setCacheQuadOnPerimeter(int cache);
@@ -185,12 +189,12 @@ namespace godot
 			return m_initialWordlViewerPosSet;
 		}
 		void recalcQuadrantsInView(void);
-		Spatial* getWorldNode(void);
+		Node3D* getWorldNode(void);
 		MeshCache* getMeshCache(void)
 		{
 			return m_meshCache.get(); 
 		}
-		Transform getInternalGlobalTransform(void);
+		Transform3D getInternalGlobalTransform(void);
 		void setDumpRequired(void)
 		{
 			m_dumpRequired = true; 
@@ -200,8 +204,8 @@ namespace godot
 		void setCameraChunk(Chunk* chunk, QuadTree* quadTree);
 		AABB getCameraChunkLocalAABB(void);
 		AABB getCameraChunkLocalDebugAABB(void);
-		Transform getCameraChunkGlobalTransformApplied(void);
-		Transform getCameraChunkDebugGlobalTransformApplied(void);
+		Transform3D getCameraChunkGlobalTransformApplied(void);
+		Transform3D getCameraChunkDebugGlobalTransformApplied(void);
 		String getCameraChunkId(void);
 		String getCameraQuadrantName(void);
 		int getNumSplits(void);
@@ -259,7 +263,7 @@ namespace godot
 		{
 			if (m_mouseTrackedOnTerrain)
 			{
-				godot::Camera* camera = getCamera();
+				godot::Camera3D* camera = getCamera();
 				return camera->get_global_transform().origin.distance_to(m_mouseHit);
 			}
 			else
@@ -355,9 +359,12 @@ namespace godot
 
 		std::string to_string(godot::String s)
 		{
-			char* str = s.alloc_c_string();
+			//godot::PackedByteArray byteStream = s.to_utf8_buffer();
+			const char* str = s.utf8().get_data();
 			std::string ret = str;
-			godot::api->godot_free(str);
+			//char* str = s.alloc_c_string();
+			//std::string ret = str;
+			//godot::api->godot_free(str);
 			return ret;
 		}
 
@@ -376,7 +383,7 @@ namespace godot
 		void streamer(void);
 		void streamingQuadrantStuff(void);
 		QuadrantPos getQuadrantSelForEdit(QuadTree** quadTreeSel);
-		godot::Camera* m_editorCamera;
+		godot::Camera3D* m_editorCamera;
 
 	private:
 		bool m_initialized;

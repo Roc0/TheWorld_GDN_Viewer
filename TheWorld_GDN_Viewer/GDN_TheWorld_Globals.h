@@ -1,11 +1,14 @@
 #pragma once
-#include <Godot.hpp>
-#include <Node.hpp>
-#include <Reference.hpp>
-#include <InputEvent.hpp>
-#include <SceneTree.hpp>
-#include <Viewport.hpp>
-#include <Engine.hpp>
+
+#pragma warning(push, 0)
+#include <godot_cpp/classes/node3d.hpp>
+#include <godot_cpp/classes/ref.hpp>
+#include <godot_cpp/classes/input_event.hpp>
+#include <godot_cpp/classes/scene_tree.hpp>
+#include <godot_cpp/classes/viewport.hpp>
+#include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/variant/utility_functions.hpp>
+#pragma warning(pop)
 
 #include "assert.h"
 #include "vector"
@@ -77,11 +80,16 @@ namespace godot
 
 	class GDN_TheWorld_Globals : public Node, public TheWorld_ClientServer::ClientCallback
 	{
-		GODOT_CLASS(GDN_TheWorld_Globals, Node)
+		GDCLASS(GDN_TheWorld_Globals, Node)
 
 		const float c_splitScale = 1.0F;
 		//const float c_splitScale = 2.0F;
 		//const float c_splitScale = 1.5F;
+
+	protected:
+		static void _bind_methods();
+		void _notification(int p_what);
+		void _init(void);
 
 	public:
 		const static Color g_color_white;
@@ -144,45 +152,6 @@ namespace godot
 
 		void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
 		
-		static void _register_methods()
-		{
-			register_method("_ready", &GDN_TheWorld_Globals::_ready);
-			register_method("_process", &GDN_TheWorld_Globals::_process);
-			register_method("_input", &GDN_TheWorld_Globals::_input);
-			register_method("_notification", &GDN_TheWorld_Globals::_notification);
-			
-			register_method("get_status", &GDN_TheWorld_Globals::get_status);
-			register_method("set_status", &GDN_TheWorld_Globals::set_status);
-
-			register_method("connect_to_server", &GDN_TheWorld_Globals::connectToServer);
-			register_method("prepare_disconnect_from_server", &GDN_TheWorld_Globals::prepareDisconnectFromServer);
-			register_method("disconnect_from_server", &GDN_TheWorld_Globals::disconnectFromServer);
-
-			register_method("set_debug_enabled", &GDN_TheWorld_Globals::setDebugEnabled);
-			register_method("is_debug_enabled", &GDN_TheWorld_Globals::isDebugEnabled);
-			register_method("debug_print", &GDN_TheWorld_Globals::debugPrint);
-			register_method("error_print", &GDN_TheWorld_Globals::errorPrint);
-			register_method("warning_print", &GDN_TheWorld_Globals::warningPrint);
-			register_method("info_print", &GDN_TheWorld_Globals::infoPrint);
-			register_method("print", &GDN_TheWorld_Globals::print);
-
-			register_method("set_app_in_error", &GDN_TheWorld_Globals::setAppInError);
-			register_method("get_app_in_error", &GDN_TheWorld_Globals::getAppInError);
-			register_method("get_app_in_error_code", &GDN_TheWorld_Globals::getAppInErrorCode);
-			register_method("get_app_in_error_message", &GDN_TheWorld_Globals::getAppInErrorMsg);
-
-			register_method("get_num_vertices_per_chunk_side", &GDN_TheWorld_Globals::numVerticesPerChuckSide);
-			register_method("get_bitmap_resolution", &GDN_TheWorld_Globals::heightmapResolution);
-			register_method("get_lod_max_depth", &GDN_TheWorld_Globals::lodMaxDepth);
-			register_method("get_num_lods", &GDN_TheWorld_Globals::numLods);
-			register_method("get_chunks_per_bitmap_side", &GDN_TheWorld_Globals::numChunksPerHeightmapSide);
-			register_method("get_grid_step_in_wu", &GDN_TheWorld_Globals::gridStepInHeightmapWUs);
-
-			register_method("viewer", &GDN_TheWorld_Globals::Viewer);
-
-			register_signal<GDN_TheWorld_Globals>((char*)"tw_status_changed", "old_value", GODOT_VARIANT_TYPE_INT, "new_value", GODOT_VARIANT_TYPE_INT);
-		}
-
 		enum class TheWorldStatus status(void)
 		{
 			return m_status;
@@ -263,58 +232,53 @@ namespace godot
 		//
 		// Godot Standard Functions
 		//
-		void _init(void); // our initializer called by Godot
-		void _ready(void);
-		void _process(float _delta);
-		void _input(const Ref<InputEvent> event);
-		void _notification(int p_what);
+		virtual void _ready(void) override;
+		virtual void _process(double _delta) override;
+		virtual void _input(const Ref<InputEvent>& event) override;
 
 		void debugPrint(String message, bool godotPrint = true)
 		{
 			if (m_isDebugEnabled)
 			{
 				String editor_string = "";
-				if (godot::Engine::get_singleton()->is_editor_hint())
+				if (IS_EDITOR_HINT())
 					editor_string = "***EDITOR*** ";
 				String msg = "DEBUG - " + editor_string + message;
 				if (godotPrint)
-					Godot::print(msg);
-				char* m = msg.alloc_c_string();
+					godot::UtilityFunctions::print(msg);
+				const char* m = msg.utf8().get_data();
 				PLOG_DEBUG << m;
-				godot::api->godot_free(m);
 			}
 		}
 
 		void warningPrint(String message, bool godotPrint = true)
 		{
 			String editor_string = "";
-			if (godot::Engine::get_singleton()->is_editor_hint())
+			if (IS_EDITOR_HINT())
 				editor_string = "***EDITOR*** ";
 			String msg = "WARNING - " + editor_string + message;
 			if (godotPrint)
-				Godot::print(msg);
-			char* m = msg.alloc_c_string();
+				godot::UtilityFunctions::print(msg);
+			const char* m = msg.utf8().get_data();
 			PLOG_WARNING << m;
-			godot::api->godot_free(m);
 		}
 
 		void errorPrint(String message, bool godotPrint = true)
 		{
 			String editor_string = "";
-			if (godot::Engine::get_singleton()->is_editor_hint())
+			if (IS_EDITOR_HINT())
 				editor_string = "***EDITOR*** ";
 			String msg = "ERROR - " + editor_string + message;
 			if (godotPrint)
-				Godot::print(msg);
-			char* m = msg.alloc_c_string();
+				godot::UtilityFunctions::print(msg);
+			const char* m = msg.utf8().get_data();
 			PLOG_ERROR << m;
-			godot::api->godot_free(m);
 		}
 
 		void infoPrint(String message, bool godotPrint = true)
 		{
 			String editor_string = "";
-			if (godot::Engine::get_singleton()->is_editor_hint())
+			if (IS_EDITOR_HINT())
 				editor_string = "***EDITOR*** ";
 			String msg = "INFO - " + editor_string + message;
 			GDN_TheWorld_Globals::print(msg, godotPrint);
@@ -323,10 +287,9 @@ namespace godot
 		void print(String message, bool godotPrint = true)
 		{
 			if (godotPrint)
-				Godot::print(message);
-			char* m = message.alloc_c_string();
+				godot::UtilityFunctions::print(message);
+			const char* m = message.utf8().get_data();
 			PLOG_INFO << m;
-			godot::api->godot_free(m);
 		}
 
 		// WORLD GRID
@@ -444,9 +407,8 @@ namespace godot
 
 		void setAppInError(int errorCode, String errorText)
 		{
-			char* m = errorText.alloc_c_string();
+			const char* m = errorText.utf8().get_data();
 			_setAppInError(errorCode, m);
-			godot::api->godot_free(m);
 		}
 		void _setAppInError(int errorCode, std::string errorText)
 		{

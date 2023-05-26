@@ -1,15 +1,19 @@
 #pragma once
-#include <Godot.hpp>
-#include <Node.hpp>
-#include <Reference.hpp>
-#include <InputEvent.hpp>
+
+#pragma warning(push, 0)
+#include <godot_cpp/classes/node.hpp>
+#include <godot_cpp/classes/input_event.hpp>
+#pragma warning(pop)
 
 namespace godot
 {
 
 	class GDN_Template : public Node
 	{
-		GODOT_CLASS(GDN_Template, Node)
+		GDCLASS(GDN_Template, Node)
+
+	protected:
+		static void _bind_methods();
 
 	public:
 		GDN_Template();
@@ -17,15 +21,12 @@ namespace godot
 		void init(void);
 		void deinit(void);
 
-		static void _register_methods();
-
 		//
 		// Godot Standard Functions
 		//
-		void _init(void); // our initializer called by Godot
-		void _ready(void);
-		void _process(float _delta);
-		void _input(const Ref<InputEvent> event);
+		virtual void _ready(void) override;
+		virtual void _process(double _delta) override;
+		virtual void _input(const Ref<InputEvent>& event) override;
 
 		//
 		// Test

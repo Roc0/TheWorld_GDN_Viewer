@@ -1,15 +1,17 @@
 #pragma once
-#include <Godot.hpp>
-#include <Node.hpp>
-#include <Reference.hpp>
-#include <InputEvent.hpp>
-#include <PanelContainer.hpp>
-#include <TabContainer.hpp>
-#include <MarginContainer.hpp>
-#include <Label.hpp>
-#include <LineEdit.hpp>
-#include <CheckBox.hpp>
-#include <OptionButton.hpp>
+#include "Viewer_Utils.h"
+
+#pragma warning (push, 0)
+#include <godot_cpp/classes/margin_container.hpp>
+#include <godot_cpp/classes/panel_container.hpp>
+#include <godot_cpp/classes/tab_container.hpp>
+#include <godot_cpp/classes/label.hpp>
+#include <godot_cpp/classes/line_Edit.hpp>
+#include <godot_cpp/classes/check_box.hpp>
+#include <godot_cpp/classes/option_button.hpp>
+#include <godot_cpp/classes/input_event.hpp>
+#include <godot_cpp/classes/ref.hpp>
+#pragma warning (pop)
 
 #include <WorldModifier.h>
 
@@ -19,7 +21,7 @@ namespace godot
 
 	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
 	{
-		GODOT_CLASS(GDN_TheWorld_Edit, MarginContainer)
+		GDCLASS(GDN_TheWorld_Edit, MarginContainer)
 
 		enum Margin {
 			MARGIN_LEFT,
@@ -28,25 +30,28 @@ namespace godot
 			MARGIN_BOTTOM
 		};
 
+	protected:
+		static void _bind_methods();
+		void _notification(int p_what);
+		void _init(void);
+
 	public:
 		GDN_TheWorld_Edit();
 		~GDN_TheWorld_Edit();
 		void init(GDN_TheWorld_Viewer* viewer);
 		void deinit(void);
 
+		template <class T> T* createControl(godot::Node* parent);
+			
 		virtual void threadInit(void) {}
 		virtual void threadDeinit(void) {}
-
-		static void _register_methods();
 
 		//
 		// Godot Standard Functions
 		//
-		void _init(void); // our initializer called by Godot
-		void _ready(void);
-		void _process(float _delta);
-		void _input(const Ref<InputEvent> event);
-		void _notification(int p_what);
+		virtual void _ready(void) override;
+		virtual void _process(double _delta) override;
+		virtual void _input(const Ref<InputEvent>& event) override;
 
 		virtual void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
 
@@ -72,8 +77,8 @@ namespace godot
 		void editModeSaveAction(void);
 		void editModeUploadAction(void);
 		void editModeStopAction(void);
-		void editModeSelectTerrainTypeAction(int64_t index);
-		void editModeSelectLookDevAction(int64_t index);
+		void editModeSelectTerrainTypeAction(int32_t index);
+		void editModeSelectLookDevAction(int32_t index);
 
 		void editModeGenerate(void);
 		void editModeBlend(void);

@@ -3,11 +3,13 @@
 #include "QuadTree.h"
 #include "GDN_TheWorld_Viewer.h"
 
+#pragma warning (push, 0)
+#include <godot_cpp/classes/physics_server3d.hpp>
+#include <godot_cpp/classes/world3d.hpp>
+#pragma warning (pop)
+
 #include <assert.h>
 
-#include <PhysicsServer.hpp>
-#include <World.hpp>
-#include <Camera.hpp>
 
 //#define MOCK_COLLIDER true
 #define MOCK_COLLIDER false
@@ -28,7 +30,7 @@ namespace godot
 		deinit();
 	}
 
-	void Collider::init(Node* attachedNode, int64_t initialLayer, int64_t initialMask)
+	void Collider::init(Node* attachedNode, uint32_t initialLayer, uint32_t initialMask)
 	{
 		if (MOCK_COLLIDER)
 			return;
@@ -36,9 +38,9 @@ namespace godot
 		assert(!m_initialized);
 		assert(attachedNode != nullptr);
 
-		PhysicsServer* ps = PhysicsServer::get_singleton();
-		m_shapeRID = ps->shape_create(PhysicsServer::SHAPE_HEIGHTMAP);
-		m_bodyRID = ps->body_create(PhysicsServer::BODY_MODE_STATIC);
+		godot::PhysicsServer3D* ps = godot::PhysicsServer3D::get_singleton();
+		m_shapeRID = ps->heightmap_shape_create();
+		m_bodyRID = ps->body_create();
 		ps->body_set_collision_layer(m_bodyRID, initialLayer);
 		ps->body_set_collision_mask(m_bodyRID, initialMask);
 
@@ -46,7 +48,7 @@ namespace godot
 		ps->body_set_ray_pickable(m_bodyRID, true);
 
 		// Initial data - This is a workaround to https://github.com/godotengine/godot/issues/25304
-		PoolRealArray arr;
+		PackedFloat32Array arr;
 		arr.resize(4);
 		arr.set(0, 0);
 		arr.set(1, 0);
@@ -75,7 +77,7 @@ namespace godot
 
 		if (m_initialized)
 		{
-			PhysicsServer* ps = PhysicsServer::get_singleton();
+			godot::PhysicsServer3D* ps = godot::PhysicsServer3D::get_singleton();
 
 			if (m_bodyRID != RID())
 				ps->free_rid(m_bodyRID);
@@ -96,10 +98,10 @@ namespace godot
 		if (!m_initialized)
 			return;
 
-		Ref<World> world = m_quadTree->Viewer()->get_world();
+		Ref<godot::World3D> world = m_quadTree->Viewer()->get_world_3d();
 		if (world != nullptr && world.is_valid())
 		{
-			PhysicsServer* ps = PhysicsServer::get_singleton();
+			godot::PhysicsServer3D* ps = godot::PhysicsServer3D::get_singleton();
 			ps->body_set_space(m_bodyRID, world->get_space());
 		}
 	}
@@ -113,7 +115,7 @@ namespace godot
 		if (!m_initialized)
 			return;
 
-		PhysicsServer* ps = PhysicsServer::get_singleton();
+		godot::PhysicsServer3D* ps = godot::PhysicsServer3D::get_singleton();
 		ps->body_set_space(m_bodyRID, RID());
 	}
 
@@ -131,7 +133,7 @@ namespace godot
 		//	TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1.1.1 ") + __FUNCTION__, "Collider::setData - gen empty heights");
 		//	PoolRealArray& h = m_quadTree->getQuadrant()->getHeightsForCollider();
 		//}
-		PoolRealArray& heightsForCollider = m_quadTree->getQuadrant()->getHeightsForCollider();
+		PackedFloat32Array& heightsForCollider = m_quadTree->getQuadrant()->getHeightsForCollider();
 		my_assert(areaSize == heightsForCollider.size());
 		if (areaSize != heightsForCollider.size())
 			throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Size of Heigths inconsistent, areaSize=" + std::to_string(areaSize) + " Heigths size=" + std::to_string(heightsForCollider.size())).c_str()));
@@ -147,7 +149,7 @@ namespace godot
 		//data["min_height"] = -endPoint.y;			// ???
 		data["max_height"] = endPoint.y;			// ???
 
-		PhysicsServer* ps = PhysicsServer::get_singleton();
+		godot::PhysicsServer3D* ps = godot::PhysicsServer3D::get_singleton();
 		{
 			//TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4.1.1.2 ") + __FUNCTION__, "Collider::setData - ps->shape_set_data(m_shapeRID, data)");
 			ps->shape_set_data(m_shapeRID, data);
@@ -180,7 +182,7 @@ namespace godot
 
 		m_cameraGlobalTranform = m_quadTree->Viewer()->getCamera()->get_global_transform();
 		float colliderAltitude = getColliderAltitude();
-		Transform t = getTransform();
+		Transform3D t = getTransform();
 		t.origin.y = colliderAltitude;
 		setTransform(t);
 	}
@@ -204,43 +206,43 @@ namespace godot
 		//int numVerticesPerSize = m_quadTree->getQuadrant()->getPos().getNumVerticesPerSize();
 		float sizeInWU = m_quadTree->getQuadrant()->getPos().getSizeInWU();
 		float gridStepInWU = m_quadTree->getQuadrant()->getPos().getGridStepInWU();
-		Transform igt = m_quadTree->getInternalGlobalTransform();
+		Transform3D igt = m_quadTree->getInternalGlobalTransform();
 		//float axisScaleFactr = sqrtf(powf(gridStepInWU, (float)2.0) / (float)2.0);
 		float axisScaleFactr = gridStepInWU;
-		Camera* cam = m_quadTree->Viewer()->getCamera();
+		Camera3D* cam = m_quadTree->Viewer()->getCamera();
 		m_cameraGlobalTranform = cam->get_global_transform();
 		float colliderAltitude = getColliderAltitude();
 		//Vector3 centerOfQuadrant = igt.origin + 0.5 * Vector3(sizeInWU, 0, sizeInWU);
 		//Vector3 centerOfQuadrantDistFromCamera = cam->get_global_transform().origin - centerOfQuadrant;
 
 		// set body to the center of the quadrant
-		Transform tTranslate(Basis(), Vector3((float)0.5 * sizeInWU, (float)colliderAltitude, (float)0.5 * sizeInWU));
-		Transform tScale(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)), Vector3(0, 0, 0));
-		Transform t = tTranslate * tScale;
+		Transform3D tTranslate(Basis(), Vector3((float)0.5 * sizeInWU, (float)colliderAltitude, (float)0.5 * sizeInWU));
+		Transform3D tScale(Basis().scaled(Vector3(axisScaleFactr, (float)1.0, axisScaleFactr)), Vector3(0, 0, 0));
+		Transform3D t = tTranslate * tScale;
 
 		m_colliderTransform = igt * t;
 		setTransform(m_colliderTransform);
 	}
 
-	void Collider::setTransform(Transform t)
+	void Collider::setTransform(Transform3D t)
 	{
 		assert(m_initialized);
 		if (!m_initialized)
 			return;
 
-		PhysicsServer* ps = PhysicsServer::get_singleton();
-		ps->body_set_state(m_bodyRID, PhysicsServer::BODY_STATE_TRANSFORM, t);
+		godot::PhysicsServer3D* ps = godot::PhysicsServer3D::get_singleton();
+		ps->body_set_state(m_bodyRID, godot::PhysicsServer3D::BodyState::BODY_STATE_TRANSFORM, t);
 		//ps->body_set_shape_transform(m_bodyRID, 0, t);
 	}
 
-	Transform Collider::getTransform(void)
+	Transform3D Collider::getTransform(void)
 	{
 		assert(m_initialized);
 		if (!m_initialized)
-			return Transform();
+			return Transform3D();
 
-		PhysicsServer* ps = PhysicsServer::get_singleton();
-		Transform t = ps->body_get_state(m_bodyRID, PhysicsServer::BODY_STATE_TRANSFORM);
+		godot::PhysicsServer3D* ps = godot::PhysicsServer3D::get_singleton();
+		Transform3D t = ps->body_get_state(m_bodyRID, PhysicsServer3D::BodyState::BODY_STATE_TRANSFORM);
 		return t;
 	}
 }

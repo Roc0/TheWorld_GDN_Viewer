@@ -69,15 +69,15 @@
     <ClInclude Include="UnicodeDefine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="register_types.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="dllmain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="pch.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="gdlibrary.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GDN_TheWorld_Viewer.cpp">
@@ -120,6 +120,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="GDN_TheWorld_Edit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="register_types.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

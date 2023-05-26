@@ -1,9 +1,9 @@
 #pragma once
-#include <Godot.hpp>
-#include <Node.hpp>
-#include <Reference.hpp>
-#include <SceneTree.hpp>
-#include <Viewport.hpp>
+
+#pragma warning (push, 0)
+#include <godot_cpp/classes/node.hpp>
+#include <godot_cpp/variant/basis.hpp>
+#pragma warning (pop)
 
 namespace godot
 {
@@ -15,7 +15,7 @@ namespace godot
 		Collider(QuadTree* quadTree);
 		~Collider(void);
 
-		void init(Node* attachedNode, int64_t initialLayer, int64_t initialMask);
+		void init(Node* attachedNode, uint32_t initialLayer, uint32_t initialMask);
 		void deinit(void);
 
 		void enterWorld(void);
@@ -24,8 +24,8 @@ namespace godot
 		void updateTransform();
 		void onGlobalTransformChanged(void);
 		void onCameraTransformChanged(void);
-		void setTransform(Transform t);
-		Transform getTransform(void);
+		void setTransform(Transform3D t);
+		Transform3D getTransform(void);
 
 	private:
 		inline float getColliderAltitude(void);
@@ -36,7 +36,7 @@ namespace godot
 		QuadTree* m_quadTree;
 		RID m_shapeRID;
 		RID m_bodyRID;
-		Transform m_colliderTransform;
-		Transform m_cameraGlobalTranform;
+		Transform3D m_colliderTransform;
+		Transform3D m_cameraGlobalTranform;
 	};
 }

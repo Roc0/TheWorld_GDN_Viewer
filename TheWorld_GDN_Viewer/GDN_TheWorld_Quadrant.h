@@ -1,7 +1,8 @@
 #pragma once
-#include <Godot.hpp>
-#include <Spatial.hpp>
-#include <MeshInstance.hpp>
+
+#pragma warning (push, 0)
+#include <godot_cpp/classes/node3d.hpp>
+#pragma warning (pop)
 
 namespace godot
 {
@@ -31,16 +32,23 @@ namespace godot
 	//	bool m_initialized;
 	//};
 
-	class GDN_TheWorld_Quadrant : public Spatial
+	class GDN_TheWorld_Quadrant : public Node3D
 	{
-		GODOT_CLASS(GDN_TheWorld_Quadrant, Spatial)
+		GDCLASS(GDN_TheWorld_Quadrant, Node3D)
+
+	protected:
+		static void _bind_methods();
+		void _notification(int p_what);
+		void _init(void);
+
 	public:
 		GDN_TheWorld_Quadrant(void);
 		~GDN_TheWorld_Quadrant(void);
+		
 		void init(QuadTree* quadTree);
 		void deinit(void);
-		void setColliderTransform(Transform t);
-		Transform getColliderTransform(void);
+		void setColliderTransform(Transform3D t);
+		Transform3D getColliderTransform(void);
 		//void setDebugColliderMeshTransform(Transform t);
 		//Transform getDebugColliderMeshTransform(void);
 		//void showDebugColliderMesh(bool show = true);
@@ -49,13 +57,10 @@ namespace godot
 		//
 		// Godot Standard Functions
 		//
-		static void _register_methods();
-		void _init(void); // our initializer called by Godot
-		void _ready(void);
-		void _process(float _delta);
-		void _physics_process(float _delta);
-		void _input(const Ref<InputEvent> event);
-		void _notification(int p_what);
+		virtual void _ready(void) override;
+		virtual void _process(double _delta) override;
+		virtual void _physics_process(double _delta) override;
+		virtual void _input(const Ref<InputEvent>& event) override;
 
 	private:
 		//void createDebugColliderMeshInstance(void);
@@ -63,7 +68,7 @@ namespace godot
 	private:
 		QuadTree* m_quadTree;
 		//GDN_Collider_MeshInstance* m_colliderMeshInstance;
-		Transform m_lastCameraTransform;
+		Transform3D m_lastCameraTransform;
 		bool m_initialized;
 	};
 }

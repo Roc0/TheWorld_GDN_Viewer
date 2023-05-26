@@ -1,12 +1,4 @@
 #pragma once
-#include <Godot.hpp>
-#include <Array.hpp>
-#include <Node.hpp>
-#include <ResourceLoader.hpp>
-#include <ImageTexture.hpp>
-#include <Shader.hpp>
-#include <ShaderMaterial.hpp>
-#include <OS.hpp>
 
 #include <map>
 #include <vector>
@@ -17,6 +9,11 @@
 #include "Chunk.h"
 #include "Collider.h"
 //#include <Utils.h>
+
+#pragma warning(push, 0)
+#include <godot_cpp/classes/image_texture.hpp>
+#include <godot_cpp/classes/shader_material.hpp>
+#pragma warning(pop)
 
 #define _DEBUG_AAB	1
 
@@ -306,14 +303,13 @@ namespace godot
 
 		_declspec(dllexport) void populateGridVertices(float initialViewerPosX, float initialViewerPosZ, bool setCamera, float cameraDistanceFromTerrain);
 
-		PoolRealArray& getHeightsForCollider(bool reload = true)
+		PackedFloat32Array& getHeightsForCollider(bool reload = true)
 		{
 			if (m_heightsForCollider.size() == 0 && reload)
 			{
 				int numVertices = getPos().getNumVerticesPerSize() * getPos().getNumVerticesPerSize();
 				m_heightsForCollider.resize((int)numVertices);
-				godot::PoolRealArray::Write w = m_heightsForCollider.write();
-				memcpy((char*)w.ptr(), getFloat32HeightsBuffer().ptr(), getFloat32HeightsBuffer().size());
+				memcpy((char*)m_heightsForCollider.ptrw(), getFloat32HeightsBuffer().ptr(), getFloat32HeightsBuffer().size());
 			}
 			return m_heightsForCollider;
 		}
@@ -613,7 +609,7 @@ namespace godot
 		TheWorld_Utils::MemoryBuffer m_colormapBuffer;			// Vertices color
 		TheWorld_Utils::MemoryBuffer m_globalmapBuffer;
 		std::unique_ptr<TheWorld_Utils::TerrainEdit> m_terrainEdit;
-		godot::PoolRealArray m_heightsForCollider;
+		godot::PackedFloat32Array m_heightsForCollider;
 		// Terrain Values
 
 		bool m_heightsUpdated;
@@ -999,7 +995,7 @@ namespace godot
 		{
 			return m_tag;
 		}
-		Transform getInternalGlobalTransform(void);
+		Transform3D getInternalGlobalTransform(void);
 		GDN_TheWorld_Viewer* Viewer(void)
 		{
 			return m_viewer; 

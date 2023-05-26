@@ -1,10 +1,4 @@
 //#include "pch.h"
-#include <Godot.hpp>
-#include <Array.hpp>
-#include <ResourceLoader.hpp>
-#include <InputEvent.hpp>
-#include <Camera.hpp>
-#include <Engine.hpp>
 
 #include "GDN_TheWorld_Viewer.h"
 #include "GDN_TheWorld_Quadrant.h"
@@ -17,6 +11,8 @@ namespace godot
 		m_quadTree = nullptr;
 		//m_colliderMeshInstance = nullptr;
 		m_initialized = false;
+
+		_init();
 	}
 	
 	GDN_TheWorld_Quadrant::~GDN_TheWorld_Quadrant()
@@ -58,19 +54,13 @@ namespace godot
 		}
 	}
 		
-	void GDN_TheWorld_Quadrant::_register_methods()
+	void GDN_TheWorld_Quadrant::_bind_methods()
 	{
-		register_method("_ready", &GDN_TheWorld_Quadrant::_ready);
-		register_method("_process", &GDN_TheWorld_Quadrant::_process);
-		register_method("_physics_process", &GDN_TheWorld_Quadrant::_physics_process);
-		register_method("_input", &GDN_TheWorld_Quadrant::_input);
-		register_method("_notification", &GDN_TheWorld_Quadrant::_notification);
-
-		register_method("set_collider_transform", &GDN_TheWorld_Quadrant::setColliderTransform);
-		register_method("get_collider_transform", &GDN_TheWorld_Quadrant::getColliderTransform);
-		//register_method("set_collider_mesh_transform", &GDN_TheWorld_Quadrant::setDebugColliderMeshTransform);
-		//register_method("get_collider_mesh_transform", &GDN_TheWorld_Quadrant::getDebugColliderMeshTransform);
-		//register_method("show_collider_mesh", &GDN_TheWorld_Quadrant::showDebugColliderMesh);
+		ClassDB::bind_method(D_METHOD("set_collider_transform"), &GDN_TheWorld_Quadrant::setColliderTransform);
+		ClassDB::bind_method(D_METHOD("get_collider_transform"), &GDN_TheWorld_Quadrant::getColliderTransform);
+		//ClassDB::bind_method(D_METHOD("set_collider_mesh_transform"), &GDN_TheWorld_Quadrant::setDebugColliderMeshTransform);
+		//ClassDB::bind_method(D_METHOD("get_collider_mesh_transform"), &GDN_TheWorld_Quadrant::getDebugColliderMeshTransform);
+		//ClassDB::bind_method(D_METHOD("show_collider_mesh"), &GDN_TheWorld_Quadrant::showDebugColliderMesh);
 	}
 
 	void GDN_TheWorld_Quadrant::_init(void)
@@ -81,7 +71,7 @@ namespace godot
 	{
 	}
 
-	void GDN_TheWorld_Quadrant::_input(const Ref<InputEvent> event)
+	void GDN_TheWorld_Quadrant::_input(const Ref<InputEvent>& event)
 	{
 	}
 
@@ -113,16 +103,16 @@ namespace godot
 		}
 	}
 
-	void GDN_TheWorld_Quadrant::_physics_process(float _delta)
+	void GDN_TheWorld_Quadrant::_physics_process(double _delta)
 	{
 	}
 
-	void GDN_TheWorld_Quadrant::_process(float _delta)
+	void GDN_TheWorld_Quadrant::_process(double _delta)
 	{
 		if (m_quadTree != nullptr)
 		{
-			godot::Camera* camera = m_quadTree->Viewer()->getCamera();
-			Transform cameraTransform = camera->get_global_transform();
+			godot::Camera3D* camera = m_quadTree->Viewer()->getCamera();
+			Transform3D cameraTransform = camera->get_global_transform();
 			if (cameraTransform != m_lastCameraTransform)
 			{
 				m_lastCameraTransform = cameraTransform;
@@ -131,12 +121,12 @@ namespace godot
 		}
 	}
 
-	void GDN_TheWorld_Quadrant::setColliderTransform(Transform t)
+	void GDN_TheWorld_Quadrant::setColliderTransform(Transform3D t)
 	{
 		m_quadTree->getQuadrant()->getCollider()->setTransform(t);
 	}
 
-	Transform GDN_TheWorld_Quadrant::getColliderTransform(void)
+	Transform3D GDN_TheWorld_Quadrant::getColliderTransform(void)
 	{
 		return m_quadTree->getQuadrant()->getCollider()->getTransform();
 	}
@@ -310,7 +300,7 @@ namespace godot
 //	}
 }
 
-void GDN_TheWorld_Quadrant_showCollider_makeIndices(godot::PoolIntArray& indices, int numVerticesPerSide)
+void GDN_TheWorld_Quadrant_showCollider_makeIndices(godot::PackedInt32Array& indices, int numVerticesPerSide)
 {
 	int numColumnsOrRows = numVerticesPerSide - 1;
 	assert(numColumnsOrRows % 2 == 0);

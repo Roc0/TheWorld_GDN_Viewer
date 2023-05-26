@@ -5,10 +5,8 @@
 
 #include <string>
 
-#include <PoolArrays.hpp>
-#include <SpatialMaterial.hpp>
-#include <MeshDataTool.hpp>
-#include <CubeMesh.hpp>
+#include <godot_cpp/classes/base_material3d.hpp>
+#include <godot_cpp/classes/standard_material3d.hpp>
 
 //using namespace godot;
 namespace godot
@@ -60,8 +58,8 @@ namespace godot
 		float strideInWUs = m_viewer->Globals()->strideInWorldGridWUs(idxLod);
 
 		// Determines the vertices in a flat mesh at the required lod using World Grid vertices: coordinates are expressed in WUs and are realtive to the lower vertex of the chunk
-		PoolVector3Array positions;
-		PoolColorArray colors;
+		PackedVector3Array positions;
+		PackedColorArray colors;
 		Color initialVertexColor = GDN_TheWorld_Globals::g_color_white;
 		//Color initialVertexColor = GDN_TheWorld_Globals::g_color_pink_amaranth;
 		//strideInWUs = (numVerticesPerChuckSide * strideInWUs) / 4;	// DEBUGRIC
@@ -79,8 +77,8 @@ namespace godot
 			}
 		
 		// Preparing array of indices releate to vertex array to form the triangles of the mesh: a tringle every three indices
-		PoolIntArray indices;
-		void makeFlatChunk_makeIndices(PoolIntArray& indices, int numVerticesPerChuckSide, int seams);
+		PackedInt32Array indices;
+		void makeFlatChunk_makeIndices(PackedInt32Array & indices, int numVerticesPerChuckSide, int seams);
 		makeFlatChunk_makeIndices(indices, numVerticesPerChuckSide, seams);
 
 		// DEBUGRIC
@@ -124,16 +122,16 @@ namespace godot
 		arrays[ArrayMesh::ARRAY_INDEX] = indices;
 
 		m_viewer->getMainProcessingMutex().lock();
-		Ref<ArrayMesh> mesh = ArrayMesh::_new();
+		Ref<ArrayMesh> mesh = memnew(ArrayMesh);
 		m_viewer->getMainProcessingMutex().unlock();
-		int64_t surf_idx = mesh->get_surface_count();	// next surface added will have this surf_idx
+		int32_t surf_idx = mesh->get_surface_count();	// next surface added will have this surf_idx
 		mesh->add_surface_from_arrays(Mesh::PRIMITIVE_TRIANGLES, arrays);
 
 		// Initial Material
 		m_viewer->getMainProcessingMutex().lock();
-		Ref<SpatialMaterial> initialMaterial = SpatialMaterial::_new();
+		Ref<StandardMaterial3D> initialMaterial = memnew(StandardMaterial3D);
 		m_viewer->getMainProcessingMutex().unlock();
-		initialMaterial->set_flag(SpatialMaterial::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
+		initialMaterial->set_flag(BaseMaterial3D::Flags::FLAG_ALBEDO_FROM_VERTEX_COLOR, true);
 		initialMaterial->set_albedo(initialVertexColor);
 		mesh->surface_set_material(surf_idx, initialMaterial);
 
@@ -146,7 +144,7 @@ namespace godot
 	}
 }
 
-void makeFlatChunk_makeIndices(godot::PoolIntArray& indices, int numVerticesPerChuckSide, int seams)
+void makeFlatChunk_makeIndices(godot::PackedInt32Array& indices, int numVerticesPerChuckSide, int seams)
 {
 	// only even sizes admitted
 	assert(numVerticesPerChuckSide % 2 == 0);

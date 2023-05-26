@@ -1,11 +1,11 @@
 #pragma 
-#include <vector>
 
-#include <Godot.hpp>
-#include <Node.hpp>
-#include <Reference.hpp>
-#include <InputEvent.hpp>
-#include <ArrayMesh.hpp>
+#pragma warning(push, 0)
+#include <godot_cpp/classes/ref.hpp>
+#include <godot_cpp/classes/mesh.hpp>
+#pragma warning(pop)
+
+#include <vector>
 
 namespace godot
 {
