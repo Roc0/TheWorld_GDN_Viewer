@@ -154,6 +154,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_ready;
 		GDN_TheWorld_Viewer* m_viewer;
 		std::recursive_mutex m_mtxUI;
 

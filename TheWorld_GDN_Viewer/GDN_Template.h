@@ -38,6 +38,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_ready;
 	};
 
 }

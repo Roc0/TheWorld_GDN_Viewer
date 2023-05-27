@@ -17,6 +17,7 @@ void GDN_Template::_bind_methods()
 GDN_Template::GDN_Template()
 {
 	m_initialized = false;
+	m_ready = false;
 }
 
 GDN_Template::~GDN_Template()
@@ -46,6 +47,7 @@ void GDN_Template::_ready(void)
 {
 	//Godot::print("GDN_Template::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
+	m_ready = true;
 }
 
 void GDN_Template::_input(const Ref<InputEvent>& event)

@@ -135,6 +135,7 @@ namespace godot
 	GDN_TheWorld_Globals::GDN_TheWorld_Globals()
 	{
 		m_initialized = false;
+		m_ready = false;
 		setStatus(TheWorldStatus::uninitialized);
 		m_isDebugEnabled = DEFAULT_DEBUG_ENABLED;
 		m_bAppInError = false;
@@ -395,6 +396,7 @@ namespace godot
 	{
 		debugPrint("GDN_TheWorld_Globals::_ready");
 		//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
+		m_ready = true;
 	}
 
 	void GDN_TheWorld_Globals::_input(const Ref<InputEvent>& event)
@@ -403,11 +405,15 @@ namespace godot
 
 	void GDN_TheWorld_Globals::_notification(int p_what)
 	{
+		//return;	// DATOGLIERE
 		switch (p_what)
 		{
 		case NOTIFICATION_PREDELETE:
 		{
-			debugPrint("GDN_TheWorld_Globals::_notification - Destroy Globals");
+			if (m_ready)
+			{
+				debugPrint("GDN_TheWorld_Globals::_notification - Destroy Globals");
+			}
 		}
 		break;
 		}

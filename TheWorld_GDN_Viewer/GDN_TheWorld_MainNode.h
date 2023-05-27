@@ -43,6 +43,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_ready;
 		bool m_initInProgress;
 
 		// Node cache

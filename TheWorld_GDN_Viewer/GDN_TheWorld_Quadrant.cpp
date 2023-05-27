@@ -11,6 +11,7 @@ namespace godot
 		m_quadTree = nullptr;
 		//m_colliderMeshInstance = nullptr;
 		m_initialized = false;
+		m_ready = false;
 
 		_init();
 	}
@@ -69,6 +70,7 @@ namespace godot
 
 	void GDN_TheWorld_Quadrant::_ready(void)
 	{
+		m_ready = true;
 	}
 
 	void GDN_TheWorld_Quadrant::_input(const Ref<InputEvent>& event)

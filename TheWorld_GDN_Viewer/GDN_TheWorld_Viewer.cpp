@@ -128,6 +128,7 @@ void GDN_TheWorld_Viewer::_bind_methods()
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_initialized = false;
+	m_ready = false;
 	m_desiderdLookDev = ShaderTerrainData::LookDev::NotSet;
 	m_desideredLookDevChanged = false;
 	m_useVisualServer = true;
@@ -671,6 +672,8 @@ void GDN_TheWorld_Viewer::_ready(void)
 		camera->call_deferred("set_owner", sceneRoot);
 
 		godot::Control* control = getOrCreateEditModeUIControl();
+
+		m_ready = true;
 	}
 
 	//{
@@ -927,9 +930,12 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 	{
 		case NOTIFICATION_PREDELETE:
 		{
-			GDN_TheWorld_Globals* globals = Globals();
-			if (globals != nullptr)
-				globals->debugPrint("GDN_TheWorld_Viewer::_notification - Destroy Viewer");
+			if (m_ready)
+			{
+				GDN_TheWorld_Globals* globals = Globals();
+				if (globals != nullptr)
+					globals->debugPrint("GDN_TheWorld_Viewer::_notification - Destroy Viewer");
+			}
 	
 			deinit();
 		}

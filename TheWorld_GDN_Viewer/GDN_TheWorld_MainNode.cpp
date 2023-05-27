@@ -27,6 +27,7 @@ void GDN_TheWorld_MainNode::_bind_methods()
 GDN_TheWorld_MainNode::GDN_TheWorld_MainNode()
 {
 	m_initialized = false;
+	m_ready = false;
 	m_initInProgress = false;
 	m_globals = NULL;
 
@@ -51,6 +52,7 @@ void GDN_TheWorld_MainNode::_ready(void)
 	if (globals != nullptr)
 		globals->debugPrint("GDN_TheWorld_MainNode::_ready");
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
+	m_ready = true;
 }
 
 void GDN_TheWorld_MainNode::_notification(int p_what)
@@ -59,9 +61,12 @@ void GDN_TheWorld_MainNode::_notification(int p_what)
 	{
 	case NOTIFICATION_PREDELETE:
 	{
-		GDN_TheWorld_Globals* globals = Globals();
-		if (globals != nullptr)
-			globals->debugPrint("GDN_TheWorld_MainNode::_notification - Destroy Main Node");
+		if (m_ready)
+		{
+			GDN_TheWorld_Globals* globals = Globals();
+			if (globals != nullptr)
+				globals->debugPrint("GDN_TheWorld_MainNode::_notification - Destroy Main Node");
+		}
 	}
 	break;
 	}

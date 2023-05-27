@@ -66,6 +66,7 @@ namespace godot
 		//void createDebugColliderMeshInstance(void);
 
 	private:
+		bool m_ready;
 		QuadTree* m_quadTree;
 		//GDN_Collider_MeshInstance* m_colliderMeshInstance;
 		Transform3D m_lastCameraTransform;

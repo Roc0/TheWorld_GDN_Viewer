@@ -33,6 +33,7 @@ void GDN_TheWorld_Camera::_bind_methods()
 
 GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 {
+	m_ready = false;
 	m_isActive = false;
 	m_instanceId = -1;
 	m_PlayerCamera = false;
@@ -109,6 +110,8 @@ void GDN_TheWorld_Camera::_ready()
 	//Node* parent = get_parent();
 	//String parentName = parent->get_name();
 	//globals->debugPrint("GDN_TheWorld_Camera::_ready - Parent name: " + parentName);
+
+	m_ready = true;
 }
 
 void GDN_TheWorld_Camera::_notification(int p_what)
@@ -120,9 +123,12 @@ void GDN_TheWorld_Camera::_notification(int p_what)
 	{
 	case NOTIFICATION_PREDELETE:
 	{
-		GDN_TheWorld_Globals* globals = Globals();
-		if (globals != nullptr)
-			globals->debugPrint("GDN_TheWorld_Camera::_notification - Destroy Camera");
+		if (m_ready)
+		{
+			GDN_TheWorld_Globals* globals = Globals();
+			if (globals != nullptr)
+				globals->debugPrint("GDN_TheWorld_Camera::_notification - Destroy Camera");
+		}
 	}
 	break;
 	}

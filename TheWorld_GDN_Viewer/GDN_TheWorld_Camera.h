@@ -115,6 +115,7 @@ namespace godot {
 	private:
 
 	private:
+		bool m_ready;
 		Transform3D m_lastCameraPosInWorld;
 		bool m_PlayerCamera;
 		bool m_OtherEntityCamera;

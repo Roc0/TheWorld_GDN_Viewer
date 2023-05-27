@@ -387,6 +387,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_ready;
 		bool m_useVisualServer;
 		bool m_altPressed;
 		bool m_ctrlPressed;

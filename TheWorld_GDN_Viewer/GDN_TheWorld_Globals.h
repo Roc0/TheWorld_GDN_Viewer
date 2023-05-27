@@ -463,6 +463,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_ready;
 		enum class TheWorldStatus m_status;
 		TheWorld_Utils::TimerMs m_statusChangeClock;
 		bool m_isDebugEnabled;

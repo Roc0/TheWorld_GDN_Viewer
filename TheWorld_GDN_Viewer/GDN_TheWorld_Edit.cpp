@@ -43,6 +43,7 @@ void GDN_TheWorld_Edit::_bind_methods()
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 {
 	m_initialized = false;
+	m_ready = false;
 	m_actionInProgress = false;
 	m_actionStopRequested = false;
 	m_onGoingElapsedLabel = false;
@@ -1143,6 +1144,8 @@ void GDN_TheWorld_Edit::_ready(void)
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 
 	//get_tree()->get_root()->connect("size_changed", this, "setSizeUI");
+
+	m_ready = true;
 }
 
 //void GDN_TheWorld_Edit::controlNeedResize(void)
