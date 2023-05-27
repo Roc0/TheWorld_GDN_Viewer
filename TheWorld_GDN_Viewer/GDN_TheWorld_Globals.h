@@ -150,7 +150,7 @@ namespace godot
 
 		static std::string getClientDataDir(void);
 
-		void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
+		virtual void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply) override;
 		
 		enum class TheWorldStatus status(void)
 		{

@@ -139,7 +139,7 @@
       <AdditionalDependencies>libgodot-cpp.windows.template_debug.x86_64.lib;TheWorld_MapManager_d.lib;TheWorld_Utils_d.lib;Rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y ..\x64\*.dll ..\..\TheWorld_Viewer\godot_proj\addons\twviewer\native</Command>
+      <Command>copy /Y ..\x64\*.dll ..\..\TheWorld_Viewer\TheWorld\addons\twviewer\native</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

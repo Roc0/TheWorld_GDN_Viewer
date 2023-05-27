@@ -34,9 +34,7 @@ void initialize_tw_main_module(ModuleInitializationLevel p_level)
     ClassDB::register_class<godot::GDN_TheWorld_Globals>();
     ClassDB::register_class<godot::GDN_TheWorld_Viewer>();
     ClassDB::register_class<godot::GDN_TheWorld_Camera>();
-    //ClassDB::register_class<godot::GDN_Chunk_MeshInstance>();
     ClassDB::register_class<godot::GDN_TheWorld_Quadrant>();
-    //ClassDB::register_class<godot::GDN_Collider_MeshInstance>();
     ClassDB::register_class<godot::GDN_TheWorld_Edit>();
 }
 

@@ -25,14 +25,7 @@ using namespace godot;
 
 void GDN_TheWorld_Edit::_bind_methods()
 {
-	ClassDB::bind_method(D_METHOD("_ready"), &GDN_TheWorld_Edit::_ready);
-	ClassDB::bind_method(D_METHOD("_process"), &GDN_TheWorld_Edit::_process);
-	ClassDB::bind_method(D_METHOD("_input"), &GDN_TheWorld_Edit::_input);
-	ClassDB::bind_method(D_METHOD("_notification"), &GDN_TheWorld_Edit::_notification);
-
 	ClassDB::bind_method(D_METHOD("edit_mode_noise_panel"), &GDN_TheWorld_Edit::editModeNoisePanel);
-
-	//ClassDB::bind_method(D_METHOD("hello"), &GDN_TheWorld_Edit::hello);
 	ClassDB::bind_method(D_METHOD("edit_mode_generate"), &GDN_TheWorld_Edit::editModeGenerateAction);
 	ClassDB::bind_method(D_METHOD("edit_mode_blend"), &GDN_TheWorld_Edit::editModeBlendAction);
 	ClassDB::bind_method(D_METHOD("edit_mode_gen_normals"), &GDN_TheWorld_Edit::editModeGenNormalsAction);

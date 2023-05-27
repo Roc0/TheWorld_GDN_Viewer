@@ -20,11 +20,6 @@ using namespace godot;
 
 void GDN_TheWorld_Camera::_bind_methods()
 {
-	ClassDB::bind_method(D_METHOD("_ready"), &GDN_TheWorld_Camera::_ready);
-	ClassDB::bind_method(D_METHOD("_process"), &GDN_TheWorld_Camera::_process);
-	ClassDB::bind_method(D_METHOD("_physics_process"), &GDN_TheWorld_Camera::_physics_process);
-	ClassDB::bind_method(D_METHOD("_input"), &GDN_TheWorld_Camera::_input);
-	ClassDB::bind_method(D_METHOD("_notification"), &GDN_TheWorld_Camera::_notification);
 	ClassDB::bind_method(D_METHOD("is_active_camera"), &GDN_TheWorld_Camera::isActiveCamera);
 	ClassDB::bind_method(D_METHOD("get_active_camera"), &GDN_TheWorld_Camera::getActiveCamera);
 	ClassDB::bind_method(D_METHOD("get_angle_from_north"), &GDN_TheWorld_Camera::getAngleFromNorth);
