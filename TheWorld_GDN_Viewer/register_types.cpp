@@ -29,7 +29,7 @@ void initialize_tw_main_module(ModuleInitializationLevel p_level)
         return;
     }
 
-    ClassDB::register_class<godot::GDN_Template>();
+    //ClassDB::register_class<godot::GDN_Template>();
     ClassDB::register_class<godot::GDN_TheWorld_MainNode>();
     ClassDB::register_class<godot::GDN_TheWorld_Globals>();
     ClassDB::register_class<godot::GDN_TheWorld_Viewer>();

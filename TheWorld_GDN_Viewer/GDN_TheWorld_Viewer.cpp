@@ -205,26 +205,12 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_recalcQuadrantsInViewNeeded = false;
 	m_editorInterface = nullptr;
 	m_editorCamera = nullptr;
-	if (IS_EDITOR_HINT())
-	{
-		m_depthQuadOnPerimeter = 1;
-		m_cacheQuadOnPerimeter = 1;
-	}
-	else
-	{
-		m_depthQuadOnPerimeter = 3;
-		m_cacheQuadOnPerimeter = 1;
-	}
-	m_shaderParam_groundUVScale.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));	// if every coord is 0.0 the parameter is not passed to the shader
-	m_shaderParam_groundUVScale.d = 0.0f;
+	m_depthQuadOnPerimeter = 3;
+	m_cacheQuadOnPerimeter = 1;
 	m_shaderParam_depthBlending = false;
 	m_shaderParam_triplanar = false;
-	m_shaderParam_tileReduction.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));
-	m_shaderParam_tileReduction.d = 0.0f;
 	m_shaderParam_globalmapBlendStart = 0.0f;
 	m_shaderParam_globalmapBlendDistance = 0.0f;
-	m_shaderParam_colormapOpacity.set_normal(godot::Vector3(1.0f, 1.0f, 1.0f));
-	m_shaderParam_colormapOpacity.d = 1.0f;
 	m_shaderParamChanged = false;
 
 	_init();
@@ -616,6 +602,26 @@ void GDN_TheWorld_Viewer::_init(void)
 
 void GDN_TheWorld_Viewer::_ready(void)
 {
+	if (IS_EDITOR_HINT())
+	{
+		m_depthQuadOnPerimeter = 1;
+		m_cacheQuadOnPerimeter = 1;
+	}
+	else
+	{
+		m_depthQuadOnPerimeter = 3;
+		m_cacheQuadOnPerimeter = 1;
+	}
+
+	m_shaderParam_groundUVScale.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));	// if every coord is 0.0 the parameter is not passed to the shader
+	m_shaderParam_groundUVScale.d = 0.0f;
+	m_shaderParam_tileReduction.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));
+	m_shaderParam_tileReduction.d = 0.0f;
+	m_shaderParam_colormapOpacity.set_normal(godot::Vector3(1.0f, 1.0f, 1.0f));
+	m_shaderParam_colormapOpacity.d = 1.0f;
+
+	set_notify_transform(true);
+
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
 		return;
@@ -625,8 +631,6 @@ void GDN_TheWorld_Viewer::_ready(void)
 
 	globals->debugPrint("GDN_TheWorld_Viewer::_ready");
 
-	set_notify_transform(true);
-	
 	//get_tree()->get_root()->connect("size_changed", this, "viewport_resizing");
 	
 	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
@@ -921,7 +925,6 @@ void GDN_TheWorld_Viewer::printKeyboardMapping(void)
 
 void GDN_TheWorld_Viewer::_notification(int p_what)
 {
-
 	//GDN_TheWorld_Globals* globals = Globals();
 	//if (globals->status() != TheWorldStatus::sessionInitialized)
 	//	return;

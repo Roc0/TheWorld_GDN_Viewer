@@ -405,7 +405,6 @@ namespace godot
 
 	void GDN_TheWorld_Globals::_notification(int p_what)
 	{
-		//return;	// DATOGLIERE
 		switch (p_what)
 		{
 		case NOTIFICATION_PREDELETE:
