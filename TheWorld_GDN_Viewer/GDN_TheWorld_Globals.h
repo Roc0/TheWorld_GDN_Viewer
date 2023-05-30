@@ -246,7 +246,7 @@ namespace godot
 				String msg = "DEBUG - " + editor_string + message;
 				if (godotPrint)
 					godot::UtilityFunctions::print(msg);
-				const char* m = msg.utf8().get_data();
+				std::string m = msg.utf8().get_data();
 				PLOG_DEBUG << m;
 			}
 		}
@@ -259,7 +259,7 @@ namespace godot
 			String msg = "WARNING - " + editor_string + message;
 			if (godotPrint)
 				godot::UtilityFunctions::print(msg);
-			const char* m = msg.utf8().get_data();
+			std::string m = msg.utf8().get_data();
 			PLOG_WARNING << m;
 		}
 
@@ -271,7 +271,7 @@ namespace godot
 			String msg = "ERROR - " + editor_string + message;
 			if (godotPrint)
 				godot::UtilityFunctions::print(msg);
-			const char* m = msg.utf8().get_data();
+			std::string m = msg.utf8().get_data();
 			PLOG_ERROR << m;
 		}
 
@@ -288,7 +288,7 @@ namespace godot
 		{
 			if (godotPrint)
 				godot::UtilityFunctions::print(message);
-			const char* m = message.utf8().get_data();
+			std::string m = message.utf8().get_data();
 			PLOG_INFO << m;
 		}
 

@@ -746,7 +746,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				button->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
-			separator = memnew(Separator);
+			separator = memnew(VSeparator);
 			mainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 			separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
