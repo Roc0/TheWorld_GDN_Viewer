@@ -65,7 +65,7 @@ void GDN_TheWorld_MainNode::_notification(int p_what)
 		{
 			GDN_TheWorld_Globals* globals = Globals();
 			if (globals != nullptr)
-				globals->debugPrint("GDN_TheWorld_MainNode::_notification - Destroy Main Node");
+				globals->debugPrint("GDN_TheWorld_MainNode::_notification (NOTIFICATION_PREDELETE) - Destroy Main Node");
 		}
 	}
 	break;
@@ -262,7 +262,7 @@ void GDN_TheWorld_MainNode::deinit(void)
 					//parent->remove_child(viewer);
 				}
 				viewer->set_owner(nullptr);
-				//viewer->queue_free();
+				viewer->queue_free();
 			}
 			PLOG_INFO << "TheWorld Main Node Deinitialized!";
 
@@ -274,7 +274,7 @@ void GDN_TheWorld_MainNode::deinit(void)
 				//parent->remove_child(globals);
 			}
 			globals->set_owner(nullptr);
-			//globals->queue_free();
+			globals->queue_free();
 		}
 
 		m_initialized = false;

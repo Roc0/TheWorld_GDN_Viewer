@@ -127,7 +127,7 @@ void GDN_TheWorld_Camera::_notification(int p_what)
 		{
 			GDN_TheWorld_Globals* globals = Globals();
 			if (globals != nullptr)
-				globals->debugPrint("GDN_TheWorld_Camera::_notification - Destroy Camera");
+				globals->debugPrint("GDN_TheWorld_Camera::_notification (NOTIFICATION_PREDELETE) - Destroy Camera");
 		}
 	}
 	break;
@@ -478,7 +478,8 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 	Vector3 worldNodePosGlobalCoord = Globals()->Viewer()->getWorldNode()->get_global_transform().origin;
 	Vector3 cameraPosGlobalCoord = cameraPos + worldNodePosGlobalCoord;
 	Vector3 lookAtGlobalCoord = lookAt + worldNodePosGlobalCoord;
-	Camera3D::look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
+	if (cameraPosGlobalCoord != lookAtGlobalCoord)
+		Camera3D::look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
 
 	//real_t z_near = Camera::get_znear();
 	//real_t z_far = Camera::get_zfar();

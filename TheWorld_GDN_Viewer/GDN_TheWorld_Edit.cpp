@@ -1180,6 +1180,16 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 		}
 	}
 	break;
+	case NOTIFICATION_PREDELETE:
+	{
+		if (m_ready && m_viewer != nullptr)
+		{
+			GDN_TheWorld_Globals* globals = m_viewer->Globals();
+			if (globals != nullptr)
+				globals->debugPrint("GDN_TheWorld_Edit::_notification (NOTIFICATION_PREDELETE) - Destroy Edit");
+		}
+	}
+	break;
 	case NOTIFICATION_RESIZED:
 	{
 		setSizeUI();

@@ -122,7 +122,7 @@ void GDN_TheWorld_Viewer::_bind_methods()
 	ClassDB::bind_method(D_METHOD("get_mouse_chunk_hit_size"), &GDN_TheWorld_Viewer::getMouseChunkHitSize);
 	ClassDB::bind_method(D_METHOD("get_mouse_chunk_hit_dist_from_cam"), &GDN_TheWorld_Viewer::getMouseChunkHitDistFromCam);
 	ClassDB::bind_method(D_METHOD("update_material_parmas_for_every_quadrant"), &GDN_TheWorld_Viewer::updateMaterialParamsForEveryQuadrant);
-	ClassDB::bind_method(D_METHOD("set_shader_param"), &GDN_TheWorld_Viewer::setShaderParam);
+	ClassDB::bind_method(D_METHOD("set_shader_parameter"), &GDN_TheWorld_Viewer::setShaderParam);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -369,9 +369,22 @@ void GDN_TheWorld_Viewer::deinit(void)
 		if (editModeUIControl != nullptr)
 		{
 			editModeUIControl->deinit();
-			//editModeUIControl->queue_free();
+			
+			Node* parent = editModeUIControl->get_parent();
+			if (parent != nullptr)
+				parent->call_deferred("remove_child", editModeUIControl);
+			editModeUIControl->queue_free();
 		}
 
+		GDN_TheWorld_Camera* camera = CameraNode(true);
+		if (camera != nullptr)
+		{
+			Node* parent = camera->get_parent();
+			if (parent != nullptr)
+				parent->call_deferred("remove_child", camera);
+			camera->queue_free();
+		}
+		
 		m_initialized = false;
 		PLOG_INFO << "TheWorld Viewer Deinitialized!";
 		
@@ -937,7 +950,7 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 			{
 				GDN_TheWorld_Globals* globals = Globals();
 				if (globals != nullptr)
-					globals->debugPrint("GDN_TheWorld_Viewer::_notification - Destroy Viewer");
+					globals->debugPrint("GDN_TheWorld_Viewer::_notification (NOTIFICATION_PREDELETE) - Destroy Viewer");
 			}
 	
 			deinit();
@@ -3044,7 +3057,7 @@ godot::Camera3D* GDN_TheWorld_Viewer::getCameraInEditor(void)
 	godot::Array children = editorSceneRootViewport->get_children();
 	int64_t ___size = children.size();	// DEBUG
 	if (!children.is_empty())
-		_findChildNodes(foundNodes, children, "Camera3D");
+		_findChildNodes(foundNodes, children, "GDN_TheWorld_Camera");
 
 	___size = foundNodes.size();	// DEBUG
 	if (!foundNodes.is_empty())

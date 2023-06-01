@@ -993,8 +993,8 @@ void ShaderTerrainData::init(void)
 	Ref<ShaderMaterial> mat = memnew(ShaderMaterial);
 	m_viewer->getMainProcessingMutex().unlock();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
-	//String shaderPath = "res://addons/twviewer/shaders/regularChunk.shader";
-	String shaderPath = "res://addons/twviewer/shaders/simple4.shader";
+	//String shaderPath = "res://addons/twviewer/shaders/regularChunk.gdshader";
+	String shaderPath = "res://addons/twviewer/shaders/simple4.gdshader";
 	Ref<Shader> shader = resLoader->load(shaderPath);
 	mat->set_shader(shader);
 	m_regularMaterial = mat;
@@ -1013,7 +1013,7 @@ Ref<Material> ShaderTerrainData::getLookDevMaterial(void)
 		Ref<ShaderMaterial> mat = memnew(ShaderMaterial);
 		m_viewer->getMainProcessingMutex().unlock();
 		ResourceLoader* resLoader = ResourceLoader::get_singleton();
-		String shaderPath = "res://addons/twviewer/shaders/lookdevChunk.shader";
+		String shaderPath = "res://addons/twviewer/shaders/lookdevChunk.gdshader";
 		Ref<Shader> shader = resLoader->load(shaderPath);
 		mat->set_shader(shader);
 		m_lookDevMaterial = mat;
@@ -1032,7 +1032,6 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 	std::string _fileName = std::string(s);
 
 	m_viewer->getMainProcessingMutex().lock();
-	godot::Ref<godot::Image> image = memnew(godot::Image);
 	//godot::FileAccess* file = memnew(godot::FileAccess);
 	godot::Ref<godot::FileAccess> file = godot::FileAccess::open(fileName, godot::FileAccess::READ);
 	if (file == nullptr)
@@ -1046,7 +1045,9 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 	if (imageSize * imageSize * sizeof(struct TheWorld_Utils::_RGBA) != fileSize)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Wrong image size ") + std::to_string(imageSize) + " file size " + std::to_string(fileSize)).c_str()));
 
-	image->create((int32_t)imageSize, (int32_t)imageSize, true, godot::Image::FORMAT_RGBA8);
+	m_viewer->getMainProcessingMutex().lock();
+	godot::Ref<godot::Image> image = Image::create((int32_t)imageSize, (int32_t)imageSize, true, godot::Image::FORMAT_RGBA8);
+	m_viewer->getMainProcessingMutex().unlock();
 
 	godot::PackedByteArray imageRowBuffer;
 	size_t imageRowSize = imageSize * sizeof(struct TheWorld_Utils::_RGBA);
@@ -1071,7 +1072,7 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 
 	file->close();
 
-	image->generate_mipmaps();
+	godot::Error e = image->generate_mipmaps();
 
 	return image;
 }
@@ -1083,11 +1084,10 @@ void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainD
 		bool ok;
 		godot::Ref<godot::Image> image = readGroundTexture(fileName + "_albedo_bump.ground", ok);
 		m_viewer->getMainProcessingMutex().lock();
-		Ref<godot::ImageTexture> tex = memnew(godot::ImageTexture);
-		m_viewer->getMainProcessingMutex().unlock();
 		// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
 		//tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
-		tex->create_from_image(image);
+		Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+		m_viewer->getMainProcessingMutex().unlock();
 		groundTextures->m_albedo_bump_tex = tex;
 	}
 	catch (...) {}
@@ -1097,11 +1097,10 @@ void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainD
 		bool ok;
 		godot::Ref<godot::Image> image = readGroundTexture(fileName + "_normal_roughness.ground", ok);
 		m_viewer->getMainProcessingMutex().lock();
-		Ref<godot::ImageTexture> tex = memnew(godot::ImageTexture);
-		m_viewer->getMainProcessingMutex().unlock();
 		// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
 		//tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
-		tex->create_from_image(image);
+		Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+		m_viewer->getMainProcessingMutex().unlock();
 		groundTextures->m_normal_roughness_tex = tex;
 	}
 	catch (...) {}
@@ -1182,9 +1181,7 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 	{
 		if (m_quadTree->getQuadrant()->getFloat16HeightsBuffer().size() > 0)
 		{
-			m_viewer->getMainProcessingMutex().lock();
-			godot::Ref<godot::Image> image = memnew(godot::Image);
-			m_viewer->getMainProcessingMutex().unlock();
+			godot::Ref<godot::Image> image;
 
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.1 ") + __FUNCTION__, "Create Image from heights buffer");
@@ -1198,18 +1195,21 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 					assert(heightmapBufferSizeInBytes == heightsBufferSize);
 					memcpy((char*)data.ptrw(), m_quadTree->getQuadrant()->getFloat16HeightsBuffer().ptr(), heightsBufferSize);
 				}
-				image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, data);
+
+				m_viewer->getMainProcessingMutex().lock();
+				godot::Ref<godot::Image> im = godot::Image::create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, data);
+				m_viewer->getMainProcessingMutex().unlock();
+				image = im;
 			}
 
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.2 ") + __FUNCTION__, "Create Texture from heights image");
 
 				m_viewer->getMainProcessingMutex().lock();
-				Ref<godot::ImageTexture> tex = memnew(godot::ImageTexture);
-				m_viewer->getMainProcessingMutex().unlock();
 				// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
 				//tex->create_from_image(image, godot::Texture::FLAG_FILTER);
-				tex->create_from_image(image);
+				Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+				m_viewer->getMainProcessingMutex().unlock();
 				m_heightMapTexture = tex;
 				m_heightMapTexModified = true;
 				//debugPrintTexture(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
@@ -1224,9 +1224,7 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 	// if normals updated create texture for shader (m_normalMapTexture), it will be freed we passed to the shader. If normals have not been computed we fill the texturo with 0,0,0,0
 	if (m_quadTree->getQuadrant()->normalsUpdated())
 	{
-		m_viewer->getMainProcessingMutex().lock();
-		godot::Ref<godot::Image> image = memnew(godot::Image);
-		m_viewer->getMainProcessingMutex().unlock();
+		godot::Ref<godot::Image> image;
 
 		TheWorld_Utils::MemoryBuffer& normalsBuffer = m_quadTree->getQuadrant()->getNormalsBuffer();
 		size_t normalsBufferSize = normalsBuffer.size();
@@ -1234,7 +1232,10 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 		if (normalsBufferSize == 0)
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for normals");
-			image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> im = godot::Image::create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+			m_viewer->getMainProcessingMutex().unlock();
+			image = im;
 			image->fill(godot::Color(0, 0, 0, 1.0));
 		}
 		else
@@ -1248,7 +1249,10 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 			{
 				memcpy((char*)data.ptrw(), normalsBuffer.ptr(), normalsBufferSize);
 			}
-			image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
+			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> im = godot::Image::create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
+			m_viewer->getMainProcessingMutex().unlock();
+			image = im;
 
 			//{
 			//	struct TheWorld_Utils::_RGB* rgb = (struct TheWorld_Utils::_RGB*)normalsBuffer.ptr();
@@ -1265,11 +1269,10 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from normal image");
 
 			m_viewer->getMainProcessingMutex().lock();
-			Ref<godot::ImageTexture> tex = memnew(godot::ImageTexture);
-			m_viewer->getMainProcessingMutex().unlock();
 			// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
 			//tex->create_from_image(image, godot::Texture::FLAG_FILTER);
-			tex->create_from_image(image);
+			Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+			m_viewer->getMainProcessingMutex().unlock();
 			m_normalMapTexture = tex;
 			m_normalMapTexModified = true;
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_NORMALMAP, m_normalMapTexture);
@@ -1282,9 +1285,7 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 
 	if (m_quadTree->getQuadrant()->splatmapUpdated())
 	{
-		m_viewer->getMainProcessingMutex().lock();
-		Ref<Image> image = memnew(Image);
-		m_viewer->getMainProcessingMutex().unlock();
+		godot::Ref<godot::Image> image;
 
 		TheWorld_Utils::MemoryBuffer& splatmapBuffer = m_quadTree->getQuadrant()->getSplatmapBuffer();
 		size_t splatmapBufferSize = splatmapBuffer.size();
@@ -1293,7 +1294,10 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 		if (splatmapBufferSize == 0)
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for splatmap");
-			image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+			m_viewer->getMainProcessingMutex().lock();
+			Ref<godot::Image> im = godot::Image::create(_resolution, _resolution, false, godot::Image::FORMAT_RGBA8);
+			m_viewer->getMainProcessingMutex().unlock();
+			image = im;
 			image->fill(godot::Color(1.0f, 0.0f, 0.0f, 0.0f));
 			//image->fill(godot::Color(0.0f, 1.0f, 0.0f, 0.0f));
 			//image->fill(godot::Color(0.0f, 0.0f, 1.0f, 0.0f));
@@ -1310,18 +1314,20 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 			{
 				memcpy((char*)data.ptrw(), splatmapBuffer.ptr(), splatmapBufferSizeInBytes);
 			}
-			image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGBA8, data);
+			m_viewer->getMainProcessingMutex().lock();
+			Ref<godot::Image> im = godot::Image::create_from_data(_resolution, _resolution, false, Image::FORMAT_RGBA8, data);
+			m_viewer->getMainProcessingMutex().unlock();
+			image = im;
 		}
 
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from splatmap image");
 
 			m_viewer->getMainProcessingMutex().lock();
-			Ref<godot::ImageTexture> tex = memnew(godot::ImageTexture);
-			m_viewer->getMainProcessingMutex().unlock();
 			// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
 			//tex->create_from_image(image, godot::Texture::FLAG_FILTER);
-			tex->create_from_image(image);
+			Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+			m_viewer->getMainProcessingMutex().unlock();
 			m_splatMapTexture = tex;
 			m_splatMapTexModified = true;
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_SPLATMAP, m_splatMapTexture);
@@ -1334,9 +1340,7 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 
 	if (m_quadTree->getQuadrant()->colorsUpdated())
 	{
-		m_viewer->getMainProcessingMutex().lock();
-		Ref<Image> image = memnew(Image);
-		m_viewer->getMainProcessingMutex().unlock();
+		Ref<Image> image;
 
 		TheWorld_Utils::MemoryBuffer& colormapBuffer = m_quadTree->getQuadrant()->getColormapBuffer();
 		size_t colormapBufferSize = colormapBuffer.size();
@@ -1344,7 +1348,10 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 		if (colormapBufferSize == 0)
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for colors");
-			image->create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> im = godot::Image::create(_resolution, _resolution, false, Image::FORMAT_RGBA8);
+			m_viewer->getMainProcessingMutex().unlock();
+			image = im;
 			image->fill(godot::Color(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 		else
@@ -1358,18 +1365,20 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 			{
 				memcpy((char*)data.ptrw(), colormapBuffer.ptr(), colormapBufferSizeInBytes);
 			}
-			image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGBA8, data);
+			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> im = godot::Image::create_from_data(_resolution, _resolution, false, Image::FORMAT_RGBA8, data);
+			m_viewer->getMainProcessingMutex().unlock();
+			image = im;
 		}
 
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from colormap image");
 
 			m_viewer->getMainProcessingMutex().lock();
-			Ref<godot::ImageTexture> tex = memnew(godot::ImageTexture);
-			m_viewer->getMainProcessingMutex().unlock();
 			// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
 			//tex->create_from_image(image, godot::Texture::FLAG_FILTER);
-			tex->create_from_image(image);
+			godot::Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+			m_viewer->getMainProcessingMutex().unlock();
 			m_colorMapTexture = tex;
 			m_colorMapTexModified = true;
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_COLORMAP, m_colorMapTexture);
@@ -1382,9 +1391,7 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 
 	if (m_quadTree->getQuadrant()->globalmapUpdated())
 	{
-		m_viewer->getMainProcessingMutex().lock();
-		Ref<Image> image = memnew(Image);
-		m_viewer->getMainProcessingMutex().unlock();
+		Ref<Image> image;
 
 		TheWorld_Utils::MemoryBuffer& globalmapBuffer = m_quadTree->getQuadrant()->getGlobalmapBuffer();
 		size_t globalmapBufferSize = globalmapBuffer.size();
@@ -1392,7 +1399,10 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 		if (globalmapBufferSize == 0)
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for globalmap");
-			image->create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> im = godot::Image::create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+			m_viewer->getMainProcessingMutex().unlock();
+			image = im;
 			image->fill(godot::Color(1.0f, 1.0f, 1.0f, 1.0f));
 		}
 		else
@@ -1406,18 +1416,20 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 			{
 				memcpy((char*)data.ptrw(), globalmapBuffer.ptr(), globalmapBufferSizeInBytes);
 			}
-			image->create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
+			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> im = godot::Image::create_from_data(_resolution, _resolution, false, Image::FORMAT_RGB8, data);
+			m_viewer->getMainProcessingMutex().unlock();
+			image = im;
 		}
 
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.4 ") + __FUNCTION__, "Create Texture from globalmap image");
 
 			m_viewer->getMainProcessingMutex().lock();
-			Ref<godot::ImageTexture> tex = memnew(godot::ImageTexture);
-			m_viewer->getMainProcessingMutex().unlock();
 			// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
 			//tex->create_from_image(image, godot::Texture::FLAG_FILTER | godot::Texture::FLAG_MIPMAPS);
-			tex->create_from_image(image);
+			godot::Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+			m_viewer->getMainProcessingMutex().unlock();
 			m_globalMapTexture = tex;
 			m_globalMapTexModified = true;
 			//debugPrintTexture(SHADER_PARAM_TERRAIN_COLORMAP, m_colorMapTexture);

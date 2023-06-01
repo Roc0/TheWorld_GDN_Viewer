@@ -7,6 +7,8 @@
 #include <godot_cpp/classes/os.hpp>
 #pragma warning(pop)
 
+static bool g_plogInitilized = false;
+
 //#include <MapManager.h>
 #include <plog/Initializers/RollingFileInitializer.h>
 
@@ -275,12 +277,15 @@ namespace godot
 		plog::Severity sev = PLOG_DEFAULT_LEVEL;
 		if (m_isDebugEnabled)
 			sev = PLOG_DEBUG_LEVEL;
-		plog::init(sev, logPath.c_str(), 1000000, 3);
+		if (!g_plogInitilized)
+		{
+			plog::init(sev, logPath.c_str(), 1000000, 3);
+			TheWorld_Utils::Utils::plogInit(sev, plog::get());
+			g_plogInitilized = true;
+		}
 		PLOG(plog::get()->getMaxSeverity()) << "***************";
 		PLOG(plog::get()->getMaxSeverity()) << "Log initilized!";
 		PLOG(plog::get()->getMaxSeverity()) << "***************";
-
-		TheWorld_Utils::Utils::plogInit(sev, plog::get());
 
 		PLOG_INFO << "TheWorld Globals Initializing...";
 
@@ -411,7 +416,7 @@ namespace godot
 		{
 			if (m_ready)
 			{
-				debugPrint("GDN_TheWorld_Globals::_notification - Destroy Globals");
+				debugPrint("GDN_TheWorld_Globals::_notification (NOTIFICATION_PREDELETE) - Destroy Globals");
 			}
 		}
 		break;
