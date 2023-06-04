@@ -1079,8 +1079,12 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 
 void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainData::GroundTextures* groundTextures)
 {
+	TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTextures 1 ") + __FUNCTION__, "all");
+
 	try
 	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTextures 1.1 ") + __FUNCTION__, "albedo_bump");
+
 		bool ok;
 		godot::Ref<godot::Image> image = readGroundTexture(fileName + "_albedo_bump.ground", ok);
 		m_viewer->getMainProcessingMutex().lock();
@@ -1094,6 +1098,8 @@ void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainD
 
 	try
 	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTextures 1.2 ") + __FUNCTION__, "normal_roughness");
+
 		bool ok;
 		godot::Ref<godot::Image> image = readGroundTexture(fileName + "_normal_roughness.ground", ok);
 		m_viewer->getMainProcessingMutex().lock();
