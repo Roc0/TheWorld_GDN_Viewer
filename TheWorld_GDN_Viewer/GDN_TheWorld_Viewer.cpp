@@ -1136,6 +1136,8 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 	TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
 
 	QuadrantPos cameraQuadrant = m_computedCameraQuadrantPos;
+	if (!cameraQuadrant.isInitialized())
+		return;
 	
 	vector<QuadrantPos> quadrantPosNeeded;
 	quadrantPosNeeded.push_back(cameraQuadrant);
