@@ -385,6 +385,8 @@ void GDN_TheWorld_Viewer::deinit(void)
 			camera->queue_free();
 		}
 		
+		ShaderTerrainData::releaseGlobals();
+
 		m_initialized = false;
 		PLOG_INFO << "TheWorld Viewer Deinitialized!";
 		

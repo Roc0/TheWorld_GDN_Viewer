@@ -1112,6 +1112,15 @@ void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainD
 	catch (...) {}
 }
 
+void ShaderTerrainData::releaseGlobals(void)
+{
+	for (auto& it : s_groundTextures)
+	{
+		it.second->m_albedo_bump_tex.unref();
+		it.second->m_normal_roughness_tex.unref();
+	}
+}
+
 // it is expected that globals and World Datas are loaded
 // TODORIC: maybe usefull for performance reasons specify which texture need update and which rect of the texture 
 void ShaderTerrainData::resetMaterialParams(LookDev lookdev)

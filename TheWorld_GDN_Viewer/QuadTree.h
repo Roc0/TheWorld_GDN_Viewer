@@ -706,6 +706,7 @@ namespace godot
 		void updateMaterialParams(LookDev lookdev);
 		Ref<Material> getRegularMaterial(void);
 		Ref<Material> getLookDevMaterial(void);
+		static void releaseGlobals(void);
 
 	private:
 		//void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
