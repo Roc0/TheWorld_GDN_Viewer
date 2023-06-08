@@ -682,11 +682,15 @@ void GDN_TheWorld_Viewer::_ready(void)
 			if (parentId != worldMainNodeId)
 			{
 				parent->remove_child(camera);
-				getWorldNode()->call_deferred("add_child", camera);
+				//getWorldNode()->call_deferred("add_child", camera);
+				getWorldNode()->add_child(camera);
 			}
 		}
 		else
-			getWorldNode()->call_deferred("add_child", camera);
+		{
+			//getWorldNode()->call_deferred("add_child", camera);	// with deferred we risk that we call get_tree in Globals() (activateCamera) before camera is added to the scene 
+			getWorldNode()->add_child(camera);
+		}
 
 		camera->call_deferred("set_owner", sceneRoot);
 
@@ -3651,7 +3655,8 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 
 		if (allQuadrantInitialized)
 		{
-			if (Globals()->status() == TheWorldStatus::worldDeployInProgress && ((m_numVisibleQuadrantOnPerimeter == 1 && m_mapQuadTree.size() == 1) || m_mapQuadTree.size() > 1))
+			// m_numVisibleQuadrantOnPerimeter == 1
+			if (Globals()->status() == TheWorldStatus::worldDeployInProgress && ((m_numVisibleQuadrantOnPerimeter == 0 && m_mapQuadTree.size() == 1) || m_mapQuadTree.size() > 1))
 				Globals()->setStatus(TheWorldStatus::worldDeployed);
 
 			if (m_streamingTime.counterStarted())
