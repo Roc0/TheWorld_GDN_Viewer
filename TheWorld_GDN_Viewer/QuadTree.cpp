@@ -1119,6 +1119,8 @@ void ShaderTerrainData::releaseGlobals(void)
 		it.second->m_albedo_bump_tex.unref();
 		it.second->m_normal_roughness_tex.unref();
 	}
+
+	s_groundTextures.clear();
 }
 
 // it is expected that globals and World Datas are loaded
