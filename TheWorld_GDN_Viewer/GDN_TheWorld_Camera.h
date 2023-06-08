@@ -59,9 +59,9 @@ namespace godot {
 		void notifyActiveCameraFlag(bool active);
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
 		Ref<ArrayMesh> DrawViewFrustum(Color c = Color(1, 1, 1));
-		float getAngleFromNorth(void)
+		float getAngleFromNorthDeg(void)
 		{
-			return m_angleFromNorth;
+			return m_angleFromNorthDeg;
 		}
 		float getYaw(bool radiant = true)
 		{
@@ -124,7 +124,7 @@ namespace godot {
 		bool m_isActive;
 		int64_t m_instanceId;
 
-		float m_angleFromNorth;	// angle expressed in degrees of the projection of the camera on XZ plane: 0 ==> camera points to north, 90 camera points to east, 180 camera points to south, 270 camera points to west
+		float m_angleFromNorthDeg;	// angle expressed in degrees of the projection of the camera on XZ plane: 0 ==> camera points to north, 90 camera points to east, 180 camera points to south, 270 camera points to west
 
 		float m_yawEuler;	// radiant angle of the projection of the camera on XZ plane and Z axis (-Z direction)
 							// 0 ==> projection of camera is aligned with Z axis and points to decreasing Z direction (north)

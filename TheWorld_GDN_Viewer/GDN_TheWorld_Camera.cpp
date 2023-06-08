@@ -22,7 +22,7 @@ void GDN_TheWorld_Camera::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("is_active_camera"), &GDN_TheWorld_Camera::isActiveCamera);
 	ClassDB::bind_method(D_METHOD("get_active_camera"), &GDN_TheWorld_Camera::getActiveCamera);
-	ClassDB::bind_method(D_METHOD("get_angle_from_north"), &GDN_TheWorld_Camera::getAngleFromNorth);
+	ClassDB::bind_method(D_METHOD("get_angle_from_north_degree"), &GDN_TheWorld_Camera::getAngleFromNorthDeg);
 	ClassDB::bind_method(D_METHOD("get_yaw"), &GDN_TheWorld_Camera::getYaw);
 	ClassDB::bind_method(D_METHOD("set_yaw"), &GDN_TheWorld_Camera::setYaw);
 	ClassDB::bind_method(D_METHOD("get_pitch"), &GDN_TheWorld_Camera::getPitch);
@@ -40,7 +40,7 @@ GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 	m_OtherEntityCamera = false;
 	m_WorldCamera = false;
 	m_updateCameraRequired = false;
-	m_angleFromNorth = 0;
+	m_angleFromNorthDeg = 0;
 	m_yawEuler = 0;
 	m_pitchEuler = 0;
 	m_rollEuler = 0;
@@ -157,11 +157,11 @@ void GDN_TheWorld_Camera::_process(double _delta)
 
 	m_pitchEuler = euler.x;
 	m_yawEuler = euler.y;		// 0 = camera aligned with z axis pointing to decresing z (north), - PI/2 = camera aligned with x axis pointing to incrasing x (east), 
-								// - PI or PI = camera aligned with z axis pointing to increasing x (south), PI/2 = camera aligned with x axis pointing to decreasing X (west)
+								// - PI or PI = camera aligned with z axis pointing to increasing z (south), PI/2 = camera aligned with x axis pointing to decreasing X (west)
 	m_rollEuler = euler.z;
 
-	float angleFromNorth = (m_yawEuler < 0 ? -m_yawEuler : (m_yawEuler == 0 ? 0 : TheWorld_Utils::kPi * 2 - m_yawEuler));
-	m_angleFromNorth = (angleFromNorth * 180) / TheWorld_Utils::kPi;		// transform angle from radiant to degree
+	float angleFromNorthRad = (m_yawEuler < 0 ? -m_yawEuler : (m_yawEuler == 0 ? 0 : TheWorld_Utils::kPi * 2 - m_yawEuler));
+	m_angleFromNorthDeg = (angleFromNorthRad * 180) / TheWorld_Utils::kPi;		// transform angle from radiant to degree
 }
 
 void GDN_TheWorld_Camera::_physics_process(double _delta)

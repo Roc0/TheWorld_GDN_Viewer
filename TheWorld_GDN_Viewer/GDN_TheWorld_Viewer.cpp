@@ -562,7 +562,8 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 						float cameraHeight = quadTree->getQuadrant()->getAltitudeFromHeigthmap(cameraInGridIndex);
 
 						Vector3 cameraPos(viewerPosX, cameraHeight + cameraDistanceFromTerrain, viewerPosZ);		// MapManager coordinates are local coordinates of WorldNode
-						Vector3 lookAt(viewerPosX + cameraDistanceFromTerrain, cameraHeight, viewerPosZ + cameraDistanceFromTerrain);
+						float offset = cameraDistanceFromTerrain == 0.0f ? 300 : cameraDistanceFromTerrain;
+						Vector3 lookAt(viewerPosX + offset, cameraHeight, viewerPosZ + offset);
 
 						// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
 						//Transform t = get_transform();
