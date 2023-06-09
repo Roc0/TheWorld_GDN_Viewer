@@ -387,7 +387,6 @@ void GDN_TheWorld_Camera::activateCamera(void)
 			activeCamera->set_process(false);
 			activeCamera->set_physics_process(false);
 			activeCamera->remove_from_group(GD_ACTIVE_CAMERA_GROUP);
-			//m_isActive = false;
 			activeCamera->notifyActiveCameraFlag(false);
 		}
 
