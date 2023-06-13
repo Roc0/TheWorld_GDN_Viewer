@@ -2440,6 +2440,8 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 
 void GDN_TheWorld_Viewer::_physics_process(double _delta)
 {
+	//TheWorld_Utils::GuardProfiler profiler(std::string("_physics_process 1 ") + __FUNCTION__, "ALL");
+
 	//if (IS_EDITOR_HINT())
 	//	return;
 

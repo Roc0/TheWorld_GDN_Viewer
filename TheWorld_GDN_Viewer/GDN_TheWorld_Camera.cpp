@@ -136,6 +136,8 @@ void GDN_TheWorld_Camera::_notification(int p_what)
 
 void GDN_TheWorld_Camera::_process(double _delta)
 {
+	//TheWorld_Utils::GuardProfiler profiler(std::string("_process 1 ") + __FUNCTION__, "ALL");
+
 	// To activate _process method add this Node to a Godot Scene
 	//Globals()->debugPrint("GDN_TheWorld_Camera::_process");
 
@@ -166,6 +168,8 @@ void GDN_TheWorld_Camera::_process(double _delta)
 
 void GDN_TheWorld_Camera::_physics_process(double _delta)
 {
+	//TheWorld_Utils::GuardProfiler profiler(std::string("_physics_process 1 ") + __FUNCTION__, "ALL");
+
 	// To activate _process method add this Node to a Godot Scene
 	//Globals()->debugPrint("GDN_TheWorld_Camera::_physics_process");
 
