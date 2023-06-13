@@ -942,7 +942,7 @@ void GDN_TheWorld_Viewer::rotateDrawingMode(void)
 {
 	godot::Viewport* vp = get_viewport();
 	godot::Viewport::DebugDraw dd = vp->get_debug_draw();
-	vp->set_debug_draw( (godot::Viewport::DebugDraw)((dd + 1) % 4));
+	vp->set_debug_draw( (godot::Viewport::DebugDraw)((dd + 1) % 26));
 	m_debugDraw = vp->get_debug_draw();
 }
 
@@ -1090,25 +1090,27 @@ String GDN_TheWorld_Viewer::getDebugDrawMode(void)
 {
 	if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_DISABLED)
 		return "DEBUG_DRAW_DISABLED";
-	else 	if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_UNSHADED)
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_UNSHADED)
 		return "DEBUG_DRAW_UNSHADED";
-	else 	if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_OVERDRAW)
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_LIGHTING)
+		return "DEBUG_DRAW_LIGHTING";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_OVERDRAW)
 		return "DEBUG_DRAW_OVERDRAW";
-	else 	if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_WIREFRAME)
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_WIREFRAME)
 		return "DEBUG_DRAW_WIREFRAME";
 	else
-		return "";
+		return std::to_string(int(m_debugDraw)).c_str();
 }
 
 String GDN_TheWorld_Viewer::getChunkDebugModeStr(void)
 {
 	if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::DoNotSet)
 		return "CHUNK_DEBUG_MODE_DO_NOT_SET";
-	else 	if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
+	else if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::NoDebug)
 		return "CHUNK_DEBUG_MODE_NO_DEBUG";
-	else 	if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB)
+	else if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeOnAABB)
 		return "CHUNK_DEBUG_MODE_WIREFRAME_AABB";
-	else 	if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
+	else if (m_currentChunkDebugMode == GDN_TheWorld_Globals::ChunkDebugMode::WireframeSquare)
 		return "CHUNK_DEBUG_MODE_WIREFRAME_SQUARE";
 	else
 		return "";
