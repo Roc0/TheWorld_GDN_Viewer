@@ -41,11 +41,12 @@ namespace godot
 		godot::PhysicsServer3D* ps = godot::PhysicsServer3D::get_singleton();
 		m_shapeRID = ps->heightmap_shape_create();
 		m_bodyRID = ps->body_create();
+		ps->body_set_mode(m_bodyRID, godot::PhysicsServer3D::BODY_MODE_STATIC);
 		ps->body_set_collision_layer(m_bodyRID, initialLayer);
 		ps->body_set_collision_mask(m_bodyRID, initialMask);
 
 		// SUPERDEBUGRIC - This is an attempt to workaround https ://github.com/godotengine/godot/issues/24390
-		ps->body_set_ray_pickable(m_bodyRID, true);
+		ps->body_set_ray_pickable(m_bodyRID, false);
 
 		// Initial data - This is a workaround to https://github.com/godotengine/godot/issues/25304
 		PackedFloat32Array arr;
@@ -58,8 +59,8 @@ namespace godot
 		data["width"] = 2;			// data["map_width"];	
 		data["depth"] = 2;			// data["map_depth"];
 		data["heights"] = arr;		// data["map_data"];
-		data["min_height"] = 0;		// ???
-		data["max_height"] = 0;		// ???
+		data["min_height"] = -1;		// ???
+		data["max_height"] = 1;		// ???
 		ps->shape_set_data(m_shapeRID, data);
 
 		ps->body_add_shape(m_bodyRID, m_shapeRID);
