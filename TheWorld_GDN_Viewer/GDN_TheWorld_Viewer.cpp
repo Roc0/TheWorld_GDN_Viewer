@@ -1098,6 +1098,48 @@ String GDN_TheWorld_Viewer::getDebugDrawMode(void)
 		return "DEBUG_DRAW_OVERDRAW";
 	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_WIREFRAME)
 		return "DEBUG_DRAW_WIREFRAME";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_NORMAL_BUFFER)
+		return "DEBUG_DRAW_NORMAL_BUFFER";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_VOXEL_GI_ALBEDO)
+		return "DEBUG_DRAW_VOXEL_GI_ALBEDO";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_VOXEL_GI_LIGHTING)
+		return "DEBUG_DRAW_VOXEL_GI_LIGHTING";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_VOXEL_GI_EMISSION)
+		return "DEBUG_DRAW_VOXEL_GI_EMISSION";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_SHADOW_ATLAS)
+		return "DEBUG_DRAW_SHADOW_ATLAS";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_DIRECTIONAL_SHADOW_ATLAS)
+		return "DEBUG_DRAW_DIRECTIONAL_SHADOW_ATLAS";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_SCENE_LUMINANCE)
+		return "DEBUG_DRAW_SCENE_LUMINANCE";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_SSAO)
+		return "DEBUG_DRAW_SSAO";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_SSIL)
+		return "DEBUG_DRAW_SSIL";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_PSSM_SPLITS)
+		return "DEBUG_DRAW_PSSM_SPLITS";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_DECAL_ATLAS)
+		return "DEBUG_DRAW_DECAL_ATLAS";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_SDFGI)
+		return "DEBUG_DRAW_SDFGI";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_SDFGI_PROBES)
+		return "DEBUG_DRAW_SDFGI_PROBES";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_GI_BUFFER)
+		return "DEBUG_DRAW_GI_BUFFER";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_DISABLE_LOD)
+		return "DEBUG_DRAW_DISABLE_LOD";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_CLUSTER_OMNI_LIGHTS)
+		return "DEBUG_DRAW_CLUSTER_OMNI_LIGHTS";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_CLUSTER_SPOT_LIGHTS)
+		return "DEBUG_DRAW_CLUSTER_SPOT_LIGHTS";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_CLUSTER_DECALS)
+		return "DEBUG_DRAW_CLUSTER_DECALS";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_CLUSTER_REFLECTION_PROBES)
+		return "DEBUG_DRAW_CLUSTER_REFLECTION_PROBES";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_OCCLUDERS)
+		return "DEBUG_DRAW_OCCLUDERS";
+	else if (m_debugDraw == Viewport::DebugDraw::DEBUG_DRAW_MOTION_VECTORS)
+		return "DEBUG_DRAW_MOTION_VECTORS";
 	else
 		return std::to_string(int(m_debugDraw)).c_str();
 }
