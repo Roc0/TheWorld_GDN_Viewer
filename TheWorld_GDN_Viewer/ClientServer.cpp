@@ -513,15 +513,15 @@ namespace TheWorld_ClientServer
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 1a ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);
 
-				float* viewerPosX = std::get_if<float>(&reply->m_inputParams[0]);
-				if (viewerPosX == nullptr)
+				float* cameraX = std::get_if<float>(&reply->m_inputParams[0]);
+				if (cameraX == nullptr)
 				{
 					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be a FLOAT");
 					return;
 				}
 				
-				float* viewerPosZ = std::get_if<float>(&reply->m_inputParams[1]);
-				if (viewerPosZ == nullptr)
+				float* cameraZ = std::get_if<float>(&reply->m_inputParams[1]);
+				if (cameraZ == nullptr)
 				{
 					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Second param must be a FLOAT");
 					return;
@@ -587,9 +587,9 @@ namespace TheWorld_ClientServer
 					return;
 				}
 
-				float f = mapManager->calcNextCoordOnTheGridInWUs(*viewerPosX);
+				float f = mapManager->calcNextCoordOnTheGridInWUs(*cameraX);
 				reply->replyParam(f);
-				f = mapManager->calcNextCoordOnTheGridInWUs(*viewerPosZ);
+				f = mapManager->calcNextCoordOnTheGridInWUs(*cameraZ);
 				reply->replyParam(f);
 				
 				reply->replyParam(meshBuffer);

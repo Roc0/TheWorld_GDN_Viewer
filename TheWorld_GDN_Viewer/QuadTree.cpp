@@ -154,7 +154,7 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantPos)
 	m_lookDev = ShaderTerrainData::LookDev::NotSet;
 }
 
-void QuadTree::refreshTerrainData(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
+void QuadTree::refreshTerrainData(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, bool setCamera, float cameraDistanceFromTerrain)
 {
 	my_assert(statusInitialized() || statusRefreshTerrainDataNeeded());
 	if (!(statusInitialized() || statusRefreshTerrainDataNeeded()))
@@ -164,10 +164,10 @@ void QuadTree::refreshTerrainData(float viewerPosX, float viewerPosZ, bool setCa
 
 	setStatus(QuadrantStatus::refreshTerrainDataInProgress);
 
-	m_worldQuadrant->populateGridVertices(viewerPosX, viewerPosZ, setCamera, cameraDistanceFromTerrain);
+	m_worldQuadrant->populateGridVertices(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll, setCamera, cameraDistanceFromTerrain);
 }
 
-void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
+void QuadTree::init(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, bool setCamera, float cameraDistanceFromTerrainForced)
 {
 	my_assert(status() == QuadrantStatus::uninitialized);
 	if (status() != QuadrantStatus::uninitialized)
@@ -186,7 +186,7 @@ void QuadTree::init(float viewerPosX, float viewerPosZ, bool setCamera, float ca
 
 	setStatus(QuadrantStatus::getTerrainDataInProgress);
 
-	m_worldQuadrant->populateGridVertices(viewerPosX, viewerPosZ, setCamera, cameraDistanceFromTerrain);
+	m_worldQuadrant->populateGridVertices(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll, setCamera, cameraDistanceFromTerrainForced);
 
 	getQuadrant()->getShaderTerrainData()->init();
 
@@ -1839,7 +1839,7 @@ float Quadrant::getPosZFromHeigthmap(size_t index)
 	return m_quadrantPos.getLowerZGridVertex() + numStepsZAxis * m_quadrantPos.getGridStepInWU();
 }
 
-void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool setCamera, float cameraDistanceFromTerrain)
+void Quadrant::populateGridVertices(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, bool setCamera, float cameraDistanceFromTerrainForced)
 {
 	//BYTE shortBuffer[256 + 1];
 	//TheWorld_Viewer_Utils::TimerMs clock;
@@ -1873,20 +1873,20 @@ void Quadrant::populateGridVertices(float viewerPosX, float viewerPosZ, bool set
 	if (meshId.length() > 0)
 	{
 		//clock.tick();
-		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(viewerPosX, viewerPosZ,
+		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
 																		 lowerXGridVertex, lowerZGridVertex,
 																		 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
-																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrain, meshId);
+																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrainForced, meshId);
 		//clock.tock();
 		//m_quadTree->Viewer()->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + getId().getId().c_str() + " TAG=" + getId().getTag().c_str() + " - client MapManagerGetVertices (quadrant found in cache) " + std::to_string(clock.duration().count()).c_str() + " ms");
 	}
 	else
 	{
 		//clock.tick();
-		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(viewerPosX, viewerPosZ,
+		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
 																		 lowerXGridVertex, lowerZGridVertex,
 																		 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
-																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrain, meshId);
+																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrainForced, meshId);
 		//clock.tock();
 		//m_quadTree->Viewer()->Globals()->debugPrint(String("ELAPSED - QUADRANT ") + getId().getId().c_str() + " TAG=" + getId().getTag().c_str() + " - client MapManagerGetVertices " + std::to_string(clock.duration().count()).c_str() + " ms");
 	}

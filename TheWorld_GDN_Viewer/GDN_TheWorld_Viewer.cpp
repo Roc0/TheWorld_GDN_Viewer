@@ -422,22 +422,22 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			}
 
 			ClientServerVariant v = reply.getReplyParam(0);
-			const auto _viewerPosX(std::get_if<float>(&v));
-			if (_viewerPosX == NULL)
+			const auto _cameraPosX(std::get_if<float>(&v));
+			if (_cameraPosX == NULL)
 			{
 				std::string m = std::string("Reply MapManager::getVertices did not return a float as first return param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
-			float viewerPosX = *_viewerPosX;
+			float cameraPosX = *_cameraPosX;
 
 			v = reply.getReplyParam(1);
-			const auto _viewerPosZ(std::get_if<float>(&v));
-			if (_viewerPosZ == NULL)
+			const auto _cameraPosZ(std::get_if<float>(&v));
+			if (_cameraPosZ == NULL)
 			{
 				std::string m = std::string("Reply MapManager::getVertices did not return a float as second return param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
-			float viewerPosZ = *_viewerPosZ;
+			float cameraPosZ = *_cameraPosZ;
 
 			ClientServerVariant vbuffGridVertices = reply.getReplyParam(2);
 			const auto _buffGridVerticesFromServer(std::get_if<std::string>(&vbuffGridVertices));
@@ -511,13 +511,49 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			bool setCamera = *_setCamera;
 
 			v = reply.getInputParam(9);
-			const auto _cameraDistanceFromTerrain(std::get_if<float>(&v));
-			if (_cameraDistanceFromTerrain == NULL)
+			const auto _cameraDistanceFromTerrainForced(std::get_if<float>(&v));
+			if (_cameraDistanceFromTerrainForced == NULL)
 			{
 				std::string m = std::string("Reply MapManager::getVertices did not have a float as tenth input param");
 				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 			}
-			float cameraDistanceFromTerrain = *_cameraDistanceFromTerrain;
+			float cameraDistanceFromTerrainForced = *_cameraDistanceFromTerrainForced;
+
+			v = reply.getInputParam(10);
+			const auto _cameraPosY(std::get_if<float>(&v));
+			if (_cameraPosY == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as eleventh input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPosY = *_cameraPosY;
+
+			v = reply.getInputParam(11);
+			const auto _cameraYaw(std::get_if<float>(&v));
+			if (_cameraYaw == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as twelveth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraYaw = *_cameraYaw;
+
+			v = reply.getInputParam(12);
+			const auto _cameraPitch(std::get_if<float>(&v));
+			if (_cameraPitch == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as thirteenth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPitch = *_cameraPitch;
+
+			v = reply.getInputParam(13);
+			const auto _cameraRoll(std::get_if<float>(&v));
+			if (_cameraRoll == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not have a float as fourteenth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraRoll = *_cameraRoll;
 
 			QuadrantPos quadrantPos(lowerXGridVertex, lowerZGridVertex, level, numVerticesPerSize, gridStepInWU);
 
@@ -555,22 +591,25 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 						quadTree->setVisible(true);
 
-						size_t cameraInGridIndex = quadTree->getQuadrant()->getIndexFromHeighmap(viewerPosX, viewerPosZ, level);
+						size_t cameraInGridIndex = quadTree->getQuadrant()->getIndexFromHeighmap(cameraPosX, cameraPosZ, level);
 						if (cameraInGridIndex == -1)
 							throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Not found WorldViewer Pos").c_str()));
 
 						float cameraHeight = quadTree->getQuadrant()->getAltitudeFromHeigthmap(cameraInGridIndex);
 
-						Vector3 cameraPos(viewerPosX, cameraHeight + cameraDistanceFromTerrain, viewerPosZ);		// MapManager coordinates are local coordinates of WorldNode
-						float offset = cameraDistanceFromTerrain == 0.0f ? 300 : cameraDistanceFromTerrain;
-						Vector3 lookAt(viewerPosX + offset, cameraHeight, viewerPosZ + offset);
+						Vector3 cameraPos(cameraPosX, cameraPosY, cameraPosZ);		// MapManager coordinates are local coordinates of WorldNode
+						if (cameraDistanceFromTerrainForced != 0.0f)
+							cameraPos.y = cameraHeight + cameraDistanceFromTerrainForced;
+						float offset = cameraDistanceFromTerrainForced == 0.0f ? 300 : cameraDistanceFromTerrainForced;
+						//Vector3 lookAt(cameraPosX + offset, cameraHeight, cameraPosZ + offset);
+						Vector3 lookAt(cameraPosX, cameraHeight, cameraPosZ - abs(offset));		// camera look at terrain along north direction
 
 						// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
 						//Transform t = get_transform();
 						//t.origin = Vector3(quadTree->getQuadrant()->getGridVertices()[0].posX(), 0, quadTree->getQuadrant()->getGridVertices()[0].posZ());
 						//set_transform(t);
 
-						WorldCamera()->initCameraInWorld(cameraPos, lookAt);
+						WorldCamera()->initCameraInWorld(cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
 
 						m_initialWordlViewerPosSet = true;
 					}
@@ -3091,7 +3130,7 @@ void GDN_TheWorld_Viewer::_findChildNodes(godot::Array& foundNodes, godot::Array
 	}
 }
 
-void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift)
+void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll, int level, int chunkSizeShift, int heightmapResolutionShift)
 {
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -3123,14 +3162,14 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float x, float z, float cam
 		m_numWorldVerticesPerSize = Globals()->heightmapResolution() + 1;
 		
 		float _gridStepInWU = Globals()->gridStepInWU();
-		QuadrantPos quadrantPos(x, z, level, m_numWorldVerticesPerSize, _gridStepInWU);
+		QuadrantPos quadrantPos(cameraX, cameraZ, level, m_numWorldVerticesPerSize, _gridStepInWU);
 		quadrantPos.setTag("Camera");
 
 		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
 
 		m_mapQuadTree.clear();
 		m_mapQuadTree[quadrantPos] = make_unique<QuadTree>(this, quadrantPos);
-		m_mapQuadTree[quadrantPos]->init(x, z, true, cameraDistanceFromTerrain);
+		m_mapQuadTree[quadrantPos]->init(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll, true, cameraDistanceFromTerrainForced);
 
 		Globals()->setStatus(TheWorldStatus::worldDeployInProgress);
 	}
@@ -3637,11 +3676,11 @@ void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
 					size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(m_computedCameraQuadrantPos);
 					if (distanceInPerimeterFromCameraQuadrant == distance)
 					{
-						float x = 0, z = 0;
+						float x = 0, y = 0, z = 0, yaw = 0, pitch = 0, roll = 0;
 						if (itQuadTree->second->statusUninitialized())
-							itQuadTree->second->init(x, z);
+							itQuadTree->second->init(x, y, z, yaw, pitch, roll, false, 0.0f);
 						else
-							itQuadTree->second->refreshTerrainData(x, z);
+							itQuadTree->second->refreshTerrainData(x, y, z, yaw, pitch, roll, false, 0.0f);
 						exitForNow = true;
 						break;
 					}

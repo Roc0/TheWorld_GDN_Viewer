@@ -183,7 +183,7 @@ namespace godot
 		godot::GDN_TheWorld_Edit* EditModeUIControl(bool useCache = true);
 		godot::Control* getOrCreateEditModeUIControl(void);
 		void createEditModeUI(void);
-		void resetInitialWordlViewerPos(float x, float z, float cameraDistanceFromTerrain, int level, int chunkSizeShift, int heightmapResolutionShift);
+		void resetInitialWordlViewerPos(float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll, int level, int chunkSizeShift, int heightmapResolutionShift);
 		bool initialWordlViewerPosSet(void)
 		{
 			return m_initialWordlViewerPosSet;

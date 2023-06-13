@@ -36,7 +36,7 @@ namespace godot {
 		virtual void _physics_process(double _delta) override;
 		virtual void _input(const Ref<InputEvent>& event) override;
 		
-		bool initCameraInWorld(Vector3 cameraPos, Vector3 lookAt);
+		bool initCameraInWorld(Vector3 cameraPos, Vector3 lookAt, float cameraYaw, float cameraPitch, float cameraRoll);
 		bool initPlayerCamera(void);
 		bool initOtherEntityCamera(void);
 		bool updateCamera(void);

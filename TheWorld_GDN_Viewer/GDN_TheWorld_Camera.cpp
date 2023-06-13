@@ -467,7 +467,7 @@ bool GDN_TheWorld_Camera::initOtherEntityCamera(void)
 }
 
 
-bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
+bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt, float cameraYaw, float cameraPitch, float cameraRoll)
 {
 	//set_name("WorldCamera");
 
@@ -479,6 +479,10 @@ bool GDN_TheWorld_Camera::initCameraInWorld(Vector3 cameraPos, Vector3 lookAt)
 	Vector3 lookAtGlobalCoord = lookAt + worldNodePosGlobalCoord;
 	if (cameraPosGlobalCoord != lookAtGlobalCoord)
 		Camera3D::look_at_from_position(cameraPosGlobalCoord, lookAtGlobalCoord, Vector3(0, 1, 0));
+
+	setYaw(cameraYaw, false);
+	setPitch(cameraPitch, false);
+	setRoll(cameraRoll, false);
 
 	//real_t z_near = Camera::get_znear();
 	//real_t z_far = Camera::get_zfar();

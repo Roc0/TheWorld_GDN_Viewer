@@ -301,7 +301,7 @@ namespace godot
 			//godot::GDN_TheWorld_Globals::s_elapsed1 += clock.duration().count();
 		}
 
-		_declspec(dllexport) void populateGridVertices(float initialViewerPosX, float initialViewerPosZ, bool setCamera, float cameraDistanceFromTerrain);
+		_declspec(dllexport) void populateGridVertices(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, bool setCamera, float cameraDistanceFromTerrainForced);
 
 		PackedFloat32Array& getHeightsForCollider(bool reload = true)
 		{
@@ -838,8 +838,8 @@ namespace godot
 
 		void onGlobalTransformChanged(void);
 
-		void init(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
-		void refreshTerrainData(float viewerPosX, float viewerPosZ, bool setCamera = false, float cameraDistanceFromTerrain = 0.00);
+		void init(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, bool setCamera, float cameraDistanceFromTerrainForced);
+		void refreshTerrainData(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, bool setCamera, float cameraDistanceFromTerrain);
 		enum class UpdateStage
 		{
 			Stage1 = 1,
