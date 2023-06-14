@@ -1027,6 +1027,8 @@ std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTextures>> Shader
 
 godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String fileName, bool& ok)
 {
+	TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1 ") + __FUNCTION__, "ALL");
+
 	ok = true;
 	
 	const char* s = fileName.utf8().get_data();

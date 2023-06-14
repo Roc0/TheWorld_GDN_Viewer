@@ -107,6 +107,8 @@ void Chunk::deinit(void)
 {
 	if (m_meshInstanceRID != godot::RID())
 	{
+		godot::Ref<godot::Material> nullMaterial;
+		setMaterial(nullMaterial);
 		godot::RenderingServer::get_singleton()->free_rid(m_meshInstanceRID);
 		m_meshInstanceRID = godot::RID();
 	}
@@ -211,9 +213,14 @@ bool Chunk::isQuadTreeVisible(void)
 void Chunk::setMaterial(godot::Ref<godot::Material>& mat)
 {
 	assert(m_meshInstanceRID != godot::RID());
-	assert(mat != nullptr);
+	//assert(mat != nullptr);
 
-	godot::RenderingServer::get_singleton()->instance_geometry_set_material_override(m_meshInstanceRID, mat->get_rid());
+	godot::RID materialRid;
+	if (mat != nullptr)
+		materialRid = mat->get_rid();
+	else
+		materialRid = godot::RID();
+	godot::RenderingServer::get_singleton()->instance_geometry_set_material_override(m_meshInstanceRID, materialRid);
 }
 
 void Chunk::update(bool isVisible)
