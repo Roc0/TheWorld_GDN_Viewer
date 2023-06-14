@@ -142,7 +142,12 @@ namespace godot
 		void preDeinit(void);
 		bool canDeinit(void);
 		void deinit(void);
+		bool initialized(void)
+		{
+			return m_initialized;
+		}
 		void connectToServer(void);
+		bool connectedToServer(void);
 		void prepareDisconnectFromServer(void);
 		bool canDisconnectFromServer(void);
 		void disconnectFromServer(void);

@@ -341,6 +341,14 @@ namespace godot
 		set_name(THEWORLD_GLOBALS_NODE_NAME);
 	}
 
+	bool GDN_TheWorld_Globals::connectedToServer(void)
+	{
+		if (m_client != nullptr && m_client->connected())
+			return true;
+		else
+			return false;
+	}
+	
 	void GDN_TheWorld_Globals::connectToServer(void)
 	{
 		if (status() != TheWorldStatus::initialized)

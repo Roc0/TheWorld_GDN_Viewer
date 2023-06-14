@@ -80,7 +80,8 @@ void GDN_TheWorld_Viewer::_bind_methods()
 	ClassDB::bind_method(D_METHOD("get_depth_quad"), &GDN_TheWorld_Viewer::getDepthQuadOnPerimeter);
 	ClassDB::bind_method(D_METHOD("set_cache_quad"), &GDN_TheWorld_Viewer::setCacheQuadOnPerimeter);
 	ClassDB::bind_method(D_METHOD("get_cache_quad"), &GDN_TheWorld_Viewer::getCacheQuadOnPerimeter);
-	ClassDB::bind_method(D_METHOD("reset_initial_world_viewer_pos"), &GDN_TheWorld_Viewer::resetInitialWordlViewerPos);
+	ClassDB::bind_method(D_METHOD("deploy_world"), &GDN_TheWorld_Viewer::deployWorld);
+	ClassDB::bind_method(D_METHOD("undeploy_world"), &GDN_TheWorld_Viewer::undeployWorld);
 	ClassDB::bind_method(D_METHOD("initial_world_viewer_pos_set"), &GDN_TheWorld_Viewer::initialWordlViewerPosSet);
 	ClassDB::bind_method(D_METHOD("dump_required"), &GDN_TheWorld_Viewer::setDumpRequired);
 	//ClassDB::bind_method(D_METHOD("get_camera_chunk_global_transform_of_aabb"), &GDN_TheWorld_Viewer::getCameraChunkGlobalTransformOfAABB);
@@ -3176,7 +3177,7 @@ void GDN_TheWorld_Viewer::_findChildNodes(godot::Array& foundNodes, godot::Array
 	}
 }
 
-void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll, int level, int chunkSizeShift, int heightmapResolutionShift)
+void GDN_TheWorld_Viewer::deployWorld(float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll, int level, int chunkSizeShift, int heightmapResolutionShift)
 {
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -3234,6 +3235,22 @@ void GDN_TheWorld_Viewer::resetInitialWordlViewerPos(float cameraX, float camera
 		Globals()->_setAppInError(THEWORLD_VIEWER_GENERIC_ERROR, "std::exception caught");
 		return;
 	}
+}
+
+void GDN_TheWorld_Viewer::undeployWorld(void)
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+
+	m_mapQuadTree.clear();
+	
+	if (Globals()->connectedToServer() && m_initialized)
+		Globals()->setStatus(TheWorldStatus::sessionInitialized);
+	else if (Globals()->connectedToServer())
+		Globals()->setStatus(TheWorldStatus::connectedToServer);
+	else if (Globals()->initialized())
+		Globals()->setStatus(TheWorldStatus::initialized);
+	else
+		Globals()->setStatus(TheWorldStatus::uninitialized);
 }
 
 Node3D* GDN_TheWorld_Viewer::getWorldNode(void)

@@ -88,6 +88,14 @@ namespace TheWorld_ClientServer
 		disconnect();
 	}
 
+	bool ClientInterface::connected(void)
+	{
+		if (m_server != nullptr)
+			return true;
+		else
+			return false;
+	}
+
 	int ClientInterface::connect(void)
 	{
 		if (m_server != nullptr)

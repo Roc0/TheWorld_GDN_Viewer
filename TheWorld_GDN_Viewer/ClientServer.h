@@ -350,6 +350,7 @@ namespace TheWorld_ClientServer
 		ClientInterface(plog::Severity sev);
 		~ClientInterface(void);
 		virtual int connect(void);
+		virtual bool connected(void);
 		virtual void prepareDisconnect(void);
 		virtual bool canDisconnect(void);
 		virtual void disconnect(void);
