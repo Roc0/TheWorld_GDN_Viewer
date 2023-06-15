@@ -1164,7 +1164,8 @@ void GDN_TheWorld_Viewer::setDepthQuadOnPerimeter(int depth)
 	if (depth >= 0 && depth <= MAX_DEPTH_ON_PERIMETER)
 	{
 		m_depthQuadOnPerimeter = depth;
-		m_recalcQuadrantsInViewNeeded = true;
+		if ((int)Globals()->status() >= (int)TheWorldStatus::worldDeployInProgress)
+			m_recalcQuadrantsInViewNeeded = true;
 	}
 }
 
@@ -1178,7 +1179,8 @@ void GDN_TheWorld_Viewer::setCacheQuadOnPerimeter(int cache)
 	if (cache >= 0 && cache <= MAX_CACHE_ON_PERIMETER)
 	{
 		m_cacheQuadOnPerimeter = cache;
-		m_recalcQuadrantsInViewNeeded = true;
+		if ((int)Globals()->status() >= (int)TheWorldStatus::worldDeployInProgress)
+			m_recalcQuadrantsInViewNeeded = true;
 	}
 }
 
@@ -1596,7 +1598,7 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 
 		// if forced or the camera has changed quadrant the cache is repopulated
 		//m_computedCameraQuadrantPos = quadrantPosNeeded[0];	// DEBUG
-		if (m_refreshMapQuadTree || m_computedCameraQuadrantPos != cameraQuadrant)
+		if ( (m_refreshMapQuadTree || m_computedCameraQuadrantPos != cameraQuadrant) && (int)Globals()->status() >= (int)TheWorldStatus::worldDeployInProgress)
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.2.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
 
@@ -3677,7 +3679,7 @@ void GDN_TheWorld_Viewer::streamer(void)
 				// Optimization: calc here getHeightsForCollider, getFloat16HeightsBuffer, getFloat32HeightsBuffer, getNormalsBuffer if they are empty and if we know they will be loaded in next _process
 				// with this optimization we want to do the work outside _process to have more fluidity
 				
-				if (m_recalcQuadrantsInViewNeeded)
+				if (m_recalcQuadrantsInViewNeeded && (int)Globals()->status() >= (int)TheWorldStatus::worldDeployInProgress)
 				{
 					recalcQuadrantsInView();
 					m_recalcQuadrantsInViewNeeded = false;
