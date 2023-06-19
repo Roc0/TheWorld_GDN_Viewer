@@ -15,6 +15,7 @@
 #pragma warning(push, 0)
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
+#include <godot_cpp/classes/compressed_texture2d.hpp>
 #pragma warning(pop)
 
 using namespace godot;
@@ -1077,6 +1078,10 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 
 	godot::Error e = image->generate_mipmaps();
 
+	//e = image->compress(godot::Image::CompressMode::COMPRESS_S3TC);
+
+	//e = image->save_png(fileName + ".png");
+	
 	return image;
 }
 
@@ -1084,18 +1089,31 @@ void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainD
 {
 	TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTextures 1 ") + __FUNCTION__, "all");
 
+	godot::ResourceLoader* resLoader = ResourceLoader::get_singleton();
+
 	try
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTextures 1.1 ") + __FUNCTION__, "albedo_bump");
 
-		bool ok;
-		godot::Ref<godot::Image> image = readGroundTexture(fileName + "_albedo_bump.ground", ok);
-		m_viewer->getMainProcessingMutex().lock();
-		// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
-		//tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
-		Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
-		m_viewer->getMainProcessingMutex().unlock();
-		groundTextures->m_albedo_bump_tex = tex;
+		godot::String path = fileName + "_albedo_bump.ground";
+		std::string _path = std::string(path.utf8().get_data());
+
+		Ref<godot::CompressedTexture2D> c_tex = nullptr;
+		//c_tex = resLoader->load(path + ".png");
+		if (c_tex == nullptr)
+		{
+			bool ok;
+			godot::Ref<godot::Image> image = readGroundTexture(path, ok);
+			m_viewer->getMainProcessingMutex().lock();
+			// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
+			//tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
+			Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+			m_viewer->getMainProcessingMutex().unlock();
+			groundTextures->m_albedo_bump_tex = tex;
+		}
+		else
+			groundTextures->m_albedo_bump_tex = c_tex;
+
 	}
 	catch (...) {}
 
@@ -1103,14 +1121,24 @@ void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainD
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTextures 1.2 ") + __FUNCTION__, "normal_roughness");
 
-		bool ok;
-		godot::Ref<godot::Image> image = readGroundTexture(fileName + "_normal_roughness.ground", ok);
-		m_viewer->getMainProcessingMutex().lock();
-		// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
-		//tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
-		Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
-		m_viewer->getMainProcessingMutex().unlock();
-		groundTextures->m_normal_roughness_tex = tex;
+		godot::String path = fileName + "_normal_roughness.ground";
+		std::string _path = std::string(path.utf8().get_data());
+
+		Ref<godot::CompressedTexture2D> c_tex = nullptr;
+		//c_tex = resLoader->load(path + ".png");
+		if (c_tex == nullptr)
+		{
+			bool ok;
+			godot::Ref<godot::Image> image = readGroundTexture(path, ok);
+			m_viewer->getMainProcessingMutex().lock();
+			// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
+			//tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
+			Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+			m_viewer->getMainProcessingMutex().unlock();
+			groundTextures->m_normal_roughness_tex = tex;
+		}
+		else
+			groundTextures->m_normal_roughness_tex = c_tex;
 	}
 	catch (...) {}
 }
