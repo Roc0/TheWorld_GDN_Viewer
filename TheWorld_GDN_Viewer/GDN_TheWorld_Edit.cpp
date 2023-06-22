@@ -1134,17 +1134,11 @@ void GDN_TheWorld_Edit::refreshNumToSaveUpload(size_t& numToSave, size_t& numToU
 
 void GDN_TheWorld_Edit::_init(void)
 {
-	//Godot::print("GDN_Template::Init");
 	set_name(THEWORLD_EDIT_MODE_UI_CONTROL_NAME);
 }
 
 void GDN_TheWorld_Edit::_ready(void)
 {
-	//Godot::print("GDN_Template::_ready");
-	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
-
-	//get_tree()->get_root()->connect("size_changed", this, "setSizeUI");
-
 	m_ready = true;
 }
 

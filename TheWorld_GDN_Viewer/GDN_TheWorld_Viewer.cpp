@@ -312,6 +312,116 @@ bool GDN_TheWorld_Viewer::init(void)
 {
 	PLOG_INFO << "TheWorld Viewer Initializing...";
 
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals == nullptr)
+		return false;
+
+	// From _notification ENTER_WORLD
+	printKeyboardMapping();
+
+	string s = "Use Visual Server: "; s += (m_useVisualServer ? "True" : "False");
+	if (globals != nullptr)
+	{
+		globals->infoPrint(s.c_str());
+		globals->debugPrint("Enter world");
+	}
+
+	//if (m_initialWordlViewerPosSet)
+	//{
+	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (!itQuadTree->second->isValid())
+			continue;
+
+		if (!itQuadTree->second->isVisible())
+			continue;
+
+		Chunk::EnterWorldChunkAction action;
+		itQuadTree->second->ForAllChunk(action);
+
+		itQuadTree->second->getQuadrant()->getCollider()->enterWorld();
+	}
+	//}
+
+	// From _ready
+	{
+		if (IS_EDITOR_HINT())
+		{
+			m_depthQuadOnPerimeter = 1;
+			m_cacheQuadOnPerimeter = 1;
+		}
+		else
+		{
+			m_depthQuadOnPerimeter = 3;
+			m_cacheQuadOnPerimeter = 1;
+		}
+
+		m_shaderParam_groundUVScale.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));	// if every coord is 0.0 the parameter is not passed to the shader
+		m_shaderParam_groundUVScale.d = 0.0f;
+		m_shaderParam_tileReduction.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));
+		m_shaderParam_tileReduction.d = 0.0f;
+		m_shaderParam_colormapOpacity.set_normal(godot::Vector3(1.0f, 1.0f, 1.0f));
+		m_shaderParam_colormapOpacity.d = 1.0f;
+
+		set_notify_transform(true);
+
+		//if (globals->status() != TheWorldStatus::sessionInitialized)
+		//	return;
+
+		//get_tree()->get_root()->connect("size_changed", this, "viewport_resizing");
+
+		//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
+
+		// Camera stuff
+		//if (!IS_EDITOR_HINT())
+		{
+			//if (WorldCamera())
+			//{
+			//	WorldCamera()->deactivateCamera();
+			//	WorldCamera()->queue_free();
+			//}
+			//assignWorldCamera(GDN_TheWorld_Camera::_new());
+
+			GDN_TheWorld_Camera* camera = CameraNode(false);
+			if (camera == nullptr)
+				camera = memnew(GDN_TheWorld_Camera);
+			camera->set_name(THEWORLD_CAMERA_NODE_NAME);
+			assignWorldCamera(camera);
+
+			SceneTree* scene = get_tree();
+			Node* sceneRoot = nullptr;
+			if (IS_EDITOR_HINT())
+				sceneRoot = scene->get_edited_scene_root();
+			else
+				sceneRoot = scene->get_root();
+
+			int64_t worldMainNodeId = getWorldNode()->get_instance_id();
+
+			Node* parent = camera->get_parent();
+			if (parent != nullptr)
+			{
+				int64_t parentId = parent->get_instance_id();
+				if (parentId != worldMainNodeId)
+				{
+					parent->remove_child(camera);
+					//getWorldNode()->call_deferred("add_child", camera);
+					getWorldNode()->add_child(camera);
+				}
+			}
+			else
+			{
+				//getWorldNode()->call_deferred("add_child", camera);	// with deferred we risk that we call get_tree in Globals() (activateCamera) before camera is added to the scene 
+				getWorldNode()->add_child(camera);
+			}
+
+			camera->call_deferred("set_owner", sceneRoot);
+
+			godot::Control* control = getOrCreateEditModeUIControl();
+		}
+
+	}
+
 	m_meshCache = make_unique<MeshCache>(this);
 	m_meshCache->initCache(Globals()->numVerticesPerChuckSide(), Globals()->numLods());
 
@@ -342,6 +452,29 @@ void GDN_TheWorld_Viewer::deinit(void)
 	if (m_initialized)
 	{
 		PLOG_INFO << "TheWorld Viewer Deinitializing...";
+
+		// from _notification EXIT_WORLD
+		GDN_TheWorld_Globals* globals = Globals();
+		if (globals != nullptr)
+			globals->debugPrint("Exit world");
+		//if (m_initialWordlViewerPosSet)
+		//{
+		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		{
+			if (!itQuadTree->second->isValid())
+				continue;
+
+			if (!itQuadTree->second->isVisible())
+				continue;
+
+			Chunk::ExitWorldChunkAction action;
+			itQuadTree->second->ForAllChunk(action);
+
+			itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
+			//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
+		}
+		//}
 
 		m_streamerThreadRequiredExit = true;
 		if (m_streamerThread.joinable())
@@ -381,9 +514,9 @@ void GDN_TheWorld_Viewer::deinit(void)
 		if (camera != nullptr)
 		{
 			Node* parent = camera->get_parent();
-			if (parent != nullptr)
-				parent->call_deferred("remove_child", camera);
-			camera->queue_free();
+			//if (parent != nullptr)									// TESTING
+			//	parent->call_deferred("remove_child", camera);			// TESTING
+			//camera->queue_free();										// TESTING
 		}
 		
 		ShaderTerrainData::releaseGlobals();
@@ -658,113 +791,7 @@ void GDN_TheWorld_Viewer::_init(void)
 
 void GDN_TheWorld_Viewer::_ready(void)
 {
-	if (IS_EDITOR_HINT())
-	{
-		m_depthQuadOnPerimeter = 1;
-		m_cacheQuadOnPerimeter = 1;
-	}
-	else
-	{
-		m_depthQuadOnPerimeter = 3;
-		m_cacheQuadOnPerimeter = 1;
-	}
-
-	m_shaderParam_groundUVScale.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));	// if every coord is 0.0 the parameter is not passed to the shader
-	m_shaderParam_groundUVScale.d = 0.0f;
-	m_shaderParam_tileReduction.set_normal(godot::Vector3(0.0f, 0.0f, 0.0f));
-	m_shaderParam_tileReduction.d = 0.0f;
-	m_shaderParam_colormapOpacity.set_normal(godot::Vector3(1.0f, 1.0f, 1.0f));
-	m_shaderParam_colormapOpacity.d = 1.0f;
-
-	set_notify_transform(true);
-
-	GDN_TheWorld_Globals* globals = Globals();
-	if (globals == nullptr)
-		return;
-
-	//if (globals->status() != TheWorldStatus::sessionInitialized)
-	//	return;
-
-	globals->debugPrint("GDN_TheWorld_Viewer::_ready");
-
-	//get_tree()->get_root()->connect("size_changed", this, "viewport_resizing");
-	
-	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
-
-	// Camera stuff
-	//if (!IS_EDITOR_HINT())
-	{
-		//if (WorldCamera())
-		//{
-		//	WorldCamera()->deactivateCamera();
-		//	WorldCamera()->queue_free();
-		//}
-		//assignWorldCamera(GDN_TheWorld_Camera::_new());
-		
-		GDN_TheWorld_Camera* camera = CameraNode(false);
-		if (camera == nullptr)
-			camera = memnew(GDN_TheWorld_Camera);
-		camera->set_name(THEWORLD_CAMERA_NODE_NAME);
-		assignWorldCamera(camera);
-
-		SceneTree* scene = get_tree();
-		Node* sceneRoot = nullptr;
-		if (IS_EDITOR_HINT())
-			sceneRoot = scene->get_edited_scene_root();
-		else
-			sceneRoot = scene->get_root();
-
-		int64_t worldMainNodeId = getWorldNode()->get_instance_id();
-
-		Node* parent = camera->get_parent();
-		if (parent != nullptr)
-		{
-			int64_t parentId = parent->get_instance_id();
-			if (parentId != worldMainNodeId)
-			{
-				parent->remove_child(camera);
-				//getWorldNode()->call_deferred("add_child", camera);
-				getWorldNode()->add_child(camera);
-			}
-		}
-		else
-		{
-			//getWorldNode()->call_deferred("add_child", camera);	// with deferred we risk that we call get_tree in Globals() (activateCamera) before camera is added to the scene 
-			getWorldNode()->add_child(camera);
-		}
-
-		camera->call_deferred("set_owner", sceneRoot);
-
-		godot::Control* control = getOrCreateEditModeUIControl();
-
-		m_ready = true;
-	}
-
-	//{
-	//	// Test performance memcpy
-	//	int size = 2049 * 2049 * 4;
-	//	char* buffer = (char*)calloc(1, size);
-	//	memset(buffer, (int)'A', size);
-
-	//	for (int i = 0; i < 100; i++)
-	//	{
-	//		char* p = nullptr;
-	//		{
-	//			TheWorld_Utils::GuardProfiler profiler(std::string("TestReady 1 ") + std::to_string(size) + " " + __FUNCTION__, "calloc");
-	//			p = (char*)calloc(1, size);
-	//		}
-	//		{
-	//			TheWorld_Utils::GuardProfiler profiler(std::string("TestReady 2 ") + std::to_string(size) + " " + __FUNCTION__, "memcpy");
-	//			memcpy(p, buffer, size);
-	//		}
-	//		{
-	//			TheWorld_Utils::GuardProfiler profiler(std::string("TestReady 3 ") + std::to_string(size) + " " + __FUNCTION__, "free");
-	//			::free(p);
-	//		}
-	//	}
-
-	//	::free(buffer);
-	//}
+	m_ready = true;
 }
 
 void GDN_TheWorld_Viewer::toggleQuadrantSelected(void)
@@ -1005,56 +1032,56 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		break;
 		case NOTIFICATION_ENTER_WORLD:
 		{
-			GDN_TheWorld_Globals* globals = Globals();
-			printKeyboardMapping();
-			string s = "Use Visual Server: "; s += (m_useVisualServer ? "True" : "False");
-			if (globals != nullptr)
-			{
-				globals->infoPrint(s.c_str());
-				globals->debugPrint("Enter world");
-			}
-			//if (m_initialWordlViewerPosSet)
+			//GDN_TheWorld_Globals* globals = Globals();
+			//printKeyboardMapping();
+			//string s = "Use Visual Server: "; s += (m_useVisualServer ? "True" : "False");
+			//if (globals != nullptr)
 			//{
-			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-			{
-				if (!itQuadTree->second->isValid())
-					continue;
-
-				if (!itQuadTree->second->isVisible())
-					continue;
-
-				Chunk::EnterWorldChunkAction action;
-				itQuadTree->second->ForAllChunk(action);
-				
-				itQuadTree->second->getQuadrant()->getCollider()->enterWorld();
-			}
+			//	globals->infoPrint(s.c_str());
+			//	globals->debugPrint("Enter world");
 			//}
+			////if (m_initialWordlViewerPosSet)
+			////{
+			//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+			//for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			//{
+			//	if (!itQuadTree->second->isValid())
+			//		continue;
+
+			//	if (!itQuadTree->second->isVisible())
+			//		continue;
+
+			//	Chunk::EnterWorldChunkAction action;
+			//	itQuadTree->second->ForAllChunk(action);
+			//	
+			//	itQuadTree->second->getQuadrant()->getCollider()->enterWorld();
+			//}
+			////}
 		}
 		break;
 		case NOTIFICATION_EXIT_WORLD:
 		{
-			GDN_TheWorld_Globals* globals = Globals();
-			if (globals != nullptr)
-				globals->debugPrint("Exit world");
-			//if (m_initialWordlViewerPosSet)
+			//GDN_TheWorld_Globals* globals = Globals();
+			//if (globals != nullptr)
+			//	globals->debugPrint("Exit world");
+			////if (m_initialWordlViewerPosSet)
+			////{
+			//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+			//for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			//{
-			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-			{
-				if (!itQuadTree->second->isValid())
-					continue;
+			//	if (!itQuadTree->second->isValid())
+			//		continue;
 
-				if (!itQuadTree->second->isVisible())
-					continue;
+			//	if (!itQuadTree->second->isVisible())
+			//		continue;
 
-				Chunk::ExitWorldChunkAction action;
-				itQuadTree->second->ForAllChunk(action);
-				
-				itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
-				//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
-			}
+			//	Chunk::ExitWorldChunkAction action;
+			//	itQuadTree->second->ForAllChunk(action);
+			//	
+			//	itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
+			//	//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
 			//}
+			////}
 		}
 		break;
 		case NOTIFICATION_VISIBILITY_CHANGED:
@@ -3691,7 +3718,6 @@ void GDN_TheWorld_Viewer::streamer(void)
 					m_dumpRequired = false;
 					dump();
 				}
-
 			}
 			catch (std::exception& e)
 			{

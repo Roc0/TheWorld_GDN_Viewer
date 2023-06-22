@@ -50,6 +50,7 @@ extern "C"
 {
     // Initialization.
     GDExtensionBool GDE_EXPORT tw_main_library_init(const GDExtensionInterface* p_interface, const GDExtensionClassLibraryPtr p_library, GDExtensionInitialization* r_initialization)
+    //GDExtensionBool GDE_EXPORT tw_main_library_init(const GDExtensionInterfaceGetProcAddress* p_interface, const GDExtensionClassLibraryPtr p_library, GDExtensionInitialization* r_initialization)
     {
         godot::GDExtensionBinding::InitObject init_obj(p_interface, p_library, r_initialization);
 

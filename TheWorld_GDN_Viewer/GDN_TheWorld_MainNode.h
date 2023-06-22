@@ -4,6 +4,7 @@
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/ref.hpp>
+#include <godot_cpp/classes/engine.hpp>
 #pragma warning (pop)
 
 namespace godot
@@ -18,7 +19,7 @@ namespace godot
 	public:
 		GDN_TheWorld_MainNode();
 		~GDN_TheWorld_MainNode();
-		bool init(Node3D* pWorldMainNode);
+		bool init(Node3D* pWorldMainNode, bool isInEditor);
 		void preDeinit(void);
 		bool canDeinit(void);
 		void deinit(void);

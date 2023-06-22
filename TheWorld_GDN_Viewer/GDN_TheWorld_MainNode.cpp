@@ -41,17 +41,11 @@ GDN_TheWorld_MainNode::~GDN_TheWorld_MainNode()
 
 void GDN_TheWorld_MainNode::_init(void)
 {
-	//Cannot find Globals pointer as current node is not yet in the scene
-	//Godot::print("GDN_TheWorld_MainNode::Init");
 	set_name(THEWORLD_MAIN_NODE_NAME);
 }
 
 void GDN_TheWorld_MainNode::_ready(void)
 {
-	GDN_TheWorld_Globals* globals = Globals();
-	if (globals != nullptr)
-		globals->debugPrint("GDN_TheWorld_MainNode::_ready");
-	//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 	m_ready = true;
 }
 
@@ -115,7 +109,7 @@ void GDN_TheWorld_MainNode::_process(double _delta)
 	//}
 }
 
-bool GDN_TheWorld_MainNode::init(Node3D* pWorldMainNode)
+bool GDN_TheWorld_MainNode::init(Node3D* pWorldMainNode, bool isInEditor)
 {
 	assert(!m_initialized);
 	
@@ -142,6 +136,7 @@ bool GDN_TheWorld_MainNode::init(Node3D* pWorldMainNode)
 
 	SceneTree* scene = get_tree();
 	Node* sceneRoot = nullptr;
+	if (isInEditor)		// it should be fixed in https://github.com/godotengine/godot/pull/77633 commit 31/05
 	if (IS_EDITOR_HINT())
 		sceneRoot = scene->get_edited_scene_root();
 	else
@@ -169,7 +164,7 @@ bool GDN_TheWorld_MainNode::init(Node3D* pWorldMainNode)
 		else
 			pWorldMainNode->add_child(globals);
 		globals->set_name(THEWORLD_GLOBALS_NODE_NAME);
-		globals->init();
+		globals->init(isInEditor);
 		globals->set_owner(sceneRoot);
 	}
 	else
@@ -258,11 +253,11 @@ void GDN_TheWorld_MainNode::deinit(void)
 				Node* parent = viewer->get_parent();
 				if (parent)
 				{
-					parent->call_deferred("remove_child", viewer);
+					//parent->call_deferred("remove_child", viewer);	// TESTING
 					//parent->remove_child(viewer);
 				}
-				viewer->set_owner(nullptr);
-				viewer->queue_free();
+				//viewer->set_owner(nullptr);							// TESTING
+				//viewer->queue_free();									// TESTING
 			}
 			PLOG_INFO << "TheWorld Main Node Deinitialized!";
 
@@ -270,11 +265,11 @@ void GDN_TheWorld_MainNode::deinit(void)
 			Node* parent = globals->get_parent();
 			if (parent)
 			{
-				parent->call_deferred("remove_child", globals);
+				//parent->call_deferred("remove_child", globals);		// TESTING
 				//parent->remove_child(globals);
 			}
-			globals->set_owner(nullptr);
-			globals->queue_free();
+			//globals->set_owner(nullptr);								// TESTING
+			//globals->queue_free();									// TESTING
 		}
 
 		m_initialized = false;
@@ -284,10 +279,10 @@ void GDN_TheWorld_MainNode::deinit(void)
 		Node* parent = get_parent();
 		if (parent)
 		{
-			parent->call_deferred("remove_child", this);
+			//parent->call_deferred("remove_child", this);				// TESTING
 			//parent->remove_child(this);
 		}
-		set_owner(nullptr);
+		//set_owner(nullptr);											// TESTING
 	}
 }
 

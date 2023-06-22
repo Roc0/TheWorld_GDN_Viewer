@@ -152,6 +152,13 @@ namespace godot
 		//	return m_mapQuadToSave;
 		//}
 
+		GDN_TheWorld_Globals* Globals(bool useCache = true)
+		{
+			if (m_viewer == nullptr)
+				return nullptr;
+			return m_viewer->Globals();
+		}
+
 	private:
 		bool m_initialized;
 		bool m_ready;

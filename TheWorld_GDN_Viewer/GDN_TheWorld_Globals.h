@@ -138,7 +138,7 @@ namespace godot
 
 		GDN_TheWorld_Globals();
 		~GDN_TheWorld_Globals();
-		void init(void);
+		void init(bool isInEditor);
 		void preDeinit(void);
 		bool canDeinit(void);
 		void deinit(void);
@@ -283,6 +283,8 @@ namespace godot
 		void infoPrint(String message, bool godotPrint = true)
 		{
 			String editor_string = "";
+			//static godot::Engine* engine = godot::Engine::get_singleton();
+			//if (engine->is_editor_hint())
 			if (IS_EDITOR_HINT())
 				editor_string = "***EDITOR*** ";
 			String msg = "INFO - " + editor_string + message;
@@ -295,6 +297,18 @@ namespace godot
 				godot::UtilityFunctions::print(message);
 			std::string m = message.utf8().get_data();
 			PLOG_INFO << m;
+		}
+
+		GDN_TheWorld_Globals* Globals(bool useCache = true)
+		{
+			return this;
+		}
+			
+		bool isEngineInEditor()
+		{
+			godot::Engine* engine = godot::Engine::get_singleton();
+			return engine->is_editor_hint();
+			//return m_isInEditor;	// it should be fixed in https://github.com/godotengine/godot/pull/77633 commit 31/05
 		}
 
 		// WORLD GRID
@@ -485,6 +499,7 @@ namespace godot
 		std::vector<std::string> m_errorText;
 		float m_gridStepInWU;
 		GDN_TheWorld_Globals_Client* m_client;
+		bool m_isInEditor;
 
 		// Node cache
 		GDN_TheWorld_Viewer* m_viewer;

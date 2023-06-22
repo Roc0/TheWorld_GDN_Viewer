@@ -154,7 +154,8 @@ namespace godot
 		m_client = nullptr;
 		m_gridStepInWU = 0;
 
-		m_viewer = NULL;
+		m_viewer = nullptr;
+		m_isInEditor = false;
 
 		_init();
 	}
@@ -271,8 +272,10 @@ namespace godot
 		return true;
 	}
 
-	void GDN_TheWorld_Globals::init(void)
+	void GDN_TheWorld_Globals::init(bool isInEditor)
 	{
+		m_isInEditor = isInEditor;
+
 		string logPath;
 		if (IS_EDITOR_HINT())
 			logPath = getModuleLoadPath() + "\\TheWorld_Viewer_EDITOR_log.txt";
@@ -337,7 +340,6 @@ namespace godot
 
 	void GDN_TheWorld_Globals::_init(void)
 	{
-		//debugPrint("GDN_TheWorld_Globals::_init");
 		set_name(THEWORLD_GLOBALS_NODE_NAME);
 	}
 
@@ -411,7 +413,6 @@ namespace godot
 
 	void GDN_TheWorld_Globals::_ready(void)
 	{
-		debugPrint("GDN_TheWorld_Globals::_ready");
 		//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 		m_ready = true;
 	}

@@ -93,24 +93,12 @@ GDN_TheWorld_Camera::~GDN_TheWorld_Camera()
 
 void GDN_TheWorld_Camera::_init()
 {
-	//Cannot find Globals pointer as current node is not yet in the scene
-	//Godot::print("GDN_TheWorld_Camera::_init");
-
 	m_instanceId = get_instance_id();
 	set_name(THEWORLD_CAMERA_NODE_NAME);
 }
 
 void GDN_TheWorld_Camera::_ready()
 {
-	GDN_TheWorld_Globals* globals = Globals();
-	if (globals == nullptr)
-		return;
-
-	globals->debugPrint("GDN_TheWorld_Camera::_ready");
-	//Node* parent = get_parent();
-	//String parentName = parent->get_name();
-	//globals->debugPrint("GDN_TheWorld_Camera::_ready - Parent name: " + parentName);
-
 	m_ready = true;
 }
 

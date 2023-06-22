@@ -33,12 +33,14 @@
 #define Vector3Left Vector3(-1, 0, 0)
 #define Vector3Right Vector3(1, 0, 0)
 
-#define Vector3X Vector3(1, 0, 1)
+#define Vector3X Vector3(1, 0, 0)
 #define Vector3Y Vector3(0, 1, 0)
 #define Vector3Z Vector3(0, 0, 1)
 
 //#define TEXT(s) #s
-#define IS_EDITOR_HINT() godot::Engine::get_singleton()->is_editor_hint()
+//#define IS_EDITOR_HINT() godot::Engine::get_singleton()->is_editor_hint()
+#define IS_EDITOR_HINT() Globals()->isEngineInEditor()
+//#define IS_EDITOR_HINT() true
 #define SCENE_TREE() godot::Object::cast_to<SceneTree>(Engine::get_singleton()->get_main_loop())
 #define SCENE_ROOT() (SCENE_TREE()->get_root())
 #define RS() godot::RenderingServer::get_singleton()
