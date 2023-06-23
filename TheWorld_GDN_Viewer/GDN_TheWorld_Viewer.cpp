@@ -791,6 +791,10 @@ void GDN_TheWorld_Viewer::_init(void)
 
 void GDN_TheWorld_Viewer::_ready(void)
 {
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals != nullptr)
+		globals->debugPrint("GDN_TheWorld_Viewer::_ready");
+
 	m_ready = true;
 }
 

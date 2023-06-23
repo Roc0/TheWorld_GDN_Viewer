@@ -340,6 +340,9 @@ namespace godot
 
 	void GDN_TheWorld_Globals::_init(void)
 	{
+		//Cannot find Globals pointer as current node is not yet in the scene
+		//godot::UtilityFunctions::print("GDN_TheWorld_Globals::Init");
+
 		set_name(THEWORLD_GLOBALS_NODE_NAME);
 	}
 
@@ -413,6 +416,8 @@ namespace godot
 
 	void GDN_TheWorld_Globals::_ready(void)
 	{
+		debugPrint("GDN_TheWorld_Globals::_ready");
+
 		//get_node(NodePath("/root/Main/Reset"))->connect("pressed", this, "on_Reset_pressed");
 		m_ready = true;
 	}

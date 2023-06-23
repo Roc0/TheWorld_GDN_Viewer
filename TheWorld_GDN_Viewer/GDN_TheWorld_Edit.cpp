@@ -1134,11 +1134,17 @@ void GDN_TheWorld_Edit::refreshNumToSaveUpload(size_t& numToSave, size_t& numToU
 
 void GDN_TheWorld_Edit::_init(void)
 {
+	//Cannot find Globals pointer as current node is not yet in the scene
+	//godot::UtilityFunctions::print("GDN_TheWorld_Edit::Init");
+
 	set_name(THEWORLD_EDIT_MODE_UI_CONTROL_NAME);
 }
 
 void GDN_TheWorld_Edit::_ready(void)
 {
+	//Cannot find Globals pointer as current node is not yet in the scene
+	//godot::UtilityFunctions::print("GDN_TheWorld_Edit::_ready");
+
 	m_ready = true;
 }
 

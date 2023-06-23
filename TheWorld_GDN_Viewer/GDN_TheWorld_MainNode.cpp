@@ -41,11 +41,18 @@ GDN_TheWorld_MainNode::~GDN_TheWorld_MainNode()
 
 void GDN_TheWorld_MainNode::_init(void)
 {
+	//Cannot find Globals pointer as current node is not yet in the scene
+	//godot::UtilityFunctions::print("GDN_TheWorld_MainNode::_init");
+
 	set_name(THEWORLD_MAIN_NODE_NAME);
 }
 
 void GDN_TheWorld_MainNode::_ready(void)
 {
+	GDN_TheWorld_Globals* globals = Globals();
+	if (globals != nullptr)
+		globals->debugPrint("GDN_TheWorld_MainNode::_ready");
+
 	m_ready = true;
 }
 
@@ -136,7 +143,7 @@ bool GDN_TheWorld_MainNode::init(Node3D* pWorldMainNode, bool isInEditor)
 
 	SceneTree* scene = get_tree();
 	Node* sceneRoot = nullptr;
-	if (isInEditor)		// it should be fixed in https://github.com/godotengine/godot/pull/77633 commit 31/05
+	//if (isInEditor)		// it should be fixed in https://github.com/godotengine/godot/pull/77633 commit 31/05
 	if (IS_EDITOR_HINT())
 		sceneRoot = scene->get_edited_scene_root();
 	else
