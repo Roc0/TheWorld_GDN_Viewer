@@ -1035,6 +1035,8 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 	const char* s = fileName.utf8().get_data();
 	std::string _fileName = std::string(s);
 
+	m_viewer->Globals()->debugPrint((std::string("Reading ground texture ") + _fileName + " ...").c_str());
+
 	m_viewer->getMainProcessingMutex().lock();
 	//godot::FileAccess* file = memnew(godot::FileAccess);
 	godot::Ref<godot::FileAccess> file = godot::FileAccess::open(fileName, godot::FileAccess::READ);
@@ -1082,6 +1084,8 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 
 	//e = image->save_png(fileName + ".png");
 	
+	m_viewer->Globals()->debugPrint((std::string("Reading ground texture ") + _fileName + " done!").c_str());
+
 	return image;
 }
 
@@ -1828,6 +1832,39 @@ size_t QuadrantPos::distanceInPerimeter(QuadrantPos& q)
 		return distanceOnX;
 	else
 		return distanceOnZ;
+}
+
+Quadrant::Quadrant(QuadrantPos& quadrantPos, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
+{
+	m_quadrantPos = quadrantPos;
+	m_viewer = viewer;
+	m_quadTree = quadTree;
+	std::string dir = GDN_TheWorld_Globals::getClientDataDir();
+	std::string mapName = viewer->Globals()->getMapName();
+	m_cache = TheWorld_Utils::MeshCacheBuffer(dir, mapName, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
+	m_shaderTerrainData = make_unique<ShaderTerrainData>(viewer, quadTree);
+	m_collider = make_unique<Collider>(quadTree);
+	m_heightsUpdated = false;
+	m_normalsUpdated = false;
+	m_colorsUpdated = false;
+	m_splatmapUpdated = false;
+	m_globalmapUpdated = false;
+	m_texturesUpdated = false;
+	//m_terrainValuesCanBeCleared = false;
+	m_needUploadToServer = false;
+	m_internalDataLocked = false;
+	m_empty = true;
+}
+
+Quadrant::~Quadrant()
+{
+	//TheWorld_Viewer_Utils::TimerMs clock;
+	//clock.tick();
+	m_shaderTerrainData.reset();
+	m_collider.reset();
+	m_terrainEdit.reset();
+	//clock.tock();
+	//godot::GDN_TheWorld_Globals::s_elapsed1 += clock.duration().count();
 }
 
 TheWorld_Utils::MeshCacheBuffer& Quadrant::getMeshCacheBuffer(void)

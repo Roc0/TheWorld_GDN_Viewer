@@ -269,37 +269,9 @@ namespace godot
 		friend class QuadTree;
 
 	public:
-		Quadrant(QuadrantPos& quadrantPos, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree)
-		{
-			m_quadrantPos = quadrantPos;
-			m_viewer = viewer;
-			m_quadTree = quadTree;
-			std::string dir = GDN_TheWorld_Globals::getClientDataDir();
-			m_cache = TheWorld_Utils::MeshCacheBuffer(dir, m_quadrantPos.getGridStepInWU(), m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getLevel(), m_quadrantPos.getLowerXGridVertex(), m_quadrantPos.getLowerZGridVertex());
-			m_shaderTerrainData = make_unique<ShaderTerrainData>(viewer, quadTree);
-			m_collider = make_unique<Collider>(quadTree);
-			m_heightsUpdated = false;
-			m_normalsUpdated = false;
-			m_colorsUpdated = false;
-			m_splatmapUpdated = false;
-			m_globalmapUpdated = false;
-			m_texturesUpdated = false;
-			//m_terrainValuesCanBeCleared = false;
-			m_needUploadToServer = false;
-			m_internalDataLocked = false;
-			m_empty = true;
-		}
+		Quadrant(QuadrantPos& quadrantPos, GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
 
-		~Quadrant()
-		{
-			//TheWorld_Viewer_Utils::TimerMs clock;
-			//clock.tick();
-			m_shaderTerrainData.reset();
-			m_collider.reset();
-			m_terrainEdit.reset();
-			//clock.tock();
-			//godot::GDN_TheWorld_Globals::s_elapsed1 += clock.duration().count();
-		}
+		~Quadrant();
 
 		_declspec(dllexport) void populateGridVertices(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, bool setCamera, float cameraDistanceFromTerrainForced);
 

@@ -351,6 +351,7 @@ namespace godot
 		
 		// m_mapManager->gridStepInWU();
 		float gridStepInWU(void);
+		std::string getMapName(void);
 			
 		// Number of vertices of the side of the heightmap (-1) with the elevations which is fixed and is a multiple of the number of vertices of the side of a chunk (numVerticesPerChuckSide) and is for this a multiple of 2 too
 		int heightmapResolution(void)
@@ -498,6 +499,7 @@ namespace godot
 		std::string m_lastErrorText;
 		std::vector<std::string> m_errorText;
 		float m_gridStepInWU;
+		std::string m_mapName;
 		GDN_TheWorld_Globals_Client* m_client;
 		bool m_isInEditor;
 

@@ -460,8 +460,10 @@ namespace TheWorld_ClientServer
 				}
 				plog::Severity sev = plog::Severity(*i);
 				TheWorld_MapManager::MapManager::setLogMaxSeverity(sev);
-				float f = m_threadContextPool->getCurrentContext()->getMapManager()->gridStepInWU();
-				reply->replyParam(f);
+				float gridStepInWU = m_threadContextPool->getCurrentContext()->getMapManager()->gridStepInWU();
+				std::string mapName = m_threadContextPool->getCurrentContext()->getMapManager()->getMapName();
+				reply->replyParam(gridStepInWU);
+				reply->replyParam(mapName);
 				reply->replyComplete();
 			}
 			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER)

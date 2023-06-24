@@ -213,7 +213,7 @@ namespace godot
 		{
 			if (method == THEWORLD_CLIENTSERVER_METHOD_SERVER_INITIALIZATION)
 			{
-				if (reply.getNumReplyParams() != 1)
+				if (reply.getNumReplyParams() != 2)
 				{
 					std::string m = std::string("Server::initializeSession: error reply params ");
 					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", 0));
@@ -223,11 +223,19 @@ namespace godot
 				const auto ptr(std::get_if<float>(&v));
 				if (ptr == NULL)
 				{
-					std::string m = std::string("Server::initializeSession did not return a float");
+					std::string m = std::string("Server::initializeSession did not return a float as first param");
 					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
 				}
-
 				m_gridStepInWU = *ptr;
+
+				v = reply.getReplyParam(1);
+				const auto ptr1(std::get_if<std::string>(&v));
+				if (ptr == NULL)
+				{
+					std::string m = std::string("Server::initializeSession did not return a string as second param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				m_mapName = *ptr1;
 
 				Viewer()->init();
 
@@ -336,6 +344,11 @@ namespace godot
 	float GDN_TheWorld_Globals::gridStepInWU(void)
 	{
 		return m_gridStepInWU;
+	}
+
+	std::string GDN_TheWorld_Globals::getMapName(void)
+	{
+		return m_mapName;
 	}
 
 	void GDN_TheWorld_Globals::_init(void)
