@@ -995,8 +995,8 @@ void ShaderTerrainData::init(void)
 	m_viewer->getMainProcessingMutex().unlock();
 	ResourceLoader* resLoader = ResourceLoader::get_singleton();
 	//String shaderPath = "res://addons/twviewer/shaders/lookdevChunk.gdshader";
-	//String shaderPath = "res://addons/twviewer/shaders/regularChunk.gdshader";
-	String shaderPath = "res://addons/twviewer/shaders/simple4.gdshader";
+	String shaderPath = "res://addons/twviewer/shaders/regularChunk.gdshader";
+	//String shaderPath = "res://addons/twviewer/shaders/simple4.gdshader";
 	Ref<Shader> shader = resLoader->load(shaderPath);
 	mat->set_shader(shader);
 	m_regularMaterial = mat;
