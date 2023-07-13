@@ -34,6 +34,7 @@ void GDN_TheWorld_Camera::_bind_methods()
 GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 {
 	m_ready = false;
+	std::string m = TheWorld_Utils::MeshCacheBuffer::generateNewMeshId();
 	m_isActive = false;
 	m_instanceId = -1;
 	m_PlayerCamera = false;

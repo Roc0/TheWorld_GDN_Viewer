@@ -459,7 +459,9 @@ namespace TheWorld_ClientServer
 					return;
 				}
 				plog::Severity sev = plog::Severity(*i);
+
 				TheWorld_MapManager::MapManager::setLogMaxSeverity(sev);
+
 				float gridStepInWU = m_threadContextPool->getCurrentContext()->getMapManager()->gridStepInWU();
 				std::string mapName = m_threadContextPool->getCurrentContext()->getMapManager()->getMapName();
 				reply->replyParam(gridStepInWU);
@@ -603,6 +605,42 @@ namespace TheWorld_ClientServer
 				reply->replyParam(f);
 				
 				reply->replyParam(meshBuffer);
+
+				reply->replyComplete();
+			}
+			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYLEVEL)
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("DeployLevel ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYLEVEL);
+
+				int* level = std::get_if<int>(&reply->m_inputParams[0]);
+				if (level == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be an int");
+					return;
+				}
+
+				size_t* numVerticesPerSize = std::get_if<size_t>(&reply->m_inputParams[1]);
+				if (numVerticesPerSize == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Second param must be a size_t");
+					return;
+				}
+
+				m_threadContextPool->getCurrentContext()->getMapManager()->alignDiskCacheAndDB(*numVerticesPerSize, *level);
+
+				reply->replyComplete();
+			}
+			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYWORLD)
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("DeployWorld 0a ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYWORLD);
+
+				reply->replyComplete();
+			}
+			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD)
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("UndeployWorld ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD);
+
+				m_threadContextPool->getCurrentContext()->getMapManager()->stopAlignDiskCacheAndDBTasks();
 
 				reply->replyComplete();
 			}

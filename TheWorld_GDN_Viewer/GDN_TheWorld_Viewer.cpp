@@ -437,9 +437,18 @@ bool GDN_TheWorld_Viewer::init(void)
 
 void GDN_TheWorld_Viewer::preDeinit(void)
 {
+	enum class TheWorldStatus status = Globals()->status();
+	if ((int)status >= (int)TheWorldStatus::worldDeployInProgress)
+	{
+		if ((int)status < (int)TheWorldStatus::worldUnDeployInProgress)
+			undeployWorld();
+		while ((int)Globals()->status() >= (int)TheWorldStatus::worldDeployInProgress)
+		{
+			Sleep(5);
+		}
+	}
+
 	m_streamerThreadRequiredExit = true;
-	//if (m_streamerThread.joinable())
-	//	m_streamerThread.join();
 }
 
 bool GDN_TheWorld_Viewer::canDeinit(void)
@@ -457,6 +466,7 @@ void GDN_TheWorld_Viewer::deinit(void)
 		GDN_TheWorld_Globals* globals = Globals();
 		if (globals != nullptr)
 			globals->debugPrint("Exit world");
+
 		//if (m_initialWordlViewerPosSet)
 		//{
 		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
@@ -759,6 +769,254 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
 			if (editModeUIControl != nullptr && editModeUIControl->initilized())
 				editModeUIControl->replyFromServer(reply);
+		}
+		else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYLEVEL)
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 0.2 ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYLEVEL);
+
+			ClientServerVariant v = reply.getInputParam(0);
+			const auto _level(std::get_if<int>(&v));
+			if (_level == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a int as first input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			int level = *_level;
+
+			v = reply.getInputParam(1);
+			const auto _numVerticesPerSize(std::get_if<size_t>(&v));
+			if (_numVerticesPerSize == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a size_t as second input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			size_t numVerticesPerSize = *_numVerticesPerSize;
+
+			v = reply.getInputParam(2);
+			const auto _gridStepInWU(std::get_if<float>(&v));
+			if (_gridStepInWU == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as third input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float gridStepInWU = *_gridStepInWU;
+
+			v = reply.getInputParam(3);
+			const auto _setCamera(std::get_if<bool>(&v));
+			if (_setCamera == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a bool as forth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			bool setCamera = *_setCamera;
+
+			v = reply.getInputParam(4);
+			const auto _cameraPosX(std::get_if<float>(&v));
+			if (_cameraPosX == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as fifth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPosX = *_cameraPosX;
+
+			v = reply.getInputParam(5);
+			const auto _cameraPosY(std::get_if<float>(&v));
+			if (_cameraPosY == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as sixth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPosY = *_cameraPosY;
+
+			v = reply.getInputParam(6);
+			const auto _cameraPosZ(std::get_if<float>(&v));
+			if (_cameraPosZ == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as seventh input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPosZ = *_cameraPosZ;
+
+			v = reply.getInputParam(7);
+			const auto _cameraDistanceFromTerrainForced(std::get_if<float>(&v));
+			if (_cameraDistanceFromTerrainForced == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as eight input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraDistanceFromTerrainForced = *_cameraDistanceFromTerrainForced;
+
+			v = reply.getInputParam(8);
+			const auto _cameraYaw(std::get_if<float>(&v));
+			if (_cameraYaw == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as ninth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraYaw = *_cameraYaw;
+
+			v = reply.getInputParam(9);
+			const auto _cameraPitch(std::get_if<float>(&v));
+			if (_cameraPitch == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as tenth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPitch = *_cameraPitch;
+
+			v = reply.getInputParam(10);
+			const auto _cameraRoll(std::get_if<float>(&v));
+			if (_cameraRoll == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as eleventh input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraRoll = *_cameraRoll;
+
+			QuadrantPos quadrantPos(cameraPosX, cameraPosZ, level, numVerticesPerSize, gridStepInWU);
+			quadrantPos.setTag("Camera");
+
+			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+
+			m_mapQuadTree.clear();
+			m_mapQuadTree[quadrantPos] = make_unique<QuadTree>(this, quadrantPos);
+			m_mapQuadTree[quadrantPos]->init(cameraPosX, cameraPosY, cameraPosZ, cameraYaw, cameraPitch, cameraRoll, true, cameraDistanceFromTerrainForced);
+		}
+		else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYWORLD)
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 0.1 ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYWORLD);
+
+			ClientServerVariant v = reply.getInputParam(0);
+			const auto _level(std::get_if<int>(&v));
+			if (_level == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a int as first input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			int level = *_level;
+
+			v = reply.getInputParam(1);
+			const auto _numVerticesPerSize(std::get_if<size_t>(&v));
+			if (_numVerticesPerSize == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a size_t as second input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			size_t numVerticesPerSize = *_numVerticesPerSize;
+
+			v = reply.getInputParam(2);
+			const auto _gridStepInWU(std::get_if<float>(&v));
+			if (_gridStepInWU == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as third input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float gridStepInWU = *_gridStepInWU;
+
+			v = reply.getInputParam(3);
+			const auto _setCamera(std::get_if<bool>(&v));
+			if (_setCamera == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a bool as forth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			bool setCamera = *_setCamera;
+
+			v = reply.getInputParam(4);
+			const auto _cameraPosX(std::get_if<float>(&v));
+			if (_cameraPosX == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as fifth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPosX = *_cameraPosX;
+
+			v = reply.getInputParam(5);
+			const auto _cameraPosY(std::get_if<float>(&v));
+			if (_cameraPosY == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as sixth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPosY = *_cameraPosY;
+
+			v = reply.getInputParam(6);
+			const auto _cameraPosZ(std::get_if<float>(&v));
+			if (_cameraPosZ == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as seventh input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPosZ = *_cameraPosZ;
+
+			v = reply.getInputParam(7);
+			const auto _cameraDistanceFromTerrainForced(std::get_if<float>(&v));
+			if (_cameraDistanceFromTerrainForced == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as eight input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraDistanceFromTerrainForced = *_cameraDistanceFromTerrainForced;
+
+			v = reply.getInputParam(8);
+			const auto _cameraYaw(std::get_if<float>(&v));
+			if (_cameraYaw == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as ninth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraYaw = *_cameraYaw;
+
+			v = reply.getInputParam(9);
+			const auto _cameraPitch(std::get_if<float>(&v));
+			if (_cameraPitch == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as tenth input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraPitch = *_cameraPitch;
+
+			v = reply.getInputParam(10);
+			const auto _cameraRoll(std::get_if<float>(&v));
+			if (_cameraRoll == NULL)
+			{
+				std::string m = std::string("Reply MapManager::deployWorld did not return a float as eleventh input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float cameraRoll = *_cameraRoll;
+
+			Globals()->Client()->MapManagerDeployLevel(level, numVerticesPerSize, gridStepInWU, setCamera, cameraPosX, cameraPosY, cameraPosZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
+		}
+		else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD)
+		{
+			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+		
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				if (!itQuadTree->second->isValid())
+					continue;
+
+				if (!itQuadTree->second->isVisible())
+					continue;
+
+				Chunk::ExitWorldChunkAction action;
+				itQuadTree->second->ForAllChunk(action);
+
+				itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
+				//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
+			}
+
+			m_mapQuadTree.clear();
+
+			if (Globals()->connectedToServer() && m_initialized)
+				Globals()->setStatus(TheWorldStatus::sessionInitialized);
+			else if (Globals()->connectedToServer())
+				Globals()->setStatus(TheWorldStatus::connectedToServer);
+			else if (Globals()->initialized())
+				Globals()->setStatus(TheWorldStatus::initialized);
+			else
+				Globals()->setStatus(TheWorldStatus::uninitialized);
+
 		}
 		else
 		{
@@ -3241,17 +3499,22 @@ void GDN_TheWorld_Viewer::deployWorld(float cameraX, float cameraY, float camera
 
 		m_numWorldVerticesPerSize = Globals()->heightmapResolution() + 1;
 		
-		float _gridStepInWU = Globals()->gridStepInWU();
-		QuadrantPos quadrantPos(cameraX, cameraZ, level, m_numWorldVerticesPerSize, _gridStepInWU);
-		quadrantPos.setTag("Camera");
-
-		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-
-		m_mapQuadTree.clear();
-		m_mapQuadTree[quadrantPos] = make_unique<QuadTree>(this, quadrantPos);
-		m_mapQuadTree[quadrantPos]->init(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll, true, cameraDistanceFromTerrainForced);
-
 		Globals()->setStatus(TheWorldStatus::worldDeployInProgress);
+
+		float _gridStepInWU = Globals()->gridStepInWU();
+
+		Globals()->Client()->MapManagerDeployWorld(level, (size_t)m_numWorldVerticesPerSize, _gridStepInWU, true, cameraX, cameraY, cameraZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
+		
+		//Globals()->Client()->MapManagerDeployLevel(level, (size_t)m_numWorldVerticesPerSize, _gridStepInWU, true, cameraX, cameraY, cameraZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
+
+		//QuadrantPos quadrantPos(cameraX, cameraZ, level, m_numWorldVerticesPerSize, _gridStepInWU);
+		//quadrantPos.setTag("Camera");
+
+		//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+
+		//m_mapQuadTree.clear();
+		//m_mapQuadTree[quadrantPos] = make_unique<QuadTree>(this, quadrantPos);
+		//m_mapQuadTree[quadrantPos]->init(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll, true, cameraDistanceFromTerrainForced);
 	}
 	catch (TheWorld_MapManager::MapManagerException& e)
 	{
@@ -3274,16 +3537,16 @@ void GDN_TheWorld_Viewer::undeployWorld(void)
 {
 	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
 
-	m_mapQuadTree.clear();
+	enum class TheWorldStatus status = Globals()->status();
+	if ((int)status < (int)TheWorldStatus::worldDeployInProgress)
+		return;
 	
-	if (Globals()->connectedToServer() && m_initialized)
-		Globals()->setStatus(TheWorldStatus::sessionInitialized);
-	else if (Globals()->connectedToServer())
-		Globals()->setStatus(TheWorldStatus::connectedToServer);
-	else if (Globals()->initialized())
-		Globals()->setStatus(TheWorldStatus::initialized);
-	else
-		Globals()->setStatus(TheWorldStatus::uninitialized);
+	if ((int)status >= (int)TheWorldStatus::worldUnDeployInProgress)
+		return;
+
+	Globals()->setStatus(TheWorldStatus::worldUnDeployInProgress);
+
+	Globals()->Client()->MapManagerUndeployWorld();
 }
 
 Node3D* GDN_TheWorld_Viewer::getWorldNode(void)

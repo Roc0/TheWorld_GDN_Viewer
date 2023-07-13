@@ -1343,7 +1343,7 @@ void GDN_TheWorld_Edit::editModeSave(void)
 			QuadrantPos quadrantPos = item.first;
 			TheWorld_Utils::MemoryBuffer buffer;
 			cache.setBufferFromCacheQuadrantData(quadrantPos.getNumVerticesPerSize(), cacheQuadrantData, buffer);
-			cache.writeBufferToCache(buffer);
+			cache.writeBufferToDiskCache(buffer);
 
 			m_completedItems++;
 			size_t partialCount = m_actionClock.partialDuration().count();
@@ -1459,7 +1459,7 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 			int lvl = pos.getLevel();
 			quadTree->Viewer()->Globals()->Client()->MapManagerUploadBuffer(lowerXGridVertex, lowerZGridVertex, numVerticesPerSize, gridStepinWU, lvl, buffer);
 
-			cache.writeBufferToCache(buffer);
+			cache.writeBufferToDiskCache(buffer);
 
 			//quadTree->getQuadrant()->setNeedUploadToServer(false);
 		}

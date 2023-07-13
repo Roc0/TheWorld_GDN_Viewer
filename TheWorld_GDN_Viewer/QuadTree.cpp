@@ -1936,7 +1936,7 @@ void Quadrant::populateGridVertices(float cameraX, float cameraY, float cameraZ,
 
 	// look for cache in file system
 	TheWorld_Utils::MeshCacheBuffer cache = getMeshCacheBuffer();
-	std::string meshId = cache.getMeshIdFromCache();
+	std::string meshId = cache.getMeshIdFromDisk();
 
 	if (meshId.length() > 0)
 	{
@@ -1989,7 +1989,7 @@ void Quadrant::refreshGridVerticesFromServer(std::string& buffer, std::string me
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1.2 ") + __FUNCTION__, "m_cache.readMapsFromMeshCache");
 
-		bool empty = m_cache.refreshMapsFromCache(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer);
+		bool empty = m_cache.refreshMapsFromDisk(m_quadrantPos.getNumVerticesPerSize(), m_quadrantPos.getGridStepInWU(), meshId, terrainEditValuesBuffer, minAltitude, maxAltitude, m_float16HeigthsBuffer, m_float32HeigthsBuffer, m_normalsBuffer, m_splatmapBuffer, m_colormapBuffer, m_globalmapBuffer);
 		if (terrainEditValuesBuffer.size() > 0)
 			getTerrainEdit()->deserialize(terrainEditValuesBuffer);
 

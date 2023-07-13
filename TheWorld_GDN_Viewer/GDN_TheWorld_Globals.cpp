@@ -73,7 +73,7 @@ namespace godot
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_SETLOGMAXSEVERITY, ref, inputParams, THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, (TheWorld_ClientServer::ClientCallback*)m_globals);
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
 		{
-			std::string m = std::string("ClientInterface::execMethodSync ==> MapManager::MapManagerSetLogMaxSeverity error ") + std::to_string(rc);
+			std::string m = std::string("ClientInterface::execMethodSync ==> " THEWORLD_CLIENTSERVER_METHOD_MAPM_SETLOGMAXSEVERITY " error ") + std::to_string(rc);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(),"", rc));
 		}
 	}
@@ -87,7 +87,7 @@ namespace godot
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_SERVER_INITIALIZATION, ref, inputParams, THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, (TheWorld_ClientServer::ClientCallback*)m_globals);
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
 		{
-			std::string m = std::string("ClientInterface::execMethodAsync ==> Server::initializeSession error ") + std::to_string(rc);
+			std::string m = std::string("ClientInterface::execMethodAsync ==> " THEWORLD_CLIENTSERVER_METHOD_SERVER_INITIALIZATION " error ") + std::to_string(rc);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
 		}
 	}
@@ -114,7 +114,7 @@ namespace godot
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES, ref, inputParams, THEWORLD_CLIENTSERVER_MAPVERTICES_TIME_TO_LIVE, m_globals->Viewer());
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
 		{
-			std::string m = std::string("ClientInterface::execMethodSync ==> MapManager::getVertices error ") + std::to_string(rc);
+			std::string m = std::string("ClientInterface::execMethodSync ==> " THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES " error ") + std::to_string(rc);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
 		}
 	}
@@ -133,7 +133,68 @@ namespace godot
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER, ref, inputParams, THEWORLD_CLIENTSERVER_MAPVERTICES_TIME_TO_LIVE, m_globals->Viewer());
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
 		{
-			std::string m = std::string("ClientInterface::execMethodSync ==> MapManager::getVertices error ") + std::to_string(rc);
+			std::string m = std::string("ClientInterface::execMethodSync ==> " THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER " error ") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
+		}
+	}
+
+	void GDN_TheWorld_Globals_Client::MapManagerDeployLevel(int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll)
+	{
+		std::vector<ClientServerVariant> replyParams;
+		std::vector<ClientServerVariant> inputParams;
+		inputParams.push_back(level);
+		inputParams.push_back(numVerticesPerSize);
+		inputParams.push_back(gridStepinWU);
+		inputParams.push_back(setCamera);
+		inputParams.push_back(cameraX);
+		inputParams.push_back(cameraY);
+		inputParams.push_back(cameraZ);
+		inputParams.push_back(cameraDistanceFromTerrainForced);
+		inputParams.push_back(cameraYaw);
+		inputParams.push_back(cameraPitch);
+		inputParams.push_back(cameraRoll);
+		std::string ref;
+		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYLEVEL, ref, inputParams, THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, m_globals->Viewer());
+		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+		{
+			std::string m = std::string("ClientInterface::execMethodSync ==> " THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYLEVEL " error ") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
+		}
+	}
+
+	void GDN_TheWorld_Globals_Client::MapManagerDeployWorld(int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll)
+	{
+		std::vector<ClientServerVariant> replyParams;
+		std::vector<ClientServerVariant> inputParams;
+		inputParams.push_back(level);
+		inputParams.push_back(numVerticesPerSize);
+		inputParams.push_back(gridStepinWU);
+		inputParams.push_back(setCamera);
+		inputParams.push_back(cameraX);
+		inputParams.push_back(cameraY);
+		inputParams.push_back(cameraZ);
+		inputParams.push_back(cameraDistanceFromTerrainForced);
+		inputParams.push_back(cameraYaw);
+		inputParams.push_back(cameraPitch);
+		inputParams.push_back(cameraRoll);
+		std::string ref;
+		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYWORLD, ref, inputParams, THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, m_globals->Viewer());
+		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+		{
+			std::string m = std::string("ClientInterface::execMethodSync ==> " THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYWORLD " error ") + std::to_string(rc);
+			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
+		}
+	}
+
+	void GDN_TheWorld_Globals_Client::MapManagerUndeployWorld(void)
+	{
+		std::vector<ClientServerVariant> replyParams;
+		std::vector<ClientServerVariant> inputParams;
+		std::string ref;
+		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD, ref, inputParams, THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, m_globals->Viewer());
+		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
+		{
+			std::string m = std::string("ClientInterface::execMethodSync ==> " THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD " error ") + std::to_string(rc);
 			throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str(), "", rc));
 		}
 	}

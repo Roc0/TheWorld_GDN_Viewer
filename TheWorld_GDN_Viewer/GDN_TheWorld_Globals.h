@@ -52,7 +52,8 @@ namespace godot
 		connectedToServer = 2,
 		sessionInitialized = 3,
 		worldDeployInProgress = 4,
-		worldDeployed = 5
+		worldDeployed = 5,
+		worldUnDeployInProgress = 100
 	};
 
 	static bool equal(Vector3 v1, Vector3 v2, const float epsilon = 0.00001)
@@ -69,6 +70,10 @@ namespace godot
 		void ServerInitializeSession(plog::Severity sev);
 		void MapManagerGetVertices(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, bool setCamera, float cameraDistanceFromTerrainForced, std::string meshId);
 		void MapManagerUploadBuffer(float lowerXGridVertex, float lowerZGridVertex, int numVerticesPerSize, float gridStepinWU, int level, std::string buffer);
+		void MapManagerDeployLevel(int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll);
+		void MapManagerDeployWorld(int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll);
+		void MapManagerUndeployWorld(void);
+
 
 	private:
 		//GDN_TheWorld_Globals* Globals(bool useCache);
@@ -151,7 +156,6 @@ namespace godot
 		void prepareDisconnectFromServer(void);
 		bool canDisconnectFromServer(void);
 		void disconnectFromServer(void);
-		bool resize(int chunkSizeShift, int heightmapResolutionShift, bool force = false);
 
 		static std::string getClientDataDir(void);
 
@@ -310,6 +314,8 @@ namespace godot
 			return engine->is_editor_hint();
 			//return m_isInEditor;	// it should be fixed in https://github.com/godotengine/godot/pull/77633 commit 31/05
 		}
+
+		bool resize(int chunkSizeShift, int heightmapResolutionShift, bool force = false);
 
 		// WORLD GRID
 		// The world is rapresented by a grid map (World Grid) streamed from external source which defines also the distance of each vertex of the grid map in WUs. Such a grid is a flat grid of vertices whose elevations
@@ -480,6 +486,8 @@ namespace godot
 		//static size_t s_elapsed3;
 		//static size_t s_elapsed4;
 		//static size_t s_elapsed5;
+
+	private:
 
 	private:
 		bool m_initialized;
