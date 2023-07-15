@@ -129,6 +129,7 @@ void GDN_TheWorld_Viewer::_bind_methods()
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
 	m_initialized = false;
+	m_isInEditor = false;
 	m_ready = false;
 	m_desiderdLookDev = ShaderTerrainData::LookDev::NotSet;
 	m_desideredLookDevChanged = false;
@@ -316,6 +317,8 @@ bool GDN_TheWorld_Viewer::init(void)
 	if (globals == nullptr)
 		return false;
 
+	m_isInEditor = IS_EDITOR_HINT();
+	
 	// From _notification ENTER_WORLD
 	printKeyboardMapping();
 
@@ -873,7 +876,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			}
 			float cameraRoll = *_cameraRoll;
 
-			QuadrantPos quadrantPos(cameraPosX, cameraPosZ, level, numVerticesPerSize, gridStepInWU);
+			QuadrantPos quadrantPos(cameraPosX, cameraPosZ, level, (int)numVerticesPerSize, gridStepInWU);
 			quadrantPos.setTag("Camera");
 
 			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
@@ -985,7 +988,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			}
 			float cameraRoll = *_cameraRoll;
 
-			Globals()->Client()->MapManagerDeployLevel(level, numVerticesPerSize, gridStepInWU, setCamera, cameraPosX, cameraPosY, cameraPosZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
+			Globals()->Client()->MapManagerDeployLevel(m_isInEditor, level, numVerticesPerSize, gridStepInWU, setCamera, cameraPosX, cameraPosY, cameraPosZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
 		}
 		else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD)
 		{
@@ -3503,7 +3506,7 @@ void GDN_TheWorld_Viewer::deployWorld(float cameraX, float cameraY, float camera
 
 		float _gridStepInWU = Globals()->gridStepInWU();
 
-		Globals()->Client()->MapManagerDeployWorld(level, (size_t)m_numWorldVerticesPerSize, _gridStepInWU, true, cameraX, cameraY, cameraZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
+		Globals()->Client()->MapManagerDeployWorld(m_isInEditor, level, (size_t)m_numWorldVerticesPerSize, _gridStepInWU, true, cameraX, cameraY, cameraZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
 		
 		//Globals()->Client()->MapManagerDeployLevel(level, (size_t)m_numWorldVerticesPerSize, _gridStepInWU, true, cameraX, cameraY, cameraZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
 
@@ -3546,7 +3549,7 @@ void GDN_TheWorld_Viewer::undeployWorld(void)
 
 	Globals()->setStatus(TheWorldStatus::worldUnDeployInProgress);
 
-	Globals()->Client()->MapManagerUndeployWorld();
+	Globals()->Client()->MapManagerUndeployWorld(m_isInEditor);
 }
 
 Node3D* GDN_TheWorld_Viewer::getWorldNode(void)

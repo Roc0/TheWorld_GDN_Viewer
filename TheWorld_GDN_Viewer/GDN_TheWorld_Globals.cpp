@@ -78,10 +78,11 @@ namespace godot
 		}
 	}
 
-	void GDN_TheWorld_Globals_Client::ServerInitializeSession(plog::Severity sev)
+	void GDN_TheWorld_Globals_Client::ServerInitializeSession(bool isInEditor, plog::Severity sev)
 	{
 		std::vector<ClientServerVariant> replyParams;
 		std::vector<ClientServerVariant> inputParams;
+		inputParams.push_back(isInEditor);
 		inputParams.push_back((int)sev);
 		std::string ref;
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_SERVER_INITIALIZATION, ref, inputParams, THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, (TheWorld_ClientServer::ClientCallback*)m_globals);
@@ -92,7 +93,7 @@ namespace godot
 		}
 	}
 
-	void GDN_TheWorld_Globals_Client::MapManagerGetVertices(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, bool setCamera, float cameraDistanceFromTerrainForced, std::string meshId)
+	void GDN_TheWorld_Globals_Client::MapManagerGetVertices(bool isInEditor, float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, bool setCamera, float cameraDistanceFromTerrainForced, std::string meshId)
 	{
 		std::vector<ClientServerVariant> replyParams;
 		std::vector<ClientServerVariant> inputParams;
@@ -110,6 +111,7 @@ namespace godot
 		inputParams.push_back(cameraYaw);
 		inputParams.push_back(cameraPitch);
 		inputParams.push_back(cameraRoll);
+		inputParams.push_back(isInEditor);
 		std::string ref;
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES, ref, inputParams, THEWORLD_CLIENTSERVER_MAPVERTICES_TIME_TO_LIVE, m_globals->Viewer());
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
@@ -119,7 +121,7 @@ namespace godot
 		}
 	}
 
-	void GDN_TheWorld_Globals_Client::MapManagerUploadBuffer(float lowerXGridVertex, float lowerZGridVertex, int numVerticesPerSize, float gridStepinWU, int level, std::string buffer)
+	void GDN_TheWorld_Globals_Client::MapManagerUploadBuffer(bool isInEditor, float lowerXGridVertex, float lowerZGridVertex, int numVerticesPerSize, float gridStepinWU, int level, std::string buffer)
 	{
 		std::vector<ClientServerVariant> replyParams;
 		std::vector<ClientServerVariant> inputParams;
@@ -129,6 +131,7 @@ namespace godot
 		inputParams.push_back(gridStepinWU);
 		inputParams.push_back(level);
 		inputParams.push_back(buffer);
+		inputParams.push_back(isInEditor);
 		std::string ref;
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER, ref, inputParams, THEWORLD_CLIENTSERVER_MAPVERTICES_TIME_TO_LIVE, m_globals->Viewer());
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
@@ -138,7 +141,7 @@ namespace godot
 		}
 	}
 
-	void GDN_TheWorld_Globals_Client::MapManagerDeployLevel(int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll)
+	void GDN_TheWorld_Globals_Client::MapManagerDeployLevel(bool isInEditor, int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll)
 	{
 		std::vector<ClientServerVariant> replyParams;
 		std::vector<ClientServerVariant> inputParams;
@@ -153,6 +156,7 @@ namespace godot
 		inputParams.push_back(cameraYaw);
 		inputParams.push_back(cameraPitch);
 		inputParams.push_back(cameraRoll);
+		inputParams.push_back(isInEditor);
 		std::string ref;
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYLEVEL, ref, inputParams, THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, m_globals->Viewer());
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
@@ -162,7 +166,7 @@ namespace godot
 		}
 	}
 
-	void GDN_TheWorld_Globals_Client::MapManagerDeployWorld(int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll)
+	void GDN_TheWorld_Globals_Client::MapManagerDeployWorld(bool isInEditor, int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll)
 	{
 		std::vector<ClientServerVariant> replyParams;
 		std::vector<ClientServerVariant> inputParams;
@@ -177,6 +181,7 @@ namespace godot
 		inputParams.push_back(cameraYaw);
 		inputParams.push_back(cameraPitch);
 		inputParams.push_back(cameraRoll);
+		inputParams.push_back(isInEditor);
 		std::string ref;
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYWORLD, ref, inputParams, THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, m_globals->Viewer());
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
@@ -186,10 +191,11 @@ namespace godot
 		}
 	}
 
-	void GDN_TheWorld_Globals_Client::MapManagerUndeployWorld(void)
+	void GDN_TheWorld_Globals_Client::MapManagerUndeployWorld(bool isInEditor)
 	{
 		std::vector<ClientServerVariant> replyParams;
 		std::vector<ClientServerVariant> inputParams;
+		inputParams.push_back(isInEditor);
 		std::string ref;
 		int rc = execMethodAsync(THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD, ref, inputParams, THEWORLD_CLIENTSERVER_DEFAULT_TIME_TO_LIVE, m_globals->Viewer());
 		if (rc != THEWORLD_CLIENTSERVER_RC_OK)
@@ -449,7 +455,7 @@ namespace godot
 
 		infoPrint("GDN_TheWorld_Globals::connectToServer DONE!");
 
-		m_client->ServerInitializeSession(sev);
+		m_client->ServerInitializeSession(IS_EDITOR_HINT(), sev);
 	}
 
 	void GDN_TheWorld_Globals::prepareDisconnectFromServer(void)

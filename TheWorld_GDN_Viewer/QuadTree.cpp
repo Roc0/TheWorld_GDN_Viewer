@@ -1941,7 +1941,7 @@ void Quadrant::populateGridVertices(float cameraX, float cameraY, float cameraZ,
 	if (meshId.length() > 0)
 	{
 		//clock.tick();
-		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
+		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(m_quadTree->Viewer()->isInEditor(), cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
 																		 lowerXGridVertex, lowerZGridVertex,
 																		 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
 																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrainForced, meshId);
@@ -1951,7 +1951,7 @@ void Quadrant::populateGridVertices(float cameraX, float cameraY, float cameraZ,
 	else
 	{
 		//clock.tick();
-		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
+		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(m_quadTree->Viewer()->isInEditor(), cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
 																		 lowerXGridVertex, lowerZGridVertex,
 																		 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
 																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrainForced, meshId);

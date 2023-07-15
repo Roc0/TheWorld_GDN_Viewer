@@ -67,12 +67,12 @@ namespace godot
 		GDN_TheWorld_Globals_Client(GDN_TheWorld_Globals* globals, plog::Severity sev);
 
 		void MapManagerSetLogMaxSeverity(plog::Severity sev);
-		void ServerInitializeSession(plog::Severity sev);
-		void MapManagerGetVertices(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, bool setCamera, float cameraDistanceFromTerrainForced, std::string meshId);
-		void MapManagerUploadBuffer(float lowerXGridVertex, float lowerZGridVertex, int numVerticesPerSize, float gridStepinWU, int level, std::string buffer);
-		void MapManagerDeployLevel(int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll);
-		void MapManagerDeployWorld(int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll);
-		void MapManagerUndeployWorld(void);
+		void ServerInitializeSession(bool isInEditor, plog::Severity sev);
+		void MapManagerGetVertices(bool isInEditor, float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, float lowerXGridVertex, float lowerZGridVertex, int anchorType, int numVerticesPerSize, float gridStepinWU, int level, bool setCamera, float cameraDistanceFromTerrainForced, std::string meshId);
+		void MapManagerUploadBuffer(bool isInEditor, float lowerXGridVertex, float lowerZGridVertex, int numVerticesPerSize, float gridStepinWU, int level, std::string buffer);
+		void MapManagerDeployLevel(bool isInEditor, int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll);
+		void MapManagerDeployWorld(bool isInEditor, int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll);
+		void MapManagerUndeployWorld(bool isInEditor);
 
 
 	private:

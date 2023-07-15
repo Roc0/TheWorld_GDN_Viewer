@@ -369,6 +369,11 @@ namespace godot
 			return ret;
 		}
 
+		bool isInEditor(void)
+		{
+			return m_isInEditor;
+		}
+
 	private:
 		void _findChildNodes(godot::Array& foundNodes, godot::Array& searchNodes, String searchClass);
 		void onTransformChanged(void);
@@ -388,6 +393,7 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_isInEditor;
 		bool m_ready;
 		bool m_useVisualServer;
 		bool m_altPressed;

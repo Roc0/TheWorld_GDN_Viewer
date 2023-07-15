@@ -1457,7 +1457,7 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 			int numVerticesPerSize = pos.getNumVerticesPerSize();
 			float gridStepinWU = pos.getGridStepInWU();
 			int lvl = pos.getLevel();
-			quadTree->Viewer()->Globals()->Client()->MapManagerUploadBuffer(lowerXGridVertex, lowerZGridVertex, numVerticesPerSize, gridStepinWU, lvl, buffer);
+			quadTree->Viewer()->Globals()->Client()->MapManagerUploadBuffer(quadTree->Viewer()->isInEditor(), lowerXGridVertex, lowerZGridVertex, numVerticesPerSize, gridStepinWU, lvl, buffer);
 
 			cache.writeBufferToDiskCache(buffer);
 

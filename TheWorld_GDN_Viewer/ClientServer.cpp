@@ -452,7 +452,7 @@ namespace TheWorld_ClientServer
 			}
 			else if (method == THEWORLD_CLIENTSERVER_METHOD_SERVER_INITIALIZATION)
 			{
-				int* i = std::get_if<int>(&reply->m_inputParams[0]);
+				int* i = std::get_if<int>(&reply->m_inputParams[1]);
 				if (i == nullptr)
 				{
 					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be an INT");
@@ -626,7 +626,14 @@ namespace TheWorld_ClientServer
 					return;
 				}
 
-				m_threadContextPool->getCurrentContext()->getMapManager()->alignDiskCacheAndDB(*numVerticesPerSize, *level);
+				bool* isInEditor = std::get_if<bool>(&reply->m_inputParams[11]);
+				if (isInEditor == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Twelveth param must be a bool");
+					return;
+				}
+
+				m_threadContextPool->getCurrentContext()->getMapManager()->alignDiskCacheAndDB(*isInEditor,*numVerticesPerSize, *level);
 
 				reply->replyComplete();
 			}
@@ -640,7 +647,14 @@ namespace TheWorld_ClientServer
 			{
 				TheWorld_Utils::GuardProfiler profiler(std::string("UndeployWorld ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD);
 
-				m_threadContextPool->getCurrentContext()->getMapManager()->stopAlignDiskCacheAndDBTasks();
+				bool* isInEditor = std::get_if<bool>(&reply->m_inputParams[0]);
+				if (isInEditor == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Twelveth param must be a bool");
+					return;
+				}
+
+				m_threadContextPool->getCurrentContext()->getMapManager()->stopAlignDiskCacheAndDBTasks(*isInEditor);
 
 				reply->replyComplete();
 			}
