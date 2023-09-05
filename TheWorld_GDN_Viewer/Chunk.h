@@ -340,7 +340,7 @@ namespace godot
 				m_lod = lod;
 			}
 			~ChunkPos() {}
-			// needed to use an istance of GISPoint as a key in a map (to keep the map sorted by y and by x for equal y)
+			// needed to use an istance of ChunkPos as a key in a map (to keep the map sorted by y and by x for equal y)
 			// first row, second row, ... etc
 			bool operator<(const ChunkPos& pos) const
 			{

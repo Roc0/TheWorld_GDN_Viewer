@@ -1021,6 +1021,88 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 				Globals()->setStatus(TheWorldStatus::uninitialized);
 
 		}
+		else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_SYNC)
+		{
+			ClientServerVariant v = reply.getInputParam(1);
+			const auto _numVerticesPerSize(std::get_if<size_t>(&v));
+			if (_numVerticesPerSize == NULL)
+			{
+				std::string m = std::string("Reply MapManager::sync did not return a size_t as second input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			size_t numVerticesPerSize = *_numVerticesPerSize;
+
+			v = reply.getInputParam(2);
+			const auto _gridStepinWU(std::get_if<float>(&v));
+			if (_gridStepinWU == NULL)
+			{
+				std::string m = std::string("Reply MapManager::sync did not return a float as third input param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			float gridStepinWU = *_gridStepinWU;
+
+			v = reply.getReplyParam(0);
+			const auto _foundUpdatedQuadrant(std::get_if<bool>(&v));
+			if (_foundUpdatedQuadrant == NULL)
+			{
+				std::string m = std::string("Reply MapManager::getVertices did not return a bool as first return param");
+				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+			}
+			bool foundUpdatedQuadrant = *_foundUpdatedQuadrant;
+
+			if (foundUpdatedQuadrant)
+			{
+				v = reply.getReplyParam(1);
+				const auto _level(std::get_if<int>(&v));
+				if (_level == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not return a int as second return param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				int level = *_level;
+
+				v = reply.getReplyParam(2);
+				const auto _lowerXGridVertex(std::get_if<float>(&v));
+				if (_lowerXGridVertex == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not return a float as third return param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float lowerXGridVertex = *_lowerXGridVertex;
+
+				v = reply.getReplyParam(3);
+				const auto _lowerZGridVertex(std::get_if<float>(&v));
+				if (_lowerZGridVertex == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not return a float as forth return param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float lowerZGridVertex = *_lowerZGridVertex;
+
+				std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+
+				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+				{
+					if (!itQuadTree->second->isValid())
+						continue;
+
+					//if (!itQuadTree->second->isVisible())
+					//	continue;
+
+					QuadrantPos pos = itQuadTree->second->getQuadrant()->getPos();
+					if (pos.isInitialized()
+						&& pos.getNumVerticesPerSize() == numVerticesPerSize
+						&& pos.getGridStepInWU() == gridStepinWU
+						&& pos.getLevel() == level
+						&& pos.getLowerXGridVertex() == lowerXGridVertex
+						&& pos.getLowerZGridVertex() == lowerZGridVertex)
+					{
+						itQuadTree->second->setStatus(QuadrantStatus::refreshTerrainDataNeeded);
+						break;
+					}
+				}
+			}
+		}
 		else
 		{
 			Globals()->setStatus(TheWorldStatus::error);
@@ -1799,7 +1881,7 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 	{
 		m_debugDraw = get_viewport()->get_debug_draw();
 
-		// TODORIC
+		// TODORIC view frustum
 		//Ref<Mesh> _mesh = activeCamera->DrawViewFrustum(GDN_TheWorld_Globals::g_color_green);
 		//SpatialMaterial* mat = SpatialMaterial::_new();
 		//mat->set_flag(SpatialMaterial::Flags::FLAG_UNSHADED, true);
@@ -3981,6 +4063,9 @@ void GDN_TheWorld_Viewer::streamer(void)
 					recalcQuadrantsInView();
 					m_recalcQuadrantsInViewNeeded = false;
 				}
+				
+				Globals()->Client()->Sync(isInEditor(), Globals()->numVerticesPerQuadrantSize(), Globals()->gridStepInWU());
+				
 				if (m_dumpRequired)
 				{
 					TheWorld_Utils::GuardProfiler profiler(std::string("streamer 1 ") + __FUNCTION__, "Dump stuff");

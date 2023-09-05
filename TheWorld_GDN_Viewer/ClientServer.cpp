@@ -629,7 +629,7 @@ namespace TheWorld_ClientServer
 				bool* isInEditor = std::get_if<bool>(&reply->m_inputParams[11]);
 				if (isInEditor == nullptr)
 				{
-					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Twelveth param must be a bool");
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Third param must be a bool");
 					return;
 				}
 
@@ -650,11 +650,49 @@ namespace TheWorld_ClientServer
 				bool* isInEditor = std::get_if<bool>(&reply->m_inputParams[0]);
 				if (isInEditor == nullptr)
 				{
-					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Twelveth param must be a bool");
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be a bool");
 					return;
 				}
 
 				m_threadContextPool->getCurrentContext()->getMapManager()->stopAlignDiskCacheAndDBTasks(*isInEditor);
+
+				reply->replyComplete();
+			}
+			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_SYNC)
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("Sync ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_SYNC);
+
+				bool* isInEditor = std::get_if<bool>(&reply->m_inputParams[0]);
+				if (isInEditor == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "First param must be a bool");
+					return;
+				}
+
+				size_t* numVerticesPerSize = std::get_if<size_t>(&reply->m_inputParams[1]);
+				if (numVerticesPerSize == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Second param must be a size_t");
+					return;
+				}
+
+				float* gridStepinWU = std::get_if<float>(&reply->m_inputParams[2]);
+				if (gridStepinWU == nullptr)
+				{
+					reply->replyError(THEWORLD_CLIENTSERVER_RC_INPUT_PARAM_ERROR, "Third param must be a float");
+					return;
+				}
+
+				int level = 0;
+				float lowerXGridVertex = 0.0f;
+				float lowerZGridVertex = 0.0f;
+				bool foundUpdatedQuadrant = false;;
+				m_threadContextPool->getCurrentContext()->getMapManager()->sync(*isInEditor, *numVerticesPerSize, *gridStepinWU, foundUpdatedQuadrant, level, lowerXGridVertex, lowerZGridVertex);
+
+				reply->replyParam(foundUpdatedQuadrant);
+				reply->replyParam(level);
+				reply->replyParam(lowerXGridVertex);
+				reply->replyParam(lowerZGridVertex);
 
 				reply->replyComplete();
 			}

@@ -204,7 +204,7 @@ bool Chunk::isQuadTreeVisible(void)
 	return m_quadTree->isVisible() && m_quadTree->isValid();
 }
 
-// TODORIC Material stuff
+// TODORIC mah Material stuff
 //func set_material(material: Material) :
 //	assert(_mesh_instance != RID())
 //	VisualServer.instance_geometry_set_material_override(\

@@ -902,7 +902,12 @@ namespace godot
 		}
 		bool statusRefreshTerrainDataNeeded(void)
 		{
-			return status() == QuadrantStatus::refreshTerrainDataNeeded;
+			bool b = status() == QuadrantStatus::refreshTerrainDataNeeded;
+			if (b)
+			{
+				b = status() == QuadrantStatus::refreshTerrainDataNeeded;
+			}
+			return b;
 		}
 		bool statusRefreshTerrainDataInProgress(void)
 		{

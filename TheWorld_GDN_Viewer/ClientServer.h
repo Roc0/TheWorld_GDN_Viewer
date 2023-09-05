@@ -43,6 +43,7 @@ namespace TheWorld_ClientServer
 #define THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYWORLD					"MapManager::deployWorld"
 #define THEWORLD_CLIENTSERVER_METHOD_MAPM_DEPLOYLEVEL					"MapManager::deployLevel"
 #define THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD					"MapManager::undeployWorld"
+#define THEWORLD_CLIENTSERVER_METHOD_MAPM_SYNC							"MapManager::sync"
 
 #define THEWORLD_CLIENTSERVER_METHOD_MAPM_SETLOGMAXSEVERITY				"MapManager::setLogMaxSeverity"
 //#define THEWORLD_CLIENTSERVER_METHOD_MAPM_CALCNEXTCOORDGETVERTICES		"MapManager::calcNextCoordOnTheGridInWUs"

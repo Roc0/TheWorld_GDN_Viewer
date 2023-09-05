@@ -1492,7 +1492,7 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 		m_quadTree->getQuadrant()->setGlobalmapUpdated(false);
 	}
 
-	// _update_all_vertical_bounds ???	// TODORIC
+	// _update_all_vertical_bounds ???	// TODORIC mah
 	//	# RGF image where R is min heightand G is max height
 	//	var _chunked_vertical_bounds : = Image.new()	// _chunked_vertical_bounds.create(csize_x, csize_y, false, Image.FORMAT_RGF)
 	//	_update_vertical_bounds(0, 0, _resolution - 1, _resolution - 1)
@@ -1941,7 +1941,7 @@ void Quadrant::populateGridVertices(float cameraX, float cameraY, float cameraZ,
 	if (meshId.length() > 0)
 	{
 		//clock.tick();
-		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(m_quadTree->Viewer()->isInEditor(), cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
+		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetQuadrantVertices(m_quadTree->Viewer()->isInEditor(), cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
 																		 lowerXGridVertex, lowerZGridVertex,
 																		 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
 																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrainForced, meshId);
@@ -1951,7 +1951,7 @@ void Quadrant::populateGridVertices(float cameraX, float cameraY, float cameraZ,
 	else
 	{
 		//clock.tick();
-		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetVertices(m_quadTree->Viewer()->isInEditor(), cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
+		m_quadTree->Viewer()->Globals()->Client()->MapManagerGetQuadrantVertices(m_quadTree->Viewer()->isInEditor(), cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll,
 																		 lowerXGridVertex, lowerZGridVertex,
 																		 1, // TheWorld_MapManager::MapManager::anchorType::upperleftcorner
 																		 numVerticesPerSize, gridStepinWU, lvl, setCamera, cameraDistanceFromTerrainForced, meshId);
