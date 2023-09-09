@@ -10,6 +10,7 @@
 namespace godot
 {
 	class GDN_TheWorld_Globals;
+	class GDN_TheWorld_Viewer;
 	class GDN_Template;
 
 	class GDN_TheWorld_MainNode : public Node
@@ -36,6 +37,7 @@ namespace godot
 		virtual void _input(const Ref<InputEvent>& event) override;
 
 		GDN_TheWorld_Globals* Globals(bool useCache = true);
+		GDN_TheWorld_Viewer* Viewer(bool useCache = true);
 
 	protected:
 		static void _bind_methods();
@@ -44,10 +46,12 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_quitting;
 		bool m_ready;
 		bool m_initInProgress;
 
 		// Node cache
 		GDN_TheWorld_Globals* m_globals;
+		GDN_TheWorld_Viewer* m_viewer;
 	};
 }

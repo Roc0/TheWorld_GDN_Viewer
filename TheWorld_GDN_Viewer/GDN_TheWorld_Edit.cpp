@@ -42,6 +42,7 @@ void GDN_TheWorld_Edit::_bind_methods()
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 {
+	m_quitting = false;
 	m_initialized = false;
 	m_ready = false;
 	m_actionInProgress = false;
@@ -1180,12 +1181,16 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 		}
 	}
 	break;
+	case NOTIFICATION_WM_CLOSE_REQUEST:
+	{
+		m_quitting = true;
+	}
 	case NOTIFICATION_PREDELETE:
 	{
 		if (m_ready && m_viewer != nullptr)
 		{
 			GDN_TheWorld_Globals* globals = m_viewer->Globals();
-			if (globals != nullptr)
+			if (globals != nullptr && !m_quitting)
 				globals->debugPrint("GDN_TheWorld_Edit::_notification (NOTIFICATION_PREDELETE) - Destroy Edit");
 		}
 	}

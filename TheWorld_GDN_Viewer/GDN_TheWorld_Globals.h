@@ -494,9 +494,8 @@ namespace godot
 		//static size_t s_elapsed5;
 
 	private:
-
-	private:
 		bool m_initialized;
+		bool m_quitting;
 		bool m_ready;
 		enum class TheWorldStatus m_status;
 		TheWorld_Utils::TimerMs m_statusChangeClock;

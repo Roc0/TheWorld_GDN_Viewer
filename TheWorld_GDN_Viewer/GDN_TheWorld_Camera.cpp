@@ -33,6 +33,7 @@ void GDN_TheWorld_Camera::_bind_methods()
 
 GDN_TheWorld_Camera::GDN_TheWorld_Camera()
 {
+	m_quitting = false;
 	m_ready = false;
 	std::string m = TheWorld_Utils::MeshCacheBuffer::generateNewMeshId();
 	m_isActive = false;
@@ -122,12 +123,16 @@ void GDN_TheWorld_Camera::_notification(int p_what)
 
 	switch (p_what)
 	{
+	case NOTIFICATION_WM_CLOSE_REQUEST:
+	{
+		m_quitting = true;
+	}
 	case NOTIFICATION_PREDELETE:
 	{
 		if (m_ready)
 		{
 			GDN_TheWorld_Globals* globals = Globals();
-			if (globals != nullptr)
+			if (globals != nullptr && !m_quitting)
 				globals->debugPrint("GDN_TheWorld_Camera::_notification (NOTIFICATION_PREDELETE) - Destroy Camera");
 		}
 	}

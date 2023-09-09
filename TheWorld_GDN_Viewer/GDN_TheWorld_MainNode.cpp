@@ -26,10 +26,12 @@ void GDN_TheWorld_MainNode::_bind_methods()
 
 GDN_TheWorld_MainNode::GDN_TheWorld_MainNode()
 {
+	m_quitting = false;
 	m_initialized = false;
 	m_ready = false;
 	m_initInProgress = false;
-	m_globals = NULL;
+	m_globals = nullptr;
+	m_viewer = nullptr;
 
 	_init();
 }
@@ -60,12 +62,16 @@ void GDN_TheWorld_MainNode::_notification(int p_what)
 {
 	switch (p_what)
 	{
+	case NOTIFICATION_WM_CLOSE_REQUEST:
+	{
+		m_quitting = true;
+	}
 	case NOTIFICATION_PREDELETE:
 	{
 		if (m_ready)
 		{
 			GDN_TheWorld_Globals* globals = Globals();
-			if (globals != nullptr)
+			if (globals != nullptr && !m_quitting)
 				globals->debugPrint("GDN_TheWorld_MainNode::_notification (NOTIFICATION_PREDELETE) - Destroy Main Node");
 		}
 	}
@@ -204,6 +210,9 @@ bool GDN_TheWorld_MainNode::init(Node3D* pWorldMainNode, bool isInEditor)
 	else
 		return false;
 
+	viewer = globals->Viewer(false);
+	viewer = Viewer(false);
+	
 	m_initInProgress = false;
 	m_initialized = true;
 	PLOG_INFO << "TheWorld Main Node Initialized!";
@@ -307,4 +316,20 @@ GDN_TheWorld_Globals* GDN_TheWorld_MainNode::Globals(bool useCache)
 	}
 
 	return m_globals;
+}
+
+GDN_TheWorld_Viewer* GDN_TheWorld_MainNode::Viewer(bool useCache)
+{
+	if (m_viewer == NULL || !useCache)
+	{
+		SceneTree* scene = get_tree();
+		if (!scene)
+			return NULL;
+		Viewport* root = scene->get_root();
+		if (!root)
+			return NULL;
+		m_viewer = Object::cast_to<GDN_TheWorld_Viewer>(root->find_child(THEWORLD_VIEWER_NODE_NAME, true, false));
+	}
+
+	return m_viewer;
 }

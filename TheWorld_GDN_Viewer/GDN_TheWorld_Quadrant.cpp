@@ -8,6 +8,7 @@ namespace godot
 {
 	GDN_TheWorld_Quadrant::GDN_TheWorld_Quadrant()
 	{
+		m_quitting = false;
 		m_quadTree = nullptr;
 		//m_colliderMeshInstance = nullptr;
 		m_initialized = false;
@@ -81,6 +82,10 @@ namespace godot
 	{
 		switch (p_what)
 		{
+		case NOTIFICATION_WM_CLOSE_REQUEST:
+		{
+			m_quitting = true;
+		}
 		case NOTIFICATION_PREDELETE:
 		{
 		}

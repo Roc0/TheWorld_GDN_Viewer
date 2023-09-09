@@ -128,7 +128,9 @@ void GDN_TheWorld_Viewer::_bind_methods()
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
+	m_quitting = false;
 	m_initialized = false;
+	m_initRequired = false;
 	m_isInEditor = false;
 	m_ready = false;
 	m_desiderdLookDev = ShaderTerrainData::LookDev::NotSet;
@@ -433,6 +435,7 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_streamerThread = std::thread(&GDN_TheWorld_Viewer::streamer, this);
 
 	m_initialized = true;
+	m_initRequired = false;
 	PLOG_INFO << "TheWorld Viewer Initialized!";
 
 	return true;
@@ -1365,12 +1368,16 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 
 	switch (p_what)
 	{
+		case NOTIFICATION_WM_CLOSE_REQUEST:
+		{
+			m_quitting = true;
+		}
 		case NOTIFICATION_PREDELETE:
 		{
 			if (m_ready)
 			{
 				GDN_TheWorld_Globals* globals = Globals();
-				if (globals != nullptr)
+				if (globals != nullptr && !m_quitting)
 					globals->debugPrint("GDN_TheWorld_Viewer::_notification (NOTIFICATION_PREDELETE) - Destroy Viewer");
 			}
 	
@@ -1817,6 +1824,12 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 	if (globals == nullptr)
 		return;
 
+	if (initRequired())
+	{
+		init();
+		globals->setStatus(TheWorldStatus::sessionInitialized);
+	}
+	
 	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
@@ -3521,18 +3534,21 @@ godot::Camera3D* GDN_TheWorld_Viewer::getCameraInEditor(void)
 	
 	godot::Camera3D* editorCamera = nullptr;
 
-	Node* editorSceneRootViewport = m_editorInterface->get_edited_scene_root();
-	
-	godot::Array foundNodes;
-	//godot::Array children = get_tree()->get_edited_scene_root()->get_children();
-	godot::Array children = editorSceneRootViewport->get_children();
-	int64_t ___size = children.size();	// DEBUG
-	if (!children.is_empty())
-		_findChildNodes(foundNodes, children, "GDN_TheWorld_Camera");
+	if (m_editorInterface != nullptr)
+	{
+		Node* editorSceneRootViewport = m_editorInterface->get_edited_scene_root();
 
-	___size = foundNodes.size();	// DEBUG
-	if (!foundNodes.is_empty())
-		editorCamera = godot::Object::cast_to<godot::Camera3D>(foundNodes[0]);
+		godot::Array foundNodes;
+		//godot::Array children = get_tree()->get_edited_scene_root()->get_children();
+		godot::Array children = editorSceneRootViewport->get_children();
+		int64_t ___size = children.size();	// DEBUG
+		if (!children.is_empty())
+			_findChildNodes(foundNodes, children, "GDN_TheWorld_Camera");
+
+		___size = foundNodes.size();	// DEBUG
+		if (!foundNodes.is_empty())
+			editorCamera = godot::Object::cast_to<godot::Camera3D>(foundNodes[0]);
+	}
 
 	return editorCamera;
 }

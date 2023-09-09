@@ -223,6 +223,7 @@ namespace godot
 
 	GDN_TheWorld_Globals::GDN_TheWorld_Globals()
 	{
+		m_quitting = false;
 		m_initialized = false;
 		m_ready = false;
 		setStatus(TheWorldStatus::uninitialized);
@@ -320,9 +321,11 @@ namespace godot
 				}
 				m_mapName = *ptr1;
 
-				Viewer()->init();
+				Viewer()->initRequired(true);
 
-				setStatus(TheWorldStatus::sessionInitialized);
+				//Viewer()->init();
+				
+				//setStatus(TheWorldStatus::sessionInitialized);
 			}
 			else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_SETLOGMAXSEVERITY)
 			{
@@ -526,9 +529,13 @@ namespace godot
 	{
 		switch (p_what)
 		{
+		case NOTIFICATION_WM_CLOSE_REQUEST:
+		{
+			m_quitting = true;
+		}
 		case NOTIFICATION_PREDELETE:
 		{
-			if (m_ready)
+			if (m_ready && !m_quitting)
 			{
 				debugPrint("GDN_TheWorld_Globals::_notification (NOTIFICATION_PREDELETE) - Destroy Globals");
 			}

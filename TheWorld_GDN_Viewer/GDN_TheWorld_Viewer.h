@@ -72,6 +72,14 @@ namespace godot
 	public:
 		GDN_TheWorld_Viewer();
 		~GDN_TheWorld_Viewer();
+		bool initRequired(void)
+		{
+			return m_initRequired;
+		};
+		void initRequired(bool b)
+		{
+			m_initRequired = b;
+		};
 		bool init(void);
 		bool canDeinit(void);
 		void preDeinit(void);
@@ -393,6 +401,8 @@ namespace godot
 
 	private:
 		bool m_initialized;
+		bool m_quitting;
+		bool m_initRequired;
 		bool m_isInEditor;
 		bool m_ready;
 		bool m_useVisualServer;
