@@ -163,7 +163,7 @@ namespace godot
 		{
 			Globals()->print(message);
 		}
-		void setEditorInterface(godot::Node* editorInterface)
+		void setEditorInterface(godot::Object* editorInterface)
 		{
 			m_editorInterface = (godot::EditorInterface*)editorInterface;
 		}
