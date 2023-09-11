@@ -66,13 +66,18 @@ void GDN_TheWorld_MainNode::_notification(int p_what)
 	{
 		m_quitting = true;
 	}
+	break;
 	case NOTIFICATION_PREDELETE:
 	{
 		if (m_ready)
 		{
+			//m_quitting = false;	// to reproduce access violation on exit
 			GDN_TheWorld_Globals* globals = Globals();
-			if (globals != nullptr && !m_quitting)
-				globals->debugPrint("GDN_TheWorld_MainNode::_notification (NOTIFICATION_PREDELETE) - Destroy Main Node");
+			if (globals != nullptr)
+				if (m_quitting)
+					globals->debugPrint("GDN_TheWorld_MainNode::_notification (NOTIFICATION_PREDELETE) - Destroy Main Node", false);
+				else
+					globals->debugPrint("GDN_TheWorld_MainNode::_notification (NOTIFICATION_PREDELETE) - Destroy Main Node");
 		}
 	}
 	break;

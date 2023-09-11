@@ -29,6 +29,7 @@ void GDN_TheWorld_Camera::_bind_methods()
 	ClassDB::bind_method(D_METHOD("set_pitch"), &GDN_TheWorld_Camera::setPitch);
 	ClassDB::bind_method(D_METHOD("get_roll"), &GDN_TheWorld_Camera::getRoll);
 	ClassDB::bind_method(D_METHOD("set_roll"), &GDN_TheWorld_Camera::setRoll);
+	ClassDB::bind_method(D_METHOD("init_camera_in_world"), &GDN_TheWorld_Camera::initCameraInWorld);
 }
 
 GDN_TheWorld_Camera::GDN_TheWorld_Camera()
@@ -127,13 +128,17 @@ void GDN_TheWorld_Camera::_notification(int p_what)
 	{
 		m_quitting = true;
 	}
+	break;
 	case NOTIFICATION_PREDELETE:
 	{
 		if (m_ready)
 		{
 			GDN_TheWorld_Globals* globals = Globals();
-			if (globals != nullptr && !m_quitting)
-				globals->debugPrint("GDN_TheWorld_Camera::_notification (NOTIFICATION_PREDELETE) - Destroy Camera");
+			if (globals != nullptr)
+				if (m_quitting)
+					globals->debugPrint("GDN_TheWorld_Camera::_notification (NOTIFICATION_PREDELETE) - Destroy Camera", false);
+				else
+					globals->debugPrint("GDN_TheWorld_Camera::_notification (NOTIFICATION_PREDELETE) - Destroy Camera");
 		}
 	}
 	break;

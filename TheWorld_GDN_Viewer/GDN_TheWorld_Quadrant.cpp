@@ -86,6 +86,7 @@ namespace godot
 		{
 			m_quitting = true;
 		}
+		break;
 		case NOTIFICATION_PREDELETE:
 		{
 		}

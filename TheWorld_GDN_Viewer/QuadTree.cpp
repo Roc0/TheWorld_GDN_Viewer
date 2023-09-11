@@ -182,7 +182,8 @@ void QuadTree::init(float cameraX, float cameraY, float cameraZ, float cameraYaw
 	m_GDN_Quadrant->init(this);
 	std::string quadrantNodeName = m_worldQuadrant->getPos().getName();
 	m_GDN_Quadrant->set_name(quadrantNodeName.c_str());
-	m_viewer->add_child(m_GDN_Quadrant);
+	//m_viewer->add_child(m_GDN_Quadrant);
+	m_viewer->call_deferred("add_child", m_GDN_Quadrant);
 	onGlobalTransformChanged();
 
 	setStatus(QuadrantStatus::getTerrainDataInProgress);
@@ -215,7 +216,10 @@ QuadTree::~QuadTree()
 		m_GDN_Quadrant->deinit();
 		Node* parent = m_GDN_Quadrant->get_parent();
 		if (parent)
-			parent->remove_child(m_GDN_Quadrant);
+		{
+			//parent->remove_child(m_GDN_Quadrant);
+			parent->call_deferred("remove_child", m_GDN_Quadrant);
+		}
 		m_GDN_Quadrant->queue_free();
 		m_GDN_Quadrant = nullptr;
 	}

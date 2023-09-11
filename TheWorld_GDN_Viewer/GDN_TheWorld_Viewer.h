@@ -402,6 +402,7 @@ namespace godot
 	private:
 		bool m_initialized;
 		bool m_quitting;
+		bool m_visibleInTree;
 		bool m_initRequired;
 		bool m_isInEditor;
 		bool m_ready;

@@ -533,11 +533,15 @@ namespace godot
 		{
 			m_quitting = true;
 		}
+		break;
 		case NOTIFICATION_PREDELETE:
 		{
-			if (m_ready && !m_quitting)
+			if (m_ready)
 			{
-				debugPrint("GDN_TheWorld_Globals::_notification (NOTIFICATION_PREDELETE) - Destroy Globals");
+				if (m_quitting)
+					debugPrint("GDN_TheWorld_Globals::_notification (NOTIFICATION_PREDELETE) - Destroy Globals", false);
+				else
+					debugPrint("GDN_TheWorld_Globals::_notification (NOTIFICATION_PREDELETE) - Destroy Globals");
 			}
 		}
 		break;

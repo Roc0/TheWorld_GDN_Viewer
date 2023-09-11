@@ -128,8 +128,9 @@ void GDN_TheWorld_Viewer::_bind_methods()
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 {
-	m_quitting = false;
 	m_initialized = false;
+	m_quitting = false;
+	m_visibleInTree = false;
 	m_initRequired = false;
 	m_isInEditor = false;
 	m_ready = false;
@@ -759,7 +760,8 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 						//t.origin = Vector3(quadTree->getQuadrant()->getGridVertices()[0].posX(), 0, quadTree->getQuadrant()->getGridVertices()[0].posZ());
 						//set_transform(t);
 
-						WorldCamera()->initCameraInWorld(cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
+						//WorldCamera()->initCameraInWorld(cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
+						WorldCamera()->call_deferred("init_camera_in_world", cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
 
 						m_initialWordlViewerPosSet = true;
 					}
@@ -1372,13 +1374,17 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 		{
 			m_quitting = true;
 		}
+		break;
 		case NOTIFICATION_PREDELETE:
 		{
 			if (m_ready)
 			{
 				GDN_TheWorld_Globals* globals = Globals();
-				if (globals != nullptr && !m_quitting)
-					globals->debugPrint("GDN_TheWorld_Viewer::_notification (NOTIFICATION_PREDELETE) - Destroy Viewer");
+				if (globals != nullptr)
+					if (m_quitting)
+						globals->debugPrint("GDN_TheWorld_Viewer::_notification (NOTIFICATION_PREDELETE) - Destroy Viewer", false);
+					else
+						globals->debugPrint("GDN_TheWorld_Viewer::_notification (NOTIFICATION_PREDELETE) - Destroy Viewer");
 			}
 	
 			deinit();
@@ -1776,7 +1782,7 @@ void GDN_TheWorld_Viewer::recalcQuadrantsInView(void)
 					if (visibilityChanged)
 					{
 						//TheWorld_Utils::GuardProfiler profiler(std::string("recalcQuadrantsInView 1.1.3 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants (ForAllChunk)");
-						Chunk::VisibilityChangedChunkAction action(is_visible_in_tree());
+						Chunk::VisibilityChangedChunkAction action(m_visibleInTree);
 						itQuadTree->second->ForAllChunk(action);
 					}
 				}
@@ -1820,6 +1826,8 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1 ") + __FUNCTION__, "ALL");
 
+	m_visibleInTree = is_visible_in_tree();
+	
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
 		return;
@@ -2205,7 +2213,7 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.8 ") + __FUNCTION__, "Refresh required");
 
-		Chunk::RefreshChunkAction action(is_visible_in_tree());
+		Chunk::RefreshChunkAction action(m_visibleInTree);
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
 			itQuadTree->second->ForAllChunk(action);
@@ -2666,10 +2674,10 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 			}
 
 			for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
-				(*it)->update(is_visible_in_tree());
+				(*it)->update(m_visibleInTree);
 
 			for (std::vector<Chunk*>::iterator it = vectAdditionalUpdateChunk.begin(); it != vectAdditionalUpdateChunk.end(); it++)
-				(*it)->update(is_visible_in_tree());
+				(*it)->update(m_visibleInTree);
 
 			itQuadTree->second->clearChunkUpdate();
 			vectAdditionalUpdateChunk.clear();

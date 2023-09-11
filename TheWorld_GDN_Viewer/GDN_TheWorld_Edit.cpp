@@ -1185,13 +1185,17 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 	{
 		m_quitting = true;
 	}
+	break;
 	case NOTIFICATION_PREDELETE:
 	{
 		if (m_ready && m_viewer != nullptr)
 		{
 			GDN_TheWorld_Globals* globals = m_viewer->Globals();
-			if (globals != nullptr && !m_quitting)
-				globals->debugPrint("GDN_TheWorld_Edit::_notification (NOTIFICATION_PREDELETE) - Destroy Edit");
+			if (globals != nullptr)
+				if (m_quitting)
+					globals->debugPrint("GDN_TheWorld_Edit::_notification (NOTIFICATION_PREDELETE) - Destroy Edit", false);
+				else
+					globals->debugPrint("GDN_TheWorld_Edit::_notification (NOTIFICATION_PREDELETE) - Destroy Edit");
 		}
 	}
 	break;

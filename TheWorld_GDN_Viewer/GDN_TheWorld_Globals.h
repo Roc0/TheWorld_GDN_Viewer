@@ -180,7 +180,8 @@ namespace godot
 			
 			if (statusChanged)
 			{
-				emit_signal("tw_status_changed", (int)m_status, (int)status);
+				//emit_signal("tw_status_changed", (int)m_status, (int)status);
+				call_deferred("emit_signal", "tw_status_changed", (int)m_status, (int)status);
 				m_status = status;
 				m_statusChangeClock.tick();
 			}
