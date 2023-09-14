@@ -596,16 +596,18 @@ namespace godot
 	class ShaderTerrainData
 	{
 	public:
-		class GroundTextures
+		class GroundTexture
 		{
 		public:
-			GroundTextures()
+			GroundTexture()
 			{
 				//m_albedo_bump_tex = nullptr;
 				//m_normal_roughness_tex = nullptr;
+				initialized = false;
 			}
 		
 		public:
+			bool initialized;
 			Ref<ImageTexture> m_albedo_bump_tex;
 			Ref<ImageTexture> m_normal_roughness_tex;
 		};
@@ -656,8 +658,8 @@ namespace godot
 		ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
 		~ShaderTerrainData();
 		void init(void);
-		godot::Ref<godot::Image> readGroundTexture(godot::String fileName, bool& ok);
-		void getGroundTextures(godot::String fileName, GroundTextures* groundTextures);
+		static godot::Ref<godot::Image> readGroundTexture(godot::String fileName, bool& ok, GDN_TheWorld_Viewer* viewer = nullptr);
+		static void getGroundTexture(godot::String fileName, GroundTexture* groundTexture, GDN_TheWorld_Viewer* viewer = nullptr);
 		bool materialParamsNeedReset(void)
 		{
 			return m_materialParamsNeedReset;
@@ -679,6 +681,19 @@ namespace godot
 		Ref<Material> getRegularMaterial(void);
 		Ref<Material> getLookDevMaterial(void);
 		static void releaseGlobals(void);
+		static void getGroundTextures(godot::String dirName, GDN_TheWorld_Viewer* viewer = nullptr);
+		static std::map<std::string, std::unique_ptr<GroundTexture>>& getGroundTextures(void)
+		{
+			return s_groundTextures;
+		}
+		static bool groundTexturesNeedProcessing(void)
+		{
+			return s_groundTexturesNeedProcessing;
+		}
+		static void groundTexturesNeedProcessing(bool b)
+		{
+			s_groundTexturesNeedProcessing = b;
+		}
 
 	private:
 		//void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
@@ -707,7 +722,9 @@ namespace godot
 		Ref<Texture> m_globalMapTexture;
 		bool m_globalMapTexModified;
 
-		static std::map<std::string, std::unique_ptr<GroundTextures>> s_groundTextures;
+		static std::map<std::string, std::unique_ptr<GroundTexture>> s_groundTextures;
+		static bool s_groundTexturesNeedProcessing;
+		//static std::recursive_mutex s_groundTexturesMutex;
 	};
 	
 	class Quad

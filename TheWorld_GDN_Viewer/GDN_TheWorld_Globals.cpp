@@ -50,6 +50,10 @@ const godot::Color godot::GDN_TheWorld_Globals::g_color_black = godot::Color(0.0
 
 namespace godot
 {
+	const std::string GDN_TheWorld_Globals::c_groundTexturesDir = "res://assets/textures/ground/";
+	const std::string GDN_TheWorld_Globals::c_albedo_bump_file_ext = "_albedo_bump.ground";
+	const std::string GDN_TheWorld_Globals::c_normal_roughness_file_ext = "_normal_roughness.ground";
+
 	std::string GDN_TheWorld_Globals::getClientDataDir(void)
 	{
 		String userPath = OS::get_singleton()->get_user_data_dir();
@@ -241,6 +245,8 @@ namespace godot
 		m_viewer = nullptr;
 		m_isInEditor = false;
 
+		m_totElementToInitialize = m_numElementInitialized = 0;
+		
 		_init();
 	}
 
@@ -277,6 +283,11 @@ namespace godot
 		ClassDB::bind_method(D_METHOD("get_num_lods"), &GDN_TheWorld_Globals::numLods);
 		ClassDB::bind_method(D_METHOD("get_chunks_per_bitmap_side"), &GDN_TheWorld_Globals::numChunksPerHeightmapSide);
 		ClassDB::bind_method(D_METHOD("get_grid_step_in_wu"), &GDN_TheWorld_Globals::gridStepInHeightmapWUs);
+
+		ClassDB::bind_method(D_METHOD("get_tot_element_to_initialize"), &GDN_TheWorld_Globals::getTotElementToInitialize);
+		ClassDB::bind_method(D_METHOD("add_element_to_initialize"), &GDN_TheWorld_Globals::addElementToInitialize);
+		ClassDB::bind_method(D_METHOD("get_num_element_initialized"), &GDN_TheWorld_Globals::getNumElementInitialized);
+		ClassDB::bind_method(D_METHOD("add_num_element_initialized"), &GDN_TheWorld_Globals::addNumElementInitialized);
 
 		ClassDB::bind_method(D_METHOD("viewer"), &GDN_TheWorld_Globals::Viewer);
 

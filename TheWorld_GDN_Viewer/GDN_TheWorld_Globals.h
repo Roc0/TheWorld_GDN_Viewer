@@ -92,6 +92,10 @@ namespace godot
 		//const float c_splitScale = 2.0F;
 		//const float c_splitScale = 1.5F;
 
+		static const std::string c_groundTexturesDir;
+		static const std::string c_albedo_bump_file_ext;
+		static const std::string c_normal_roughness_file_ext;
+
 	protected:
 		static void _bind_methods();
 		void _notification(int p_what);
@@ -486,6 +490,23 @@ namespace godot
 			return m_client; 
 		}
 
+		int getTotElementToInitialize()
+		{
+			return (int)m_totElementToInitialize;
+		}
+		void addElementToInitialize(int num = 1)
+		{
+			m_totElementToInitialize += num;
+		}
+		int getNumElementInitialized()
+		{
+			return (int)m_numElementInitialized;
+		}
+		void addNumElementInitialized(int num = 1)
+		{
+			m_numElementInitialized += num;
+		}
+
 		// DEBUG
 		//static size_t s_num;
 		//static size_t s_elapsed1;
@@ -516,6 +537,9 @@ namespace godot
 		std::string m_mapName;
 		GDN_TheWorld_Globals_Client* m_client;
 		bool m_isInEditor;
+
+		size_t m_totElementToInitialize;
+		size_t m_numElementInitialized;
 
 		// Node cache
 		GDN_TheWorld_Viewer* m_viewer;

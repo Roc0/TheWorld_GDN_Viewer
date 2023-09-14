@@ -16,6 +16,7 @@
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
 #include <godot_cpp/classes/compressed_texture2d.hpp>
+#include <godot_cpp/classes/project_settings.hpp>
 #pragma warning(pop)
 
 using namespace godot;
@@ -1028,25 +1029,32 @@ Ref<Material> ShaderTerrainData::getLookDevMaterial(void)
 	return m_lookDevMaterial;
 }
 
-std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTextures>> ShaderTerrainData::s_groundTextures;
+std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>> ShaderTerrainData::s_groundTextures;
+bool ShaderTerrainData::s_groundTexturesNeedProcessing = false;
+//std::recursive_mutex ShaderTerrainData::s_groundTexturesMutex;
 
-godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String fileName, bool& ok)
+godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String fileName, bool& ok, GDN_TheWorld_Viewer* viewer)
 {
 	TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1 ") + __FUNCTION__, "ALL");
+
+	TheWorld_Viewer_Utils::MsTimePoint start = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 
 	ok = true;
 	
 	const char* s = fileName.utf8().get_data();
 	std::string _fileName = std::string(s);
 
-	m_viewer->Globals()->debugPrint((std::string("Reading ground texture ") + _fileName + " ...").c_str());
+	if (viewer != nullptr)
+		viewer->Globals()->debugPrint((std::string("Reading ground texture ") + _fileName + " ...").c_str());
 
-	m_viewer->getMainProcessingMutex().lock();
+	if (viewer != nullptr)
+		viewer->getMainProcessingMutex().lock();
 	//godot::FileAccess* file = memnew(godot::FileAccess);
 	godot::Ref<godot::FileAccess> file = godot::FileAccess::open(fileName, godot::FileAccess::READ);
 	if (file == nullptr)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Error reading file ") + _fileName + " error " + std::to_string(int(godot::FileAccess::get_open_error()))).c_str()));
-	m_viewer->getMainProcessingMutex().unlock();
+	if (viewer != nullptr)
+		viewer->getMainProcessingMutex().unlock();
 
 	
 	int64_t fileSize = file->get_length();
@@ -1055,55 +1063,136 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 	if (imageSize * imageSize * sizeof(struct TheWorld_Utils::_RGBA) != fileSize)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Wrong image size ") + std::to_string(imageSize) + " file size " + std::to_string(fileSize)).c_str()));
 
-	m_viewer->getMainProcessingMutex().lock();
+	if (viewer != nullptr)
+		viewer->getMainProcessingMutex().lock();
 	godot::Ref<godot::Image> image = Image::create((int32_t)imageSize, (int32_t)imageSize, true, godot::Image::FORMAT_RGBA8);
-	m_viewer->getMainProcessingMutex().unlock();
+	if (viewer != nullptr)
+		viewer->getMainProcessingMutex().unlock();
 
 	godot::PackedByteArray imageRowBuffer;
 	size_t imageRowSize = imageSize * sizeof(struct TheWorld_Utils::_RGBA);
 
 	for (size_t y = 0; y < imageSize; y++)
 	{
-		imageRowBuffer = file->get_buffer(imageRowSize);
+		{
+			//TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1.1 ") + __FUNCTION__, "read file from disk");
+			imageRowBuffer = file->get_buffer(imageRowSize);
+		}
 		assert(imageRowBuffer.size() == imageRowSize);
 		
-		size_t idx = 0;
-		for (size_t x = 0; x < imageSize; x++)
 		{
-			godot::Color c;
-			c.r = float(imageRowBuffer[int(idx)]) / 255;
-			c.g = float(imageRowBuffer[int(idx) + 1]) / 255;
-			c.b = float(imageRowBuffer[int(idx) + 2]) / 255;
-			c.a = float(imageRowBuffer[int(idx) + 3]) / 255;
-			idx += 4;
-			image->set_pixel((int32_t)x, (int32_t)y, c);
+			//TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1.2 ") + __FUNCTION__, "set_pixel");
+
+			size_t idx = 0;
+			for (size_t x = 0; x < imageSize; x++)
+			{
+				godot::Color c;
+				c.r = float(imageRowBuffer[int(idx)]) / 255;
+				c.g = float(imageRowBuffer[int(idx) + 1]) / 255;
+				c.b = float(imageRowBuffer[int(idx) + 2]) / 255;
+				c.a = float(imageRowBuffer[int(idx) + 3]) / 255;
+				idx += 4;
+				image->set_pixel((int32_t)x, (int32_t)y, c);
+			}
 		}
 	}
 
 	file->close();
 
-	godot::Error e = image->generate_mipmaps();
+	{
+		//TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1.3 ") + __FUNCTION__, "generate_mipmaps");
+		godot::Error e = image->generate_mipmaps();
+	}
 
 	//e = image->compress(godot::Image::CompressMode::COMPRESS_S3TC);
 
 	//e = image->save_png(fileName + ".png");
 	
-	m_viewer->Globals()->debugPrint((std::string("Reading ground texture ") + _fileName + " done!").c_str());
+	TheWorld_Viewer_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
+	long long elapsed = (now - start).count();
+
+	if (viewer != nullptr)
+		viewer->Globals()->debugPrint((std::string("Reading ground texture ") + _fileName + " done! - Elapsed " + std::to_string(elapsed)  + " ms").c_str());
 
 	return image;
 }
 
-void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainData::GroundTextures* groundTextures)
+void ShaderTerrainData::getGroundTextures(godot::String dirName, GDN_TheWorld_Viewer* viewer)
 {
 	TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTextures 1 ") + __FUNCTION__, "all");
+	
+	TheWorld_Viewer_Utils::MsTimePoint start = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 
-	godot::ResourceLoader* resLoader = ResourceLoader::get_singleton();
+	if (viewer != nullptr)
+		viewer->Globals()->debugPrint("Reading ground textures");
+
+	godot::String globalizedDirName = ProjectSettings::get_singleton()->globalize_path(dirName);
+	
+	std::map<std::string, bool> textures;
+
+	std::string dir = std::string(globalizedDirName.utf8().get_data());
+	if (!fs::exists(dir))
+		return;
+
+	for (const auto& entry : fs::directory_iterator(dir))
+		if (entry.is_regular_file())
+		{
+			bool isTexture = false;
+			std::string filename = entry.path().filename().generic_string();
+			if (filename.ends_with(GDN_TheWorld_Globals::c_albedo_bump_file_ext))
+			{
+				filename = filename.substr(0, filename.length() - GDN_TheWorld_Globals::c_albedo_bump_file_ext.length());
+				isTexture = true;
+			}
+			else if (filename.ends_with(GDN_TheWorld_Globals::c_normal_roughness_file_ext))
+			{
+				filename = filename.substr(0, filename.length() - GDN_TheWorld_Globals::c_normal_roughness_file_ext.length());
+				isTexture = true;
+			}
+			
+			if (isTexture)
+			{
+				std::string albedo_bump_filename = dir + filename + GDN_TheWorld_Globals::c_albedo_bump_file_ext;
+				std::string normal_roughness_filename = dir + filename + GDN_TheWorld_Globals::c_normal_roughness_file_ext;
+				if (fs::exists(albedo_bump_filename) && fs::exists(normal_roughness_filename))
+				{
+					if (!textures.contains(filename))
+						textures[filename] = true;
+				}
+			}
+		}
+
+	for (const auto& texture : textures)
+	{
+		//std::lock_guard<std::recursive_mutex> lock(s_groundTexturesMutex);
+
+		if (!s_groundTextures.contains(texture.first))
+		{
+			s_groundTextures[texture.first] = std::make_unique<ShaderTerrainData::GroundTexture>();
+			s_groundTexturesNeedProcessing = true;
+			//ShaderTerrainData::GroundTexture* groundTexture = s_groundTextures[texture.first].get();
+			//getGroundTexture(godot::String(GDN_TheWorld_Globals::c_groundTexturesDir.c_str()) + texture.first.c_str(), groundTexture, viewer);
+		}
+	}
+
+	TheWorld_Viewer_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now()); 
+	long long elapsed = (now - start).count();
+
+	if (viewer != nullptr)
+		viewer->Globals()->debugPrint((std::string("Reading ground textures done! - Elapsed ") + std::to_string(elapsed) + " ms").c_str());
+}
+
+void ShaderTerrainData::getGroundTexture(godot::String fileName, ShaderTerrainData::GroundTexture* groundTexture, GDN_TheWorld_Viewer* viewer)
+{
+	TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTexture 1 ") + __FUNCTION__, "all");
+
+	//godot::ResourceLoader* resLoader = ResourceLoader::get_singleton();
 
 	try
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTextures 1.1 ") + __FUNCTION__, "albedo_bump");
+		TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTexture 1.1 ") + __FUNCTION__, "albedo_bump");
 
-		godot::String path = fileName + "_albedo_bump.ground";
+		godot::String path = fileName + GDN_TheWorld_Globals::c_albedo_bump_file_ext.c_str();
 		std::string _path = std::string(path.utf8().get_data());
 
 		Ref<godot::CompressedTexture2D> c_tex = nullptr;
@@ -1111,25 +1200,27 @@ void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainD
 		if (c_tex == nullptr)
 		{
 			bool ok;
-			godot::Ref<godot::Image> image = readGroundTexture(path, ok);
-			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> image = readGroundTexture(path, ok, viewer);
+			if (viewer != nullptr)
+				viewer->getMainProcessingMutex().lock();
 			// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
 			//tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
 			Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
-			m_viewer->getMainProcessingMutex().unlock();
-			groundTextures->m_albedo_bump_tex = tex;
+			if (viewer != nullptr)
+				viewer->getMainProcessingMutex().unlock();
+			groundTexture->m_albedo_bump_tex = tex;
 		}
 		else
-			groundTextures->m_albedo_bump_tex = c_tex;
+			groundTexture->m_albedo_bump_tex = c_tex;
 
 	}
 	catch (...) {}
 
 	try
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTextures 1.2 ") + __FUNCTION__, "normal_roughness");
+		TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTexture 1.2 ") + __FUNCTION__, "normal_roughness");
 
-		godot::String path = fileName + "_normal_roughness.ground";
+		godot::String path = fileName + GDN_TheWorld_Globals::c_normal_roughness_file_ext.c_str();
 		std::string _path = std::string(path.utf8().get_data());
 
 		Ref<godot::CompressedTexture2D> c_tex = nullptr;
@@ -1137,22 +1228,28 @@ void ShaderTerrainData::getGroundTextures(godot::String fileName, ShaderTerrainD
 		if (c_tex == nullptr)
 		{
 			bool ok;
-			godot::Ref<godot::Image> image = readGroundTexture(path, ok);
-			m_viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::Image> image = readGroundTexture(path, ok, viewer);
+			if (viewer != nullptr)
+				viewer->getMainProcessingMutex().lock();
 			// Look at https://docs.godotengine.org/en/4.0/tutorials/shaders/shader_reference/shading_language.html#uniforms to activate hints corresponding to flags in the shader
 			//tex->create_from_image(image, godot::ImageTexture::FLAG_FILTER | godot::ImageTexture::FLAG_MIPMAPS | godot::ImageTexture::FLAG_REPEAT);
 			Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
-			m_viewer->getMainProcessingMutex().unlock();
-			groundTextures->m_normal_roughness_tex = tex;
+			if (viewer != nullptr)
+				viewer->getMainProcessingMutex().unlock();
+			groundTexture->m_normal_roughness_tex = tex;
 		}
 		else
-			groundTextures->m_normal_roughness_tex = c_tex;
+			groundTexture->m_normal_roughness_tex = c_tex;
 	}
 	catch (...) {}
+
+	groundTexture->initialized = true;
 }
 
 void ShaderTerrainData::releaseGlobals(void)
 {
+	//std::lock_guard<std::recursive_mutex> lock(s_groundTexturesMutex);
+
 	for (auto& it : s_groundTextures)
 	{
 		it.second->m_albedo_bump_tex.unref();
@@ -1202,32 +1299,44 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 
 	m_viewer->getMainProcessingMutex().lock();
 	
-	if (!s_groundTextures.contains(lowElevationTexName))
 	{
-		s_groundTextures[lowElevationTexName] = std::make_unique<ShaderTerrainData::GroundTextures>();
-		ShaderTerrainData::GroundTextures* groundTextures = s_groundTextures[lowElevationTexName].get();
-		getGroundTextures(godot::String("res://assets/textures/ground/") + lowElevationTexName.c_str(), groundTextures);
-	}
+		//std::lock_guard<std::recursive_mutex> lock(s_groundTexturesMutex);
 	
-	if (!s_groundTextures.contains(highElevationTexName))
-	{
-		s_groundTextures[highElevationTexName] = std::make_unique<ShaderTerrainData::GroundTextures>();
-		ShaderTerrainData::GroundTextures* groundTextures = s_groundTextures[highElevationTexName].get();
-		getGroundTextures(godot::String("res://assets/textures/ground/") + highElevationTexName.c_str(), groundTextures);
-	}
+		if (!s_groundTextures.contains(lowElevationTexName) || !s_groundTextures[lowElevationTexName]->initialized)
+		{
+			s_groundTextures[lowElevationTexName] = std::make_unique<ShaderTerrainData::GroundTexture>();
+			ShaderTerrainData::GroundTexture* groundTexture = s_groundTextures[lowElevationTexName].get();
+			//std::recursive_mutex& viewerMainProcessingMutex = m_viewer->getMainProcessingMutex();
+			//std::lock_guard<std::recursive_mutex> lock(viewerMainProcessingMutex);
+			getGroundTexture(godot::String(GDN_TheWorld_Globals::c_groundTexturesDir.c_str()) + lowElevationTexName.c_str(), groundTexture, m_viewer);
+		}
 
-	if (!s_groundTextures.contains(dirtTexName))
-	{
-		s_groundTextures[dirtTexName] = std::make_unique<ShaderTerrainData::GroundTextures>();
-		ShaderTerrainData::GroundTextures* groundTextures = s_groundTextures[dirtTexName].get();
-		getGroundTextures(godot::String("res://assets/textures/ground/") + dirtTexName.c_str(), groundTextures);
-	}
+		if (!s_groundTextures.contains(highElevationTexName) || !s_groundTextures[highElevationTexName]->initialized)
+		{
+			s_groundTextures[highElevationTexName] = std::make_unique<ShaderTerrainData::GroundTexture>();
+			ShaderTerrainData::GroundTexture* groundTexture = s_groundTextures[highElevationTexName].get();
+			//std::recursive_mutex& viewerMainProcessingMutex = m_viewer->getMainProcessingMutex();
+			//std::lock_guard<std::recursive_mutex> lock(viewerMainProcessingMutex);
+			getGroundTexture(godot::String(GDN_TheWorld_Globals::c_groundTexturesDir.c_str()) + highElevationTexName.c_str(), groundTexture, m_viewer);
+		}
 
-	if (!s_groundTextures.contains(rocksTexName))
-	{
-		s_groundTextures[rocksTexName] = std::make_unique<ShaderTerrainData::GroundTextures>();
-		ShaderTerrainData::GroundTextures* groundTextures = s_groundTextures[rocksTexName].get();
-		getGroundTextures(godot::String("res://assets/textures/ground/") + rocksTexName.c_str(), groundTextures);
+		if (!s_groundTextures.contains(dirtTexName) || !s_groundTextures[dirtTexName]->initialized)
+		{
+			s_groundTextures[dirtTexName] = std::make_unique<ShaderTerrainData::GroundTexture>();
+			ShaderTerrainData::GroundTexture* groundTexture = s_groundTextures[dirtTexName].get();
+			//std::recursive_mutex& viewerMainProcessingMutex = m_viewer->getMainProcessingMutex();
+			//std::lock_guard<std::recursive_mutex> lock(viewerMainProcessingMutex);
+			getGroundTexture(godot::String(GDN_TheWorld_Globals::c_groundTexturesDir.c_str()) + dirtTexName.c_str(), groundTexture, m_viewer);
+		}
+
+		if (!s_groundTextures.contains(rocksTexName) || !s_groundTextures[rocksTexName]->initialized)
+		{
+			s_groundTextures[rocksTexName] = std::make_unique<ShaderTerrainData::GroundTexture>();
+			ShaderTerrainData::GroundTexture* groundTexture = s_groundTextures[rocksTexName].get();
+			//std::recursive_mutex& viewerMainProcessingMutex = m_viewer->getMainProcessingMutex();
+			//std::lock_guard<std::recursive_mutex> lock(viewerMainProcessingMutex);
+			getGroundTexture(godot::String(GDN_TheWorld_Globals::c_groundTexturesDir.c_str()) + rocksTexName.c_str(), groundTexture, m_viewer);
+		}
 	}
 
 	m_viewer->getMainProcessingMutex().unlock();

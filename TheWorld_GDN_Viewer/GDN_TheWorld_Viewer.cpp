@@ -320,6 +320,8 @@ bool GDN_TheWorld_Viewer::init(void)
 	if (globals == nullptr)
 		return false;
 
+	globals->addElementToInitialize();
+	
 	m_isInEditor = IS_EDITOR_HINT();
 	
 	// From _notification ENTER_WORLD
@@ -425,7 +427,6 @@ bool GDN_TheWorld_Viewer::init(void)
 
 			godot::Control* control = getOrCreateEditModeUIControl();
 		}
-
 	}
 
 	m_meshCache = make_unique<MeshCache>(this);
@@ -434,6 +435,13 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_streamerThreadRequiredExit = false;
 	m_streamerThreadRunning = true;
 	m_streamerThread = std::thread(&GDN_TheWorld_Viewer::streamer, this);
+
+	ShaderTerrainData::ShaderTerrainData::getGroundTextures(godot::String(GDN_TheWorld_Globals::c_groundTexturesDir.c_str()), this);
+
+	std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>>& groundTextures = ShaderTerrainData::getGroundTextures();
+	globals->addElementToInitialize((int)groundTextures.size());
+	
+	globals->addNumElementInitialized();
 
 	m_initialized = true;
 	m_initRequired = false;
@@ -1835,9 +1843,42 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 	if (initRequired())
 	{
 		init();
-		globals->setStatus(TheWorldStatus::sessionInitialized);
+		if (!ShaderTerrainData::groundTexturesNeedProcessing())
+			globals->setStatus(TheWorldStatus::sessionInitialized);
 	}
 	
+	//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing, std::try_to_lock);
+	if (!lock.owns_lock())
+	{
+		m_numProcessNotOwnsLock++;
+		return;
+	}
+
+	if (ShaderTerrainData::groundTexturesNeedProcessing())
+	{
+		std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>>& groundTextures = ShaderTerrainData::getGroundTextures();
+
+		bool resetProcessing = true;
+
+		for (const auto& groundTexture : groundTextures)
+		{
+			if (!groundTexture.second->initialized)
+			{
+				ShaderTerrainData::getGroundTexture(godot::String(GDN_TheWorld_Globals::c_groundTexturesDir.c_str()) + groundTexture.first.c_str(), groundTexture.second.get(), this);
+				globals->addNumElementInitialized();
+				resetProcessing = false;
+				break;
+			}
+		}
+
+		if (resetProcessing)
+		{
+			ShaderTerrainData::groundTexturesNeedProcessing(false);
+			globals->setStatus(TheWorldStatus::sessionInitialized);
+		}
+	}
+
 	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
@@ -1856,16 +1897,7 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 	}
 	if (!activeCamera)
 		return;
-
 	
-	//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing, std::try_to_lock);
-	if (!lock.owns_lock())
-	{
-		m_numProcessNotOwnsLock++;
-		return;
-	}
-
 	TheWorld_Viewer_Utils::TimerMcs clock;
 	clock.tick();
 	auto save_duration = TheWorld_Viewer_Utils::finally([&clock, this] { clock.tock(); this->m_numProcessExecution++; this->m_processDuration += clock.duration().count(); });
