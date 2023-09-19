@@ -64,6 +64,7 @@ void GDN_TheWorld_Viewer::_bind_methods()
 	ClassDB::bind_method(D_METHOD("print", "p_msg"), &GDN_TheWorld_Viewer::print);
 
 	ClassDB::bind_method(D_METHOD("set_editor_interface"), &GDN_TheWorld_Viewer::setEditorInterface);
+	ClassDB::bind_method(D_METHOD("set_editor_3d_overlay"), &GDN_TheWorld_Viewer::setEditor3dOverlay);
 	ClassDB::bind_method(D_METHOD("set_editor_camera"), &GDN_TheWorld_Viewer::setEditorCamera);
 	ClassDB::bind_method(D_METHOD("get_camera"), &GDN_TheWorld_Viewer::getCamera);
 	ClassDB::bind_method(D_METHOD("get_info_camera"), &GDN_TheWorld_Viewer::getInfoCamera);
@@ -209,6 +210,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numCacheQuadrantOnPerimeter = 0;
 	m_recalcQuadrantsInViewNeeded = false;
 	m_editorInterface = nullptr;
+	m_editor3dOverlay = nullptr;
 	m_editorCamera = nullptr;
 	m_depthQuadOnPerimeter = 3;
 	m_cacheQuadOnPerimeter = 1;
@@ -1898,6 +1900,24 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 	if (!activeCamera)
 		return;
 	
+	//// DEBUG
+	//{
+	//	godot::Camera3D::ProjectionType type = activeCamera->get_projection();
+	//	int i = activeCamera->get_cull_mask();
+	//	bool b = activeCamera->is_current();
+	//	godot::Camera3D::DopplerTracking d = activeCamera->get_doppler_tracking();
+	//	double far1 = activeCamera->get_far();
+	//	double fov = activeCamera->get_fov();
+	//	godot::Vector2 frustumOffset = activeCamera->get_frustum_offset();
+	//	double hOffset = activeCamera->get_h_offset();
+	//	double vOffset = activeCamera->get_v_offset();
+	//	double near1 = activeCamera->get_near();
+	//	double size1 = activeCamera->get_size();
+	//	godot::Camera3D::KeepAspect k = activeCamera->get_keep_aspect_mode();
+	//	type = (godot::Camera3D::ProjectionType)0;
+	//}
+	//// DEBUG
+
 	TheWorld_Viewer_Utils::TimerMcs clock;
 	clock.tick();
 	auto save_duration = TheWorld_Viewer_Utils::finally([&clock, this] { clock.tock(); this->m_numProcessExecution++; this->m_processDuration += clock.duration().count(); });
@@ -2070,7 +2090,7 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 
 				godot::PhysicsDirectSpaceState3D* spaceState = get_world_3d()->get_direct_space_state();
 				godot::Dictionary rayArray;
-				godot::Vector2 mousePosInVieport = get_viewport()->get_mouse_position();
+				godot::Vector2 mousePosInVieport = getMousPosInViewport();
 				godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
 				godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * (real_t)activeCamera->get_far() * 1.5;
 				godot::Ref<godot::PhysicsRayQueryParameters3D> query = PhysicsRayQueryParameters3D::create(rayOrigin, rayEnd);

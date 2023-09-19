@@ -118,6 +118,7 @@ namespace godot
 			//m_initialized = true;
 		}
 
+		// x, z pos a point contained in the quadrant in global coord: calculating starting point of the quadrant in global coord
 		QuadrantPos(float x, float z, int level, int numVerticesPerSize, float gridStepInWU)
 		{
 			float gridSizeInWU = (numVerticesPerSize - 1) * gridStepInWU;
@@ -247,8 +248,8 @@ namespace godot
 
 	private:
 		// ID
-		float m_lowerXGridVertex;
-		float m_lowerZGridVertex;
+		float m_lowerXGridVertex;	// starting point in the X axis of the quadrant in global coord
+		float m_lowerZGridVertex;	// starting point in the Z axis of the quadrant in global coord
 		int m_numVerticesPerSize;
 		int m_level;
 		float m_gridStepInWU;

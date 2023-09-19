@@ -3,6 +3,7 @@
 #pragma warning(push, 0)
 #include <godot_cpp/classes/node3d.hpp>
 #include <godot_cpp/classes/viewport.hpp>
+#include <godot_cpp/classes/control.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/ref.hpp>
 #include <godot_cpp/classes/mesh.hpp>
@@ -166,6 +167,10 @@ namespace godot
 		void setEditorInterface(godot::Object* editorInterface)
 		{
 			m_editorInterface = (godot::EditorInterface*)editorInterface;
+		}
+		void setEditor3dOverlay(godot::Object* editor3dOverlay)
+		{
+			m_editor3dOverlay = (godot::Control*)editor3dOverlay;
 		}
 		void toggleTrackMouse(void);
 		void toggleEditMode(void);
@@ -382,6 +387,21 @@ namespace godot
 			return m_isInEditor;
 		}
 
+		godot::Vector2 getMousPosInViewport(void)
+		{
+			if (isInEditor())
+			{
+				if (m_editor3dOverlay != nullptr)
+				{
+					return m_editor3dOverlay->get_local_mouse_position();
+				}
+				else
+					return godot::Vector2(0.0f, 0.0f);
+			}
+			else
+				return get_viewport()->get_mouse_position();
+		}
+
 	private:
 		void _findChildNodes(godot::Array& foundNodes, godot::Array& searchNodes, String searchClass);
 		void onTransformChanged(void);
@@ -530,6 +550,7 @@ namespace godot
 
 		// Editor stuff
 		godot::EditorInterface* m_editorInterface;
+		godot::Control* m_editor3dOverlay;
 		size_t m_depthQuadOnPerimeter;
 		size_t m_cacheQuadOnPerimeter;
 	};
