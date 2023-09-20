@@ -181,8 +181,8 @@ namespace godot
 		bool m_requiredUIAcceptFocus;
 		bool m_UIAcceptingFocus;
 
-		godot::PanelContainer* m_mainPanelContainer;
-		godot::TabContainer* m_mainTabContainer;
+		godot::Control* m_mainPanelContainer;
+		godot::Control* m_mainTabContainer;
 
 		godot::Control* m_noiseVBoxContainer;
 		//bool m_noiseContainerShowing;

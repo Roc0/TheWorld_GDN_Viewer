@@ -363,6 +363,7 @@ namespace TheWorld_ClientServer
 		virtual int getReplyParam(std::string& ref, size_t index, ClientServerVariant& ReplyParam);
 		virtual int getReplyParams(std::string& ref, std::vector <ClientServerVariant>& replyParams);
 		virtual int replied(std::string& method, std::string& ref, bool& replied, size_t& numReplyParams, bool& error, int& errorCode, std::string& errorMessage);
+		virtual bool quitting(void) = 0;
 
 	private:
 		void receiver(void);

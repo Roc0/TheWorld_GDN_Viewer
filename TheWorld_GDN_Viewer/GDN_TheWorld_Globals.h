@@ -74,7 +74,7 @@ namespace godot
 		void MapManagerDeployLevel(bool isInEditor, int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll);
 		void MapManagerDeployWorld(bool isInEditor, int level, size_t numVerticesPerSize, float gridStepinWU, bool setCamera, float cameraX, float cameraY, float cameraZ, float cameraDistanceFromTerrainForced, float cameraYaw, float cameraPitch, float cameraRoll);
 		void MapManagerUndeployWorld(bool isInEditor);
-
+		virtual bool quitting(void);
 
 	private:
 		//GDN_TheWorld_Globals* Globals(bool useCache);
@@ -161,6 +161,10 @@ namespace godot
 		void prepareDisconnectFromServer(void);
 		bool canDisconnectFromServer(void);
 		void disconnectFromServer(void);
+		bool quitting(void)
+		{
+			return m_quitting;
+		}
 
 		static std::string getClientDataDir(void);
 

@@ -67,10 +67,16 @@ namespace TheWorld_ClientServer
 		// Set the server execution elapsed
 		size_t d = duration();
 
-		if (clientCallbackSpecified())
-			m_clientCallback->replyFromServer(*this);
-		
-		clientExecutionStatus(ExecutionStatus::Completed);
+		//if (m_client->quitting())
+		//{
+		//	clientExecutionStatus(ExecutionStatus::Completed);
+		//}
+		//else
+		//{
+			if (clientCallbackSpecified())
+				m_clientCallback->replyFromServer(*this);
+			clientExecutionStatus(ExecutionStatus::Completed);
+		//}
 	}
 	
 	ClientInterface::ClientInterface(plog::Severity sev)

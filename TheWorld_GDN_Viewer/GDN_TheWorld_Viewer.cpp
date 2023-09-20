@@ -137,6 +137,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_ready = false;
 	m_desiderdLookDev = ShaderTerrainData::LookDev::NotSet;
 	m_desideredLookDevChanged = false;
+	m_stopDeploy = false;
 	m_useVisualServer = true;
 	m_firstProcess = true;
 	m_initialWordlViewerPosSet = false;
@@ -457,10 +458,16 @@ void GDN_TheWorld_Viewer::preDeinit(void)
 	enum class TheWorldStatus status = Globals()->status();
 	if ((int)status >= (int)TheWorldStatus::worldDeployInProgress)
 	{
-		if ((int)status < (int)TheWorldStatus::worldUnDeployInProgress)
-			undeployWorld();
 		while ((int)Globals()->status() >= (int)TheWorldStatus::worldDeployInProgress)
 		{
+			status = Globals()->status();
+			if ((int)status < (int)TheWorldStatus::worldUnDeployInProgress)
+				undeployWorld();
+
+			status = Globals()->status();
+			if (status == TheWorldStatus::worldDeployInProgress)
+				Globals()->setStatus(TheWorldStatus::worldDeployed);
+
 			Sleep(5);
 		}
 	}
@@ -724,59 +731,67 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1 ") + __FUNCTION__, "Elab. quadrant");
 				QuadTree* quadTree = m_mapQuadTree[quadrantPos].get();
 				m_mtxQuadTreeAndMainProcessing.unlock();
-				if (quadTree->statusGetTerrainDataInProgress() || quadTree->statusRefreshTerrainDataInProgress())
+				
+				if (m_stopDeploy)
 				{
-					std::recursive_mutex& quadrantMutex = quadTree->getQuadrantMutex();
-					std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
-
-					std::string meshIdFromBuffer;
-					{
-						// ATTENZIONE
-						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
-						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1 ") + __FUNCTION__,"quadTree->getQuadrant()->refreshGridVertices");
-						quadTree->getQuadrant()->refreshGridVerticesFromServer(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer, true);
-					}
-					
-					{
-						// ATTENZIONE
-						//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-						quadTree->materialParamsNeedReset(true);
-						//quadTree->resetMaterialParams(true);
-					}
-
-					if (setCamera)
-					{
-						TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.2 ") + __FUNCTION__, "setCamera");
-
-						forceRefreshMapQuadTree();
-
-						quadTree->setVisible(true);
-
-						size_t cameraInGridIndex = quadTree->getQuadrant()->getIndexFromHeighmap(cameraPosX, cameraPosZ, level);
-						if (cameraInGridIndex == -1)
-							throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Not found WorldViewer Pos").c_str()));
-
-						float cameraHeight = quadTree->getQuadrant()->getAltitudeFromHeigthmap(cameraInGridIndex);
-
-						Vector3 cameraPos(cameraPosX, cameraPosY, cameraPosZ);		// MapManager coordinates are local coordinates of WorldNode
-						if (cameraDistanceFromTerrainForced != 0.0f)
-							cameraPos.y = cameraHeight + cameraDistanceFromTerrainForced;
-						float offset = cameraDistanceFromTerrainForced == 0.0f ? 300 : cameraDistanceFromTerrainForced;
-						//Vector3 lookAt(cameraPosX + offset, cameraHeight, cameraPosZ + offset);
-						Vector3 lookAt(cameraPosX, cameraHeight, cameraPosZ - abs(offset));		// camera look at terrain along north direction
-
-						// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
-						//Transform t = get_transform();
-						//t.origin = Vector3(quadTree->getQuadrant()->getGridVertices()[0].posX(), 0, quadTree->getQuadrant()->getGridVertices()[0].posZ());
-						//set_transform(t);
-
-						//WorldCamera()->initCameraInWorld(cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
-						WorldCamera()->call_deferred("init_camera_in_world", cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
-
-						m_initialWordlViewerPosSet = true;
-					}
-
 					quadTree->setStatus(QuadrantStatus::initialized);
+				}
+				else
+				{
+					if (quadTree->statusGetTerrainDataInProgress() || quadTree->statusRefreshTerrainDataInProgress())
+					{
+						std::recursive_mutex& quadrantMutex = quadTree->getQuadrantMutex();
+						std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
+
+						std::string meshIdFromBuffer;
+						{
+							// ATTENZIONE
+							//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
+							TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1 ") + __FUNCTION__, "quadTree->getQuadrant()->refreshGridVertices");
+							quadTree->getQuadrant()->refreshGridVerticesFromServer(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer, true);
+						}
+
+						{
+							// ATTENZIONE
+							//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+							quadTree->materialParamsNeedReset(true);
+							//quadTree->resetMaterialParams(true);
+						}
+
+						if (setCamera)
+						{
+							TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.2 ") + __FUNCTION__, "setCamera");
+
+							forceRefreshMapQuadTree();
+
+							quadTree->setVisible(true);
+
+							size_t cameraInGridIndex = quadTree->getQuadrant()->getIndexFromHeighmap(cameraPosX, cameraPosZ, level);
+							if (cameraInGridIndex == -1)
+								throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Not found WorldViewer Pos").c_str()));
+
+							float cameraHeight = quadTree->getQuadrant()->getAltitudeFromHeigthmap(cameraInGridIndex);
+
+							Vector3 cameraPos(cameraPosX, cameraPosY, cameraPosZ);		// MapManager coordinates are local coordinates of WorldNode
+							if (cameraDistanceFromTerrainForced != 0.0f)
+								cameraPos.y = cameraHeight + cameraDistanceFromTerrainForced;
+							float offset = cameraDistanceFromTerrainForced == 0.0f ? 300 : cameraDistanceFromTerrainForced;
+							//Vector3 lookAt(cameraPosX + offset, cameraHeight, cameraPosZ + offset);
+							Vector3 lookAt(cameraPosX, cameraHeight, cameraPosZ - abs(offset));		// camera look at terrain along north direction
+
+							// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
+							//Transform t = get_transform();
+							//t.origin = Vector3(quadTree->getQuadrant()->getGridVertices()[0].posX(), 0, quadTree->getQuadrant()->getGridVertices()[0].posZ());
+							//set_transform(t);
+
+							//WorldCamera()->initCameraInWorld(cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
+							WorldCamera()->call_deferred("init_camera_in_world", cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
+
+							m_initialWordlViewerPosSet = true;
+						}
+
+						quadTree->setStatus(QuadrantStatus::initialized);
+					}
 				}
 			}
 			else
@@ -3698,8 +3713,11 @@ void GDN_TheWorld_Viewer::undeployWorld(void)
 {
 	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
 
+	m_stopDeploy = true;
+	
 	enum class TheWorldStatus status = Globals()->status();
-	if ((int)status < (int)TheWorldStatus::worldDeployInProgress)
+
+	if ((int)status <= (int)TheWorldStatus::worldDeployInProgress)
 		return;
 	
 	if ((int)status >= (int)TheWorldStatus::worldUnDeployInProgress)
@@ -3708,6 +3726,8 @@ void GDN_TheWorld_Viewer::undeployWorld(void)
 	Globals()->setStatus(TheWorldStatus::worldUnDeployInProgress);
 
 	Globals()->Client()->MapManagerUndeployWorld(m_isInEditor);
+
+	m_stopDeploy = false;
 }
 
 Node3D* GDN_TheWorld_Viewer::getWorldNode(void)

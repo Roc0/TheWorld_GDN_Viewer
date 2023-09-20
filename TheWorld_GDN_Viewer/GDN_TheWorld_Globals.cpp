@@ -68,6 +68,11 @@ namespace godot
 		m_globals = globals;
 	}
 
+	bool GDN_TheWorld_Globals_Client::quitting(void)
+	{
+		return m_globals->quitting();
+	}
+
 	void GDN_TheWorld_Globals_Client::MapManagerSetLogMaxSeverity(plog::Severity sev)
 	{
 		std::vector<ClientServerVariant> replyParams;

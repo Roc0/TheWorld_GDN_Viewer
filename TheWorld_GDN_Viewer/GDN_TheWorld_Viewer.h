@@ -85,6 +85,10 @@ namespace godot
 		bool canDeinit(void);
 		void preDeinit(void);
 		void deinit(void);
+		bool quitting()
+		{
+			return m_quitting;
+		}
 
 		void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
 
@@ -438,6 +442,7 @@ namespace godot
 		//Vector3 m_mapScaleVector;
 		enum class ShaderTerrainData::LookDev m_desiderdLookDev;
 		bool m_desideredLookDevChanged;
+		bool m_stopDeploy;
 
 		// Statistics data
 		int m_numProcessExecution;
