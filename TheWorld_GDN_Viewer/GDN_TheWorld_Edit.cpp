@@ -289,25 +289,31 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//mainPanelContainer->set_name("Terrain");
 	//m_mainTabContainer->add_child(mainPanelContainer);
 
-		//godot::Control* mainTerrainScrollContainer = memnew(godot::ScrollContainer);
-		//mainTerrainScrollContainer->set_name("Terrain");
-		//m_mainTabContainer->add_child(mainTerrainScrollContainer);
-		////mainTerrainScrollContainer->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
-		////mainTerrainScrollContainer->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
-		//mainTerrainScrollContainer->set_self_modulate(self_modulate);
-		////mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_EXPAND_FILL);
-		////mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_EXPAND_FILL);
-		//mainTerrainScrollContainer->set_custom_minimum_size(godot::Vector2(0,550));
+		godot::Control* mainTerrainScrollContainer = memnew(godot::ScrollContainer);
+		mainTerrainScrollContainer->set_name("Terrain");
+		m_mainTabContainer->add_child(mainTerrainScrollContainer);
+		//mainTerrainScrollContainer->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//mainTerrainScrollContainer->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		mainTerrainScrollContainer->set_self_modulate(self_modulate);
+		mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+		mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+		//mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_EXPAND_FILL);
+		//mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_EXPAND_FILL);
+		//mainTerrainScrollContainer->set_size(godot::Vector2(100, 500));
+		mainTerrainScrollContainer->set_custom_minimum_size(godot::Vector2(100,500));
+
 
 		godot::Control* mainTerrainVBoxContainer = memnew(godot::VBoxContainer);
 		mainTerrainVBoxContainer->set_name("Terrain");
-		//mainTerrainScrollContainer->add_child(mainTerrainVBoxContainer);
-		m_mainTabContainer->add_child(mainTerrainVBoxContainer);
+		mainTerrainScrollContainer->add_child(mainTerrainVBoxContainer);
+		//m_mainTabContainer->add_child(mainTerrainVBoxContainer);
 		mainTerrainVBoxContainer->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 		mainTerrainVBoxContainer->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		mainTerrainVBoxContainer->set_self_modulate(self_modulate);
-		//mainTerrainVBoxContainer->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
-		//mainTerrainVBoxContainer->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+		mainTerrainVBoxContainer->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+		mainTerrainVBoxContainer->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+		//mainTerrainVBoxContainer->set_size(godot::Vector2(100, 200));
+		//mainTerrainVBoxContainer->set_custom_minimum_size(godot::Vector2(100, 200));
 
 
 			separator = memnew(HSeparator);
