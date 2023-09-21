@@ -70,6 +70,7 @@ namespace godot
 		}
 		void controlNeedResize(void);
 		void editModeNoisePanel(void);
+		void editModeInfoPanel(void);
 		void setSizeUI(void);
 		void editModeGenerateAction(void);
 		void editModeBlendAction(void);
@@ -193,7 +194,9 @@ namespace godot
 
 		godot::Control* m_noiseVBoxContainer;
 		godot::Button* m_noiseButton;
-		
+		godot::Control* m_infoVBoxContainer;
+		godot::Button* m_infoButton;
+
 		godot::LineEdit* m_seed;
 		godot::LineEdit* m_frequency;
 		godot::LineEdit* m_fractalOctaves;
@@ -201,16 +204,15 @@ namespace godot
 		godot::LineEdit* m_fractalGain;
 		godot::LineEdit* m_fractalWeightedStrength;
 		godot::LineEdit* m_fractalPingPongStrength;
-
 		godot::LineEdit* m_amplitudeLabel;
 		godot::LineEdit* m_scaleFactorLabel;
 		godot::LineEdit* m_desideredMinHeightLabel;
+		
 		godot::Label* m_minHeightLabel;
 		godot::Label* m_maxHeightLabel;
 		godot::Label* m_elapsedLabel;
 		godot::Label* m_counterLabel;
 		godot::Label* m_note1Label;
-
 		godot::Label* m_mouseHitLabel;
 		godot::Label* m_mouseQuadHitLabel;
 		godot::Label* m_mouseQuadHitPosLabel;
