@@ -388,6 +388,16 @@ namespace godot
 
 		bool isInEditor(void)
 		{
+			if (m_isInEditorInitialized)
+				return m_isInEditor;
+
+			GDN_TheWorld_Globals* g = Globals();
+			if (g == nullptr)
+				return false;
+
+			m_isInEditor = IS_EDITOR_HINT();
+			m_isInEditorInitialized = true;
+			
 			return m_isInEditor;
 		}
 
@@ -405,6 +415,27 @@ namespace godot
 			else
 				return get_viewport()->get_mouse_position();
 		}
+		
+		godot::Size2 getViewportSize(void)
+		{
+			if (isInEditor())
+			{
+				if (m_editor3dOverlay != nullptr)
+				{
+					godot::Rect2 rect = m_editor3dOverlay->get_rect();
+					return godot::Size2(rect.size);
+				}
+				else
+					return godot::Size2(0.0f, 0.0f);
+			}
+			else
+			{
+				godot::Rect2 rect = get_viewport()->get_visible_rect();
+				return godot::Size2(rect.size);
+			}
+		}
+		
+		void viewportSizeChanged(void);
 
 	private:
 		void _findChildNodes(godot::Array& foundNodes, godot::Array& searchNodes, String searchClass);
@@ -429,6 +460,7 @@ namespace godot
 		bool m_visibleInTree;
 		bool m_initRequired;
 		bool m_isInEditor;
+		bool m_isInEditorInitialized;
 		bool m_ready;
 		bool m_useVisualServer;
 		bool m_altPressed;

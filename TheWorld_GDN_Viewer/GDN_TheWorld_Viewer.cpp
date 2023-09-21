@@ -125,6 +125,8 @@ void GDN_TheWorld_Viewer::_bind_methods()
 	ClassDB::bind_method(D_METHOD("get_mouse_chunk_hit_dist_from_cam"), &GDN_TheWorld_Viewer::getMouseChunkHitDistFromCam);
 	ClassDB::bind_method(D_METHOD("update_material_parmas_for_every_quadrant"), &GDN_TheWorld_Viewer::updateMaterialParamsForEveryQuadrant);
 	ClassDB::bind_method(D_METHOD("set_shader_parameter"), &GDN_TheWorld_Viewer::setShaderParam);
+	ClassDB::bind_method(D_METHOD("get_viewport_size"), &GDN_TheWorld_Viewer::getViewportSize);
+	ClassDB::bind_method(D_METHOD("viewport_size_changed"), &GDN_TheWorld_Viewer::viewportSizeChanged);
 }
 
 GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
@@ -134,6 +136,7 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_visibleInTree = false;
 	m_initRequired = false;
 	m_isInEditor = false;
+	m_isInEditorInitialized = false;
 	m_ready = false;
 	m_desiderdLookDev = ShaderTerrainData::LookDev::NotSet;
 	m_desideredLookDevChanged = false;
@@ -325,7 +328,7 @@ bool GDN_TheWorld_Viewer::init(void)
 
 	globals->addElementToInitialize();
 	
-	m_isInEditor = IS_EDITOR_HINT();
+	//m_isInEditor = IS_EDITOR_HINT();
 	
 	// From _notification ENTER_WORLD
 	printKeyboardMapping();
@@ -1018,7 +1021,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			}
 			float cameraRoll = *_cameraRoll;
 
-			Globals()->Client()->MapManagerDeployLevel(m_isInEditor, level, numVerticesPerSize, gridStepInWU, setCamera, cameraPosX, cameraPosY, cameraPosZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
+			Globals()->Client()->MapManagerDeployLevel(isInEditor(), level, numVerticesPerSize, gridStepInWU, setCamera, cameraPosX, cameraPosY, cameraPosZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
 		}
 		else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD)
 		{
@@ -1496,7 +1499,21 @@ void GDN_TheWorld_Viewer::_notification(int p_what)
 			onTransformChanged();
 		}
 		break;
+		//case NOTIFICATION_WM_SIZE_CHANGED:
+		//{
+		//	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+		//	if (editModeUIControl != nullptr && editModeUIControl->initilized())
+		//		editModeUIControl->controlNeedResize();
+		//}
+		//break;
 	}
+}
+
+void GDN_TheWorld_Viewer::viewportSizeChanged(void)
+{
+	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+	if (editModeUIControl != nullptr && editModeUIControl->initilized())
+		editModeUIControl->controlNeedResize();
 }
 
 String GDN_TheWorld_Viewer::getDebugDrawMode(void)
@@ -3679,7 +3696,7 @@ void GDN_TheWorld_Viewer::deployWorld(float cameraX, float cameraY, float camera
 
 		float _gridStepInWU = Globals()->gridStepInWU();
 
-		Globals()->Client()->MapManagerDeployWorld(m_isInEditor, level, (size_t)m_numWorldVerticesPerSize, _gridStepInWU, true, cameraX, cameraY, cameraZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
+		Globals()->Client()->MapManagerDeployWorld(isInEditor(), level, (size_t)m_numWorldVerticesPerSize, _gridStepInWU, true, cameraX, cameraY, cameraZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
 		
 		//Globals()->Client()->MapManagerDeployLevel(level, (size_t)m_numWorldVerticesPerSize, _gridStepInWU, true, cameraX, cameraY, cameraZ, cameraDistanceFromTerrainForced, cameraYaw, cameraPitch, cameraRoll);
 
@@ -3725,7 +3742,7 @@ void GDN_TheWorld_Viewer::undeployWorld(void)
 
 	Globals()->setStatus(TheWorldStatus::worldUnDeployInProgress);
 
-	Globals()->Client()->MapManagerUndeployWorld(m_isInEditor);
+	Globals()->Client()->MapManagerUndeployWorld(isInEditor());
 
 	m_stopDeploy = false;
 }

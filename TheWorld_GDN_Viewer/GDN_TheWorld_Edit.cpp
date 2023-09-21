@@ -39,7 +39,7 @@ void GDN_TheWorld_Edit::_bind_methods()
 	ClassDB::bind_method(D_METHOD("edit_mode_sel_lookdev"), &GDN_TheWorld_Edit::editModeSelectLookDevAction);
 	ClassDB::bind_method(D_METHOD("mouse_entered_main_panel"), &GDN_TheWorld_Edit::editModeMouseEnteredMainPanel);
 	ClassDB::bind_method(D_METHOD("mouse_exited_main_panel"), &GDN_TheWorld_Edit::editModeMouseExitedMainPanel);
-	ClassDB::bind_method(D_METHOD("control_need_resize"), &GDN_TheWorld_Edit::setSizeUI);
+	ClassDB::bind_method(D_METHOD("control_need_resize"), &GDN_TheWorld_Edit::controlNeedResize);
 }
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
@@ -51,10 +51,13 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_actionStopRequested = false;
 	m_onGoingElapsedLabel = false;
 	m_viewer = nullptr;
+	m_controlNeedResize = false;
+	m_scrollPanelsNeedResize = false;
 	m_mainPanelContainer = nullptr;
 	m_noiseVBoxContainer = nullptr;
+	m_mainTerrainVBoxContainer = nullptr;
+	m_mainTerrainScrollContainer = nullptr;
 	m_noiseButton = nullptr;
-	//m_noiseContainerShowing = false;
 	m_mainTabContainer = nullptr;
 	m_seed = nullptr;
 	m_frequency = nullptr;
@@ -251,7 +254,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//if (!IS_EDITOR_HINT())
 	m_viewer->add_child(this);
 	set_name(THEWORLD_EDIT_MODE_UI_CONTROL_NAME);
-	//setSizeUI();
 
 	//const Color self_modulate = get_self_modulate();
 	const Color self_modulate(1.0f, 1.0f, 1.0f, 0.5f);
@@ -289,41 +291,41 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//mainPanelContainer->set_name("Terrain");
 	//m_mainTabContainer->add_child(mainPanelContainer);
 
-		godot::Control* mainTerrainScrollContainer = memnew(godot::ScrollContainer);
-		mainTerrainScrollContainer->set_name("Terrain");
-		m_mainTabContainer->add_child(mainTerrainScrollContainer);
+		m_mainTerrainScrollContainer = memnew(godot::ScrollContainer);
+		m_mainTerrainScrollContainer->set_name("Terrain");
+		m_mainTabContainer->add_child(m_mainTerrainScrollContainer);
 		//mainTerrainScrollContainer->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 		//mainTerrainScrollContainer->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
-		mainTerrainScrollContainer->set_self_modulate(self_modulate);
-		mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
-		mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
-		//mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_EXPAND_FILL);
-		//mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_EXPAND_FILL);
-		//mainTerrainScrollContainer->set_size(godot::Vector2(100, 500));
-		mainTerrainScrollContainer->set_custom_minimum_size(godot::Vector2(100,500));
+		m_mainTerrainScrollContainer->set_self_modulate(self_modulate);
+		m_mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+		m_mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+		m_mainTerrainScrollContainer->set_horizontal_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
+		m_mainTerrainScrollContainer->set_vertical_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
+		//m_mainTerrainScrollContainer->set_custom_minimum_size(godot::Vector2(100, 500));
+		//m_mainTerrainScrollContainer->set_custom_minimum_size(godot::Vector2(100, 200));
 
 
-		godot::Control* mainTerrainVBoxContainer = memnew(godot::VBoxContainer);
-		mainTerrainVBoxContainer->set_name("Terrain");
-		mainTerrainScrollContainer->add_child(mainTerrainVBoxContainer);
-		//m_mainTabContainer->add_child(mainTerrainVBoxContainer);
-		mainTerrainVBoxContainer->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
-		mainTerrainVBoxContainer->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
-		mainTerrainVBoxContainer->set_self_modulate(self_modulate);
-		mainTerrainVBoxContainer->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
-		mainTerrainVBoxContainer->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
-		//mainTerrainVBoxContainer->set_size(godot::Vector2(100, 200));
-		//mainTerrainVBoxContainer->set_custom_minimum_size(godot::Vector2(100, 200));
+		m_mainTerrainVBoxContainer = memnew(godot::VBoxContainer);
+		m_mainTerrainVBoxContainer->set_name("Terrain");
+		m_mainTerrainScrollContainer->add_child(m_mainTerrainVBoxContainer);
+		//m_mainTabContainer->add_child(m_mainTerrainVBoxContainer);
+		m_mainTerrainVBoxContainer->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		m_mainTerrainVBoxContainer->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		m_mainTerrainVBoxContainer->set_self_modulate(self_modulate);
+		m_mainTerrainVBoxContainer->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+		m_mainTerrainVBoxContainer->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+		//m_mainTerrainVBoxContainer->set_size(godot::Vector2(100, 200));
+		//m_mainTerrainVBoxContainer->set_custom_minimum_size(godot::Vector2(100, 200));
 
 
 			separator = memnew(HSeparator);
-			mainTerrainVBoxContainer->add_child(separator);
+			m_mainTerrainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 			separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 			//hBoxContainer->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
 			//hBoxContainer->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
 				button = memnew(godot::Button);
@@ -369,13 +371,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				//m_allCheckBox->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
 
 			separator = memnew(HSeparator);
-			mainTerrainVBoxContainer->add_child(separator);
+			m_mainTerrainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 			separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 			separator->set_self_modulate(self_modulate);
 
 			m_noiseButton = memnew(godot::Button);
-			mainTerrainVBoxContainer->add_child(m_noiseButton);
+			m_mainTerrainVBoxContainer->add_child(m_noiseButton);
 			//m_noiseButton->set_flat(true);
 			m_noiseButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 			m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" Noise").c_str());
@@ -386,9 +388,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 
 			m_noiseVBoxContainer = memnew(godot::VBoxContainer);
 			m_noiseVBoxContainer->set_name("Noise");
-			mainTerrainVBoxContainer->add_child(m_noiseVBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(m_noiseVBoxContainer);
 			m_noiseVBoxContainer->hide();
-			//m_noiseContainerShowing = false;
 
 				hBoxContainer = memnew(godot::HBoxContainer);
 				m_noiseVBoxContainer->add_child(hBoxContainer);
@@ -557,13 +558,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 					m_fractalPingPongStrength->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
 			separator = memnew(HSeparator);
-			mainTerrainVBoxContainer->add_child(separator);
+			m_mainTerrainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 			separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				m_lookDevOptionButton = memnew(godot::OptionButton);
 				hBoxContainer->add_child(m_lookDevOptionButton);
 				m_lookDevOptionButton->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
@@ -581,13 +582,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_lookDevOptionButton->add_item("Lookdev globalmap", (int64_t)ShaderTerrainData::LookDev::Global);
 
 			separator = memnew(HSeparator);
-			mainTerrainVBoxContainer->add_child(separator);
+			m_mainTerrainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 			separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				label = memnew(godot::Label);
 				hBoxContainer->add_child(label);
 				label->set_text("Min");
@@ -612,7 +613,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_maxHeightLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				label = memnew(godot::Label);
 				hBoxContainer->add_child(label);
 				label->set_text("Elapsed");
@@ -636,13 +637,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_note1Label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
 			separator = memnew(HSeparator);
-			mainTerrainVBoxContainer->add_child(separator);
+			m_mainTerrainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 			separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				label = memnew(godot::Label);
 				hBoxContainer->add_child(label);
 				label->set_text("Hit");
@@ -656,7 +657,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_mouseHitLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				label = memnew(godot::Label);
 				hBoxContainer->add_child(label);
 				label->set_text("Quad Hit");
@@ -670,7 +671,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_mouseQuadHitLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				label = memnew(godot::Label);
 				hBoxContainer->add_child(label);
 				label->set_text("Pos Hit");
@@ -684,7 +685,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_mouseQuadHitPosLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				label = memnew(godot::Label);
 				hBoxContainer->add_child(label);
 				label->set_text("Quad Sel");
@@ -698,7 +699,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_mouseQuadSelLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				label = memnew(godot::Label);
 				hBoxContainer->add_child(label);
 				label->set_text("Pos Sel");
@@ -712,13 +713,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_mouseQuadSelPosLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
 			separator = memnew(HSeparator);
-			mainTerrainVBoxContainer->add_child(separator);
+			m_mainTerrainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 			separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				label = memnew(godot::Label);
 				hBoxContainer->add_child(label);
 				label->set_text("Quads to save");
@@ -743,13 +744,13 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				m_numQuadrantToUploadLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
 			separator = memnew(HSeparator);
-			mainTerrainVBoxContainer->add_child(separator);
+			m_mainTerrainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 			separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				button = memnew(godot::Button);
 				hBoxContainer->add_child(button);
 				button->set_text("Save");
@@ -785,33 +786,35 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 				button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
 			separator = memnew(VSeparator);
-			mainTerrainVBoxContainer->add_child(separator);
+			m_mainTerrainVBoxContainer->add_child(separator);
 			separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 			separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 			separator->set_self_modulate(self_modulate);
 
 			hBoxContainer = memnew(godot::HBoxContainer);
-			mainTerrainVBoxContainer->add_child(hBoxContainer);
+			m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 				m_message = memnew(godot::Label);
 				hBoxContainer->add_child(m_message);
 				m_message->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 				m_message->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
 				m_message->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 
-			separator = createControl<HSeparator>(mainTerrainVBoxContainer);
+			separator = createControl<HSeparator>(m_mainTerrainVBoxContainer);
 			//separator = memnew(HSeparator);
-			//mainTerrainVBoxContainer->add_child(separator);
+			//m_mainTerrainVBoxContainer->add_child(separator);
 			//separator->connect("mouse_entered", this, "mouse_entered_main_panel"));
 			//separator->connect("mouse_exited", this, "mouse_exited_main_panel"));
 			separator->set_self_modulate(self_modulate);
 
-			size_t numToSave = 0;
-			size_t numToUpload = 0;
-			refreshNumToSaveUpload(numToSave, numToUpload);
+	controlNeedResize();
 
-			m_tp.Start("EditModeWorker", 1, this);
+	size_t numToSave = 0;
+	size_t numToUpload = 0;
+	refreshNumToSaveUpload(numToSave, numToUpload);
 
-			m_initialized = true;
+	m_tp.Start("EditModeWorker", 1, this);
+
+	m_initialized = true;
 }
 
 template <class T>
@@ -856,6 +859,8 @@ void GDN_TheWorld_Edit::setSizeUI(void)
 	}
 	else
 		set_offset(godot::Side::SIDE_LEFT, get_viewport()->get_visible_rect().get_size().x - 350);
+
+	m_scrollPanelsNeedResize = true;
 }
 
 void GDN_TheWorld_Edit::setEmptyTerrainEditValues(void)
@@ -1186,10 +1191,10 @@ void GDN_TheWorld_Edit::_ready(void)
 	m_ready = true;
 }
 
-//void GDN_TheWorld_Edit::controlNeedResize(void)
-//{
-//	setSizeUI();
-//}
+void GDN_TheWorld_Edit::controlNeedResize(void)
+{
+	m_controlNeedResize = true;
+}
 
 void GDN_TheWorld_Edit::_input(const Ref<InputEvent>& event)
 {
@@ -1238,10 +1243,35 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 	break;
 	case NOTIFICATION_RESIZED:
 	{
-		setSizeUI();
+		//setSizeUI();
+		controlNeedResize();
 	}
 	break;
 	}
+}
+
+godot::Size2 GDN_TheWorld_Edit::getTerrainScrollPanelSize(void)
+{
+	if (m_viewer == nullptr || m_mainTerrainVBoxContainer == nullptr)
+		return godot::Size2(0.0f, 0.0f);
+
+	godot::Size2 viewportSize = m_viewer->getViewportSize();
+	godot::Rect2 contentRect = m_mainTerrainVBoxContainer->get_rect();
+	godot::Size2 contentSize = contentRect.size;
+	
+	godot::Size2 ret = viewportSize;
+
+	if (contentRect.size != godot::Size2(0.0f, 0.0f))
+	{
+		if (viewportSize.height > contentSize.height)
+			ret.height = contentSize.height;
+		if (viewportSize.width > contentSize.width)
+			ret.width = contentSize.width;
+	}
+
+	ret.width = 0;	// ???
+	
+	return ret;
 }
 
 void GDN_TheWorld_Edit::_process(double _delta)
@@ -1265,6 +1295,21 @@ void GDN_TheWorld_Edit::_process(double _delta)
 
 	if (!m_initialized)
 		return;
+
+	if (m_controlNeedResize)
+	{
+		setSizeUI();
+		m_controlNeedResize = false;
+	}
+
+	if (m_scrollPanelsNeedResize)
+	{
+		if (m_mainTerrainVBoxContainer != nullptr && m_mainTerrainVBoxContainer->get_rect().size != godot::Size2(0.0f, 0.0f))
+		{
+			m_mainTerrainScrollContainer->set_custom_minimum_size(getTerrainScrollPanelSize());
+			m_scrollPanelsNeedResize = false;
+		}
+	}
 
 	if (m_viewer->editMode() && (!m_refreshUI.counterStarted() || m_refreshUI.partialDuration().count() > 1000))
 	{
@@ -1299,6 +1344,7 @@ void GDN_TheWorld_Edit::_process(double _delta)
 			m_lastMessageChanged = false;
 		}
 	}
+
 }
 
 void GDN_TheWorld_Edit::editModeNoisePanel(void)
@@ -1307,14 +1353,14 @@ void GDN_TheWorld_Edit::editModeNoisePanel(void)
 	{
 		m_noiseVBoxContainer->hide();
 		m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" Noise").c_str());
-		//m_noiseContainerShowing = false;
 	}
 	else
 	{
 		m_noiseVBoxContainer->show();
 		m_noiseButton->set_text((std::wstring(DOWN_ARROW) + L" Noise").c_str());
-		//m_noiseContainerShowing = true;
 	}
+
+	m_scrollPanelsNeedResize = true;
 }
 
 void GDN_TheWorld_Edit::editModeStopAction(void)

@@ -5,6 +5,7 @@
 #include <godot_cpp/classes/margin_container.hpp>
 #include <godot_cpp/classes/panel_container.hpp>
 #include <godot_cpp/classes/tab_container.hpp>
+#include <godot_cpp/classes/scroll_container.hpp>
 #include <godot_cpp/classes/label.hpp>
 #include <godot_cpp/classes/line_Edit.hpp>
 #include <godot_cpp/classes/check_box.hpp>
@@ -67,7 +68,7 @@ namespace godot
 		{
 			return m_initialized;
 		}
-		//void controlNeedResize(void);
+		void controlNeedResize(void);
 		void editModeNoisePanel(void);
 		void setSizeUI(void);
 		void editModeGenerateAction(void);
@@ -159,6 +160,8 @@ namespace godot
 			return m_viewer->Globals();
 		}
 
+		godot::Size2 getTerrainScrollPanelSize(void);
+
 	private:
 		bool m_initialized;
 		bool m_quitting;
@@ -181,11 +184,14 @@ namespace godot
 		bool m_requiredUIAcceptFocus;
 		bool m_UIAcceptingFocus;
 
+		bool m_controlNeedResize;
+		bool m_scrollPanelsNeedResize;
 		godot::Control* m_mainPanelContainer;
 		godot::Control* m_mainTabContainer;
+		godot::ScrollContainer* m_mainTerrainScrollContainer;
+		godot::Control* m_mainTerrainVBoxContainer;
 
 		godot::Control* m_noiseVBoxContainer;
-		//bool m_noiseContainerShowing;
 		godot::Button* m_noiseButton;
 		
 		godot::LineEdit* m_seed;
