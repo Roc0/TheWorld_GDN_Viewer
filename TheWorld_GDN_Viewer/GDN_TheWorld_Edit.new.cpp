@@ -291,131 +291,272 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	godot::Button* button = nullptr;
 	godot::Label* label = nullptr;
 
-	m_mainPanelContainer = createControl<godot::PanelContainer>(this, "EditBox", self_modulate);
+	{
+		m_mainPanelContainer = createControl<godot::PanelContainer>(this, "EditBox", self_modulate);
+		//m_mainPanelContainer = memnew(godot::PanelContainer);
+		////m_mainPanelContainer = memnew(godot::MarginContainer);
+		//m_mainPanelContainer->set_name("EditBox");
+		//add_child(m_mainPanelContainer);
+		//m_mainPanelContainer->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_mainPanelContainer->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		//m_mainPanelContainer->set_self_modulate(self_modulate);
+	}
 
-	m_mainTabContainer = createControl<godot::TabContainer>(m_mainPanelContainer, "EditModeTab", self_modulate);
+	{
+		m_mainTabContainer = createControl<godot::TabContainer>(m_mainPanelContainer, "EditModeTab", self_modulate);
+		//m_mainTabContainer = memnew(godot::TabContainer);
+		//m_mainTabContainer->set_name("EditModeTab");
+		//m_mainPanelContainer->add_child(m_mainTabContainer);
+		//m_mainTabContainer->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_mainTabContainer->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		//m_mainTabContainer->set_self_modulate(self_modulate);
+	}
 
-	m_mainTerrainScrollContainer = createControl<godot::ScrollContainer>(m_mainTabContainer, "Terrain", self_modulate);
-	m_mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
-	m_mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
-	m_mainTerrainScrollContainer->set_horizontal_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
-	m_mainTerrainScrollContainer->set_vertical_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
+	{
+		m_mainTerrainScrollContainer = createControl<godot::ScrollContainer>(m_mainTabContainer, "Terrain", self_modulate);
+		//m_mainTerrainScrollContainer = memnew(godot::ScrollContainer);
+		//m_mainTerrainScrollContainer->set_name("Terrain");
+		//m_mainTabContainer->add_child(m_mainTerrainScrollContainer);
+		//m_mainTerrainScrollContainer->set_self_modulate(self_modulate);
+		m_mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+		m_mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+		m_mainTerrainScrollContainer->set_horizontal_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
+		m_mainTerrainScrollContainer->set_vertical_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
+	}
 
 	godot::MarginContainer* marginContainer = nullptr;
-	marginContainer = createControl<godot::MarginContainer>(m_mainTerrainScrollContainer, "TerrainMargin", self_modulate);
-	marginContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
-	marginContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
-	if (!IS_EDITOR_HINT())
 	{
-		marginContainer->add_theme_constant_override("margin_left", 5);
-		marginContainer->add_theme_constant_override("margin_right", 5);
+		marginContainer = createControl<godot::MarginContainer>(m_mainTerrainScrollContainer, "TerrainMargin", self_modulate);
+		//marginContainer = memnew(godot::MarginContainer);
+		//marginContainer->set_name("TerrainMargin");
+		//m_mainTerrainScrollContainer->add_child(marginContainer);
+		//marginContainer->set_self_modulate(self_modulate);
+		marginContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+		marginContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+		if (!IS_EDITOR_HINT())
+		{
+			marginContainer->add_theme_constant_override("margin_left", 5);
+			marginContainer->add_theme_constant_override("margin_right", 5);
+		}
 	}
-	//marginContainer->add_theme_constant_override("margin_top", 5);
-	//marginContainer->add_theme_constant_override("margin_bottom", 5);
 
-	m_mainTerrainVBoxContainer = createControl<godot::VBoxContainer>(marginContainer, "Terrain", self_modulate);
-	m_mainTerrainVBoxContainer->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
-	m_mainTerrainVBoxContainer->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+	{
+		m_mainTerrainVBoxContainer = createControl<godot::VBoxContainer>(marginContainer, "Terrain", self_modulate);
+		//m_mainTerrainVBoxContainer = memnew(godot::VBoxContainer);
+		//m_mainTerrainVBoxContainer->set_name("Terrain");
+		////m_mainTerrainScrollContainer->add_child(m_mainTerrainVBoxContainer);
+		//marginContainer->add_child(m_mainTerrainVBoxContainer);
+		//m_mainTerrainVBoxContainer->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_mainTerrainVBoxContainer->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		//m_mainTerrainVBoxContainer->set_self_modulate(self_modulate);
+		m_mainTerrainVBoxContainer->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+		m_mainTerrainVBoxContainer->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+	}
 
 	{
 		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Quads to save");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
 		m_numQuadrantToSaveLabel = createControl<godot::Label>(hBoxContainer, "");
+		//m_numQuadrantToSaveLabel = memnew(godot::Label);
+		//hBoxContainer->add_child(m_numQuadrantToSaveLabel);
+		//m_numQuadrantToSaveLabel->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_numQuadrantToSaveLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_numQuadrantToSaveLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Quads to upload");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_numQuadrantToUploadLabel = createControl<godot::Label>(hBoxContainer, "");
+		//m_numQuadrantToUploadLabel = memnew(godot::Label);
+		//hBoxContainer->add_child(m_numQuadrantToUploadLabel);
+		//m_numQuadrantToUploadLabel->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_numQuadrantToUploadLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_numQuadrantToUploadLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
+		//button = memnew(godot::Button);
+		//hBoxContainer->add_child(button);
+		//button->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//button->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		button->set_text("Save");
 		button->connect("pressed", Callable(this, "edit_mode_save"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
 		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		//separator = memnew(VSeparator);
+		//separator->set_self_modulate(self_modulate);
+		//hBoxContainer->add_child(separator);
+		//separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		//separator->set_self_modulate(self_modulate);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
+		//button = memnew(godot::Button);
+		//hBoxContainer->add_child(button);
+		//button->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//button->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		button->set_text("Upload");
 		button->connect("pressed", Callable(this, "edit_mode_upload"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
 		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		//separator = memnew(VSeparator);
+		//separator->set_self_modulate(self_modulate);
+		//hBoxContainer->add_child(separator);
+		//separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		//separator->set_self_modulate(self_modulate);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
+		//button = memnew(godot::Button);
+		//hBoxContainer->add_child(button);
+		//button->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//button->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		button->set_text("Stop");
 		button->connect("pressed", Callable(this, "edit_mode_stop"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
+		//button = memnew(godot::Button);
+		//hBoxContainer->add_child(button);
+		//button->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//button->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		button->set_text("Blend");
 		button->connect("pressed", Callable(this, "edit_mode_blend"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
 		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		//separator = memnew(VSeparator);
+		//separator->set_self_modulate(self_modulate);
+		//hBoxContainer->add_child(separator);
+		//separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		//separator->set_self_modulate(self_modulate);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
+		//button = memnew(godot::Button);
+		//hBoxContainer->add_child(button);
+		//button->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//button->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		button->set_text("Gen. Normals");
 		button->connect("pressed", Callable(this, "edit_mode_gen_normals"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
+		//button = memnew(godot::Button);
+		//hBoxContainer->add_child(button);
+		//button->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//button->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		button->set_text("Set Texs");
 		button->connect("pressed", Callable(this, "edit_mode_set_textures"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
 		m_allCheckBox = createControl<godot::CheckBox>(hBoxContainer, "");
+		//m_allCheckBox = memnew(godot::CheckBox);
+		//hBoxContainer->add_child(m_allCheckBox);
+		//m_allCheckBox->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_allCheckBox->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_allCheckBox->set_text("All");
 		m_allCheckBox->set_toggle_mode(true);
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 		
 		m_message = createControl<godot::Label>(hBoxContainer, "");
+		//m_message = memnew(godot::Label);
+		//hBoxContainer->add_child(m_message);
+		//m_message->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_message->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_message->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Elapsed");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_elapsedLabel = createControl<godot::Label>(hBoxContainer, "");
+		//m_elapsedLabel = memnew(godot::Label);
+		//hBoxContainer->add_child(m_elapsedLabel);
+		//m_elapsedLabel->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_elapsedLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_elapsedLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
 		m_elapsed1Label = createControl<godot::Label>(hBoxContainer, "");
+		//m_elapsed1Label = memnew(godot::Label);
+		//hBoxContainer->add_child(m_elapsed1Label);
+		//m_elapsed1Label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_elapsed1Label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_elapsed1Label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 	}
-	//setMessage(std::string("AAAAAAAAAAAAAAAAAAAAAAA"));
+	setMessage(std::string("AAAAAAAAAAAAAAAAAAAAAAA"));
 
 	{
 		m_infoButton = createControl<godot::Button>(m_mainTerrainVBoxContainer, "");
+		//m_infoButton = memnew(godot::Button);
+		//m_mainTerrainVBoxContainer->add_child(m_infoButton);
+		//m_infoButton->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_infoButton->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_infoButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		m_infoButton->set_text((std::wstring(RIGHT_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
 		m_infoButton->connect("pressed", Callable(this, "edit_mode_info_panel"));
 		m_infoButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
 		m_infoVBoxContainer = createControl<godot::VBoxContainer>(m_mainTerrainVBoxContainer, "Info");
+		//m_infoVBoxContainer = memnew(godot::VBoxContainer);
+		//m_infoVBoxContainer->set_name("Info");
+		//m_mainTerrainVBoxContainer->add_child(m_infoVBoxContainer);
 		m_infoVBoxContainer->hide();
 		editModeInfoPanel();
 
 		m_infoLabel = createControl<godot::Label>(m_infoVBoxContainer, "");
+		//m_infoLabel = memnew(godot::Label);
+		//m_infoVBoxContainer->add_child(m_infoLabel);
+		//m_infoLabel->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_infoLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_infoLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 	}
 
 	{
 		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_mainTerrainVBoxContainer->add_child(hBoxContainer);
 		
 		m_lookDevOptionButton = createControl<godot::OptionButton>(hBoxContainer, "");
+		//m_lookDevOptionButton = memnew(godot::OptionButton);
+		//hBoxContainer->add_child(m_lookDevOptionButton);
+		//m_lookDevOptionButton->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_lookDevOptionButton->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_lookDevOptionButton->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
 		m_lookDevOptionButton->set_toggle_mode(true);
 		m_lookDevOptionButton->connect("item_selected", Callable(this, "edit_mode_sel_lookdev"));
@@ -431,20 +572,31 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 
 	{
 		m_noiseButton = createControl<godot::Button>(m_mainTerrainVBoxContainer, "");
-		//m_noiseButton->set_flat(true);
+		//m_noiseButton = memnew(godot::Button);
+		//m_mainTerrainVBoxContainer->add_child(m_noiseButton);
+		//m_noiseButton->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_noiseButton->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		////m_noiseButton->set_flat(true);
 		m_noiseButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
 		m_noiseButton->connect("pressed", Callable(this, "edit_mode_noise_panel"));
 		m_noiseButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
 		m_noiseVBoxContainer = createControl<godot::VBoxContainer>(m_mainTerrainVBoxContainer, "Noise");
+		//m_noiseVBoxContainer = memnew(godot::VBoxContainer);
+		//m_noiseVBoxContainer->set_name("Noise");
+		//m_mainTerrainVBoxContainer->add_child(m_noiseVBoxContainer);
 		m_noiseVBoxContainer->hide();
 
-		separator = createControl<HSeparator>(m_noiseVBoxContainer, "", self_modulate);
-		
 		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_noiseVBoxContainer->add_child(hBoxContainer);
 		
 		m_terrTypeOptionButton = createControl<godot::OptionButton>(hBoxContainer, "");
+		//m_terrTypeOptionButton = memnew(godot::OptionButton);
+		//hBoxContainer->add_child(m_terrTypeOptionButton);
+		//m_terrTypeOptionButton->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_terrTypeOptionButton->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_terrTypeOptionButton->connect("item_selected", Callable(this, "edit_mode_sel_terr_type"));
 		m_terrTypeOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::unknown).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::unknown);
@@ -463,95 +615,198 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::noise_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::noise_1);
 		
 		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		//separator = memnew(VSeparator);
+		//hBoxContainer->add_child(separator);
+		//separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		//separator->set_self_modulate(self_modulate);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
+		//button = memnew(godot::Button);
+		//hBoxContainer->add_child(button);
+		//button->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//button->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		button->set_text("Generate");
 		button->connect("pressed", Callable(this, "edit_mode_generate"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
 		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		//separator = memnew(VSeparator);
+		//separator->set_self_modulate(self_modulate);
+		//hBoxContainer->add_child(separator);
+		//separator->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//separator->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
+		//separator->set_self_modulate(self_modulate);
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_noiseVBoxContainer->add_child(hBoxContainer);
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Seed");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_seed = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_seed = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_seed);
+		//m_seed->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_seed->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_seed->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Frequency");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_frequency = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_frequency = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_frequency);
+		//m_frequency->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_frequency->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_frequency->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Gain");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_fractalGain = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_fractalGain = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_fractalGain);
+		//m_fractalGain->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_fractalGain->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_fractalGain->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_noiseVBoxContainer->add_child(hBoxContainer);
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Octaves");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_fractalOctaves = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_fractalOctaves = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_fractalOctaves);
+		//m_fractalOctaves->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_fractalOctaves->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_fractalOctaves->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Lacunarity");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_fractalLacunarity = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_fractalLacunarity = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_fractalLacunarity);
+		//m_fractalLacunarity->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_fractalLacunarity->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_fractalLacunarity->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_noiseVBoxContainer->add_child(hBoxContainer);
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Amplitude");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_amplitudeLabel = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_amplitudeLabel = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_amplitudeLabel);
+		//m_amplitudeLabel->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_amplitudeLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_amplitudeLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Scale");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_scaleFactorLabel = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_scaleFactorLabel = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_scaleFactorLabel);
+		//m_scaleFactorLabel->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_scaleFactorLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_scaleFactorLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Start H");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_desideredMinHeightLabel = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_desideredMinHeightLabel = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_desideredMinHeightLabel);
+		//m_desideredMinHeightLabel->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_desideredMinHeightLabel->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_desideredMinHeightLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_noiseVBoxContainer->add_child(hBoxContainer);
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Weighted Strength");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_fractalWeightedStrength = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_fractalWeightedStrength = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_fractalWeightedStrength);
+		//m_fractalWeightedStrength->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_fractalWeightedStrength->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_fractalWeightedStrength->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		//hBoxContainer = memnew(godot::HBoxContainer);
+		//m_noiseVBoxContainer->add_child(hBoxContainer);
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
+		//label = memnew(godot::Label);
+		//hBoxContainer->add_child(label);
+		//label->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//label->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		label->set_text("Ping Pong Strength");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
 		m_fractalPingPongStrength = createControl<godot::LineEdit>(hBoxContainer, "");
+		//m_fractalPingPongStrength = memnew(godot::LineEdit);
+		//hBoxContainer->add_child(m_fractalPingPongStrength);
+		//m_fractalPingPongStrength->connect("mouse_entered", Callable(this, "mouse_entered_main_panel"));
+		//m_fractalPingPongStrength->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 		m_fractalPingPongStrength->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
-
-		separator = createControl<HSeparator>(m_noiseVBoxContainer, "", self_modulate);
 	}
 
 	separator = createControl<HSeparator>(m_mainTerrainVBoxContainer, "", self_modulate);

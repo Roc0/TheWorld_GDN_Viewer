@@ -42,7 +42,7 @@ namespace godot
 		void init(GDN_TheWorld_Viewer* viewer);
 		void deinit(void);
 
-		template <class T> T* createControl(godot::Node* parent, std::string name = "",  Color selfModulateColor = Color(0.0f, 0.0f, 0.0f, 0.0f));
+		template <class T> T* createControl(godot::Node* parent);
 			
 		virtual void threadInit(void) {}
 		virtual void threadDeinit(void) {}
@@ -177,7 +177,7 @@ namespace godot
 		TheWorld_Utils::TimerMs m_actionClock;
 		TheWorld_Utils::TimerMs m_refreshUI;
 		bool m_onGoingElapsedLabel;
-		//Color m_elapsedLabelNormalColor;
+		Color m_elapsedLabelNormalColor;
 		size_t m_completedItems;
 		size_t m_elapsedCompleted;
 		size_t m_allItems;
@@ -208,33 +208,16 @@ namespace godot
 		godot::LineEdit* m_scaleFactorLabel;
 		godot::LineEdit* m_desideredMinHeightLabel;
 		
-		bool m_infoLabelTextChanged;
-		godot::Label* m_infoLabel;
-		// filler
-		//char filler[72];	// 72 OK (73 no) oppure 32 + 1 std::string (sembra che occupi 40 byte)
-		// filler
-		std::string* m_minHeightStr;
-		std::string* m_maxHeightStr;
-		std::string* m_counterStr;
-		std::string* m_note1Str;
-		std::string* m_mouseHitStr;
-		std::string* m_mouseQuadHitStr;
-		std::string* m_mouseQuadHitPosStr;
-		std::string* m_mouseQuadSelStr;
-		std::string* m_mouseQuadSelPosStr;
-		
+		godot::Label* m_minHeightLabel;
+		godot::Label* m_maxHeightLabel;
 		godot::Label* m_elapsedLabel;
-		godot::Label* m_elapsed1Label;
-
-		//godot::Label* m_minHeightLabel;
-		//godot::Label* m_maxHeightLabel;
-		//godot::Label* m_counterLabel;
-		//godot::Label* m_note1Label;
-		//godot::Label* m_mouseHitLabel;
-		//godot::Label* m_mouseQuadHitLabel;
-		//godot::Label* m_mouseQuadHitPosLabel;
-		//godot::Label* m_mouseQuadSelLabel;
-		//godot::Label* m_mouseQuadSelPosLabel;
+		godot::Label* m_counterLabel;
+		godot::Label* m_note1Label;
+		godot::Label* m_mouseHitLabel;
+		godot::Label* m_mouseQuadHitLabel;
+		godot::Label* m_mouseQuadHitPosLabel;
+		godot::Label* m_mouseQuadSelLabel;
+		godot::Label* m_mouseQuadSelPosLabel;
 
 		godot::Label* m_numQuadrantToSaveLabel;
 		godot::Label* m_numQuadrantToUploadLabel;
