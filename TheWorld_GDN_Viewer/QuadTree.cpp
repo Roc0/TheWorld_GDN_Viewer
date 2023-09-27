@@ -15,6 +15,7 @@
 #pragma warning(push, 0)
 #include <godot_cpp/classes/file_access.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
+#include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/compressed_texture2d.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
 #pragma warning(pop)
@@ -694,6 +695,9 @@ bool QuadTree::updateMaterialParams(void)
 	if (!isValid())
 		return updated;
 	
+	if ((int)m_viewer->Globals()->status() < (int)TheWorldStatus::worldDeployed)
+		return updated;
+
 	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 4 ") + __FUNCTION__, "QuadTree updateMaterialParams");
@@ -1039,24 +1043,32 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 
 	TheWorld_Viewer_Utils::MsTimePoint start = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 
+	godot::Error e;
+
 	ok = true;
 	
 	const char* s = fileName.utf8().get_data();
 	std::string _fileName = std::string(s);
+
+	const godot::String webpFilename = fileName + ".cache_image";
+	const char* s1 = webpFilename.utf8().get_data();
+	std::string _webpFilename = std::string(s1);
+
+	const godot::String pngFilename = fileName + ".png";
+	const char* s2 = pngFilename.utf8().get_data();
+	std::string _pngFilename = std::string(s2);
 
 	if (viewer != nullptr)
 		viewer->Globals()->debugPrint((std::string("Reading ground texture ") + _fileName + " ...").c_str());
 
 	if (viewer != nullptr)
 		viewer->getMainProcessingMutex().lock();
-	//godot::FileAccess* file = memnew(godot::FileAccess);
 	godot::Ref<godot::FileAccess> file = godot::FileAccess::open(fileName, godot::FileAccess::READ);
 	if (file == nullptr)
 		throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Error reading file ") + _fileName + " error " + std::to_string(int(godot::FileAccess::get_open_error()))).c_str()));
 	if (viewer != nullptr)
 		viewer->getMainProcessingMutex().unlock();
 
-	
 	int64_t fileSize = file->get_length();
 	size_t imageSize = (size_t)sqrt(fileSize / sizeof(struct TheWorld_Utils::_RGBA));
 	assert(imageSize * imageSize * sizeof(struct TheWorld_Utils::_RGBA) == fileSize);
@@ -1065,49 +1077,94 @@ godot::Ref<godot::Image> ShaderTerrainData::readGroundTexture(godot::String file
 
 	if (viewer != nullptr)
 		viewer->getMainProcessingMutex().lock();
-	godot::Ref<godot::Image> image = Image::create((int32_t)imageSize, (int32_t)imageSize, true, godot::Image::FORMAT_RGBA8);
+	godot::Ref<godot::Image> image = godot::Image::create((int32_t)imageSize, (int32_t)imageSize, true, godot::Image::FORMAT_RGBA8);
 	if (viewer != nullptr)
 		viewer->getMainProcessingMutex().unlock();
 
-	godot::PackedByteArray imageRowBuffer;
-	size_t imageRowSize = imageSize * sizeof(struct TheWorld_Utils::_RGBA);
-
-	for (size_t y = 0; y < imageSize; y++)
+	if (godot::FileAccess::file_exists(webpFilename))
 	{
-		{
-			//TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1.1 ") + __FUNCTION__, "read file from disk");
-			imageRowBuffer = file->get_buffer(imageRowSize);
-		}
-		assert(imageRowBuffer.size() == imageRowSize);
-		
-		{
-			//TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1.2 ") + __FUNCTION__, "set_pixel");
+		file->close();
 
-			size_t idx = 0;
-			for (size_t x = 0; x < imageSize; x++)
+		//ResourceLoader* resLoader = ResourceLoader::get_singleton();
+		//godot::Ref<godot::Texture2D> tex = resLoader->load(webpFilename);
+		//image = tex->get_image();
+		{
+			if (viewer != nullptr)
+				viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::FileAccess> file = godot::FileAccess::open(webpFilename, godot::FileAccess::READ);
+			if (file == nullptr)
+				throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Error reading file ") + _webpFilename + " error " + std::to_string(int(godot::FileAccess::get_open_error()))).c_str()));
+			if (viewer != nullptr)
+				viewer->getMainProcessingMutex().unlock();
+			uint64_t size = file->get_64();
+			godot::PackedByteArray array = file->get_buffer(size);
+			file->close();
+
+			e = image->load_webp_from_buffer(array);
+			if (e != godot::Error::OK)
+				throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("reading image error ") + std::to_string(int(e))).c_str()));
+		}
+	}
+	else
+	{
+		godot::PackedByteArray imageRowBuffer;
+		size_t imageRowSize = imageSize * sizeof(struct TheWorld_Utils::_RGBA);
+
+		for (size_t y = 0; y < imageSize; y++)
+		{
 			{
-				godot::Color c;
-				c.r = float(imageRowBuffer[int(idx)]) / 255;
-				c.g = float(imageRowBuffer[int(idx) + 1]) / 255;
-				c.b = float(imageRowBuffer[int(idx) + 2]) / 255;
-				c.a = float(imageRowBuffer[int(idx) + 3]) / 255;
-				idx += 4;
-				image->set_pixel((int32_t)x, (int32_t)y, c);
+				//TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1.1 ") + __FUNCTION__, "read file from disk");
+				imageRowBuffer = file->get_buffer(imageRowSize);
+			}
+			assert(imageRowBuffer.size() == imageRowSize);
+
+			{
+				//TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1.2 ") + __FUNCTION__, "set_pixel");
+
+				size_t idx = 0;
+				for (size_t x = 0; x < imageSize; x++)
+				{
+					godot::Color c;
+					c.r = float(imageRowBuffer[int(idx)]) / 255;
+					c.g = float(imageRowBuffer[int(idx) + 1]) / 255;
+					c.b = float(imageRowBuffer[int(idx) + 2]) / 255;
+					c.a = float(imageRowBuffer[int(idx) + 3]) / 255;
+					idx += 4;
+					image->set_pixel((int32_t)x, (int32_t)y, c);
+				}
 			}
 		}
+
+		file->close();
+
+		e = image->save_png(pngFilename);
+
+		//e = image->save_webp(webpFilename);
+		{
+			godot::PackedByteArray array = image->save_webp_to_buffer();
+
+			if (viewer != nullptr)
+				viewer->getMainProcessingMutex().lock();
+			godot::Ref<godot::FileAccess> file = godot::FileAccess::open(webpFilename, godot::FileAccess::WRITE);
+			if (file == nullptr)
+				throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("Error writing file ") + _webpFilename + " error " + std::to_string(int(godot::FileAccess::get_open_error()))).c_str()));
+			if (viewer != nullptr)
+				viewer->getMainProcessingMutex().unlock();
+			uint64_t size = array.size();
+			file->store_64(size);
+			file->store_buffer(array);
+			file->close();
+		}
 	}
-
-	file->close();
-
+	
 	{
 		//TheWorld_Utils::GuardProfiler profiler(std::string("readGroundTexture 1.3 ") + __FUNCTION__, "generate_mipmaps");
-		godot::Error e = image->generate_mipmaps();
+		e = image->generate_mipmaps();
+		if (e != godot::Error::OK)
+			throw(GDN_TheWorld_Exception(__FUNCTION__, (std::string("generate_mipmaps error ") + std::to_string(int(e))).c_str()));
+
 	}
 
-	//e = image->compress(godot::Image::CompressMode::COMPRESS_S3TC);
-
-	//e = image->save_png(fileName + ".png");
-	
 	TheWorld_Viewer_Utils::MsTimePoint now = std::chrono::time_point_cast<TheWorld_Viewer_Utils::MsTimePoint::duration>(std::chrono::system_clock::now());
 	long long elapsed = (now - start).count();
 

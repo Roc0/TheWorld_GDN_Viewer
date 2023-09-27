@@ -2841,14 +2841,17 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 			m_shaderParamChanged = false;
 		}
 
-		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		//if ((int)globals->status() >= (int)TheWorldStatus::worldDeployed)
 		{
-			bool reset = false;
-			reset = itQuadTree->second->resetMaterialParams();
-			bool updated = itQuadTree->second->updateMaterialParams();
-				
-			if ((reset || updated) && !m_desideredLookDevChanged)
-				break;
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				bool reset = false;
+				reset = itQuadTree->second->resetMaterialParams();
+				bool updated = itQuadTree->second->updateMaterialParams();
+
+				if ((reset || updated) && !m_desideredLookDevChanged)
+					break;
+			}
 		}
 	}
 
