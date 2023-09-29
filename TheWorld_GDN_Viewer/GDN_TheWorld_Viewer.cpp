@@ -1954,7 +1954,7 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 	clock.tick();
 	auto save_duration = TheWorld_Viewer_Utils::finally([&clock, this] { clock.tock(); this->m_numProcessExecution++; this->m_processDuration += clock.duration().count(); });
 
-	_process_impl(_delta, activeCamera);
+	process_impl(_delta, activeCamera);
 }
 
 godot::Control* GDN_TheWorld_Viewer::getOrCreateEditModeUIControl(void)
@@ -1974,7 +1974,7 @@ godot::Control* GDN_TheWorld_Viewer::getOrCreateEditModeUIControl(void)
 	return editModeUIControl;
 }
 
-void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
+void GDN_TheWorld_Viewer::process_impl(double _delta, godot::Camera3D* activeCamera)
 {
 	GDN_TheWorld_Globals* globals = Globals();
 	if (globals == nullptr)
@@ -2035,738 +2035,24 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 	//Transform globalTransform = internalTransformGlobalCoord();
 	//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos
 
-	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - START
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.2 ") + __FUNCTION__, "Adjust Quadtrees");
-
-		float farHorizon = cameraPosGlobalCoord.y * FAR_HORIZON_MULTIPLIER;
-		if (globals->heightmapSizeInWUs() > farHorizon)
-			farHorizon = globals->heightmapSizeInWUs();
-
-		QuadrantPos cameraQuadrant;
-
-		// Look for Camera QuadTree: put it as first element of quadrantPosNeeded
-		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-		{
-			if (itQuadTree->second->statusToErase())
-				continue;
-
-			float quadrantSizeInWU = itQuadTree->second->getQuadrant()->getPos().getSizeInWU();
-			if (cameraPosGlobalCoord.x >= itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() && cameraPosGlobalCoord.x < (itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() + quadrantSizeInWU)
-				&& cameraPosGlobalCoord.z >= itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() && cameraPosGlobalCoord.z < (itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() + quadrantSizeInWU))
-			{
-				cameraQuadrant = itQuadTree->second->getQuadrant()->getPos();
-				cameraQuadrant.setTag("Camera");
-				break;
-			}
-		}
-
-		if (cameraQuadrant.empty())	// boh not found camera-quad-tree (it seems impossible) ...
-		{
-			// ... btw we create new quad tree containing camera
-			float x = cameraPosGlobalCoord.x, z = cameraPosGlobalCoord.z;
-			float _gridStepInWU = globals->gridStepInWU();
-			QuadrantPos q(x, z, m_worldViewerLevel, m_numWorldVerticesPerSize, _gridStepInWU);
-			cameraQuadrant = q;
-			cameraQuadrant.setTag("Camera");
-		}
-
-		//
-		// now quadrantPosNeeded has 1 element and quadrantPosNeeded[0] is the camera 
-		//
-
-		// if forced or the camera has changed quadrant the cache is repopulated
-		//m_computedCameraQuadrantPos = quadrantPosNeeded[0];	// DEBUG
-		if ( (m_refreshMapQuadTree || m_computedCameraQuadrantPos != cameraQuadrant) && (int)Globals()->status() >= (int)TheWorldStatus::worldDeployInProgress)
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.2.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
-
-			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, false);
-			clock1.tick();
-			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
-				clock1.tock();
-				this->m_numRefreshMapQuad++;
-				this->m_RefreshMapQuadDuration += clock1.duration().count();
-				});
-
-			m_refreshMapQuadTree = false;
-			m_computedCameraQuadrantPos = cameraQuadrant;
-
-			m_recalcQuadrantsInViewNeeded = true;
-			//recalcQuadrantsInView();
-		}
+		process_adjustQuadTreeByCamera(globals, cameraPosGlobalCoord);
 	}
-	// ADJUST QUADTREEs NEEDED ACCORDING TO CAMERA POS - END
 
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.3 ") + __FUNCTION__, "Init new quadrants");
-		streamingQuadrantStuff();
+		process_streamingQuadrantStuff();
 	}
 
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.4 ") + __FUNCTION__, "Track mouse");
-
-		godot::Node* collider = nullptr;
-		if (m_trackMouse)
-		{
-			int64_t timeElapsed = TIME()->get_ticks_msec();
-			if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
-			{
-				TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Track Mouse Chunk", false, false);
-				clock1.tick();
-				auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
-					clock1.tock();
-				this->m_numMouseTrackHit++;
-				this->m_mouseTrackHitDuration += clock1.duration().count();
-					});
-
-				godot::PhysicsDirectSpaceState3D* spaceState = get_world_3d()->get_direct_space_state();
-				godot::Dictionary rayArray;
-				godot::Vector2 mousePosInVieport = getMousPosInViewport();
-				godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
-				godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * (real_t)activeCamera->get_far() * 1.5;
-				godot::Ref<godot::PhysicsRayQueryParameters3D> query = PhysicsRayQueryParameters3D::create(rayOrigin, rayEnd);
-				rayArray = spaceState->intersect_ray(query);
-
-				GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
-
-				if (rayArray.has("position"))
-				{
-					m_mouseHit = rayArray["position"];
-					m_mouseTrackedOnTerrain = true;
-					if (m_editMode && editModeUIControl && editModeUIControl->initilized())
-						editModeUIControl->setMouseHitLabelText(std::string("X=") + std::to_string(m_mouseHit.x) + " Y=" + std::to_string(m_mouseHit.y) + " Z=" + std::to_string(m_mouseHit.z));
-				}
-				else
-					m_mouseTrackedOnTerrain = false;
-
-				if (m_mouseTrackedOnTerrain)
-				{
-					if (rayArray.has("collider"))
-					{
-						collider = godot::Object::cast_to<godot::Node>(rayArray["collider"]);
-						if (collider->has_meta("QuadrantName"))
-						{
-							godot::String s = collider->get_meta("QuadrantName", "");
-							const char* str = s.utf8().get_data();
-							std::string mouseQuadrantHitName = str;
-							if (mouseQuadrantHitName != m_mouseQuadrantHitName)
-							{
-								/*s = collider->get_meta("QuadrantTag", "");
-								str = s.alloc_c_string();
-								std::string mouseQuadrantHitTag = str;
-								godot::api->godot_free(str);*/
-								godot::Vector3 mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
-								float mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
-								float gridStepInWu = collider->get_meta("QuadrantStep");
-								int level = collider->get_meta("QuadrantLevel");
-								int numVerticesPerSize = collider->get_meta("QuadrantNumVert");
-								QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
-								//quadrantHitPos.setTag(mouseQuadrantHitTag);
-
-								// Get current Tag
-								std::string mouseQuadrantHitTag;
-								MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
-								if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-									mouseQuadrantHitTag = it->second->getTag();
-
-								if (m_editMode && editModeUIControl && editModeUIControl->initilized())
-								{
-
-									editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
-									editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
-
-									//// Get TerrainEdit Data from hit quadrant
-									//MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
-									//if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-									//{
-									//	TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
-									//	editModeUIControl->setSeed(terrainEdit->noiseSeed);
-									//	editModeUIControl->setFrequency(terrainEdit->frequency);
-									//	editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
-									//	editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
-									//	editModeUIControl->setGain(terrainEdit->fractalGain);
-									//	editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
-									//	editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
-									//	editModeUIControl->setAmplitude(terrainEdit->amplitude);
-									//	editModeUIControl->setMinHeight(terrainEdit->minHeight);
-									//	editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
-									//	//editModeUIControl->setElapsed(0);
-									//}
-								}
-
-								m_mouseQuadrantHitName = mouseQuadrantHitName;
-								m_mouseQuadrantHitTag = mouseQuadrantHitTag;
-								m_mouseQuadrantHitPos = mouseQuadrantHitPos;
-								m_mouseQuadrantHitSize = mouseQuadrantHitSize;
-								m_quadrantHitPos = quadrantHitPos;
-							}
-						}
-						//godot::PoolStringArray metas = collider->get_meta_list();
-						//for (int i = 0; i < metas.size(); i++)
-						//{
-						//	godot::String s = metas[i];
-						//	char* str = s.alloc_c_string();
-						//	std::string ss = str;
-						//	godot::api->godot_free(str);
-						//	godot::Variant v = collider->get_meta(s);
-						//}
-						//godot::String s = collider->get_meta("QuadrantName");
-					}
-				}
-				else
-				{
-					m_mouseQuadrantHitName = "";
-					m_mouseQuadrantHitTag = "";
-					m_mouseQuadrantHitPos = godot::Vector3();
-					m_mouseQuadrantHitSize = 0.0f;
-					m_quadrantHitPos = QuadrantPos();
-				}
-				
-				m_timeElapsedFromLastMouseTrack = timeElapsed;
-			}
-		}
-	}
-	
-	// UPDATE QUADS - Stage 1
-	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.5 ") + __FUNCTION__, "Update Quads Stage 1");
-
-		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 1", false, false);
-		clock1.tick();
-		auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
-			clock1.tock();
-			this->m_numUpdateQuads1++;
-			this->m_updateQuads1Duration += clock1.duration().count();
-			});
-
-		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-		{
-			int numSplitRequired = 0;
-			itQuadTree->second->update(cameraPosGlobalCoord, QuadTree::UpdateStage::Stage1, numSplitRequired);
-		}
-	}
-	
-	while (true)
-	{
-		int numSplitRequired = 0;
-
-		// UPDATE QUADS - Stage 2
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.6 ") + __FUNCTION__, "Update Quads Stage 2");
-
-			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 2", false, false);
-			clock1.tick();
-			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
-				clock1.tock();
-			this->m_numUpdateQuads2++;
-			this->m_updateQuads2Duration += clock1.duration().count();
-				});
-
-
-			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-			{
-				itQuadTree->second->update(Vector3(), QuadTree::UpdateStage::Stage2, numSplitRequired);
-			}
-		}
-
-		if (numSplitRequired == 0)
-			break;
-		else
-		{
-			// UPDATE QUADS - Stage 3
-			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.7 ") + __FUNCTION__, "Update Quads Stage 3");
-
-			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 3", false, false);
-			clock1.tick();
-			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
-				clock1.tock();
-			this->m_numUpdateQuads3++;
-			this->m_updateQuads3Duration += clock1.duration().count();
-				});
-
-			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-			{
-				int numSplitRequired = 0;
-				itQuadTree->second->update(cameraPosGlobalCoord, QuadTree::UpdateStage::Stage3, numSplitRequired);
-			}
-		}
+		process_trackMouse(activeCamera);
 	}
 
-	if (m_refreshRequired)
-	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.8 ") + __FUNCTION__, "Refresh required");
+	process_updateQuads(cameraPosGlobalCoord);
 
-		Chunk::RefreshChunkAction action(m_visibleInTree);
-		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-		{
-			itQuadTree->second->ForAllChunk(action);
-		}
-		m_refreshRequired = false;
-	}
-
-	// UPDATE CHUNKS
-	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.9 ") + __FUNCTION__, "Update Chunks");
-
-		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Chunks", false, false);
-		clock1.tick();
-		auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
-			clock1.tock();
-			this->m_numUpdateChunks++;
-			this->m_updateChunksDuration += clock1.duration().count();
-			});
-
-		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-		{
-			if (!itQuadTree->second->isValid())
-				continue;
-			
-			if (!itQuadTree->second->isVisible())
-				continue;
-
-			// All chunk that need an update (those are chunk that got split or joined)
-			std::vector<Chunk*> vectChunkUpdate = itQuadTree->second->getChunkUpdate();
-
-			// Forcing update to all neighboring chunks to readjust the seams (by populating vectAdditionalUpdateChunk)
-			// chunks affected are neighboring ones with same lod or less (more definded) ==> neighboring chunks with greater lod (less defined) are not selcted
-			// as the seams are calculated on chunks with lessere lof (more defined chunks) if the neighborings have different lod
-			std::vector<Chunk*> vectAdditionalUpdateChunk;
-			for (std::vector<Chunk*>::iterator itChunk = vectChunkUpdate.begin(); itChunk != vectChunkUpdate.end(); itChunk++)
-			{
-				if (!(*itChunk)->isActive())
-					continue;
-
-				Chunk::ChunkPos pos = (*itChunk)->getPos();
-				int lod = pos.getLod();
-				int numChunksPerSideAtLowerLod = 0;
-				Chunk::ChunkPos posFirstInternalChunkAtLowerLod(0, 0, 0);
-				if (lod > 0)
-				{
-					posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-					numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
-				}
-
-				{
-					// In case the chunk got split/joined forcing update to left, right, bottom, top chunks with same lod
-					Chunk* chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);	// x lessening
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//
-						// - o
-						//
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);			// x growing
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//
-						//   o -
-						//
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);			// z lessening
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//   -
-						//   o
-						//
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);			// z growing
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//
-						//   o
-						//   -
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-				}
-
-				// In case the chunk got joined: we have to look for adjacent chunks with lower lod (more defined)
-				if (lod > 0 && (*itChunk)->gotJustJoined())
-				{
-					//(*itChunk)->setJustJoined(false);
-
-					//	o =
-					//	= =
-					//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-
-					//	o =
-					//	= =
-					Chunk* chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XMinusQuadSecondChunk);
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//  
-						//	- o =
-						//	  = =
-						//  
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					//	o =
-					//	= =
-					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XMinusQuadForthChunk);
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//  
-						//	  o =
-						//	- = =
-						//  
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					//	o =
-					//	= =
-					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XPlusQuadFirstChunk);
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//  
-						//	  o = -
-						//	  = =
-						//  
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					//	o =
-					//	= =
-					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XPlusQuadThirdChunk);
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//  
-						//	  o = 
-						//	  = = -
-						//  
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					//	o =
-					//	= =
-					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZMinusQuadThirdChunk);
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//      
-						//    -
-						//	  o =
-						//	  = =
-						//    
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					//	o =
-					//	= =
-					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZMinusQuadForthChunk);
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//      
-						//      -
-						//	  o =
-						//	  = =
-						//    
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					//	o =
-					//	= =
-					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZPlusQuadFirstChunk);
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//    
-						//	  o =
-						//	  = =
-						//    -
-						//      
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-					//	o =
-					//	= =
-					chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZPlusQuadSecondChunk);
-					if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
-					{
-						//      
-						//	  o =
-						//	  = =
-						//      -
-						//      
-						chunk->setPendingUpdate(true);
-						vectAdditionalUpdateChunk.push_back(chunk);
-					}
-				}
-
-				// if the current chunk is on a border of the quadrant we need to look for adjacent chunks (with same lod or lesser if the chunk was just joined) in Adjacent quadrant
-				QuadrantPos XMinusQuadrantPos, XPlusQuadrantPos, ZMinusQuadrantPos, ZPlusQuadrantPos;
-				if (itQuadTree->second->isChunkOnBorderOfQuadrant(pos, XMinusQuadrantPos, XPlusQuadrantPos, ZMinusQuadrantPos, ZPlusQuadrantPos))
-				{
-					int numChunksPerSide = Globals()->numChunksPerHeightmapSide(pos.getLod());
-
-					// if the chunks is adjacent to another quadrant
-					if (XMinusQuadrantPos.isInitialized())
-					{
-						// take the adjacent quadrant if it exists
-						auto iter = m_mapQuadTree.find(XMinusQuadrantPos);
-						if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
-						{
-							QuadTree* quadTreeXMinus = iter->second.get();
-							if (quadTreeXMinus->isValid())
-							{
-								Chunk::ChunkPos posSameLodOnAdjacentQuadrant(numChunksPerSide - 1, pos.getSlotPosZ(), pos.getLod());
-								Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeXMinus->getChunkAt(posSameLodOnAdjacentQuadrant);
-								if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
-								{
-									//
-									// - | o
-									//
-									chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
-									vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
-								}
-
-								if (lod > 0 && ((*itChunk)->gotJustJoined() || lod == Globals()->lodMaxDepth()))
-								{
-									//	o =
-									//	= =
-									//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-
-									//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
-
-									{
-										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(numChunksPerSideAtLowerLod - 1, posFirstInternalChunkAtLowerLod.getSlotPosZ(), posFirstInternalChunkAtLowerLod.getLod());
-										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
-										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
-										{
-											//  
-											//	- | o =
-											//	  | = =
-											//  
-											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
-											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
-										}
-									}
-									{
-										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(numChunksPerSideAtLowerLod - 1, posFirstInternalChunkAtLowerLod.getSlotPosZ() + 1, posFirstInternalChunkAtLowerLod.getLod());
-										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
-										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
-										{
-											//  
-											//	  | o =
-											//	- | = =
-											//  
-											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
-											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
-										}
-									}
-								}
-							}
-						}
-					}
-
-					if (XPlusQuadrantPos.isInitialized())
-					{
-						// take the adjacent quadrant if it exists
-						auto iter = m_mapQuadTree.find(XPlusQuadrantPos);
-						if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
-						{
-							QuadTree* quadTreeXPlus = iter->second.get();
-							if (quadTreeXPlus->isValid())
-							{
-								Chunk::ChunkPos posSameLodOnAdjacentQuadrant(0, pos.getSlotPosZ(), pos.getLod());
-								Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeXPlus->getChunkAt(posSameLodOnAdjacentQuadrant);
-								if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
-								{
-									//
-									//   o | -
-									//
-									chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
-									vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
-								}
-
-								if (lod > 0 && (*itChunk)->gotJustJoined())
-								{
-									//	o =
-									//	= =
-									//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-
-									//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
-
-									{
-										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(0, posFirstInternalChunkAtLowerLod.getSlotPosZ(), posFirstInternalChunkAtLowerLod.getLod());
-										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
-										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
-										{
-											//  
-											//	o = | -
-											//	= = |
-											//  
-											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
-											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
-										}
-									}
-									{
-										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(0, posFirstInternalChunkAtLowerLod.getSlotPosZ() + 1, posFirstInternalChunkAtLowerLod.getLod());
-										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
-										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
-										{
-											//  
-											//	o = |
-											//	= = | -
-											//  
-											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
-											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
-										}
-									}
-								}
-							}
-						}
-					}
-
-					if (ZMinusQuadrantPos.isInitialized())
-					{
-						// take the adjacent quadrant if it exists
-						auto iter = m_mapQuadTree.find(ZMinusQuadrantPos);
-						if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
-						{
-							QuadTree* quadTreeZMinus = iter->second.get();
-							if (quadTreeZMinus->isValid())
-							{
-								Chunk::ChunkPos posSameLodOnAdjacentQuadrant(pos.getSlotPosX(), numChunksPerSide - 1, pos.getLod());
-								Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeZMinus->getChunkAt(posSameLodOnAdjacentQuadrant);
-								if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
-								{
-									//   -
-									//   =
-									//   o
-									//
-									chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
-									vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
-								}
-
-								if (lod > 0 && (*itChunk)->gotJustJoined())
-								{
-									//	o =
-									//	= =
-									//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-
-									//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
-
-									{
-										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunkAtLowerLod.getSlotPosX(), numChunksPerSideAtLowerLod - 1, posFirstInternalChunkAtLowerLod.getLod());
-										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
-										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
-										{
-											//  
-											//  -
-											//  = =
-											//	o =
-											//	= =
-											//  
-											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
-											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
-										}
-									}
-									{
-										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunkAtLowerLod.getSlotPosX() + 1, numChunksPerSideAtLowerLod - 1, posFirstInternalChunkAtLowerLod.getLod());
-										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
-										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
-										{
-											//  
-											//    -
-											//  = =
-											//	o =
-											//	= =
-											//  
-											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
-											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
-										}
-									}
-								}
-							}
-						}
-					}
-
-					if (ZPlusQuadrantPos.isInitialized())
-					{
-						// take the adjacent quadrant if it exists
-						auto iter = m_mapQuadTree.find(ZPlusQuadrantPos);
-						if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
-						{
-							QuadTree* quadTreeZPlus = iter->second.get();
-							if (quadTreeZPlus->isValid())
-							{
-								//
-								//   o
-								//   =
-								//   -
-								Chunk::ChunkPos posSameLodOnAdjacentQuadrant(pos.getSlotPosX(), 0, pos.getLod());
-								Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeZPlus->getChunkAt(posSameLodOnAdjacentQuadrant);
-								if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
-								{
-									chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
-									vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
-								}
-
-								if (lod > 0 && (*itChunk)->gotJustJoined())
-								{
-									//	o =
-									//	= =
-									//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
-
-									//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
-
-									{
-										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunkAtLowerLod.getSlotPosX(), 0, posFirstInternalChunkAtLowerLod.getLod());
-										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
-										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
-										{
-											//  
-											//	o =
-											//	= =
-											//  = =
-											//  -
-											//  
-											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
-											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
-										}
-									}
-									{
-										Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunkAtLowerLod.getSlotPosX() + 1, 0, posFirstInternalChunkAtLowerLod.getLod());
-										Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
-										if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
-										{
-											//  
-											//	o =
-											//	= =
-											//  = =
-											//    -
-											//  
-											chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
-											vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
-										}
-									}
-								}
-							}
-						}
-					}
-				}
-
-				// Anycase clear flag just joined
-				if ((*itChunk)->gotJustJoined())
-					(*itChunk)->setJustJoined(false);
-			}
-
-			for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
-				(*it)->update(m_visibleInTree);
-
-			for (std::vector<Chunk*>::iterator it = vectAdditionalUpdateChunk.begin(); it != vectAdditionalUpdateChunk.end(); it++)
-				(*it)->update(m_visibleInTree);
-
-			itQuadTree->second->clearChunkUpdate();
-			vectAdditionalUpdateChunk.clear();
-		}
-	}
+	process_updateChunks();
 
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.10 ") + __FUNCTION__, "Other stuff");
@@ -2803,84 +2089,878 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 		}
 	}
 
-	{
-		if (m_desideredLookDevChanged)
-		{
-			enum class ShaderTerrainData::LookDev desideredLookDev = getDesideredLookDev();
+	process_lookDev();
+	
+	process_materialParam();
 
-			for (auto& it : m_mapQuadTree)
-			{
-				if (desideredLookDev == ShaderTerrainData::LookDev::NotSet)
-					it.second->setRegularMaterial();
-				else
-					it.second->setLookDevMaterial(desideredLookDev);
-			}
+	//m_desideredLookDevChanged = false;
+
+	process_dump(globals);
+
+	process_statistics(globals);
+}
+
+void GDN_TheWorld_Viewer::process_adjustQuadTreeByCamera(GDN_TheWorld_Globals* globals, Vector3& cameraPosGlobalCoord)
+{
+	float farHorizon = cameraPosGlobalCoord.y * FAR_HORIZON_MULTIPLIER;
+	if (globals->heightmapSizeInWUs() > farHorizon)
+		farHorizon = globals->heightmapSizeInWUs();
+
+	QuadrantPos cameraQuadrant;
+
+	// Look for Camera QuadTree: put it as first element of quadrantPosNeeded
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (itQuadTree->second->statusToErase())
+			continue;
+
+		float quadrantSizeInWU = itQuadTree->second->getQuadrant()->getPos().getSizeInWU();
+		if (cameraPosGlobalCoord.x >= itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() && cameraPosGlobalCoord.x < (itQuadTree->second->getQuadrant()->getPos().getLowerXGridVertex() + quadrantSizeInWU)
+			&& cameraPosGlobalCoord.z >= itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() && cameraPosGlobalCoord.z < (itQuadTree->second->getQuadrant()->getPos().getLowerZGridVertex() + quadrantSizeInWU))
+		{
+			cameraQuadrant = itQuadTree->second->getQuadrant()->getPos();
+			cameraQuadrant.setTag("Camera");
+			break;
 		}
 	}
-	
-	m_desideredLookDevChanged = false;
 
+	if (cameraQuadrant.empty())	// boh not found camera-quad-tree (it seems impossible) ...
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.11 ") + __FUNCTION__, "Material params stuff");
+		// ... btw we create new quad tree containing camera
+		float x = cameraPosGlobalCoord.x, z = cameraPosGlobalCoord.z;
+		float _gridStepInWU = globals->gridStepInWU();
+		QuadrantPos q(x, z, m_worldViewerLevel, m_numWorldVerticesPerSize, _gridStepInWU);
+		cameraQuadrant = q;
+		cameraQuadrant.setTag("Camera");
+	}
 
-		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Material Params", false, false);
+	//
+	// now quadrantPosNeeded has 1 element and quadrantPosNeeded[0] is the camera 
+	//
+
+	// if forced or the camera has changed quadrant the cache is repopulated
+	//m_computedCameraQuadrantPos = quadrantPosNeeded[0];	// DEBUG
+	if ((m_refreshMapQuadTree || m_computedCameraQuadrantPos != cameraQuadrant) && (int)Globals()->status() >= (int)TheWorldStatus::worldDeployInProgress)
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.2.1 ") + __FUNCTION__, "Adjust Quadtrees: recalc quadrants");
+
+		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Recalc in memory map of quadrants", false, false);
 		clock1.tick();
 		auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
 			clock1.tock();
-		this->m_numUpdateMaterialParams++;
-		this->m_updateMaterialParamsDuration += clock1.duration().count();
+			this->m_numRefreshMapQuad++;
+			this->m_RefreshMapQuadDuration += clock1.duration().count();
 			});
 
-		if (m_shaderParamChanged)
+		m_refreshMapQuadTree = false;
+		m_computedCameraQuadrantPos = cameraQuadrant;
+
+		m_recalcQuadrantsInViewNeeded = true;
+		//recalcQuadrantsInView();
+	}
+}
+
+void GDN_TheWorld_Viewer::process_streamingQuadrantStuff(void)
+{
+	bool allQuadrantInitialized = true;
+
+	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing, std::try_to_lock);
+	if (lock.owns_lock())
+	{
+		bool exitForNow = false;
+		for (size_t distance = 0; distance <= m_numCacheQuadrantOnPerimeter; distance++)
 		{
 			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
-				itQuadTree->second->getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(true);
+				//if (itQuadTree->second->status() != QuadrantStatus::initialized)
+				//if (itQuadTree->second->status() != QuadrantStatus::initialized && itQuadTree->second->status() != QuadrantStatus::toErase)
+				if (itQuadTree->second->status() < QuadrantStatus::initialized)
+					allQuadrantInitialized = false;
+
+				if (itQuadTree->second->statusUninitialized() || itQuadTree->second->statusRefreshTerrainDataNeeded())
+				{
+					size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(m_computedCameraQuadrantPos);
+					if (distanceInPerimeterFromCameraQuadrant == distance)
+					{
+						float x = 0, y = 0, z = 0, yaw = 0, pitch = 0, roll = 0;
+						if (itQuadTree->second->statusUninitialized())
+							itQuadTree->second->init(x, y, z, yaw, pitch, roll, false, 0.0f);
+						else
+							itQuadTree->second->refreshTerrainData(x, y, z, yaw, pitch, roll, false, 0.0f);
+						exitForNow = true;
+						break;
+					}
+				}
 			}
 
-			m_shaderParamChanged = false;
+			if (exitForNow)
+				break;
 		}
 
-		//if ((int)globals->status() >= (int)TheWorldStatus::worldDeployed)
+		lock.unlock();
+
+		if (allQuadrantInitialized)
 		{
+			// m_numVisibleQuadrantOnPerimeter == 1
+			if (Globals()->status() == TheWorldStatus::worldDeployInProgress && ((m_numVisibleQuadrantOnPerimeter == 0 && m_mapQuadTree.size() == 1) || m_mapQuadTree.size() > 1))
+				Globals()->setStatus(TheWorldStatus::worldDeployed);
+
+			if (m_streamingTime.counterStarted())
+			{
+				m_streamingTime.tock();
+				PLOG_DEBUG << "Initialization of last stream of quadrant in " << m_streamingTime.duration().count() << " ms";
+			}
+		}
+	}
+}
+
+void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
+{
+
+	godot::Node* collider = nullptr;
+	if (m_trackMouse)
+	{
+		int64_t timeElapsed = TIME()->get_ticks_msec();
+		if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
+		{
+			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Track Mouse Chunk", false, false);
+			clock1.tick();
+			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
+				clock1.tock();
+				this->m_numMouseTrackHit++;
+				this->m_mouseTrackHitDuration += clock1.duration().count();
+				});
+
+			godot::PhysicsDirectSpaceState3D* spaceState = get_world_3d()->get_direct_space_state();
+			godot::Dictionary rayArray;
+			godot::Vector2 mousePosInVieport = getMousPosInViewport();
+			godot::Vector3 rayOrigin = activeCamera->project_ray_origin(mousePosInVieport);
+			godot::Vector3 rayEnd = rayOrigin + activeCamera->project_ray_normal(mousePosInVieport) * (real_t)activeCamera->get_far() * 1.5;
+			godot::Ref<godot::PhysicsRayQueryParameters3D> query = PhysicsRayQueryParameters3D::create(rayOrigin, rayEnd);
+			rayArray = spaceState->intersect_ray(query);
+
+			GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+
+			if (rayArray.has("position"))
+			{
+				m_mouseHit = rayArray["position"];
+				m_mouseTrackedOnTerrain = true;
+				if (m_editMode && editModeUIControl && editModeUIControl->initilized())
+					editModeUIControl->setMouseHitLabelText(std::string("X=") + std::to_string(m_mouseHit.x) + " Y=" + std::to_string(m_mouseHit.y) + " Z=" + std::to_string(m_mouseHit.z));
+			}
+			else
+				m_mouseTrackedOnTerrain = false;
+
+			if (m_mouseTrackedOnTerrain)
+			{
+				if (rayArray.has("collider"))
+				{
+					collider = godot::Object::cast_to<godot::Node>(rayArray["collider"]);
+					if (collider->has_meta("QuadrantName"))
+					{
+						godot::String s = collider->get_meta("QuadrantName", "");
+						const char* str = s.utf8().get_data();
+						std::string mouseQuadrantHitName = str;
+						if (mouseQuadrantHitName != m_mouseQuadrantHitName)
+						{
+							/*s = collider->get_meta("QuadrantTag", "");
+							str = s.alloc_c_string();
+							std::string mouseQuadrantHitTag = str;
+							godot::api->godot_free(str);*/
+							godot::Vector3 mouseQuadrantHitPos = collider->get_meta("QuadrantOrig", Vector3());
+							float mouseQuadrantHitSize = collider->get_meta("QuadrantSize", 0.0);
+							float gridStepInWu = collider->get_meta("QuadrantStep");
+							int level = collider->get_meta("QuadrantLevel");
+							int numVerticesPerSize = collider->get_meta("QuadrantNumVert");
+							QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
+							//quadrantHitPos.setTag(mouseQuadrantHitTag);
+
+							// Get current Tag
+							std::string mouseQuadrantHitTag;
+							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
+							if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+								mouseQuadrantHitTag = it->second->getTag();
+
+							if (m_editMode && editModeUIControl && editModeUIControl->initilized())
+							{
+
+								editModeUIControl->setMouseQuadHitLabelText(mouseQuadrantHitName + " " + mouseQuadrantHitTag);
+								editModeUIControl->setMouseQuadHitPosLabelText(std::string("X=") + std::to_string(mouseQuadrantHitPos.x) + " Z=" + std::to_string(mouseQuadrantHitPos.z) + " " + std::to_string(mouseQuadrantHitSize));
+
+								//// Get TerrainEdit Data from hit quadrant
+								//MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
+								//if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+								//{
+								//	TerrainEdit* terrainEdit = it->second->getQuadrant()->getTerrainEdit();
+								//	editModeUIControl->setSeed(terrainEdit->noiseSeed);
+								//	editModeUIControl->setFrequency(terrainEdit->frequency);
+								//	editModeUIControl->setOctaves(terrainEdit->fractalOctaves);
+								//	editModeUIControl->setLacunarity(terrainEdit->fractalLacunarity);
+								//	editModeUIControl->setGain(terrainEdit->fractalGain);
+								//	editModeUIControl->setWeightedStrength(terrainEdit->fractalWeightedStrength);
+								//	editModeUIControl->setPingPongStrength(terrainEdit->fractalPingPongStrength);
+								//	editModeUIControl->setAmplitude(terrainEdit->amplitude);
+								//	editModeUIControl->setMinHeight(terrainEdit->minHeight);
+								//	editModeUIControl->setMaxHeight(terrainEdit->maxHeight);
+								//	//editModeUIControl->setElapsed(0);
+								//}
+							}
+
+							m_mouseQuadrantHitName = mouseQuadrantHitName;
+							m_mouseQuadrantHitTag = mouseQuadrantHitTag;
+							m_mouseQuadrantHitPos = mouseQuadrantHitPos;
+							m_mouseQuadrantHitSize = mouseQuadrantHitSize;
+							m_quadrantHitPos = quadrantHitPos;
+						}
+					}
+					//godot::PoolStringArray metas = collider->get_meta_list();
+					//for (int i = 0; i < metas.size(); i++)
+					//{
+					//	godot::String s = metas[i];
+					//	char* str = s.alloc_c_string();
+					//	std::string ss = str;
+					//	godot::api->godot_free(str);
+					//	godot::Variant v = collider->get_meta(s);
+					//}
+					//godot::String s = collider->get_meta("QuadrantName");
+				}
+			}
+			else
+			{
+				m_mouseQuadrantHitName = "";
+				m_mouseQuadrantHitTag = "";
+				m_mouseQuadrantHitPos = godot::Vector3();
+				m_mouseQuadrantHitSize = 0.0f;
+				m_quadrantHitPos = QuadrantPos();
+			}
+
+			m_timeElapsedFromLastMouseTrack = timeElapsed;
+		}
+	}
+}
+
+void GDN_TheWorld_Viewer::process_updateQuads(Vector3& cameraPosGlobalCoord)
+{
+	// UPDATE QUADS - Stage 1
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.5 ") + __FUNCTION__, "Update Quads Stage 1");
+
+		TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 1", false, false);
+		clock1.tick();
+		auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
+			clock1.tock();
+			this->m_numUpdateQuads1++;
+			this->m_updateQuads1Duration += clock1.duration().count();
+			});
+
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		{
+			int numSplitRequired = 0;
+			itQuadTree->second->update(cameraPosGlobalCoord, QuadTree::UpdateStage::Stage1, numSplitRequired);
+		}
+	}
+
+	while (true)
+	{
+		int numSplitRequired = 0;
+
+		// UPDATE QUADS - Stage 2
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.6 ") + __FUNCTION__, "Update Quads Stage 2");
+
+			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 2", false, false);
+			clock1.tick();
+			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
+				clock1.tock();
+				this->m_numUpdateQuads2++;
+				this->m_updateQuads2Duration += clock1.duration().count();
+				});
+
+
 			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
-				bool reset = false;
-				reset = itQuadTree->second->resetMaterialParams();
-				bool updated = itQuadTree->second->updateMaterialParams();
+				itQuadTree->second->update(Vector3(), QuadTree::UpdateStage::Stage2, numSplitRequired);
+			}
+		}
 
-				if ((reset || updated) && !m_desideredLookDevChanged)
-					break;
+		if (numSplitRequired == 0)
+			break;
+		else
+		{
+			// UPDATE QUADS - Stage 3
+			TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.7 ") + __FUNCTION__, "Update Quads Stage 3");
+
+			TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Quads Stage 3", false, false);
+			clock1.tick();
+			auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
+				clock1.tock();
+				this->m_numUpdateQuads3++;
+				this->m_updateQuads3Duration += clock1.duration().count();
+				});
+
+			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+			{
+				int numSplitRequired = 0;
+				itQuadTree->second->update(cameraPosGlobalCoord, QuadTree::UpdateStage::Stage3, numSplitRequired);
 			}
 		}
 	}
 
-	//return;
+	if (m_refreshRequired)
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.8 ") + __FUNCTION__, "Refresh required");
+
+		Chunk::RefreshChunkAction action(m_visibleInTree);
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		{
+			itQuadTree->second->ForAllChunk(action);
+		}
+		m_refreshRequired = false;
+	}
+}
+
+void GDN_TheWorld_Viewer::process_updateChunks(void)
+{
+	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.9 ") + __FUNCTION__, "Update Chunks");
+
+	TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Chunks", false, false);
+	clock1.tick();
+	auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
+		clock1.tock();
+		this->m_numUpdateChunks++;
+		this->m_updateChunksDuration += clock1.duration().count();
+		});
+
+	for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+	{
+		if (!itQuadTree->second->isValid())
+			continue;
+
+		if (!itQuadTree->second->isVisible())
+			continue;
+
+		// All chunk that need an update (those are chunk that got split or joined)
+		std::vector<Chunk*> vectChunkUpdate = itQuadTree->second->getChunkUpdate();
+
+		// Forcing update to all neighboring chunks to readjust the seams (by populating vectAdditionalUpdateChunk)
+		// chunks affected are neighboring ones with same lod or less (more definded) ==> neighboring chunks with greater lod (less defined) are not selcted
+		// as the seams are calculated on chunks with lessere lof (more defined chunks) if the neighborings have different lod
+		std::vector<Chunk*> vectAdditionalUpdateChunk;
+		for (std::vector<Chunk*>::iterator itChunk = vectChunkUpdate.begin(); itChunk != vectChunkUpdate.end(); itChunk++)
+		{
+			if (!(*itChunk)->isActive())
+				continue;
+
+			Chunk::ChunkPos pos = (*itChunk)->getPos();
+			int lod = pos.getLod();
+			int numChunksPerSideAtLowerLod = 0;
+			Chunk::ChunkPos posFirstInternalChunkAtLowerLod(0, 0, 0);
+			if (lod > 0)
+			{
+				posFirstInternalChunkAtLowerLod = Chunk::ChunkPos(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+				numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+			}
+
+			{
+				// In case the chunk got split/joined forcing update to left, right, bottom, top chunks with same lod
+				Chunk* chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XMinusChunk);	// x lessening
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//
+					// - o
+					//
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::XPlusChunk);			// x growing
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//
+					//   o -
+					//
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZMinusChunk);			// z lessening
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//   -
+					//   o
+					//
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				chunk = itQuadTree->second->getChunkAt(pos, Chunk::DirectionSlot::ZPlusChunk);			// z growing
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//
+					//   o
+					//   -
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+			}
+
+			// In case the chunk got joined: we have to look for adjacent chunks with lower lod (more defined)
+			if (lod > 0 && (*itChunk)->gotJustJoined())
+			{
+				//(*itChunk)->setJustJoined(false);
+
+				//	o =
+				//	= =
+				//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+				//	o =
+				//	= =
+				Chunk* chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XMinusQuadSecondChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//  
+					//	- o =
+					//	  = =
+					//  
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				//	o =
+				//	= =
+				chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XMinusQuadForthChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//  
+					//	  o =
+					//	- = =
+					//  
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				//	o =
+				//	= =
+				chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XPlusQuadFirstChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//  
+					//	  o = -
+					//	  = =
+					//  
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				//	o =
+				//	= =
+				chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::XPlusQuadThirdChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//  
+					//	  o = 
+					//	  = = -
+					//  
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				//	o =
+				//	= =
+				chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZMinusQuadThirdChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//      
+					//    -
+					//	  o =
+					//	  = =
+					//    
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				//	o =
+				//	= =
+				chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZMinusQuadForthChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//      
+					//      -
+					//	  o =
+					//	  = =
+					//    
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				//	o =
+				//	= =
+				chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZPlusQuadFirstChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//    
+					//	  o =
+					//	  = =
+					//    -
+					//      
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+				//	o =
+				//	= =
+				chunk = itQuadTree->second->getChunkAt(posFirstInternalChunkAtLowerLod, Chunk::DirectionSlot::ZPlusQuadSecondChunk);
+				if (chunk != nullptr && chunk->isActive() && !chunk->isPendingUpdate())
+				{
+					//      
+					//	  o =
+					//	  = =
+					//      -
+					//      
+					chunk->setPendingUpdate(true);
+					vectAdditionalUpdateChunk.push_back(chunk);
+				}
+			}
+
+			// if the current chunk is on a border of the quadrant we need to look for adjacent chunks (with same lod or lesser if the chunk was just joined) in Adjacent quadrant
+			QuadrantPos XMinusQuadrantPos, XPlusQuadrantPos, ZMinusQuadrantPos, ZPlusQuadrantPos;
+			if (itQuadTree->second->isChunkOnBorderOfQuadrant(pos, XMinusQuadrantPos, XPlusQuadrantPos, ZMinusQuadrantPos, ZPlusQuadrantPos))
+			{
+				int numChunksPerSide = Globals()->numChunksPerHeightmapSide(pos.getLod());
+
+				// if the chunks is adjacent to another quadrant
+				if (XMinusQuadrantPos.isInitialized())
+				{
+					// take the adjacent quadrant if it exists
+					auto iter = m_mapQuadTree.find(XMinusQuadrantPos);
+					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
+					{
+						QuadTree* quadTreeXMinus = iter->second.get();
+						if (quadTreeXMinus->isValid())
+						{
+							Chunk::ChunkPos posSameLodOnAdjacentQuadrant(numChunksPerSide - 1, pos.getSlotPosZ(), pos.getLod());
+							Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeXMinus->getChunkAt(posSameLodOnAdjacentQuadrant);
+							if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
+							{
+								//
+								// - | o
+								//
+								chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
+								vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
+							}
+
+							if (lod > 0 && ((*itChunk)->gotJustJoined() || lod == Globals()->lodMaxDepth()))
+							{
+								//	o =
+								//	= =
+								//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+								//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+
+								{
+									Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(numChunksPerSideAtLowerLod - 1, posFirstInternalChunkAtLowerLod.getSlotPosZ(), posFirstInternalChunkAtLowerLod.getLod());
+									Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+									if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+									{
+										//  
+										//	- | o =
+										//	  | = =
+										//  
+										chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+										vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+									}
+								}
+								{
+									Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(numChunksPerSideAtLowerLod - 1, posFirstInternalChunkAtLowerLod.getSlotPosZ() + 1, posFirstInternalChunkAtLowerLod.getLod());
+									Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+									if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+									{
+										//  
+										//	  | o =
+										//	- | = =
+										//  
+										chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+										vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (XPlusQuadrantPos.isInitialized())
+				{
+					// take the adjacent quadrant if it exists
+					auto iter = m_mapQuadTree.find(XPlusQuadrantPos);
+					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
+					{
+						QuadTree* quadTreeXPlus = iter->second.get();
+						if (quadTreeXPlus->isValid())
+						{
+							Chunk::ChunkPos posSameLodOnAdjacentQuadrant(0, pos.getSlotPosZ(), pos.getLod());
+							Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeXPlus->getChunkAt(posSameLodOnAdjacentQuadrant);
+							if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
+							{
+								//
+								//   o | -
+								//
+								chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
+								vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
+							}
+
+							if (lod > 0 && (*itChunk)->gotJustJoined())
+							{
+								//	o =
+								//	= =
+								//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+								//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+
+								{
+									Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(0, posFirstInternalChunkAtLowerLod.getSlotPosZ(), posFirstInternalChunkAtLowerLod.getLod());
+									Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+									if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+									{
+										//  
+										//	o = | -
+										//	= = |
+										//  
+										chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+										vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+									}
+								}
+								{
+									Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(0, posFirstInternalChunkAtLowerLod.getSlotPosZ() + 1, posFirstInternalChunkAtLowerLod.getLod());
+									Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeXPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+									if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+									{
+										//  
+										//	o = |
+										//	= = | -
+										//  
+										chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+										vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (ZMinusQuadrantPos.isInitialized())
+				{
+					// take the adjacent quadrant if it exists
+					auto iter = m_mapQuadTree.find(ZMinusQuadrantPos);
+					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
+					{
+						QuadTree* quadTreeZMinus = iter->second.get();
+						if (quadTreeZMinus->isValid())
+						{
+							Chunk::ChunkPos posSameLodOnAdjacentQuadrant(pos.getSlotPosX(), numChunksPerSide - 1, pos.getLod());
+							Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeZMinus->getChunkAt(posSameLodOnAdjacentQuadrant);
+							if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
+							{
+								//   -
+								//   =
+								//   o
+								//
+								chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
+								vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
+							}
+
+							if (lod > 0 && (*itChunk)->gotJustJoined())
+							{
+								//	o =
+								//	= =
+								//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+								//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+
+								{
+									Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunkAtLowerLod.getSlotPosX(), numChunksPerSideAtLowerLod - 1, posFirstInternalChunkAtLowerLod.getLod());
+									Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+									if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+									{
+										//  
+										//  -
+										//  = =
+										//	o =
+										//	= =
+										//  
+										chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+										vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+									}
+								}
+								{
+									Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunkAtLowerLod.getSlotPosX() + 1, numChunksPerSideAtLowerLod - 1, posFirstInternalChunkAtLowerLod.getLod());
+									Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZMinus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+									if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+									{
+										//  
+										//    -
+										//  = =
+										//	o =
+										//	= =
+										//  
+										chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+										vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (ZPlusQuadrantPos.isInitialized())
+				{
+					// take the adjacent quadrant if it exists
+					auto iter = m_mapQuadTree.find(ZPlusQuadrantPos);
+					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
+					{
+						QuadTree* quadTreeZPlus = iter->second.get();
+						if (quadTreeZPlus->isValid())
+						{
+							//
+							//   o
+							//   =
+							//   -
+							Chunk::ChunkPos posSameLodOnAdjacentQuadrant(pos.getSlotPosX(), 0, pos.getLod());
+							Chunk* chunkSameLodOnAdjacentQuadrant = quadTreeZPlus->getChunkAt(posSameLodOnAdjacentQuadrant);
+							if (chunkSameLodOnAdjacentQuadrant != nullptr && chunkSameLodOnAdjacentQuadrant->isActive() && !chunkSameLodOnAdjacentQuadrant->isPendingUpdate())
+							{
+								chunkSameLodOnAdjacentQuadrant->setPendingUpdate(true);
+								vectAdditionalUpdateChunk.push_back(chunkSameLodOnAdjacentQuadrant);
+							}
+
+							if (lod > 0 && (*itChunk)->gotJustJoined())
+							{
+								//	o =
+								//	= =
+								//Chunk::ChunkPos posFirstInternalChunk(pos.getSlotPosX() * 2, pos.getSlotPosZ() * 2, lod - 1);
+
+								//int numChunksPerSideAtLowerLod = Globals()->numChunksPerHeightmapSide(pos.getLod() - 1);
+
+								{
+									Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunkAtLowerLod.getSlotPosX(), 0, posFirstInternalChunkAtLowerLod.getLod());
+									Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+									if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+									{
+										//  
+										//	o =
+										//	= =
+										//  = =
+										//  -
+										//  
+										chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+										vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+									}
+								}
+								{
+									Chunk::ChunkPos posLesserLodOnAdjacentQuadrant(posFirstInternalChunkAtLowerLod.getSlotPosX() + 1, 0, posFirstInternalChunkAtLowerLod.getLod());
+									Chunk* chunkLesserLodOnAdjacentQuadrant = quadTreeZPlus->getChunkAt(posLesserLodOnAdjacentQuadrant);
+									if (chunkLesserLodOnAdjacentQuadrant != nullptr && chunkLesserLodOnAdjacentQuadrant->isActive() && !chunkLesserLodOnAdjacentQuadrant->isPendingUpdate())
+									{
+										//  
+										//	o =
+										//	= =
+										//  = =
+										//    -
+										//  
+										chunkLesserLodOnAdjacentQuadrant->setPendingUpdate(true);
+										vectAdditionalUpdateChunk.push_back(chunkLesserLodOnAdjacentQuadrant);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			// Anycase clear flag just joined
+			if ((*itChunk)->gotJustJoined())
+				(*itChunk)->setJustJoined(false);
+		}
+
+		for (std::vector<Chunk*>::iterator it = vectChunkUpdate.begin(); it != vectChunkUpdate.end(); it++)
+			(*it)->update(m_visibleInTree);
+
+		for (std::vector<Chunk*>::iterator it = vectAdditionalUpdateChunk.begin(); it != vectAdditionalUpdateChunk.end(); it++)
+			(*it)->update(m_visibleInTree);
+
+		itQuadTree->second->clearChunkUpdate();
+		vectAdditionalUpdateChunk.clear();
+	}
+}
+
+void GDN_TheWorld_Viewer::process_lookDev(void)
+{
+	if (m_desideredLookDevChanged)
+	{
+		enum class ShaderTerrainData::LookDev desideredLookDev = getDesideredLookDev();
+
+		for (auto& it : m_mapQuadTree)
+		{
+			if (desideredLookDev == ShaderTerrainData::LookDev::NotSet)
+				it.second->setRegularMaterial();
+			else
+				it.second->setLookDevMaterial(desideredLookDev);
+		}
+	}
 
 	m_desideredLookDevChanged = false;
+}
 
+void GDN_TheWorld_Viewer::process_materialParam(void)
+{
+	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.11 ") + __FUNCTION__, "Material params stuff");
+
+	TheWorld_Viewer_Utils::TimerMcs clock1("GDN_TheWorld_Viewer::_process", "Update Material Params", false, false);
+	clock1.tick();
+	auto save_duration = TheWorld_Viewer_Utils::finally([&clock1, this] {
+		clock1.tock();
+		this->m_numUpdateMaterialParams++;
+		this->m_updateMaterialParamsDuration += clock1.duration().count();
+		});
+
+	if (m_shaderParamChanged)
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.12 ") + __FUNCTION__, "Dump stuff");
-
-		// Check for Dump
-		if (TIME_INTERVAL_BETWEEN_DUMP != 0 && globals->isDebugEnabled())
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
-			int64_t timeElapsed = TIME()->get_ticks_msec();
-			if (timeElapsed - m_timeElapsedFromLastDump > TIME_INTERVAL_BETWEEN_DUMP * 1000)
-			{
-				m_dumpRequired = true;
-				m_timeElapsedFromLastDump = timeElapsed;
-			}
+			itQuadTree->second->getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate(true);
 		}
-		//if (m_dumpRequired)
-		//{
-		//	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.12.1 ") + __FUNCTION__, "Dump stuff");
 
-		//	m_dumpRequired = false;
-		//	dump();
-		//}
+		m_shaderParamChanged = false;
 	}
 
+	//if ((int)globals->status() >= (int)TheWorldStatus::worldDeployed)
+	{
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		{
+			bool reset = false;
+			reset = itQuadTree->second->resetMaterialParams();
+			bool updated = itQuadTree->second->updateMaterialParams();
+
+			if ((reset || updated) && !m_desideredLookDevChanged)
+				break;
+		}
+	}
+}
+
+void GDN_TheWorld_Viewer::process_dump(GDN_TheWorld_Globals* globals)
+{
+	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.12 ") + __FUNCTION__, "Dump stuff");
+
+	// Check for Dump
+	if (TIME_INTERVAL_BETWEEN_DUMP != 0 && globals->isDebugEnabled())
+	{
+		int64_t timeElapsed = TIME()->get_ticks_msec();
+		if (timeElapsed - m_timeElapsedFromLastDump > TIME_INTERVAL_BETWEEN_DUMP * 1000)
+		{
+			m_dumpRequired = true;
+			m_timeElapsedFromLastDump = timeElapsed;
+		}
+	}
+	//if (m_dumpRequired)
+	//{
+	//	TheWorld_Utils::GuardProfiler profiler(std::string("_process 1.12.1 ") + __FUNCTION__, "Dump stuff");
+
+	//	m_dumpRequired = false;
+	//	dump();
+	//}
+}
+
+void GDN_TheWorld_Viewer::process_statistics(GDN_TheWorld_Globals* globals)
+{
 	// Check for Statistics
 	if (TIME_INTERVAL_BETWEEN_STATISTICS != 0)
 	{
@@ -2890,9 +2970,9 @@ void GDN_TheWorld_Viewer::_process_impl(double _delta, Camera3D* activeCamera)
 		if (timeElapsed - m_timeElapsedFromLastStatistic > TIME_INTERVAL_BETWEEN_STATISTICS)
 		{
 			//m_numProcessNotOwnsLock = 0;
-			
+
 			refreshQuadTreeStatistics();
-			
+
 			if (m_numProcessExecution > 0)
 			{
 				m_averageProcessDuration = int(m_processDuration / m_numProcessExecution);
@@ -4214,60 +4294,6 @@ void GDN_TheWorld_Viewer::streamer(void)
 	}
 
 	m_streamerThreadRunning = false;
-}
-
-void GDN_TheWorld_Viewer::streamingQuadrantStuff(void)
-{
-	bool allQuadrantInitialized = true;
-
-	std::unique_lock<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing, std::try_to_lock);
-	if (lock.owns_lock())
-	{
-		bool exitForNow = false;
-		for (size_t distance = 0; distance <= m_numCacheQuadrantOnPerimeter; distance++)
-		{
-			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
-			{
-				//if (itQuadTree->second->status() != QuadrantStatus::initialized)
-				//if (itQuadTree->second->status() != QuadrantStatus::initialized && itQuadTree->second->status() != QuadrantStatus::toErase)
-				if (itQuadTree->second->status() < QuadrantStatus::initialized)
-					allQuadrantInitialized = false;
-
-				if (itQuadTree->second->statusUninitialized() || itQuadTree->second->statusRefreshTerrainDataNeeded())
-				{
-					size_t distanceInPerimeterFromCameraQuadrant = itQuadTree->second->getQuadrant()->getPos().distanceInPerimeter(m_computedCameraQuadrantPos);
-					if (distanceInPerimeterFromCameraQuadrant == distance)
-					{
-						float x = 0, y = 0, z = 0, yaw = 0, pitch = 0, roll = 0;
-						if (itQuadTree->second->statusUninitialized())
-							itQuadTree->second->init(x, y, z, yaw, pitch, roll, false, 0.0f);
-						else
-							itQuadTree->second->refreshTerrainData(x, y, z, yaw, pitch, roll, false, 0.0f);
-						exitForNow = true;
-						break;
-					}
-				}
-			}
-
-			if (exitForNow)
-				break;
-		}
-
-		lock.unlock();
-
-		if (allQuadrantInitialized)
-		{
-			// m_numVisibleQuadrantOnPerimeter == 1
-			if (Globals()->status() == TheWorldStatus::worldDeployInProgress && ((m_numVisibleQuadrantOnPerimeter == 0 && m_mapQuadTree.size() == 1) || m_mapQuadTree.size() > 1))
-				Globals()->setStatus(TheWorldStatus::worldDeployed);
-
-			if (m_streamingTime.counterStarted())
-			{
-				m_streamingTime.tock();
-				PLOG_DEBUG << "Initialization of last stream of quadrant in " << m_streamingTime.duration().count() << " ms";
-			}
-		}
-	}
 }
 
 Transform3D GDN_TheWorld_Viewer::getInternalGlobalTransform(void)

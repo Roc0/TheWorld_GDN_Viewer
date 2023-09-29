@@ -114,7 +114,7 @@ namespace godot
 		virtual void _physics_process(double _delta) override;
 		virtual void _input(const Ref<InputEvent>& event) override;
 		
-		void _process_impl(double _delta, Camera3D* activeCamera);
+		void process_impl(double _delta, godot::Camera3D* activeCamera);
 
 		//Ref<Material> getRegularMaterial(void);
 		//Ref<Material> getLookDevMaterial(void);
@@ -450,7 +450,16 @@ namespace godot
 		};
 		void printKeyboardMapping(void);
 		void streamer(void);
-		void streamingQuadrantStuff(void);
+		void process_adjustQuadTreeByCamera(GDN_TheWorld_Globals* globals, Vector3& cameraPosGlobalCoord);
+		void process_streamingQuadrantStuff(void);
+		void process_trackMouse(godot::Camera3D* activeCamera);
+		void process_updateQuads(Vector3& cameraPosGlobalCoord);
+		void process_updateChunks(void);
+		void process_lookDev(void);
+		void process_materialParam(void);
+		void process_dump(GDN_TheWorld_Globals* globals);
+		void process_statistics(GDN_TheWorld_Globals* globals);
+
 		QuadrantPos getQuadrantSelForEdit(QuadTree** quadTreeSel);
 		godot::Camera3D* m_editorCamera;
 

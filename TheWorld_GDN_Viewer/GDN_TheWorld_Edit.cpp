@@ -15,6 +15,7 @@
 #include <godot_cpp/classes/margin_container.hpp>
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/h_separator.hpp>
+#include <godot_cpp/classes/texture_rect.hpp>
 #include <godot_cpp/classes/v_separator.hpp>
 #include <godot_cpp/classes/engine.hpp>
 #pragma warning (pop)
@@ -32,6 +33,7 @@ void GDN_TheWorld_Edit::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("edit_mode_noise_panel"), &GDN_TheWorld_Edit::editModeNoisePanel);
 	ClassDB::bind_method(D_METHOD("edit_mode_info_panel"), &GDN_TheWorld_Edit::editModeInfoPanel);
+	ClassDB::bind_method(D_METHOD("edit_mode_terredit_panel"), &GDN_TheWorld_Edit::editModeTerrEditPanel);
 	ClassDB::bind_method(D_METHOD("edit_mode_generate"), &GDN_TheWorld_Edit::editModeGenerateAction);
 	ClassDB::bind_method(D_METHOD("edit_mode_blend"), &GDN_TheWorld_Edit::editModeBlendAction);
 	ClassDB::bind_method(D_METHOD("edit_mode_gen_normals"), &GDN_TheWorld_Edit::editModeGenNormalsAction);
@@ -48,6 +50,7 @@ void GDN_TheWorld_Edit::_bind_methods()
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 {
+	m_innerData = std::make_unique<TheWorld_Edit_InnerData>();
 	m_quitting = false;
 	m_initialized = false;
 	m_ready = false;
@@ -57,28 +60,7 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_viewer = nullptr;
 	m_controlNeedResize = false;
 	m_scrollPanelsNeedResize = false;
-	m_mainPanelContainer = nullptr;
-	m_noiseVBoxContainer = nullptr;
-	m_infoVBoxContainer = nullptr;
-	m_mainTerrainVBoxContainer = nullptr;
-	m_mainTerrainScrollContainer = nullptr;
-	m_noiseButton = nullptr;
-	m_infoButton = nullptr;
-	m_mainTabContainer = nullptr;
-	m_seed = nullptr;
-	m_frequency = nullptr;
-	m_fractalOctaves = nullptr;
-	m_fractalLacunarity = nullptr;
-	m_fractalGain = nullptr;
-	m_fractalWeightedStrength = nullptr;
-	m_fractalPingPongStrength = nullptr;
-	m_amplitudeLabel = nullptr;
-	m_scaleFactorLabel = nullptr;
-	m_desideredMinHeightLabel = nullptr;
 	m_infoLabelTextChanged = false;
-	m_infoLabel = nullptr;
-	m_elapsedLabel = nullptr;
-	m_elapsed1Label = nullptr;
 	m_minHeightStr = new std::string();
 	m_maxHeightStr = new std::string();
 	m_counterStr = new std::string();
@@ -88,27 +70,12 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_mouseQuadHitPosStr = new std::string();
 	m_mouseQuadSelStr = new std::string();
 	m_mouseQuadSelPosStr = new std::string();
-	//m_minHeightLabel = nullptr;
-	//m_maxHeightLabel = nullptr;
-	//m_counterLabel = nullptr;
-	//m_note1Label = nullptr;
-	//m_mouseHitLabel = nullptr;
-	//m_mouseQuadHitLabel = nullptr;
-	//m_mouseQuadHitPosLabel = nullptr;
-	//m_mouseQuadSelLabel = nullptr;
-	//m_mouseQuadSelPosLabel = nullptr;
-	m_numQuadrantToSaveLabel = nullptr;
-	m_numQuadrantToUploadLabel = nullptr;
-	m_allCheckBox = nullptr;
 	m_allItems = 0;
 	m_completedItems = 0;
 	m_elapsedCompleted = 0;
 	m_lastElapsed = 0;
-	m_terrTypeOptionButton = nullptr;
-	m_lookDevOptionButton = nullptr;
 	m_UIAcceptingFocus = false;
 	m_requiredUIAcceptFocus = false;
-	m_message = nullptr;
 	m_lastMessageChanged = false;
 
 	_init();
@@ -254,17 +221,17 @@ void GDN_TheWorld_Edit::setUIAcceptFocus(bool b)
 	//else
 	//	setSeed(0);
 
-	m_allCheckBox->set_focus_mode(focusMode);
-	m_seed->set_focus_mode(focusMode);
-	m_frequency->set_focus_mode(focusMode);
-	m_fractalOctaves->set_focus_mode(focusMode);
-	m_fractalLacunarity->set_focus_mode(focusMode);
-	m_fractalGain->set_focus_mode(focusMode);
-	m_amplitudeLabel->set_focus_mode(focusMode);
-	m_scaleFactorLabel->set_focus_mode(focusMode);
-	m_desideredMinHeightLabel->set_focus_mode(focusMode);
-	m_fractalWeightedStrength->set_focus_mode(focusMode);
-	m_fractalPingPongStrength->set_focus_mode(focusMode);
+	m_innerData->m_allCheckBox->set_focus_mode(focusMode);
+	m_innerData->m_seed->set_focus_mode(focusMode);
+	m_innerData->m_frequency->set_focus_mode(focusMode);
+	m_innerData->m_fractalOctaves->set_focus_mode(focusMode);
+	m_innerData->m_fractalLacunarity->set_focus_mode(focusMode);
+	m_innerData->m_fractalGain->set_focus_mode(focusMode);
+	m_innerData->m_amplitudeLabel->set_focus_mode(focusMode);
+	m_innerData->m_scaleFactorLabel->set_focus_mode(focusMode);
+	m_innerData->m_desideredMinHeightLabel->set_focus_mode(focusMode);
+	m_innerData->m_fractalWeightedStrength->set_focus_mode(focusMode);
+	m_innerData->m_fractalPingPongStrength->set_focus_mode(focusMode);
 
 	m_UIAcceptingFocus = b;
 }
@@ -291,18 +258,18 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	godot::Button* button = nullptr;
 	godot::Label* label = nullptr;
 
-	m_mainPanelContainer = createControl<godot::PanelContainer>(this, "EditBox", self_modulate);
+	m_innerData->m_mainPanelContainer = createControl<godot::PanelContainer>(this, "EditBox", "", self_modulate);
 
-	m_mainTabContainer = createControl<godot::TabContainer>(m_mainPanelContainer, "EditModeTab", self_modulate);
+	m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "EditModeTab", "", self_modulate);
 
-	m_mainTerrainScrollContainer = createControl<godot::ScrollContainer>(m_mainTabContainer, "Terrain", self_modulate);
-	m_mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
-	m_mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
-	m_mainTerrainScrollContainer->set_horizontal_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
-	m_mainTerrainScrollContainer->set_vertical_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
+	m_innerData->m_mainTerrainScrollContainer = createControl<godot::ScrollContainer>(m_innerData->m_mainTabContainer, "Terrain", "", self_modulate);
+	m_innerData->m_mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+	m_innerData->m_mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
+	m_innerData->m_mainTerrainScrollContainer->set_horizontal_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
+	m_innerData->m_mainTerrainScrollContainer->set_vertical_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
 
 	godot::MarginContainer* marginContainer = nullptr;
-	marginContainer = createControl<godot::MarginContainer>(m_mainTerrainScrollContainer, "TerrainMargin", self_modulate);
+	marginContainer = createControl<godot::MarginContainer>(m_innerData->m_mainTerrainScrollContainer, "TerrainMargin", "", self_modulate);
 	marginContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
 	marginContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
 	if (!IS_EDITOR_HINT())
@@ -313,56 +280,54 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//marginContainer->add_theme_constant_override("margin_top", 5);
 	//marginContainer->add_theme_constant_override("margin_bottom", 5);
 
-	m_mainTerrainVBoxContainer = createControl<godot::VBoxContainer>(marginContainer, "Terrain", self_modulate);
-	m_mainTerrainVBoxContainer->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
-	m_mainTerrainVBoxContainer->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+	m_innerData->m_mainTerrainVBoxContainer = createControl<godot::VBoxContainer>(marginContainer, "Terrain", "", self_modulate);
+	m_innerData->m_mainTerrainVBoxContainer->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+	m_innerData->m_mainTerrainVBoxContainer->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
 
 	{
-		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "");
 
-		label = createControl<godot::Label>(hBoxContainer, "");
-		label->set_text("Quads to save");
-		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		label = createControl<godot::Label>(hBoxContainer, "", "Quads to save");
 
-		m_numQuadrantToSaveLabel = createControl<godot::Label>(hBoxContainer, "");
-		m_numQuadrantToSaveLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_numQuadrantToSaveLabel = createControl<godot::Label>(hBoxContainer, "");
+		m_innerData->m_numQuadrantToSaveLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Quads to upload");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_numQuadrantToUploadLabel = createControl<godot::Label>(hBoxContainer, "");
-		m_numQuadrantToUploadLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_numQuadrantToUploadLabel = createControl<godot::Label>(hBoxContainer, "");
+		m_innerData->m_numQuadrantToUploadLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
-		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "");
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
 		button->set_text("Save");
 		button->connect("pressed", Callable(this, "edit_mode_save"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
-		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		separator = createControl<godot::VSeparator>(hBoxContainer, "", "", self_modulate);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
 		button->set_text("Upload");
 		button->connect("pressed", Callable(this, "edit_mode_upload"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
-		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		separator = createControl<godot::VSeparator>(hBoxContainer, "", "", self_modulate);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
 		button->set_text("Stop");
 		button->connect("pressed", Callable(this, "edit_mode_stop"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
-		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "");
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
 		button->set_text("Blend");
 		button->connect("pressed", Callable(this, "edit_mode_blend"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
-		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		separator = createControl<godot::VSeparator>(hBoxContainer, "", "", self_modulate);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
 		button->set_text("Gen. Normals");
@@ -374,187 +339,232 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		button->connect("pressed", Callable(this, "edit_mode_set_textures"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
-		m_allCheckBox = createControl<godot::CheckBox>(hBoxContainer, "");
-		m_allCheckBox->set_text("All");
-		m_allCheckBox->set_toggle_mode(true);
+		m_innerData->m_allCheckBox = createControl<godot::CheckBox>(hBoxContainer, "");
+		m_innerData->m_allCheckBox->set_text("All");
+		m_innerData->m_allCheckBox->set_toggle_mode(true);
 
-		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "");
 		
-		m_message = createControl<godot::Label>(hBoxContainer, "");
-		m_message->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_message = createControl<godot::Label>(hBoxContainer, "");
+		m_innerData->m_message->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
-		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "");
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Elapsed");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_elapsedLabel = createControl<godot::Label>(hBoxContainer, "");
-		m_elapsedLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_elapsedLabel = createControl<godot::Label>(hBoxContainer, "");
+		m_innerData->m_elapsedLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
-		m_elapsed1Label = createControl<godot::Label>(hBoxContainer, "");
-		m_elapsed1Label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_elapsed1Label = createControl<godot::Label>(hBoxContainer, "");
+		m_innerData->m_elapsed1Label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 	}
 	//setMessage(std::string("AAAAAAAAAAAAAAAAAAAAAAA"));
 
 	{
-		m_infoButton = createControl<godot::Button>(m_mainTerrainVBoxContainer, "");
-		m_infoButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
-		m_infoButton->set_text((std::wstring(RIGHT_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
-		m_infoButton->connect("pressed", Callable(this, "edit_mode_info_panel"));
-		m_infoButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+		m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "");
+		m_innerData->m_infoButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_infoButton->set_text((std::wstring(RIGHT_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
+		m_innerData->m_infoButton->connect("pressed", Callable(this, "edit_mode_info_panel"));
+		m_innerData->m_infoButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
-		m_infoVBoxContainer = createControl<godot::VBoxContainer>(m_mainTerrainVBoxContainer, "Info");
-		m_infoVBoxContainer->hide();
+		m_innerData->m_infoVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "Info");
+		m_innerData->m_infoVBoxContainer->hide();
 		editModeInfoPanel();
 
-		m_infoLabel = createControl<godot::Label>(m_infoVBoxContainer, "");
-		m_infoLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_infoLabel = createControl<godot::Label>(m_innerData->m_infoVBoxContainer, "");
+		m_innerData->m_infoLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 	}
 
 	{
-		hBoxContainer = createControl<godot::HBoxContainer>(m_mainTerrainVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "");
 		
-		m_lookDevOptionButton = createControl<godot::OptionButton>(hBoxContainer, "");
-		m_lookDevOptionButton->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
-		m_lookDevOptionButton->set_toggle_mode(true);
-		m_lookDevOptionButton->connect("item_selected", Callable(this, "edit_mode_sel_lookdev"));
-		m_lookDevOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
-		m_lookDevOptionButton->add_item("Lookdev disabled", (int64_t)ShaderTerrainData::LookDev::NotSet);
-		m_lookDevOptionButton->add_separator();
-		m_lookDevOptionButton->add_item("Lookdev heights", (int64_t)ShaderTerrainData::LookDev::Heights);
-		m_lookDevOptionButton->add_item("Lookdev normals", (int64_t)ShaderTerrainData::LookDev::Normals);
-		m_lookDevOptionButton->add_item("Lookdev splatmap", (int64_t)ShaderTerrainData::LookDev::Splat);
-		m_lookDevOptionButton->add_item("Lookdev colors", (int64_t)ShaderTerrainData::LookDev::Color);
-		m_lookDevOptionButton->add_item("Lookdev globalmap", (int64_t)ShaderTerrainData::LookDev::Global);
+		m_innerData->m_lookDevOptionButton = createControl<godot::OptionButton>(hBoxContainer, "");
+		m_innerData->m_lookDevOptionButton->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+		m_innerData->m_lookDevOptionButton->set_toggle_mode(true);
+		m_innerData->m_lookDevOptionButton->connect("item_selected", Callable(this, "edit_mode_sel_lookdev"));
+		m_innerData->m_lookDevOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev disabled", (int64_t)ShaderTerrainData::LookDev::NotSet);
+		m_innerData->m_lookDevOptionButton->add_separator();
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev heights", (int64_t)ShaderTerrainData::LookDev::Heights);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev normals", (int64_t)ShaderTerrainData::LookDev::Normals);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev splatmap", (int64_t)ShaderTerrainData::LookDev::Splat);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev colors", (int64_t)ShaderTerrainData::LookDev::Color);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev globalmap", (int64_t)ShaderTerrainData::LookDev::Global);
 	}
 
 	{
-		m_noiseButton = createControl<godot::Button>(m_mainTerrainVBoxContainer, "");
+		m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "");
 		//m_noiseButton->set_flat(true);
-		m_noiseButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
-		m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
-		m_noiseButton->connect("pressed", Callable(this, "edit_mode_noise_panel"));
-		m_noiseButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+		m_innerData->m_noiseButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
+		m_innerData->m_noiseButton->connect("pressed", Callable(this, "edit_mode_noise_panel"));
+		m_innerData->m_noiseButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 
-		m_noiseVBoxContainer = createControl<godot::VBoxContainer>(m_mainTerrainVBoxContainer, "Noise");
-		m_noiseVBoxContainer->hide();
+		m_innerData->m_noiseVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "Noise");
+		m_innerData->m_noiseVBoxContainer->hide();
 
-		separator = createControl<HSeparator>(m_noiseVBoxContainer, "", self_modulate);
+		separator = createControl<HSeparator>(m_innerData->m_noiseVBoxContainer, "", "", self_modulate);
 		
-		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_noiseVBoxContainer, "");
 		
-		m_terrTypeOptionButton = createControl<godot::OptionButton>(hBoxContainer, "");
-		m_terrTypeOptionButton->connect("item_selected", Callable(this, "edit_mode_sel_terr_type"));
-		m_terrTypeOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::unknown).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::unknown);
-		m_terrTypeOptionButton->add_separator();
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::campaign_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::campaign_1);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::plateau_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::plateau_1);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_hills).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_hills);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_hills).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_hills);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_mountains).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_mountains);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_mountains_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_mountains_grow);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1_grow);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2);
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2_grow);
-		m_terrTypeOptionButton->add_separator();
-		m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::noise_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::noise_1);
+		m_innerData->m_terrTypeOptionButton = createControl<godot::OptionButton>(hBoxContainer, "");
+		m_innerData->m_terrTypeOptionButton->connect("item_selected", Callable(this, "edit_mode_sel_terr_type"));
+		m_innerData->m_terrTypeOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::unknown).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::unknown);
+		m_innerData->m_terrTypeOptionButton->add_separator();
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::campaign_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::campaign_1);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::plateau_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::plateau_1);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_hills).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_hills);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_hills).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_hills);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_mountains).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_mountains);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::low_mountains_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::low_mountains_grow);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_1_grow);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2);
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2_grow).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::high_mountains_2_grow);
+		m_innerData->m_terrTypeOptionButton->add_separator();
+		m_innerData->m_terrTypeOptionButton->add_item(TheWorld_Utils::TerrainEdit::terrainTypeString(TheWorld_Utils::TerrainEdit::TerrainType::noise_1).c_str(), (int64_t)TheWorld_Utils::TerrainEdit::TerrainType::noise_1);
 		
-		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		separator = createControl<godot::VSeparator>(hBoxContainer, "", "", self_modulate);
 		
 		button = createControl<godot::Button>(hBoxContainer, "");
 		button->set_text("Generate");
 		button->connect("pressed", Callable(this, "edit_mode_generate"));
 		button->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		
-		separator = createControl<godot::VSeparator>(hBoxContainer, "", self_modulate);
+		separator = createControl<godot::VSeparator>(hBoxContainer, "", "", self_modulate);
 
-		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_noiseVBoxContainer, "");
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Seed");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_seed = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_seed->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_seed = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_seed->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Frequency");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_frequency = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_frequency->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_frequency = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_frequency->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Gain");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_fractalGain = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_fractalGain->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_fractalGain = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_fractalGain->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
-		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_noiseVBoxContainer, "");
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Octaves");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_fractalOctaves = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_fractalOctaves->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_fractalOctaves = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_fractalOctaves->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Lacunarity");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_fractalLacunarity = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_fractalLacunarity->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_fractalLacunarity = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_fractalLacunarity->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
-		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_noiseVBoxContainer, "");
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Amplitude");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_amplitudeLabel = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_amplitudeLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_amplitudeLabel = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_amplitudeLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Scale");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_scaleFactorLabel = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_scaleFactorLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_scaleFactorLabel = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_scaleFactorLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Start H");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_desideredMinHeightLabel = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_desideredMinHeightLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_desideredMinHeightLabel = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_desideredMinHeightLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
-		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_noiseVBoxContainer, "");
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Weighted Strength");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_fractalWeightedStrength = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_fractalWeightedStrength->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_fractalWeightedStrength = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_fractalWeightedStrength->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
-		hBoxContainer = createControl<godot::HBoxContainer>(m_noiseVBoxContainer, "");
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_noiseVBoxContainer, "");
 		
 		label = createControl<godot::Label>(hBoxContainer, "");
 		label->set_text("Ping Pong Strength");
 		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 		
-		m_fractalPingPongStrength = createControl<godot::LineEdit>(hBoxContainer, "");
-		m_fractalPingPongStrength->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		m_innerData->m_fractalPingPongStrength = createControl<godot::LineEdit>(hBoxContainer, "");
+		m_innerData->m_fractalPingPongStrength->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
 
-		separator = createControl<HSeparator>(m_noiseVBoxContainer, "", self_modulate);
+		separator = createControl<HSeparator>(m_innerData->m_noiseVBoxContainer, "", "", self_modulate);
 	}
 
-	separator = createControl<HSeparator>(m_mainTerrainVBoxContainer, "", self_modulate);
+	{
+		m_innerData->m_terrEditButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "");
+		m_innerData->m_terrEditButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_terrEditButton->set_text((std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str());
+		m_innerData->m_terrEditButton->connect("pressed", Callable(this, "edit_mode_terredit_panel"));
+		m_innerData->m_terrEditButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+
+		m_innerData->m_terrEditVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "TerrainEdit");
+		m_innerData->m_terrEditVBoxContainer->hide();
+
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer, "");
+		label = createControl<godot::Label>(hBoxContainer, "");
+		label->set_text("Low Elevation");
+		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_lowElevationTex = createControl<godot::TextureRect>(hBoxContainer, "");
+		m_innerData->m_lowElevationTexName = createControl<godot::Label>(hBoxContainer, "");
+		m_innerData->m_lowElevationTexName->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer, "");
+		label = createControl<godot::Label>(hBoxContainer, "");
+		label->set_text("High Elevation");
+		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_highElevationTex = createControl<godot::TextureRect>(hBoxContainer, "");
+		m_innerData->m_highElevationTexName = createControl<godot::Label>(hBoxContainer, "");
+		m_innerData->m_highElevationTexName->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer, "");
+		label = createControl<godot::Label>(hBoxContainer, "");
+		label->set_text("Dirt Elevation");
+		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_dirtTex = createControl<godot::TextureRect>(hBoxContainer, "");
+		m_innerData->m_dirtTexName = createControl<godot::Label>(hBoxContainer, "");
+		m_innerData->m_dirtTexName->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer, "");
+		label = createControl<godot::Label>(hBoxContainer, "");
+		label->set_text("Rocks Elevation");
+		label->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+		m_innerData->m_rocksTex = createControl<godot::TextureRect>(hBoxContainer, "");
+		m_innerData->m_rocksTexName = createControl<godot::Label>(hBoxContainer, "");
+		m_innerData->m_rocksTexName->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+
+		separator = createControl<HSeparator>(m_innerData->m_terrEditVBoxContainer, "", "", self_modulate);
+	}
+	
+	separator = createControl<HSeparator>(m_innerData->m_mainTerrainVBoxContainer, "", "", self_modulate);
 
 	controlNeedResize();
 
@@ -568,7 +578,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 }
 
 template <class T>
-T* GDN_TheWorld_Edit::createControl(godot::Node* parent, std::string name, Color selfModulateColor)
+T* GDN_TheWorld_Edit::createControl(godot::Node* parent, std::string name, std::string text, Color selfModulateColor)
 {
 	T* control = memnew(T);
 	parent->add_child(control);
@@ -578,6 +588,12 @@ T* GDN_TheWorld_Edit::createControl(godot::Node* parent, std::string name, Color
 	control->connect("mouse_exited", Callable(this, "mouse_exited_main_panel"));
 	if (selfModulateColor != Color(0.0f, 0.0f, 0.0f, 0.0f))
 		control->set_self_modulate(selfModulateColor);
+	if constexpr (std::is_same_v<T, godot::Label>)
+	{
+		if (text.length() > 0)
+			control->set_text(text.c_str());
+		control->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+	}
 	return control;
 }
 
@@ -620,7 +636,7 @@ void GDN_TheWorld_Edit::setSizeUI(void)
 
 void GDN_TheWorld_Edit::setEmptyTerrainEditValues(void)
 {
-	m_terrTypeOptionButton->select(m_terrTypeOptionButton->get_item_index((int64_t)TheWorld_Utils::TerrainEdit::TerrainType::unknown));
+	m_innerData->m_terrTypeOptionButton->select(m_innerData->m_terrTypeOptionButton->get_item_index((int64_t)TheWorld_Utils::TerrainEdit::TerrainType::unknown));
 
 	setSeed(0);
 	setFrequency(0.0f);
@@ -637,7 +653,7 @@ void GDN_TheWorld_Edit::setEmptyTerrainEditValues(void)
 
 void GDN_TheWorld_Edit::setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrainEdit)
 {
-	int64_t id = m_terrTypeOptionButton->get_selected_id();
+	int64_t id = m_innerData->m_terrTypeOptionButton->get_selected_id();
 	if (id != -1)
 	{
 		TheWorld_Utils::TerrainEdit::TerrainType selectedTerrainType = (TheWorld_Utils::TerrainEdit::TerrainType)id;
@@ -645,7 +661,7 @@ void GDN_TheWorld_Edit::setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrai
 		{
 			//std::string text = TheWorld_Utils::TerrainEdit::terrainTypeString(terrainEdit.terrainType);
 			//m_terrTypeOptionButton->set_text(text.c_str());
-			m_terrTypeOptionButton->select(m_terrTypeOptionButton->get_item_index((int64_t)terrainEdit.terrainType));
+			m_innerData->m_terrTypeOptionButton->select(m_innerData->m_terrTypeOptionButton->get_item_index((int64_t)terrainEdit.terrainType));
 		}
 	}
 	
@@ -661,16 +677,21 @@ void GDN_TheWorld_Edit::setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrai
 	setDesideredMinHeight(terrainEdit.noise.desideredMinHeight);
 	setMinHeight(terrainEdit.minHeight);
 	setMaxHeight(terrainEdit.maxHeight);
+
+	std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>>& groundTextures = ShaderTerrainData::getGroundTextures();
+
+	const std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>>::iterator it = groundTextures.find(terrainEdit.extraValues.lowElevationTexName_r);
+	//if (it)
 }
 
 void GDN_TheWorld_Edit::setSeed(int seed)
 {
-	m_seed->set_text(std::to_string(seed).c_str());
+	m_innerData->m_seed->set_text(std::to_string(seed).c_str());
 }
 
 int GDN_TheWorld_Edit::seed(void)
 {
-	godot::String s = m_seed->get_text();
+	godot::String s = m_innerData->m_seed->get_text();
 	const char* str = s.utf8().get_data();
 	int ret = std::stoi(std::string(str));
 	return ret;
@@ -678,12 +699,12 @@ int GDN_TheWorld_Edit::seed(void)
 
 void GDN_TheWorld_Edit::setFrequency(float frequency)
 {
-	m_frequency->set_text(std::to_string(frequency).c_str());
+	m_innerData->m_frequency->set_text(std::to_string(frequency).c_str());
 }
 
 float GDN_TheWorld_Edit::frequency(void)
 {
-	godot::String s = m_frequency->get_text();
+	godot::String s = m_innerData->m_frequency->get_text();
 	const char* str = s.utf8().get_data();
 	float ret = std::stof(std::string(str));
 	return ret;
@@ -691,12 +712,12 @@ float GDN_TheWorld_Edit::frequency(void)
 
 void GDN_TheWorld_Edit::setOctaves(int octaves)
 {
-	m_fractalOctaves->set_text(std::to_string(octaves).c_str());
+	m_innerData->m_fractalOctaves->set_text(std::to_string(octaves).c_str());
 }
 
 int GDN_TheWorld_Edit::octaves(void)
 {
-	godot::String s = m_fractalOctaves->get_text();
+	godot::String s = m_innerData->m_fractalOctaves->get_text();
 	const char* str = s.utf8().get_data();
 	int ret = std::stoi(std::string(str));
 	return ret;
@@ -704,12 +725,12 @@ int GDN_TheWorld_Edit::octaves(void)
 
 void GDN_TheWorld_Edit::setLacunarity(float lacunarity)
 {
-	m_fractalLacunarity->set_text(std::to_string(lacunarity).c_str());
+	m_innerData->m_fractalLacunarity->set_text(std::to_string(lacunarity).c_str());
 }
 
 float GDN_TheWorld_Edit::lacunarity(void)
 {
-	godot::String s = m_fractalLacunarity->get_text();
+	godot::String s = m_innerData->m_fractalLacunarity->get_text();
 	const char* str = s.utf8().get_data();
 	float ret = std::stof(std::string(str));
 	return ret;
@@ -717,12 +738,12 @@ float GDN_TheWorld_Edit::lacunarity(void)
 
 void GDN_TheWorld_Edit::setGain(float gain)
 {
-	m_fractalGain->set_text(std::to_string(gain).c_str());
+	m_innerData->m_fractalGain->set_text(std::to_string(gain).c_str());
 }
 
 float GDN_TheWorld_Edit::gain(void)
 {
-	godot::String s = m_fractalGain->get_text();
+	godot::String s = m_innerData->m_fractalGain->get_text();
 	const char* str = s.utf8().get_data();
 	float ret = std::stof(std::string(str));
 	return ret;
@@ -730,12 +751,12 @@ float GDN_TheWorld_Edit::gain(void)
 
 void GDN_TheWorld_Edit::setWeightedStrength(float weightedStrength)
 {
-	m_fractalWeightedStrength->set_text(std::to_string(weightedStrength).c_str());
+	m_innerData->m_fractalWeightedStrength->set_text(std::to_string(weightedStrength).c_str());
 }
 
 float GDN_TheWorld_Edit::weightedStrength(void)
 {
-	godot::String s = m_fractalWeightedStrength->get_text();
+	godot::String s = m_innerData->m_fractalWeightedStrength->get_text();
 	const char* str = s.utf8().get_data();
 	float ret = std::stof(std::string(str));
 	return ret;
@@ -743,12 +764,12 @@ float GDN_TheWorld_Edit::weightedStrength(void)
 
 void GDN_TheWorld_Edit::setPingPongStrength(float pingPongStrength)
 {
-	m_fractalPingPongStrength->set_text(std::to_string(pingPongStrength).c_str());
+	m_innerData->m_fractalPingPongStrength->set_text(std::to_string(pingPongStrength).c_str());
 }
 
 float GDN_TheWorld_Edit::pingPongStrength(void)
 {
-	godot::String s = m_fractalPingPongStrength->get_text();
+	godot::String s = m_innerData->m_fractalPingPongStrength->get_text();
 	const char* str = s.utf8().get_data();
 	float ret = std::stof(std::string(str));
 	return ret;
@@ -756,12 +777,12 @@ float GDN_TheWorld_Edit::pingPongStrength(void)
 
 void GDN_TheWorld_Edit::setAmplitude(unsigned int amplitude)
 {
-	m_amplitudeLabel->set_text(std::to_string(amplitude).c_str());
+	m_innerData->m_amplitudeLabel->set_text(std::to_string(amplitude).c_str());
 }
 
 unsigned int GDN_TheWorld_Edit::amplitude(void)
 {
-	godot::String s = m_amplitudeLabel->get_text();
+	godot::String s = m_innerData->m_amplitudeLabel->get_text();
 	const char* str = s.utf8().get_data();
 	unsigned int ret = std::stoi(std::string(str));
 	return ret;
@@ -769,12 +790,12 @@ unsigned int GDN_TheWorld_Edit::amplitude(void)
 
 void GDN_TheWorld_Edit::setScaleFactor(float scaleFactor)
 {
-	m_scaleFactorLabel->set_text(std::to_string(scaleFactor).c_str());
+	m_innerData->m_scaleFactorLabel->set_text(std::to_string(scaleFactor).c_str());
 }
 
 float GDN_TheWorld_Edit::scaleFactor(void)
 {
-	godot::String s = m_scaleFactorLabel->get_text();
+	godot::String s = m_innerData->m_scaleFactorLabel->get_text();
 	const char* str = s.utf8().get_data();
 	float ret = std::stof(std::string(str));
 	return ret;
@@ -782,12 +803,12 @@ float GDN_TheWorld_Edit::scaleFactor(void)
 
 void GDN_TheWorld_Edit::setDesideredMinHeight(float desideredMinHeight)
 {
-	m_desideredMinHeightLabel->set_text(std::to_string(desideredMinHeight).c_str());
+	m_innerData->m_desideredMinHeightLabel->set_text(std::to_string(desideredMinHeight).c_str());
 }
 
 float GDN_TheWorld_Edit::desideredMinHeight(void)
 {
-	godot::String s = m_desideredMinHeightLabel->get_text();
+	godot::String s = m_innerData->m_desideredMinHeightLabel->get_text();
 	const char* str = s.utf8().get_data();
 	float ret = std::stof(std::string(str));
 	return ret;
@@ -840,7 +861,7 @@ void GDN_TheWorld_Edit::setElapsed(size_t elapsed, bool onGoing)
 		if (!m_onGoingElapsedLabel)
 		{
 			//m_elapsedLabelNormalColor = m_elapsedLabel->get("custom_colors/font_color");
-			m_elapsedLabel->set("custom_colors/font_color", Color(1, 0, 0));
+			m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 0, 0));
 			m_onGoingElapsedLabel = true;
 		}
 	}
@@ -848,18 +869,18 @@ void GDN_TheWorld_Edit::setElapsed(size_t elapsed, bool onGoing)
 	{
 		if (m_onGoingElapsedLabel)
 		{
-			m_elapsedLabel->set("custom_colors/font_color", Color(1, 1, 1));
+			m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 1, 1));
 			m_onGoingElapsedLabel = false;
 		}
 	}
 	
 	if (elapsed == 0)
 	{
-		m_elapsedLabel->set_text("");
+		m_innerData->m_elapsedLabel->set_text("");
 	}
 	else
 	{
-		m_elapsedLabel->set_text(std::to_string(elapsed).c_str());
+		m_innerData->m_elapsedLabel->set_text(std::to_string(elapsed).c_str());
 	}
 }
 
@@ -897,7 +918,7 @@ void GDN_TheWorld_Edit::setNote1(std::string msg)
 
 size_t GDN_TheWorld_Edit::elapsed(void)
 {
-	godot::String s = m_elapsedLabel->get_text();
+	godot::String s = m_innerData->m_elapsedLabel->get_text();
 	const char* str = s.utf8().get_data();
 	size_t ret = std::stoll(std::string(str));
 	return ret;
@@ -946,12 +967,12 @@ void GDN_TheWorld_Edit::setMouseQuadSelPosLabelText(std::string text)
 
 void GDN_TheWorld_Edit::setNumQuadrantToSave(size_t num)
 {
-	m_numQuadrantToSaveLabel->set_text(std::to_string(num).c_str());
+	m_innerData->m_numQuadrantToSaveLabel->set_text(std::to_string(num).c_str());
 }
 
 void GDN_TheWorld_Edit::setNumQuadrantToUpload(size_t num)
 {
-	m_numQuadrantToUploadLabel->set_text(std::to_string(num).c_str());
+	m_innerData->m_numQuadrantToUploadLabel->set_text(std::to_string(num).c_str());
 }
 
 void GDN_TheWorld_Edit::refreshNumToSaveUpload(size_t& numToSave, size_t& numToUpload)
@@ -1053,11 +1074,11 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 
 godot::Size2 GDN_TheWorld_Edit::getTerrainScrollPanelSize(void)
 {
-	if (m_viewer == nullptr || m_mainTerrainVBoxContainer == nullptr)
+	if (m_viewer == nullptr || m_innerData->m_mainTerrainVBoxContainer == nullptr)
 		return godot::Size2(0.0f, 0.0f);
 
 	godot::Size2 viewportSize = m_viewer->getViewportSize();
-	godot::Rect2 contentRect = m_mainTerrainVBoxContainer->get_rect();
+	godot::Rect2 contentRect = m_innerData->m_mainTerrainVBoxContainer->get_rect();
 	godot::Size2 contentSize = contentRect.size;
 	
 	godot::Size2 ret = viewportSize;
@@ -1105,9 +1126,9 @@ void GDN_TheWorld_Edit::_process(double _delta)
 
 	if (m_scrollPanelsNeedResize)
 	{
-		if (m_mainTerrainVBoxContainer != nullptr && m_mainTerrainVBoxContainer->get_rect().size != godot::Size2(0.0f, 0.0f))
+		if (m_innerData->m_mainTerrainVBoxContainer != nullptr && m_innerData->m_mainTerrainVBoxContainer->get_rect().size != godot::Size2(0.0f, 0.0f))
 		{
-			m_mainTerrainScrollContainer->set_custom_minimum_size(getTerrainScrollPanelSize());
+			m_innerData->m_mainTerrainScrollContainer->set_custom_minimum_size(getTerrainScrollPanelSize());
 			m_scrollPanelsNeedResize = false;
 		}
 	}
@@ -1141,7 +1162,7 @@ void GDN_TheWorld_Edit::_process(double _delta)
 
 		if (m_lastMessageChanged)
 		{
-			m_message->set_text(m_lastMessage);
+			m_innerData->m_message->set_text(m_innerData->m_lastMessage);
 			m_lastMessageChanged = false;
 		}
 	}
@@ -1155,8 +1176,8 @@ void GDN_TheWorld_Edit::_process(double _delta)
 			+ "Pos Hit: " + *m_mouseQuadHitPosStr + "\n"
 			+ "Quad Sel: " + *m_mouseQuadSelStr + "\n"
 			+ "Pos Sel: " + *m_mouseQuadSelPosStr;
-		m_infoLabel->set_text(infoLabelText.c_str());
-		m_elapsed1Label->set_text((*m_counterStr + " " + *m_note1Str).c_str());
+		m_innerData->m_infoLabel->set_text(infoLabelText.c_str());
+		m_innerData->m_elapsed1Label->set_text((*m_counterStr + " " + *m_note1Str).c_str());
 		
 		m_infoLabelTextChanged = false;
 	}
@@ -1164,15 +1185,15 @@ void GDN_TheWorld_Edit::_process(double _delta)
 
 void GDN_TheWorld_Edit::editModeNoisePanel(void)
 {
-	if (m_noiseVBoxContainer->is_visible())
+	if (m_innerData->m_noiseVBoxContainer->is_visible())
 	{
-		m_noiseVBoxContainer->hide();
-		m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
+		m_innerData->m_noiseVBoxContainer->hide();
+		m_innerData->m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
 	}
 	else
 	{
-		m_noiseVBoxContainer->show();
-		m_noiseButton->set_text((std::wstring(DOWN_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
+		m_innerData->m_noiseVBoxContainer->show();
+		m_innerData->m_noiseButton->set_text((std::wstring(DOWN_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
 	}
 
 	m_scrollPanelsNeedResize = true;
@@ -1180,15 +1201,31 @@ void GDN_TheWorld_Edit::editModeNoisePanel(void)
 
 void GDN_TheWorld_Edit::editModeInfoPanel(void)
 {
-	if (m_infoVBoxContainer->is_visible())
+	if (m_innerData->m_infoVBoxContainer->is_visible())
 	{
-		m_infoVBoxContainer->hide();
-		m_infoButton->set_text((std::wstring(RIGHT_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
+		m_innerData->m_infoVBoxContainer->hide();
+		m_innerData->m_infoButton->set_text((std::wstring(RIGHT_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
 	}
 	else
 	{
-		m_infoVBoxContainer->show();
-		m_infoButton->set_text((std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
+		m_innerData->m_infoVBoxContainer->show();
+		m_innerData->m_infoButton->set_text((std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
+	}
+
+	m_scrollPanelsNeedResize = true;
+}
+
+void GDN_TheWorld_Edit::editModeTerrEditPanel(void)
+{
+	if (m_innerData->m_terrEditVBoxContainer->is_visible())
+	{
+		m_innerData->m_terrEditVBoxContainer->hide();
+		m_innerData->m_terrEditButton->set_text((std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str());
+	}
+	else
+	{
+		m_innerData->m_terrEditVBoxContainer->show();
+		m_innerData->m_terrEditButton->set_text((std::wstring(DOWN_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str());
 	}
 
 	m_scrollPanelsNeedResize = true;
@@ -1451,7 +1488,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1 ") + __FUNCTION__, "ALL");
 
-	int64_t id = m_terrTypeOptionButton->get_selected_id();
+	int64_t id = m_innerData->m_terrTypeOptionButton->get_selected_id();
 	enum class TheWorld_Utils::TerrainEdit::TerrainType terrainType = (enum class TheWorld_Utils::TerrainEdit::TerrainType)id;
 
 	TheWorld_Utils::TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
@@ -1621,7 +1658,7 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 
 	TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1 ") + __FUNCTION__, "ALL");
 
-	bool allCheched = m_allCheckBox->is_pressed();
+	bool allCheched = m_innerData->m_allCheckBox->is_pressed();
 
 	QuadTree* quadTreeSel = nullptr;
 	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
@@ -2086,7 +2123,7 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool force)
 	QuadTree* quadTreeSel = nullptr;
 	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
 
-	bool allCheched = m_allCheckBox->is_pressed();
+	bool allCheched = m_innerData->m_allCheckBox->is_pressed();
 
 	if (!allCheched && quadrantSelPos.empty())
 	{
@@ -2253,7 +2290,7 @@ void GDN_TheWorld_Edit::editModeSetTextures(void)
 	QuadTree* quadTreeSel = nullptr;
 	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
 
-	bool allCheched = m_allCheckBox->is_pressed();
+	bool allCheched = m_innerData->m_allCheckBox->is_pressed();
 
 	if (!allCheched && quadrantSelPos.empty())
 	{
@@ -2371,13 +2408,13 @@ void GDN_TheWorld_Edit::editModeSetTextures(void)
 
 void GDN_TheWorld_Edit::editModeSelectLookDevAction(int32_t index)
 {
-	enum class ShaderTerrainData::LookDev lookDev = (enum class ShaderTerrainData::LookDev)m_lookDevOptionButton->get_item_id(index);
+	enum class ShaderTerrainData::LookDev lookDev = (enum class ShaderTerrainData::LookDev)m_innerData->m_lookDevOptionButton->get_item_id(index);
 	m_viewer->setDesideredLookDev(lookDev);
 }
 
 void GDN_TheWorld_Edit::editModeSelectTerrainTypeAction(int32_t index)
 {
-	enum class TheWorld_Utils::TerrainEdit::TerrainType terrainType = (enum class TheWorld_Utils::TerrainEdit::TerrainType)m_terrTypeOptionButton->get_item_id(index);
+	enum class TheWorld_Utils::TerrainEdit::TerrainType terrainType = (enum class TheWorld_Utils::TerrainEdit::TerrainType)m_innerData->m_terrTypeOptionButton->get_item_id(index);
 	std::string s = TheWorld_Utils::TerrainEdit::terrainTypeString(terrainType);
 
 	TheWorld_Utils::TerrainEdit terrainEdit(terrainType);
@@ -2424,14 +2461,14 @@ void GDN_TheWorld_Edit::setMessage(godot::String text, bool add)
 
 	if (add)
 	{
-		godot::String t = m_message->get_text();
+		godot::String t = m_innerData->m_message->get_text();
 		t += " ";
 		t += text;
-		m_lastMessage = t;
+		m_innerData->m_lastMessage = t;
 		//m_message->set_text(t);
 	}
 	else
-		m_lastMessage = text;
+		m_innerData->m_lastMessage = text;
 		//m_message->set_text(text);
 
 	m_lastMessageChanged = true;

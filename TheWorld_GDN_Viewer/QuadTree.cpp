@@ -1243,7 +1243,7 @@ void ShaderTerrainData::getGroundTexture(godot::String fileName, ShaderTerrainDa
 {
 	TheWorld_Utils::GuardProfiler profiler(std::string("getGroundTexture 1 ") + __FUNCTION__, "all");
 
-	//godot::ResourceLoader* resLoader = ResourceLoader::get_singleton();
+	godot::ResourceLoader* resLoader = ResourceLoader::get_singleton();
 
 	try
 	{
@@ -1253,7 +1253,7 @@ void ShaderTerrainData::getGroundTexture(godot::String fileName, ShaderTerrainDa
 		std::string _path = std::string(path.utf8().get_data());
 
 		Ref<godot::CompressedTexture2D> c_tex = nullptr;
-		//c_tex = resLoader->load(path + ".png");
+		//c_tex = resLoader->load(path + ".png");		// must reload as image to create mipmaps (?)
 		if (c_tex == nullptr)
 		{
 			bool ok;
@@ -1266,6 +1266,7 @@ void ShaderTerrainData::getGroundTexture(godot::String fileName, ShaderTerrainDa
 			if (viewer != nullptr)
 				viewer->getMainProcessingMutex().unlock();
 			groundTexture->m_albedo_bump_tex = tex;
+			groundTexture->m_tex = resLoader->load(path + ".png");
 		}
 		else
 			groundTexture->m_albedo_bump_tex = c_tex;
@@ -1281,7 +1282,7 @@ void ShaderTerrainData::getGroundTexture(godot::String fileName, ShaderTerrainDa
 		std::string _path = std::string(path.utf8().get_data());
 
 		Ref<godot::CompressedTexture2D> c_tex = nullptr;
-		//c_tex = resLoader->load(path + ".png");
+		//c_tex = resLoader->load(path + ".png");		// must reload as image to create mipmaps (?)
 		if (c_tex == nullptr)
 		{
 			bool ok;

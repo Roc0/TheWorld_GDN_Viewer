@@ -10,6 +10,7 @@
 #include <godot_cpp/classes/line_Edit.hpp>
 #include <godot_cpp/classes/check_box.hpp>
 #include <godot_cpp/classes/option_button.hpp>
+#include <godot_cpp/classes/texture_rect.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/ref.hpp>
 #pragma warning (pop)
@@ -20,6 +21,101 @@ namespace godot
 {
 	//class GDN_TheWorld_Viewer;
 
+	class TheWorld_Edit_InnerData
+	{
+	public:
+		TheWorld_Edit_InnerData()
+		{
+			m_mainPanelContainer = nullptr;
+			m_mainTabContainer = nullptr;
+			m_mainTerrainScrollContainer = nullptr;
+			m_mainTerrainVBoxContainer = nullptr;
+			m_noiseVBoxContainer = nullptr;
+			m_noiseButton = nullptr;
+			m_infoVBoxContainer = nullptr;
+			m_infoButton = nullptr;
+			m_infoLabel = nullptr;
+			m_terrEditVBoxContainer = nullptr;
+			m_terrEditButton = nullptr;
+			m_seed = nullptr;
+			m_frequency = nullptr;
+			m_fractalOctaves = nullptr;
+			m_fractalLacunarity = nullptr;
+			m_fractalGain = nullptr;
+			m_fractalWeightedStrength = nullptr;
+			m_fractalPingPongStrength = nullptr;
+			m_amplitudeLabel = nullptr;
+			m_scaleFactorLabel = nullptr;
+			m_desideredMinHeightLabel = nullptr;
+			m_elapsedLabel = nullptr;
+			m_elapsed1Label = nullptr;
+			m_numQuadrantToSaveLabel = nullptr;
+			m_numQuadrantToUploadLabel = nullptr;
+			m_message = nullptr;
+			m_allCheckBox = nullptr;
+			m_terrTypeOptionButton = nullptr;
+			m_lookDevOptionButton = nullptr;
+			m_lowElevationTex = nullptr;
+			m_highElevationTex = nullptr;
+			m_dirtTex = nullptr;
+			m_rocksTex = nullptr;
+			m_lowElevationTexName = nullptr;
+			m_highElevationTexName = nullptr;
+			m_dirtTexName = nullptr;
+			m_rocksTexName = nullptr;
+		}
+		~TheWorld_Edit_InnerData()
+		{
+		}
+
+	public:
+		godot::Control* m_mainPanelContainer;
+		godot::Control* m_mainTabContainer;
+		godot::ScrollContainer* m_mainTerrainScrollContainer;
+		godot::Control* m_mainTerrainVBoxContainer;
+
+		godot::Label* m_elapsedLabel;
+		godot::Label* m_elapsed1Label;
+
+		godot::Label* m_numQuadrantToSaveLabel;
+		godot::Label* m_numQuadrantToUploadLabel;
+
+		godot::Label* m_message;
+		godot::String m_lastMessage;
+
+		godot::CheckBox* m_allCheckBox;
+		godot::OptionButton* m_terrTypeOptionButton;
+		godot::OptionButton* m_lookDevOptionButton;
+
+		godot::Button* m_infoButton;
+		godot::Control* m_infoVBoxContainer;
+		godot::Label* m_infoLabel;
+
+		godot::Button* m_noiseButton;
+		godot::Control* m_noiseVBoxContainer;
+		godot::LineEdit* m_seed;
+		godot::LineEdit* m_frequency;
+		godot::LineEdit* m_fractalOctaves;
+		godot::LineEdit* m_fractalLacunarity;
+		godot::LineEdit* m_fractalGain;
+		godot::LineEdit* m_fractalWeightedStrength;
+		godot::LineEdit* m_fractalPingPongStrength;
+		godot::LineEdit* m_amplitudeLabel;
+		godot::LineEdit* m_scaleFactorLabel;
+		godot::LineEdit* m_desideredMinHeightLabel;
+
+		godot::Control* m_terrEditVBoxContainer;
+		godot::Button* m_terrEditButton;
+		godot::TextureRect* m_lowElevationTex;
+		godot::Label* m_lowElevationTexName;
+		godot::TextureRect* m_highElevationTex;
+		godot::Label* m_highElevationTexName;
+		godot::TextureRect* m_dirtTex;
+		godot::Label* m_dirtTexName;
+		godot::TextureRect* m_rocksTex;
+		godot::Label* m_rocksTexName;
+	};
+	
 	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
 	{
 		GDCLASS(GDN_TheWorld_Edit, MarginContainer)
@@ -42,7 +138,7 @@ namespace godot
 		void init(GDN_TheWorld_Viewer* viewer);
 		void deinit(void);
 
-		template <class T> T* createControl(godot::Node* parent, std::string name = "",  Color selfModulateColor = Color(0.0f, 0.0f, 0.0f, 0.0f));
+		template <class T> T* createControl(godot::Node* parent, std::string name = "", std::string text = "", Color selfModulateColor = Color(0.0f, 0.0f, 0.0f, 0.0f));
 			
 		virtual void threadInit(void) {}
 		virtual void threadDeinit(void) {}
@@ -71,6 +167,7 @@ namespace godot
 		void controlNeedResize(void);
 		void editModeNoisePanel(void);
 		void editModeInfoPanel(void);
+		void editModeTerrEditPanel(void);
 		void setSizeUI(void);
 		void editModeGenerateAction(void);
 		void editModeBlendAction(void);
@@ -185,31 +282,12 @@ namespace godot
 		bool m_requiredUIAcceptFocus;
 		bool m_UIAcceptingFocus;
 
+		std::unique_ptr<TheWorld_Edit_InnerData> m_innerData;
+
 		bool m_controlNeedResize;
 		bool m_scrollPanelsNeedResize;
-		godot::Control* m_mainPanelContainer;
-		godot::Control* m_mainTabContainer;
-		godot::ScrollContainer* m_mainTerrainScrollContainer;
-		godot::Control* m_mainTerrainVBoxContainer;
-
-		godot::Control* m_noiseVBoxContainer;
-		godot::Button* m_noiseButton;
-		godot::Control* m_infoVBoxContainer;
-		godot::Button* m_infoButton;
-
-		godot::LineEdit* m_seed;
-		godot::LineEdit* m_frequency;
-		godot::LineEdit* m_fractalOctaves;
-		godot::LineEdit* m_fractalLacunarity;
-		godot::LineEdit* m_fractalGain;
-		godot::LineEdit* m_fractalWeightedStrength;
-		godot::LineEdit* m_fractalPingPongStrength;
-		godot::LineEdit* m_amplitudeLabel;
-		godot::LineEdit* m_scaleFactorLabel;
-		godot::LineEdit* m_desideredMinHeightLabel;
 		
 		bool m_infoLabelTextChanged;
-		godot::Label* m_infoLabel;
 		// filler
 		//char filler[72];	// 72 OK (73 no) oppure 32 + 1 std::string (sembra che occupi 40 byte)
 		// filler
@@ -223,29 +301,7 @@ namespace godot
 		std::string* m_mouseQuadSelStr;
 		std::string* m_mouseQuadSelPosStr;
 		
-		godot::Label* m_elapsedLabel;
-		godot::Label* m_elapsed1Label;
-
-		//godot::Label* m_minHeightLabel;
-		//godot::Label* m_maxHeightLabel;
-		//godot::Label* m_counterLabel;
-		//godot::Label* m_note1Label;
-		//godot::Label* m_mouseHitLabel;
-		//godot::Label* m_mouseQuadHitLabel;
-		//godot::Label* m_mouseQuadHitPosLabel;
-		//godot::Label* m_mouseQuadSelLabel;
-		//godot::Label* m_mouseQuadSelPosLabel;
-
-		godot::Label* m_numQuadrantToSaveLabel;
-		godot::Label* m_numQuadrantToUploadLabel;
-
-		godot::Label* m_message;
-		godot::String m_lastMessage;
 		bool m_lastMessageChanged;
-
-		godot::CheckBox* m_allCheckBox;
-		godot::OptionButton* m_terrTypeOptionButton;
-		godot::OptionButton* m_lookDevOptionButton;
 
 		std::map<QuadrantPos, std::string> m_mapQuadToSave;
 

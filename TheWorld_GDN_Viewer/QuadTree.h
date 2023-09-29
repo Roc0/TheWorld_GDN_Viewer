@@ -611,6 +611,7 @@ namespace godot
 			bool initialized;
 			Ref<ImageTexture> m_albedo_bump_tex;
 			Ref<ImageTexture> m_normal_roughness_tex;
+			Ref<Texture2D> m_tex;
 		};
 
 		// Shader Params
