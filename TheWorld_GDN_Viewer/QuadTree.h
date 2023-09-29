@@ -359,7 +359,7 @@ namespace godot
 		{
 			if (m_splatmapBuffer.empty() && reloadFromCache)
 			{
-				if (!getTerrainEdit()->extraValues.texturesNeedRegen)
+				if (!getTerrainEdit()->extraValues.splatmapNeedRegen)
 				{
 					TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
 					float minAltitude, maxAltitude;
@@ -420,7 +420,7 @@ namespace godot
 		void resetSplatmapBuffer(void)
 		{
 			getSplatmapBuffer(false).clear();
-			getTerrainEdit()->extraValues.texturesNeedRegen = true;
+			getTerrainEdit()->extraValues.splatmapNeedRegen = true;
 			setSplatmapUpdated(true);
 			
 			resetGlobalmapBuffer();

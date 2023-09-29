@@ -138,7 +138,7 @@ namespace godot
 		void init(GDN_TheWorld_Viewer* viewer);
 		void deinit(void);
 
-		template <class T> T* createControl(godot::Node* parent, std::string name = "", std::string text = "", Color selfModulateColor = Color(0.0f, 0.0f, 0.0f, 0.0f));
+		template <class T> T* createControl(godot::Node* parent, std::string name = "", godot::String text = "", std::string signalName = "", godot::Object* callableObject = nullptr, std::string callableMethod = "", Color selfModulateColor = Color(0.0f, 0.0f, 0.0f, 0.0f));
 			
 		virtual void threadInit(void) {}
 		virtual void threadDeinit(void) {}
@@ -172,7 +172,7 @@ namespace godot
 		void editModeGenerateAction(void);
 		void editModeBlendAction(void);
 		void editModeGenNormalsAction(void);
-		void editModeSetTexturesAction(void);
+		void editModeApplyTexturesAction(void);
 		void editModeSaveAction(void);
 		void editModeUploadAction(void);
 		void editModeStopAction(void);
@@ -183,7 +183,7 @@ namespace godot
 		void editModeBlend(void);
 		void editModeGenNormals(void);
 		void editModeGenNormals_1(bool force);
-		void editModeSetTextures(void);
+		void editModeApplyTextures(void);
 		void editModeSave(void);
 		void editModeUpload(void);
 
