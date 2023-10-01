@@ -63,6 +63,23 @@ namespace godot
 		return dir;
 	}
 
+	godot::Error GDN_TheWorld_Globals::connectSignal(godot::Node* node, godot::String nodeType, godot::String signal, godot::Object* callableObject, godot::String callableMethod, godot::Array& otherArgs)
+	{
+		godot::Array args;
+		args.append(node);
+		args.append(signal);
+		args.append(nodeType);
+		args.append(node->get_instance_id());
+		args.append(node->get_name());
+		//godot::Array otherArgs;
+		//otherArgs.append(1);
+		//otherArgs.append(2);
+		args.append(otherArgs);
+		int64_t size = args.size();
+		godot::Error e = node->connect(signal, Callable(callableObject, callableMethod).bindv(args));
+		return e;
+	}
+
 	GDN_TheWorld_Globals_Client::GDN_TheWorld_Globals_Client(GDN_TheWorld_Globals* globals, plog::Severity sev) : TheWorld_ClientServer::ClientInterface(sev)
 	{
 		m_globals = globals;

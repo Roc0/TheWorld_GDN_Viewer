@@ -7,6 +7,7 @@
 #include "FastNoiseLite.h"
 #include "half.h"
 #include "UnicodeDefine.h"
+#include <typeinfo>
 
 #pragma warning (push, 0)
 #include <godot_cpp/classes/v_box_container.hpp>
@@ -31,9 +32,9 @@ using namespace godot;
 
 void GDN_TheWorld_Edit::_bind_methods()
 {
-	ClassDB::bind_method(D_METHOD("edit_mode_noise_panel"), &GDN_TheWorld_Edit::editModeNoisePanel);
-	ClassDB::bind_method(D_METHOD("edit_mode_info_panel"), &GDN_TheWorld_Edit::editModeInfoPanel);
-	ClassDB::bind_method(D_METHOD("edit_mode_terredit_panel"), &GDN_TheWorld_Edit::editModeTerrEditPanel);
+	//ClassDB::bind_method(D_METHOD("edit_mode_noise_panel"), &GDN_TheWorld_Edit::editModeNoisePanel);
+	//ClassDB::bind_method(D_METHOD("edit_mode_info_panel"), &GDN_TheWorld_Edit::editModeInfoPanel);
+	//ClassDB::bind_method(D_METHOD("edit_mode_terredit_panel"), &GDN_TheWorld_Edit::editModeTerrEditPanel);
 	ClassDB::bind_method(D_METHOD("edit_mode_generate"), &GDN_TheWorld_Edit::editModeGenerateAction);
 	ClassDB::bind_method(D_METHOD("edit_mode_blend"), &GDN_TheWorld_Edit::editModeBlendAction);
 	ClassDB::bind_method(D_METHOD("edit_mode_gen_normals"), &GDN_TheWorld_Edit::editModeGenNormalsAction);
@@ -46,6 +47,7 @@ void GDN_TheWorld_Edit::_bind_methods()
 	ClassDB::bind_method(D_METHOD("mouse_entered_main_panel"), &GDN_TheWorld_Edit::editModeMouseEnteredMainPanel);
 	ClassDB::bind_method(D_METHOD("mouse_exited_main_panel"), &GDN_TheWorld_Edit::editModeMouseExitedMainPanel);
 	ClassDB::bind_method(D_METHOD("control_need_resize"), &GDN_TheWorld_Edit::controlNeedResize);
+	ClassDB::bind_method(D_METHOD("void_signal_manager", "p_object", "p_signal", "p_class_name", "p_instance_id", "p_object_name", "p_array_others"), &GDN_TheWorld_Edit::voidSignalManager);
 }
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
@@ -259,10 +261,12 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	godot::Control* separator = nullptr;
 	godot::Button* button = nullptr;
 	godot::Label* label = nullptr;
+	godot::Error e;
+	godot::Array otherArgs;
 
 	m_innerData->m_mainPanelContainer = createControl<godot::PanelContainer>(this, "EditBox");
 
-	m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "EditModeTab", "", "", nullptr, "", self_modulate_to_transparency);
+	m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "EditModeTab", "", "", nullptr, "", new godot::Array, self_modulate_to_transparency);
 	//m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "EditModeTab");
 
 	m_innerData->m_mainTerrainScrollContainer = createControl<godot::ScrollContainer>(m_innerData->m_mainTabContainer, "Terrain");
@@ -320,7 +324,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//setMessage(std::string("AAAAAAAAAAAAAAAAAAAAAAA"));
 
 	{
-		m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_info_panel");
+		//m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_info_panel");
+		m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "InfoPanelToggle", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_infoButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
 		m_innerData->m_infoVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "Info");
@@ -330,11 +335,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 
 	{
 		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainTerrainVBoxContainer);
-		m_innerData->m_lookDevOptionButton = createControl<godot::OptionButton>(hBoxContainer);
+		m_innerData->m_lookDevOptionButton = createControl<godot::OptionButton>(hBoxContainer, "", "", "item_selected", this, "edit_mode_sel_lookdev");
 		m_innerData->m_lookDevOptionButton->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
 		m_innerData->m_lookDevOptionButton->set_toggle_mode(true);
-		m_innerData->m_lookDevOptionButton->connect("item_selected", Callable(this, "edit_mode_sel_lookdev"));
-		m_innerData->m_lookDevOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
+		//m_innerData->m_lookDevOptionButton->connect("item_selected", Callable(this, "edit_mode_sel_lookdev"));
+		//m_innerData->m_lookDevOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev disabled", (int64_t)ShaderTerrainData::LookDev::NotSet);
 		m_innerData->m_lookDevOptionButton->add_separator();
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev heights", (int64_t)ShaderTerrainData::LookDev::Heights);
@@ -345,7 +350,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	}
 
 	{
-		m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_noise_panel");
+		//m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "NoisePanelToggle", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_noise_panel");
+		m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "NoisePanelToggle", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_noiseButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
 		m_innerData->m_noiseVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "Noise");
@@ -405,7 +411,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	}
 
 	{
-		m_innerData->m_terrEditButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "", (std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_terredit_panel");
+		//m_innerData->m_terrEditButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "", (std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_terredit_panel");
+		m_innerData->m_terrEditButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "TerrEditPanelToggle", (std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_terrEditButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
 		m_innerData->m_terrEditVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "TerrainEdit");
@@ -415,41 +422,58 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		
 		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", "Low Elevation");
 		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
-		m_innerData->m_lowElevationTex = createControl<godot::TextureRect>(hBoxContainer);
+		m_innerData->m_lowElevationTex = createControl<godot::TextureRect>(hBoxContainer, "LowElevationTex");
 		m_innerData->m_lowElevationTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
 		m_innerData->m_lowElevationTex->set_custom_minimum_size(size);
 		m_innerData->m_lowElevationTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
+		otherArgs.clear();
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTex, "godot::TextureRect", "mouse_entered", this, "void_signal_manager", otherArgs);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTex, "godot::TextureRect", "mouse_exited", this, "void_signal_manager", otherArgs);
+		//m_innerData->m_lowElevationTex->connect()
 		m_innerData->m_lowElevationTexName = createControl<godot::Label>(hBoxContainer);
+		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 
 		separator = createControl<godot::VSeparator>(m_innerData->m_terrEditVBoxContainer);
 
 		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", "High Elevation");
 		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
-		m_innerData->m_highElevationTex = createControl<godot::TextureRect>(hBoxContainer);
+		m_innerData->m_highElevationTex = createControl<godot::TextureRect>(hBoxContainer, "HighElevationTex");
 		m_innerData->m_highElevationTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
 		m_innerData->m_highElevationTex->set_custom_minimum_size(size);
 		m_innerData->m_highElevationTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
+		otherArgs.clear();
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_highElevationTex, "godot::TextureRect", "mouse_entered", this, "void_signal_manager", otherArgs);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_highElevationTex, "godot::TextureRect", "mouse_exited", this, "void_signal_manager", otherArgs);
 		m_innerData->m_highElevationTexName = createControl<godot::Label>(hBoxContainer);
+		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 
 		separator = createControl<godot::VSeparator>(m_innerData->m_terrEditVBoxContainer);
 
 		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", "Dirt");
 		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
-		m_innerData->m_dirtTex = createControl<godot::TextureRect>(hBoxContainer);
+		m_innerData->m_dirtTex = createControl<godot::TextureRect>(hBoxContainer, "DirtTex");
 		m_innerData->m_dirtTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
 		m_innerData->m_dirtTex->set_custom_minimum_size(size);
 		m_innerData->m_dirtTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
+		otherArgs.clear();
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTex, "godot::TextureRect", "mouse_entered", this, "void_signal_manager", otherArgs);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTex, "godot::TextureRect", "mouse_exited", this, "void_signal_manager", otherArgs);
 		m_innerData->m_dirtTexName = createControl<godot::Label>(hBoxContainer);
+		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 
 		separator = createControl<godot::VSeparator>(m_innerData->m_terrEditVBoxContainer);
 
 		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", "Rocks");
 		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
-		m_innerData->m_rocksTex = createControl<godot::TextureRect>(hBoxContainer);
+		m_innerData->m_rocksTex = createControl<godot::TextureRect>(hBoxContainer, "RocksTex");
 		m_innerData->m_rocksTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
 		m_innerData->m_rocksTex->set_custom_minimum_size(size);
 		m_innerData->m_rocksTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
+		otherArgs.clear();
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_rocksTex, "godot::TextureRect", "mouse_entered", this, "void_signal_manager", otherArgs);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_rocksTex, "godot::TextureRect", "mouse_exited", this, "void_signal_manager", otherArgs);
 		m_innerData->m_rocksTexName = createControl<godot::Label>(hBoxContainer);
+		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 	}
 	
 	separator = createControl<Label>(m_innerData->m_mainTerrainVBoxContainer, "", " ");
@@ -466,7 +490,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 }
 
 template <class T>
-T* GDN_TheWorld_Edit::createControl(godot::Node* parent, std::string name, godot::String text, std::string signalName, godot::Object* callableObject, std::string callableMethod, Color selfModulateColor)
+T* GDN_TheWorld_Edit::createControl(godot::Node* parent, std::string name, godot::String text, std::string signal, godot::Object* callableObject, std::string callableMethod, godot::Array* otherArgs, Color selfModulateColor)
 {
 	T* control = memnew(T);
 	parent->add_child(control);
@@ -489,20 +513,20 @@ T* GDN_TheWorld_Edit::createControl(godot::Node* parent, std::string name, godot
 	}
 	else if constexpr (std::is_same_v<T, godot::MarginContainer>)
 	{
-		control->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
-		control->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+		control->set_h_size_flags(godot::MarginContainer::SizeFlags::SIZE_EXPAND_FILL);
+		control->set_v_size_flags(godot::MarginContainer::SizeFlags::SIZE_EXPAND_FILL);
 	}
 	else if constexpr (std::is_same_v<T, godot::VBoxContainer>)
 	{
-		control->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
-		control->set_v_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
+		control->set_h_size_flags(godot::VBoxContainer::SizeFlags::SIZE_EXPAND_FILL);
+		control->set_v_size_flags(godot::VBoxContainer::SizeFlags::SIZE_EXPAND_FILL);
 	}
 	else if constexpr (std::is_same_v<T, godot::Button> || std::is_same_v<T, godot::OptionButton>)
 	{
 		if (text.length() > 0)
 			control->set_text(text);
-		if (signalName.length() > 0 && callableObject != nullptr && callableMethod.length() > 0)
-			e = control->connect(signalName.c_str(), Callable(callableObject, callableMethod.c_str()));
+		if (signal.length() > 0 && callableObject != nullptr && callableMethod.length() > 0 && callableMethod != "void_signal_manager")
+			e = control->connect(signal.c_str(), Callable(callableObject, callableMethod.c_str()));
 		control->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		//control->set_flat(true);
 
@@ -510,6 +534,26 @@ T* GDN_TheWorld_Edit::createControl(godot::Node* parent, std::string name, godot
 	else if constexpr (std::is_same_v<T, godot::LineEdit>)
 	{
 		control->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+	}
+
+	if (signal.length() > 0 && callableObject != nullptr && callableMethod.length() > 0 && callableMethod == "void_signal_manager")
+	{
+		//godot::Array args;
+		//args.append(control);
+		//args.append(signal.c_str());
+		//std::string typeName = typeid(T).name();
+		//args.append(typeName.c_str());
+		//args.append(control->get_instance_id());
+		//args.append(control->get_name());
+		////godot::Array otherArgs;
+		////otherArgs.append(1);
+		////otherArgs.append(2);
+		//args.append(*otherArgs);
+		//int64_t size = args.size();
+		//e = control->connect(signal.c_str(), Callable(callableObject, callableMethod.c_str()).bindv(args));
+		
+		std::string typeName = typeid(T).name();
+		e = GDN_TheWorld_Globals::connectSignal(control, typeName.c_str(), signal.c_str(), callableObject, callableMethod.c_str(), *otherArgs);
 	}
 
 	return control;
@@ -1133,53 +1177,134 @@ void GDN_TheWorld_Edit::_process(double _delta)
 	}
 }
 
-void GDN_TheWorld_Edit::editModeNoisePanel(void)
+void GDN_TheWorld_Edit::voidSignalManager(godot::Object* obj, godot::String signal, godot::String className, int instanceId, godot::String objectName, godot::Array otherArgs)
 {
-	if (m_innerData->m_noiseVBoxContainer->is_visible())
-	{
-		m_innerData->m_noiseVBoxContainer->hide();
-		m_innerData->m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
-	}
-	else
-	{
-		m_innerData->m_noiseVBoxContainer->show();
-		m_innerData->m_noiseButton->set_text((std::wstring(DOWN_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
-	}
+	//m_viewer->Globals()->debugPrint("GDN_TheWorld_Edit::buttonPressed", true);
 
-	m_scrollPanelsNeedResize = true;
+	std::string _signal = signal.utf8().get_data();
+	std::string _className = className.utf8().get_data();
+	std::string _objectName = objectName.utf8().get_data();
+	int64_t otherArgsSize = otherArgs.size();
+
+	if (TheWorld_Utils::to_lower(_signal) == "pressed")
+	{
+		if (_objectName == "NoisePanelToggle" && _className == "class godot::Button")
+		{
+			if (m_innerData->m_noiseVBoxContainer->is_visible())
+			{
+				m_innerData->m_noiseVBoxContainer->hide();
+				((godot::Button*)obj)->set_text((std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
+			}
+			else
+			{
+				m_innerData->m_noiseVBoxContainer->show();
+				((godot::Button*)obj)->set_text((std::wstring(DOWN_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
+			}
+
+			m_scrollPanelsNeedResize = true;
+		}
+		else if (_objectName == "InfoPanelToggle" && _className == "class godot::Button")
+		{
+			if (m_innerData->m_infoVBoxContainer->is_visible())
+			{
+				m_innerData->m_infoVBoxContainer->hide();
+				((godot::Button*)obj)->set_text((std::wstring(RIGHT_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
+			}
+			else
+			{
+				m_innerData->m_infoVBoxContainer->show();
+				((godot::Button*)obj)->set_text((std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
+			}
+
+			m_scrollPanelsNeedResize = true;
+		}
+		else if (_objectName == "TerrEditPanelToggle" && _className == "class godot::Button")
+		{
+			if (m_innerData->m_terrEditVBoxContainer->is_visible())
+			{
+				m_innerData->m_terrEditVBoxContainer->hide();
+				((godot::Button*)obj)->set_text((std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str());
+			}
+			else
+			{
+				m_innerData->m_terrEditVBoxContainer->show();
+				((godot::Button*)obj)->set_text((std::wstring(DOWN_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str());
+			}
+
+			m_scrollPanelsNeedResize = true;
+		}
+	}
+	else if (TheWorld_Utils::to_lower(_signal) == "mouse_entered")
+	{
+		if (_objectName == "LowElevationTex")
+			m_innerData->m_mouseInLowElevationTex = true;
+		else if (_objectName == "HighElevationTex")
+			m_innerData->m_mouseInHighElevationTex = true;
+		else if (_objectName == "DirtTex")
+			m_innerData->m_mouseInDirtTex = true;
+		else if (_objectName == "RocksTex")
+			m_innerData->m_mouseInRocksTex = true;
+	}
+	else if (TheWorld_Utils::to_lower(_signal) == "mouse_exited")
+	{
+		if (_objectName == "LowElevationTex")
+			m_innerData->m_mouseInLowElevationTex = false;
+		else if (_objectName == "HighElevationTex")
+			m_innerData->m_mouseInHighElevationTex = false;
+		else if (_objectName == "DirtTex")
+			m_innerData->m_mouseInDirtTex = false;
+		else if (_objectName == "RocksTex")
+			m_innerData->m_mouseInRocksTex = false;
+	}
 }
 
-void GDN_TheWorld_Edit::editModeInfoPanel(void)
-{
-	if (m_innerData->m_infoVBoxContainer->is_visible())
-	{
-		m_innerData->m_infoVBoxContainer->hide();
-		m_innerData->m_infoButton->set_text((std::wstring(RIGHT_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
-	}
-	else
-	{
-		m_innerData->m_infoVBoxContainer->show();
-		m_innerData->m_infoButton->set_text((std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
-	}
+//void GDN_TheWorld_Edit::editModeNoisePanel(void)
+//{
+//	if (m_innerData->m_noiseVBoxContainer->is_visible())
+//	{
+//		m_innerData->m_noiseVBoxContainer->hide();
+//		m_innerData->m_noiseButton->set_text((std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
+//	}
+//	else
+//	{
+//		m_innerData->m_noiseVBoxContainer->show();
+//		m_innerData->m_noiseButton->set_text((std::wstring(DOWN_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str());
+//	}
+//
+//	m_scrollPanelsNeedResize = true;
+//}
 
-	m_scrollPanelsNeedResize = true;
-}
+//void GDN_TheWorld_Edit::editModeInfoPanel(void)
+//{
+//	if (m_innerData->m_infoVBoxContainer->is_visible())
+//	{
+//		m_innerData->m_infoVBoxContainer->hide();
+//		m_innerData->m_infoButton->set_text((std::wstring(RIGHT_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
+//	}
+//	else
+//	{
+//		m_innerData->m_infoVBoxContainer->show();
+//		m_innerData->m_infoButton->set_text((std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str());
+//	}
+//
+//	m_scrollPanelsNeedResize = true;
+//}
 
-void GDN_TheWorld_Edit::editModeTerrEditPanel(void)
-{
-	if (m_innerData->m_terrEditVBoxContainer->is_visible())
-	{
-		m_innerData->m_terrEditVBoxContainer->hide();
-		m_innerData->m_terrEditButton->set_text((std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str());
-	}
-	else
-	{
-		m_innerData->m_terrEditVBoxContainer->show();
-		m_innerData->m_terrEditButton->set_text((std::wstring(DOWN_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str());
-	}
-
-	m_scrollPanelsNeedResize = true;
-}
+//void GDN_TheWorld_Edit::editModeTerrEditPanel(void)
+//{
+//	if (m_innerData->m_terrEditVBoxContainer->is_visible())
+//	{
+//		m_innerData->m_terrEditVBoxContainer->hide();
+//		m_innerData->m_terrEditButton->set_text((std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str());
+//	}
+//	else
+//	{
+//		m_innerData->m_terrEditVBoxContainer->show();
+//		m_innerData->m_terrEditButton->set_text((std::wstring(DOWN_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str());
+//	}
+//
+//	m_scrollPanelsNeedResize = true;
+//}
 
 void GDN_TheWorld_Edit::editModeStopAction(void)
 {

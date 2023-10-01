@@ -63,6 +63,10 @@ namespace godot
 			m_highElevationTexName = nullptr;
 			m_dirtTexName = nullptr;
 			m_rocksTexName = nullptr;
+			m_mouseInLowElevationTex = false;
+			m_mouseInHighElevationTex = false;
+			m_mouseInDirtTex = false;
+			m_mouseInRocksTex = false;
 		}
 		~TheWorld_Edit_InnerData()
 		{
@@ -106,14 +110,19 @@ namespace godot
 
 		godot::Control* m_terrEditVBoxContainer;
 		godot::Button* m_terrEditButton;
+
 		godot::TextureRect* m_lowElevationTex;
 		godot::Label* m_lowElevationTexName;
+		bool m_mouseInLowElevationTex;
 		godot::TextureRect* m_highElevationTex;
 		godot::Label* m_highElevationTexName;
+		bool m_mouseInHighElevationTex;
 		godot::TextureRect* m_dirtTex;
 		godot::Label* m_dirtTexName;
+		bool m_mouseInDirtTex;
 		godot::TextureRect* m_rocksTex;
 		godot::Label* m_rocksTexName;
+		bool m_mouseInRocksTex;
 	};
 	
 	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
@@ -138,7 +147,7 @@ namespace godot
 		void init(GDN_TheWorld_Viewer* viewer);
 		void deinit(void);
 
-		template <class T> T* createControl(godot::Node* parent, std::string name = "", godot::String text = "", std::string signalName = "", godot::Object* callableObject = nullptr, std::string callableMethod = "", Color selfModulateColor = Color(0.0f, 0.0f, 0.0f, 0.0f));
+		template <class T> T* createControl(godot::Node* parent, std::string name = "", godot::String text = "", std::string signal = "", godot::Object* callableObject = nullptr, std::string callableMethod = "", godot::Array* otherArgs = new godot::Array, Color selfModulateColor = Color(0.0f, 0.0f, 0.0f, 0.0f));
 			
 		virtual void threadInit(void) {}
 		virtual void threadDeinit(void) {}
@@ -164,10 +173,11 @@ namespace godot
 		{
 			return m_initialized;
 		}
+		void voidSignalManager(godot::Object* obj, godot::String signal, godot::String className, int instanceId, godot::String objectName, godot::Array otherArgs);
 		void controlNeedResize(void);
-		void editModeNoisePanel(void);
-		void editModeInfoPanel(void);
-		void editModeTerrEditPanel(void);
+		//void editModeNoisePanel(void);
+		//void editModeInfoPanel(void);
+		//void editModeTerrEditPanel(void);
 		void setSizeUI(void);
 		void editModeGenerateAction(void);
 		void editModeBlendAction(void);
