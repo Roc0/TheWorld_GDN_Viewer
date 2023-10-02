@@ -6,6 +6,7 @@
 #include <godot_cpp/classes/panel_container.hpp>
 #include <godot_cpp/classes/tab_container.hpp>
 #include <godot_cpp/classes/scroll_container.hpp>
+#include <godot_cpp/classes/popup_panel.hpp>
 #include <godot_cpp/classes/label.hpp>
 #include <godot_cpp/classes/line_Edit.hpp>
 #include <godot_cpp/classes/check_box.hpp>
@@ -63,10 +64,14 @@ namespace godot
 			m_highElevationTexName = nullptr;
 			m_dirtTexName = nullptr;
 			m_rocksTexName = nullptr;
-			m_mouseInLowElevationTex = false;
-			m_mouseInHighElevationTex = false;
-			m_mouseInDirtTex = false;
-			m_mouseInRocksTex = false;
+			//m_mouseInLowElevationTex = false;
+			//m_mouseInHighElevationTex = false;
+			//m_mouseInDirtTex = false;
+			//m_mouseInRocksTex = false;
+			m_openSelTexturesRequired = false;
+			m_closeSelTexturesRequired = false;
+			m_selectedTex = nullptr;
+			m_selTexturePanel = nullptr;
 		}
 		~TheWorld_Edit_InnerData()
 		{
@@ -112,17 +117,23 @@ namespace godot
 		godot::Button* m_terrEditButton;
 
 		godot::TextureRect* m_lowElevationTex;
-		godot::Label* m_lowElevationTexName;
-		bool m_mouseInLowElevationTex;
 		godot::TextureRect* m_highElevationTex;
-		godot::Label* m_highElevationTexName;
-		bool m_mouseInHighElevationTex;
 		godot::TextureRect* m_dirtTex;
-		godot::Label* m_dirtTexName;
-		bool m_mouseInDirtTex;
 		godot::TextureRect* m_rocksTex;
+		godot::Label* m_lowElevationTexName;
+		godot::Label* m_highElevationTexName;
+		godot::Label* m_dirtTexName;
 		godot::Label* m_rocksTexName;
-		bool m_mouseInRocksTex;
+		//bool m_mouseInLowElevationTex;
+		//bool m_mouseInHighElevationTex;
+		//bool m_mouseInDirtTex;
+		//bool m_mouseInRocksTex;
+
+		bool m_openSelTexturesRequired;
+		bool m_closeSelTexturesRequired;
+		godot::TextureRect* m_selectedTex;
+		std::string m_selectedTexName;
+		godot::Window* m_selTexturePanel;
 	};
 	
 	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
@@ -147,7 +158,7 @@ namespace godot
 		void init(GDN_TheWorld_Viewer* viewer);
 		void deinit(void);
 
-		template <class T> T* createControl(godot::Node* parent, std::string name = "", godot::String text = "", std::string signal = "", godot::Object* callableObject = nullptr, std::string callableMethod = "", godot::Array* otherArgs = new godot::Array, Color selfModulateColor = Color(0.0f, 0.0f, 0.0f, 0.0f));
+		template <class T> T* createControl(godot::Node* parent, std::string name = "", godot::String text = "", std::string signal = "", godot::Object* callableObject = nullptr, std::string callableMethod = "", godot::Variant custom1 = "", godot::Variant custom2 = "", godot::Variant custom3 = "", Color selfModulateColor = Color(0.0f, 0.0f, 0.0f, 0.0f));
 			
 		virtual void threadInit(void) {}
 		virtual void threadDeinit(void) {}
@@ -173,7 +184,9 @@ namespace godot
 		{
 			return m_initialized;
 		}
-		void voidSignalManager(godot::Object* obj, godot::String signal, godot::String className, int instanceId, godot::String objectName, godot::Array otherArgs);
+		godot::Window* initSelTexturePanel(void);
+		void voidSignalManager(godot::Object* obj, godot::String signal, godot::String className, int instanceId, godot::String objectName, godot::Variant custom1, godot::Variant custom2, godot::Variant custom3);
+		void guiInputEvent(const godot::Ref<godot::InputEvent>& event, godot::Object* obj, godot::String signal, godot::String className, int instanceId, godot::String objectName, godot::Variant custom1, godot::Variant custom2, godot::Variant custom3);
 		void controlNeedResize(void);
 		//void editModeNoisePanel(void);
 		//void editModeInfoPanel(void);

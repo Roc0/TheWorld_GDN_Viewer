@@ -3586,6 +3586,14 @@ void GDN_TheWorld_Viewer::createEditModeUI(void)
 	}
 }
 
+bool GDN_TheWorld_Viewer::isQuadrantSelectedForEdit(void)
+{
+	if (m_quadrantSelPos.empty())
+		return false;
+	else
+		return true;
+}
+
 QuadrantPos GDN_TheWorld_Viewer::getQuadrantSelForEdit(QuadTree** quadTreeSel)
 {
 	*quadTreeSel = nullptr;

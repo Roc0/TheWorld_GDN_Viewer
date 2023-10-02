@@ -318,7 +318,7 @@ namespace godot
 			return this;
 		}
 			
-		static godot::Error connectSignal(godot::Node* node, godot::String nodeType, godot::String signal, godot::Object* callableObject, godot::String callableMethod, godot::Array& otherArgs);
+		static godot::Error connectSignal(godot::Node* node, godot::String nodeType, godot::String signal, godot::Object* callableObject, godot::String callableMethod, godot::Variant custom1 = "", godot::Variant custom2 = "", godot::Variant custom3 = "");
 		
 		bool isEngineInEditor()
 		{

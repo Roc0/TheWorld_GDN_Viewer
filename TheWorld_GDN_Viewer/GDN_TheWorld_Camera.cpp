@@ -328,7 +328,7 @@ void GDN_TheWorld_Camera::_physics_process(double _delta)
 	//}
 }
 
-void GDN_TheWorld_Camera::_input(const Ref<InputEvent>& event)
+void GDN_TheWorld_Camera::_input(const Ref<godot::InputEvent>& event)
 {
 	//Globals()->debugPrint("GDN_TheWorld_Camera::_input: " + event->as_text());
 

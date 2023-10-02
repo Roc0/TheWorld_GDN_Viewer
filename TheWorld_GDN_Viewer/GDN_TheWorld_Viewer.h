@@ -461,6 +461,7 @@ namespace godot
 		void process_statistics(GDN_TheWorld_Globals* globals);
 
 		QuadrantPos getQuadrantSelForEdit(QuadTree** quadTreeSel);
+		bool isQuadrantSelectedForEdit(void);
 		godot::Camera3D* m_editorCamera;
 
 	private:

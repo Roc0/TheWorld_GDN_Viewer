@@ -63,7 +63,7 @@ namespace godot
 		return dir;
 	}
 
-	godot::Error GDN_TheWorld_Globals::connectSignal(godot::Node* node, godot::String nodeType, godot::String signal, godot::Object* callableObject, godot::String callableMethod, godot::Array& otherArgs)
+	godot::Error GDN_TheWorld_Globals::connectSignal(godot::Node* node, godot::String nodeType, godot::String signal, godot::Object* callableObject, godot::String callableMethod, godot::Variant custom1, godot::Variant custom2, godot::Variant custom3)
 	{
 		godot::Array args;
 		args.append(node);
@@ -71,10 +71,10 @@ namespace godot
 		args.append(nodeType);
 		args.append(node->get_instance_id());
 		args.append(node->get_name());
-		//godot::Array otherArgs;
-		//otherArgs.append(1);
-		//otherArgs.append(2);
-		args.append(otherArgs);
+		args.append(custom1);
+		args.append(custom2);
+		args.append(custom3);
+
 		int64_t size = args.size();
 		godot::Error e = node->connect(signal, Callable(callableObject, callableMethod).bindv(args));
 		return e;
