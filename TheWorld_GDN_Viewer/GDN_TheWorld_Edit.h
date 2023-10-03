@@ -149,7 +149,6 @@ namespace godot
 
 		bool m_openSelTexturesRequired;
 		bool m_closeSelTexturesRequired;
-		//godot::TextureRect* m_selectedTex;
 		std::string m_selectedTexSlotName;
 		std::string m_selectedTexName;
 		godot::Window* m_selTexturePanel;
