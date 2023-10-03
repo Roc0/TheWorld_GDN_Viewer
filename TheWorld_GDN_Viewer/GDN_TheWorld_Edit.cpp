@@ -826,18 +826,12 @@ float GDN_TheWorld_Edit::desideredMinHeight(void)
 
 void GDN_TheWorld_Edit::setMinHeight(float minHeight)
 {
-	// DEBUGRIC
-	//m_minHeightLabel->set_text(std::to_string(minHeight).c_str());
 	*m_minHeightStr = std::to_string(minHeight);
 	m_infoLabelTextChanged = true;
 }
 
 float GDN_TheWorld_Edit::minHeight(void)
 {
-	// DEBUGRIC
-	//godot::String s = m_minHeightLabel->get_text();
-	//const char* str = s.utf8().get_data();
-	//float ret = std::stof(std::string(str));
 	float ret = std::stof(*m_minHeightStr);
 	return ret;
 	return 0;
@@ -845,18 +839,12 @@ float GDN_TheWorld_Edit::minHeight(void)
 
 void GDN_TheWorld_Edit::setMaxHeight(float maxHeight)
 {
-	// DEBUGRIC
-	//m_maxHeightLabel->set_text(std::to_string(maxHeight).c_str());
 	*m_maxHeightStr = std::to_string(maxHeight);
 	m_infoLabelTextChanged = true;
 }
 
 float GDN_TheWorld_Edit::maxHeight(void)
 {
-	// DEBUGRIC
-	//godot::String s = m_maxHeightLabel->get_text();
-	//const char* str = s.utf8().get_data();
-	//float ret = std::stof(std::string(str));
 	float ret = std::stof(*m_maxHeightStr);
 	return ret;
 	return 0;
@@ -896,23 +884,18 @@ void GDN_TheWorld_Edit::setElapsed(size_t elapsed, bool onGoing)
 
 void GDN_TheWorld_Edit::setCounter(size_t current, size_t all)
 {
-	// DEBUGRIC
-	//m_counterLabel->set_text((std::to_string(current) + "/" + std::to_string(all)).c_str());
 	*m_counterStr = std::to_string(current) + "/" + std::to_string(all);
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setNote1(size_t num)
 {
-	// DEBUGRIC
 	if (num == 0)
 	{
-		//m_note1Label->set_text("");
 		*m_note1Str = "";
 	}
 	else
 	{
-		//m_note1Label->set_text(std::to_string(num).c_str());
 		*m_note1Str = std::to_string(num);
 	}
 	m_infoLabelTextChanged = true;
@@ -920,8 +903,6 @@ void GDN_TheWorld_Edit::setNote1(size_t num)
 
 void GDN_TheWorld_Edit::setNote1(std::string msg)
 {
-	// DEBUGRIC
-	//m_note1Label->set_text(msg.c_str());
 	*m_note1Str = msg;
 	m_infoLabelTextChanged = true;
 }
@@ -937,40 +918,30 @@ size_t GDN_TheWorld_Edit::elapsed(void)
 
 void GDN_TheWorld_Edit::setMouseHitLabelText(std::string text)
 {
-	// DEBUGRIC
-	//m_mouseHitLabel->set_text(text.c_str());
 	*m_mouseHitStr = text;
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setMouseQuadHitLabelText(std::string text)
 {
-	// DEBUGRIC
-	//m_mouseQuadHitLabel->set_text(text.c_str());
 	*m_mouseQuadHitStr = text;
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setMouseQuadHitPosLabelText(std::string text)
 {
-	// DEBUGRIC
-	//m_mouseQuadHitPosLabel->set_text(text.c_str());
 	*m_mouseQuadHitPosStr = text;
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setMouseQuadSelLabelText(std::string text)
 {
-	// DEBUGRIC
-	//m_mouseQuadSelLabel->set_text(text.c_str());
 	*m_mouseQuadSelStr = text;
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setMouseQuadSelPosLabelText(std::string text)
 {
-	// DEBUGRIC
-	//m_mouseQuadSelPosLabel->set_text(text.c_str());
 	*m_mouseQuadSelPosStr = text;
 	m_infoLabelTextChanged = true;
 }
@@ -1177,16 +1148,6 @@ void GDN_TheWorld_Edit::_process(double _delta)
 		}
 	}
 
-	if (m_innerData->m_openSelTexturesRequired)
-	{
-		if (m_innerData->m_selTexturePanel == nullptr)
-		{
-			m_innerData->m_selTexturePanel = initSelTexturePanel();
-		}
-
-		m_innerData->m_openSelTexturesRequired = false;
-	}
-
 	if (m_innerData->m_closeSelTexturesRequired)
 	{
 		if (m_innerData->m_selTexturePanel != nullptr)
@@ -1200,12 +1161,36 @@ void GDN_TheWorld_Edit::_process(double _delta)
 			}
 			m_innerData->m_selTexturePanel->queue_free();
 			m_innerData->m_selTexturePanel = nullptr;
+
+			m_innerData->m_lowElevationTexPanel->remove_theme_stylebox_override("panel");
+			m_innerData->m_highElevationTexPanel->remove_theme_stylebox_override("panel");
+			m_innerData->m_dirtTexPanel->remove_theme_stylebox_override("panel");
+			m_innerData->m_rocksTexPanel->remove_theme_stylebox_override("panel");
 		}
 
 		m_innerData->m_closeSelTexturesRequired = false;
 	}
 
-	// DEBUGRIC
+	if (m_innerData->m_openSelTexturesRequired)
+	{
+		if (m_innerData->m_selTexturePanel == nullptr)
+		{
+			if (m_innerData->m_lowElevationTexSelected)
+				m_innerData->m_lowElevationTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+			else if (m_innerData->m_highElevationTexSelected)
+				m_innerData->m_highElevationTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+			else if (m_innerData->m_dirtTexSelected)
+				m_innerData->m_dirtTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+			else if (m_innerData->m_rocksTexSelected)
+				m_innerData->m_rocksTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+
+			m_innerData->m_selTexturePanel = initSelTexturePanel();
+			m_innerData->m_selectedTexSlotName = "";
+		}
+
+		m_innerData->m_openSelTexturesRequired = false;
+	}
+
 	if (m_infoLabelTextChanged)
 	{
 		std::string infoLabelText = "Min: " + *m_minHeightStr + " Max: " + *m_maxHeightStr + "\n"
@@ -1236,17 +1221,18 @@ godot::Window* GDN_TheWorld_Edit::initSelTexturePanel(void)
 	e = GDN_TheWorld_Globals::connectSignal(wnd, "godot::Window", "window_input", this, "gui_input_event", "SelTexturePanel_Window");
 	
 	godot::PanelContainer* panelContainer = createControl<godot::PanelContainer>(wnd, "SelTexturesPanel");
-	//godot::Ref<godot::StyleBox> styleBoxFlat = memnew(godot::StyleBoxFlat);
-	//panelContainer->add_theme_stylebox_override("panel", styleBoxFlat);
-	godot::ScrollContainer* scrollContainer = createControl<godot::ScrollContainer>(panelContainer);
+	godot::VBoxContainer* vBoxContainer = createControl<godot::VBoxContainer>(panelContainer);
+	godot::Label* label = createControl<godot::Label>(vBoxContainer, "", m_innerData->m_selectedTexSlotName.c_str());
+	godot::HBoxContainer* hBoxContainer = createControl<godot::HBoxContainer>(vBoxContainer);
+	godot::Button* button = createControl<godot::Button>(hBoxContainer, "", "Set");
+	button = createControl<godot::Button>(hBoxContainer, "", "Cancel");
+	godot::ScrollContainer* scrollContainer = createControl<godot::ScrollContainer>(vBoxContainer);
 	godot::MarginContainer* marginContainer = createControl<godot::MarginContainer>(scrollContainer);
-	scrollContainer->set_custom_minimum_size(windowSize);
+	scrollContainer->set_custom_minimum_size(windowSize - godot::Size2(0, 40));
 	scrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
 	scrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
-	godot::VBoxContainer* vBoxContainer = createControl<godot::VBoxContainer>(marginContainer);
+	vBoxContainer = createControl<godot::VBoxContainer>(marginContainer);
 
-	godot::Label* label = createControl<godot::Label>(vBoxContainer, "", m_innerData->m_selectedTexName.c_str());
-	//godot::Separator *separator = createControl<godot::Separator>(vBoxContainer);
 
 	godot::Vector2 size(70, 70);
 
@@ -1256,7 +1242,9 @@ godot::Window* GDN_TheWorld_Edit::initSelTexturePanel(void)
 	{
 		if (groundTexture.second->initialized)
 		{
-			godot::PanelContainer* panel = createControl<godot::PanelContainer>(vBoxContainer, (std::string("SelTexturePanel_TexFrame") + std::to_string(idx)).c_str());
+			godot::PanelContainer* panel = createControl<godot::PanelContainer>(vBoxContainer, (std::string("SelTexturePanel_TexFrame_") + std::to_string(idx)).c_str());
+			if (m_innerData->m_selectedTexName == groundTexture.first)
+				panel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
 			godot::HBoxContainer* hBoxContainer = createControl<godot::HBoxContainer>(panel);
 			//int i = hBoxContainer->get_theme_constant("separation");
 			godot::TextureRect* tex = createControl<godot::TextureRect>(hBoxContainer);
@@ -1264,7 +1252,7 @@ godot::Window* GDN_TheWorld_Edit::initSelTexturePanel(void)
 			tex->set_custom_minimum_size(size);
 			tex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
 			tex->set_texture(groundTexture.second->m_tex);
-			e = GDN_TheWorld_Globals::connectSignal(tex, "godot::TextureRect", "gui_input", this, "gui_input_event", "SelTexturePanel_SelectedTexture", groundTexture.first.c_str(), idx);
+			e = GDN_TheWorld_Globals::connectSignal(tex, "godot::TextureRect", "gui_input", this, "gui_input_event", "SelTexturePanel_CursorTexture", groundTexture.first.c_str(), idx);
 			godot::Label* label = createControl<godot::Label>(hBoxContainer, "", groundTexture.first.c_str());
 		}
 	}
@@ -1385,6 +1373,14 @@ void GDN_TheWorld_Edit::voidSignalManager(godot::Object* obj, godot::String sign
 				m_innerData->m_highElevationTexPanel->remove_theme_stylebox_override("panel");
 				m_innerData->m_dirtTexPanel->remove_theme_stylebox_override("panel");
 				m_innerData->m_rocksTexPanel->remove_theme_stylebox_override("panel");
+				if (m_innerData->m_lowElevationTexSelected && godot::String(custom1) == c_lowElevationEditTextureName.c_str())
+					m_innerData->m_lowElevationTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+				else if (m_innerData->m_highElevationTexSelected && godot::String(custom1) == c_highElevationEditTextureName.c_str())
+					m_innerData->m_highElevationTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+				else if (m_innerData->m_dirtTexSelected && godot::String(custom1) == c_dirtEditTextureName.c_str())
+					m_innerData->m_dirtTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+				else if (m_innerData->m_rocksTexSelected && godot::String(custom1) == c_rocksEditTextureName.c_str())
+					m_innerData->m_rocksTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
 			}
 		}
 	}
@@ -1407,11 +1403,57 @@ void GDN_TheWorld_Edit::guiInputEvent(const godot::Ref<godot::InputEvent>& event
 			&& eventMouseButton != nullptr && eventMouseButton->is_double_click() && eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_LEFT
 			&& m_viewer->isQuadrantSelectedForEdit())
 		{
+			m_innerData->m_closeSelTexturesRequired = true;
 			m_innerData->m_openSelTexturesRequired = true;
 			//m_innerData->m_selectedTex = (godot::TextureRect*)obj;
-			m_innerData->m_selectedTexName = godot::String(custom1).utf8().get_data();
+			m_innerData->m_selectedTexSlotName = godot::String(custom1).utf8().get_data();
+			if (_objectName == "LowElevationTex")
+			{
+				m_innerData->m_selectedTexName = m_innerData->m_lowElevationTexName->get_text().utf8().get_data();
+				m_innerData->m_lowElevationTexSelected = true;
+				m_innerData->m_highElevationTexSelected = false;
+				m_innerData->m_dirtTexSelected = false;
+				m_innerData->m_rocksTexSelected = false;
+			}
+			else if (_objectName == "HighElevationTex")
+			{
+				m_innerData->m_selectedTexName = m_innerData->m_highElevationTexName->get_text().utf8().get_data();
+				m_innerData->m_lowElevationTexSelected = false;
+				m_innerData->m_highElevationTexSelected = true;
+				m_innerData->m_dirtTexSelected = false;
+				m_innerData->m_rocksTexSelected = false;
+			}
+			else if (_objectName == "DirtTex")
+			{
+				m_innerData->m_selectedTexName = m_innerData->m_dirtTexName->get_text().utf8().get_data();
+				m_innerData->m_lowElevationTexSelected = false;
+				m_innerData->m_highElevationTexSelected = false;
+				m_innerData->m_dirtTexSelected = true;
+				m_innerData->m_rocksTexSelected = false;
+			}
+			else if (_objectName == "RocksTex")
+			{
+				m_innerData->m_selectedTexName = m_innerData->m_rocksTexName->get_text().utf8().get_data();
+				m_innerData->m_lowElevationTexSelected = false;
+				m_innerData->m_highElevationTexSelected = false;
+				m_innerData->m_dirtTexSelected = false;
+				m_innerData->m_rocksTexSelected = true;
+			}
+
+			//m_innerData->m_lowElevationTexPanel->remove_theme_stylebox_override("panel");
+			//m_innerData->m_highElevationTexPanel->remove_theme_stylebox_override("panel");
+			//m_innerData->m_dirtTexPanel->remove_theme_stylebox_override("panel");
+			//m_innerData->m_rocksTexPanel->remove_theme_stylebox_override("panel");
+			//if (m_innerData->m_lowElevationTexSelected)
+			//	m_innerData->m_lowElevationTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+			//else if (m_innerData->m_highElevationTexSelected)
+			//	m_innerData->m_highElevationTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+			//else if (m_innerData->m_dirtTexSelected)
+			//	m_innerData->m_dirtTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
+			//else if (m_innerData->m_rocksTexSelected)
+			//	m_innerData->m_rocksTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
 		}
-		else if (godot::String(custom1) == "SelTexturePanel_SelectedTexture")
+		else if (godot::String(custom1) == "SelTexturePanel_CursorTexture")
 		{
 			if (eventMouseButton != nullptr && eventMouseButton->is_double_click() && eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_LEFT)
 			{

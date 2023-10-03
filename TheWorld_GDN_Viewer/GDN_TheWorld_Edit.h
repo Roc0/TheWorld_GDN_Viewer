@@ -70,6 +70,10 @@ namespace godot
 			m_highElevationTexName = nullptr;
 			m_dirtTexName = nullptr;
 			m_rocksTexName = nullptr;
+			m_lowElevationTexSelected = false;
+			m_highElevationTexSelected = false;
+			m_dirtTexSelected = false;
+			m_rocksTexSelected = false;
 			//m_mouseInLowElevationTex = false;
 			//m_mouseInHighElevationTex = false;
 			//m_mouseInDirtTex = false;
@@ -134,6 +138,10 @@ namespace godot
 		godot::Label* m_highElevationTexName;
 		godot::Label* m_dirtTexName;
 		godot::Label* m_rocksTexName;
+		bool m_lowElevationTexSelected;
+		bool m_highElevationTexSelected;
+		bool m_dirtTexSelected;
+		bool m_rocksTexSelected;
 		//bool m_mouseInLowElevationTex;
 		//bool m_mouseInHighElevationTex;
 		//bool m_mouseInDirtTex;
@@ -142,6 +150,7 @@ namespace godot
 		bool m_openSelTexturesRequired;
 		bool m_closeSelTexturesRequired;
 		//godot::TextureRect* m_selectedTex;
+		std::string m_selectedTexSlotName;
 		std::string m_selectedTexName;
 		godot::Window* m_selTexturePanel;
 
