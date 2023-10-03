@@ -14,6 +14,8 @@
 #include <godot_cpp/classes/texture_rect.hpp>
 #include <godot_cpp/classes/input_event.hpp>
 #include <godot_cpp/classes/ref.hpp>
+#include <godot_cpp/classes/style_box_flat.hpp>
+#include <godot_cpp/classes/style_box_empty.hpp>
 #pragma warning (pop)
 
 #include <WorldModifier.h>
@@ -56,6 +58,10 @@ namespace godot
 			m_allCheckBox = nullptr;
 			m_terrTypeOptionButton = nullptr;
 			m_lookDevOptionButton = nullptr;
+			m_lowElevationTexPanel = nullptr;
+			m_highElevationTexPanel = nullptr;
+			m_dirtTexPanel = nullptr;
+			m_rocksTexPanel = nullptr;
 			m_lowElevationTex = nullptr;
 			m_highElevationTex = nullptr;
 			m_dirtTex = nullptr;
@@ -70,7 +76,7 @@ namespace godot
 			//m_mouseInRocksTex = false;
 			m_openSelTexturesRequired = false;
 			m_closeSelTexturesRequired = false;
-			m_selectedTex = nullptr;
+			//m_selectedTex = nullptr;
 			m_selTexturePanel = nullptr;
 		}
 		~TheWorld_Edit_InnerData()
@@ -116,6 +122,10 @@ namespace godot
 		godot::Control* m_terrEditVBoxContainer;
 		godot::Button* m_terrEditButton;
 
+		godot::PanelContainer* m_lowElevationTexPanel;
+		godot::PanelContainer* m_highElevationTexPanel;
+		godot::PanelContainer* m_dirtTexPanel;
+		godot::PanelContainer* m_rocksTexPanel;
 		godot::TextureRect* m_lowElevationTex;
 		godot::TextureRect* m_highElevationTex;
 		godot::TextureRect* m_dirtTex;
@@ -131,9 +141,12 @@ namespace godot
 
 		bool m_openSelTexturesRequired;
 		bool m_closeSelTexturesRequired;
-		godot::TextureRect* m_selectedTex;
+		//godot::TextureRect* m_selectedTex;
 		std::string m_selectedTexName;
 		godot::Window* m_selTexturePanel;
+
+		godot::Ref<godot::StyleBoxFlat> m_styleBoxSelectedFrame;
+		godot::Ref<godot::StyleBoxFlat> m_styleBoxHighlightedFrame;
 	};
 	
 	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback

@@ -14,6 +14,7 @@
 #include <godot_cpp/classes/h_box_container.hpp>
 #include <godot_cpp/classes/scroll_container.hpp>
 #include <godot_cpp/classes/margin_container.hpp>
+#include <godot_cpp/classes/panel.hpp>
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/h_separator.hpp>
 #include <godot_cpp/classes/texture_rect.hpp>
@@ -22,6 +23,8 @@
 #include <godot_cpp/classes/input_event_mouse_motion.hpp>
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
 #include <godot_cpp/classes/input_event_key.hpp>
+#include <godot_cpp/classes/style_box_flat.hpp>
+#include <godot_cpp/classes/style_box_empty.hpp>
 #pragma warning (pop)
 
 #include <string>
@@ -32,6 +35,11 @@
 #define TERRAIN_EDIT_BUTTON_TEXT L"Terrain Edit"
 
 using namespace godot;
+
+const std::string c_lowElevationEditTextureName = "Low Elevation";
+const std::string c_highElevationEditTextureName = "High Elevation";
+const std::string c_dirtEditTextureName = "Dirt";
+const std::string c_rocksEditTextureName = "Rocks";
 
 void GDN_TheWorld_Edit::_bind_methods()
 {
@@ -246,8 +254,33 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//TheWorld_Utils::WorldModifierPos pos(0, 4096, 4096, TheWorld_Utils::WMType::elevator, 0);
 	//m_wms[pos] = std::make_unique<TheWorld_Utils::WorldModifier>(pos, TheWorld_Utils::WMFunctionType::ConsiderMinMax, 10000.0f, 0.0f, 200.0f, TheWorld_Utils::WMOrder::MaxEffectOnWM);
 
-
 	std::lock_guard<std::recursive_mutex> lock(m_viewer->getMainProcessingMutex());
+
+	int32_t border_size = 2;
+	{
+		godot::Ref<godot::StyleBoxFlat> styleBox = memnew(godot::StyleBoxFlat);
+		m_innerData->m_styleBoxSelectedFrame = styleBox;
+		Color c = m_innerData->m_styleBoxSelectedFrame->get_bg_color();
+		c.a = 0.0f;
+		m_innerData->m_styleBoxSelectedFrame->set_bg_color(c);
+		m_innerData->m_styleBoxSelectedFrame->set_border_color(GDN_TheWorld_Globals::g_color_yellow_amber);
+		m_innerData->m_styleBoxSelectedFrame->set_border_width(godot::Side::SIDE_TOP, border_size);
+		m_innerData->m_styleBoxSelectedFrame->set_border_width(godot::Side::SIDE_BOTTOM, border_size);
+		m_innerData->m_styleBoxSelectedFrame->set_border_width(godot::Side::SIDE_RIGHT, border_size);
+		m_innerData->m_styleBoxSelectedFrame->set_border_width(godot::Side::SIDE_LEFT, border_size);
+	}
+	{
+		godot::Ref<godot::StyleBoxFlat> styleBox = memnew(godot::StyleBoxFlat);
+		m_innerData->m_styleBoxHighlightedFrame = styleBox;
+		Color c = m_innerData->m_styleBoxHighlightedFrame->get_bg_color();
+		c.a = 0.0f;
+		m_innerData->m_styleBoxHighlightedFrame->set_bg_color(c);
+		m_innerData->m_styleBoxHighlightedFrame->set_border_color(GDN_TheWorld_Globals::g_color_white);
+		m_innerData->m_styleBoxHighlightedFrame->set_border_width(godot::Side::SIDE_TOP, border_size);
+		m_innerData->m_styleBoxHighlightedFrame->set_border_width(godot::Side::SIDE_BOTTOM, border_size);
+		m_innerData->m_styleBoxHighlightedFrame->set_border_width(godot::Side::SIDE_RIGHT, border_size);
+		m_innerData->m_styleBoxHighlightedFrame->set_border_width(godot::Side::SIDE_LEFT, border_size);
+	}
 
 	//if (!IS_EDITOR_HINT())
 	m_viewer->add_child(this);
@@ -258,16 +291,16 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	const Color self_modulate_to_transparency(0.0f, 0.0f, 0.0f, 0.5f);
 	//const Color self_modulate(1.0f, 1.0f, 1.0f, 1.0f);
 
-	godot::Control* hBoxContainer = nullptr;
+	godot::HBoxContainer* hBoxContainer = nullptr;
 	godot::Control* separator = nullptr;
 	godot::Button* button = nullptr;
 	godot::Label* label = nullptr;
 	godot::Error e;
 
-	m_innerData->m_mainPanelContainer = createControl<godot::PanelContainer>(this, "EditBox");
+	m_innerData->m_mainPanelContainer = createControl<godot::PanelContainer>(this, "");
 
-	m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "EditModeTab", "", "", nullptr, "", "", "", "", self_modulate_to_transparency);
-	//m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "EditModeTab");
+	m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "", "", "", nullptr, "", "", "", "", self_modulate_to_transparency);
+	//m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "");
 
 	m_innerData->m_mainTerrainScrollContainer = createControl<godot::ScrollContainer>(m_innerData->m_mainTabContainer, "Terrain");
 	m_innerData->m_mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
@@ -276,7 +309,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	m_innerData->m_mainTerrainScrollContainer->set_vertical_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
 
 	godot::MarginContainer* marginContainer = nullptr;
-	marginContainer = createControl<godot::MarginContainer>(m_innerData->m_mainTerrainScrollContainer, "TerrainMargin");
+	marginContainer = createControl<godot::MarginContainer>(m_innerData->m_mainTerrainScrollContainer, "");
 	if (!IS_EDITOR_HINT())
 	{
 		marginContainer->add_theme_constant_override("margin_left", 5);
@@ -285,7 +318,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//marginContainer->add_theme_constant_override("margin_top", 5);
 	//marginContainer->add_theme_constant_override("margin_bottom", 5);
 
-	m_innerData->m_mainTerrainVBoxContainer = createControl<godot::VBoxContainer>(marginContainer, "Terrain");
+	m_innerData->m_mainTerrainVBoxContainer = createControl<godot::VBoxContainer>(marginContainer);
 
 	{
 		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainTerrainVBoxContainer);
@@ -328,7 +361,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "InfoPanelToggle", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_infoButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
-		m_innerData->m_infoVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "Info");
+		m_innerData->m_infoVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer);
 
 		m_innerData->m_infoLabel = createControl<godot::Label>(m_innerData->m_infoVBoxContainer);
 	}
@@ -354,7 +387,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "NoisePanelToggle", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_noiseButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
-		m_innerData->m_noiseVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "Noise");
+		m_innerData->m_noiseVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer);
 		m_innerData->m_noiseVBoxContainer->hide();
 
 		separator = createControl<HSeparator>(m_innerData->m_noiseVBoxContainer);
@@ -415,52 +448,60 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_innerData->m_terrEditButton = createControl<godot::Button>(m_innerData->m_mainTerrainVBoxContainer, "TerrEditPanelToggle", (std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_terrEditButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
-		m_innerData->m_terrEditVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer, "TerrainEdit");
+		m_innerData->m_terrEditVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTerrainVBoxContainer);
 		m_innerData->m_terrEditVBoxContainer->hide();
 
 		godot::Vector2 size(70, 70);
 		
-		std::string textureName = "Low Elevation";
-		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", textureName.c_str());
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_lowElevationEditTextureName.c_str());
+		m_innerData->m_lowElevationTexPanel = createControl<godot::PanelContainer>(m_innerData->m_terrEditVBoxContainer);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTexPanel, "godot::PanelContainer", "mouse_entered", this, "void_signal_manager", c_lowElevationEditTextureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTexPanel, "godot::PanelContainer", "mouse_exited", this, "void_signal_manager", c_lowElevationEditTextureName.c_str());
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_lowElevationTexPanel);
 		m_innerData->m_lowElevationTex = createControl<godot::TextureRect>(hBoxContainer, "LowElevationTex");
 		m_innerData->m_lowElevationTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
 		m_innerData->m_lowElevationTex->set_custom_minimum_size(size);
 		m_innerData->m_lowElevationTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTex, "godot::TextureRect", "gui_input", this, "gui_input_event", textureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTex, "godot::TextureRect", "gui_input", this, "gui_input_event", c_lowElevationEditTextureName.c_str());
 		m_innerData->m_lowElevationTexName = createControl<godot::Label>(hBoxContainer);
 		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 
-		textureName = "High Elevation";
-		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", textureName.c_str());
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_highElevationEditTextureName.c_str());
+		m_innerData->m_highElevationTexPanel = createControl<godot::PanelContainer>(m_innerData->m_terrEditVBoxContainer);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_highElevationTexPanel, "godot::PanelContainer", "mouse_entered", this, "void_signal_manager", c_highElevationEditTextureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_highElevationTexPanel, "godot::PanelContainer", "mouse_exited", this, "void_signal_manager", c_highElevationEditTextureName.c_str());
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_highElevationTexPanel);
 		m_innerData->m_highElevationTex = createControl<godot::TextureRect>(hBoxContainer, "HighElevationTex");
 		m_innerData->m_highElevationTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
 		m_innerData->m_highElevationTex->set_custom_minimum_size(size);
 		m_innerData->m_highElevationTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_highElevationTex, "godot::TextureRect", "gui_input", this, "gui_input_event", textureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_highElevationTex, "godot::TextureRect", "gui_input", this, "gui_input_event", c_highElevationEditTextureName.c_str());
 		m_innerData->m_highElevationTexName = createControl<godot::Label>(hBoxContainer);
 		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 
-		textureName = "Dirt";
-		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", textureName.c_str());
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_dirtEditTextureName.c_str());
+		m_innerData->m_dirtTexPanel = createControl<godot::PanelContainer>(m_innerData->m_terrEditVBoxContainer);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTexPanel, "godot::PanelContainer", "mouse_entered", this, "void_signal_manager", c_dirtEditTextureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTexPanel, "godot::PanelContainer", "mouse_exited", this, "void_signal_manager", c_dirtEditTextureName.c_str());
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_dirtTexPanel);
 		m_innerData->m_dirtTex = createControl<godot::TextureRect>(hBoxContainer, "DirtTex");
 		m_innerData->m_dirtTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
 		m_innerData->m_dirtTex->set_custom_minimum_size(size);
 		m_innerData->m_dirtTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTex, "godot::TextureRect", "gui_input", this, "gui_input_event", textureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTex, "godot::TextureRect", "gui_input", this, "gui_input_event", c_dirtEditTextureName.c_str());
 		m_innerData->m_dirtTexName = createControl<godot::Label>(hBoxContainer);
 		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 
-		textureName = "Rocks";
-		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", textureName.c_str());
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_rocksEditTextureName.c_str());
+		m_innerData->m_rocksTexPanel = createControl<godot::PanelContainer>(m_innerData->m_terrEditVBoxContainer);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_rocksTexPanel, "godot::PanelContainer", "mouse_entered", this, "void_signal_manager", c_rocksEditTextureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_rocksTexPanel, "godot::PanelContainer", "mouse_exited", this, "void_signal_manager", c_rocksEditTextureName.c_str());
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_rocksTexPanel);
 		m_innerData->m_rocksTex = createControl<godot::TextureRect>(hBoxContainer, "RocksTex");
 		m_innerData->m_rocksTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
 		m_innerData->m_rocksTex->set_custom_minimum_size(size);
 		m_innerData->m_rocksTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_rocksTex, "godot::TextureRect", "gui_input", this, "gui_input_event", textureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_rocksTex, "godot::TextureRect", "gui_input", this, "gui_input_event", c_rocksEditTextureName.c_str());
 		m_innerData->m_rocksTexName = createControl<godot::Label>(hBoxContainer);
 		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 	}
@@ -1192,9 +1233,11 @@ godot::Window* GDN_TheWorld_Edit::initSelTexturePanel(void)
 	wnd->set_position(get_viewport_rect().size * godot::Size2(0.5f, 0.3f));
 	wnd->set_flag(godot::Window::Flags::FLAG_BORDERLESS, true);
 	wnd->set_min_size(windowSize);
-	e = GDN_TheWorld_Globals::connectSignal(wnd, "godot::Window", "window_input", this, "gui_input_event", "SelTexturePanelWindow");
+	e = GDN_TheWorld_Globals::connectSignal(wnd, "godot::Window", "window_input", this, "gui_input_event", "SelTexturePanel_Window");
 	
 	godot::PanelContainer* panelContainer = createControl<godot::PanelContainer>(wnd, "SelTexturesPanel");
+	//godot::Ref<godot::StyleBox> styleBoxFlat = memnew(godot::StyleBoxFlat);
+	//panelContainer->add_theme_stylebox_override("panel", styleBoxFlat);
 	godot::ScrollContainer* scrollContainer = createControl<godot::ScrollContainer>(panelContainer);
 	godot::MarginContainer* marginContainer = createControl<godot::MarginContainer>(scrollContainer);
 	scrollContainer->set_custom_minimum_size(windowSize);
@@ -1208,20 +1251,25 @@ godot::Window* GDN_TheWorld_Edit::initSelTexturePanel(void)
 	godot::Vector2 size(70, 70);
 
 	std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>>& groundTextures = ShaderTerrainData::getGroundTextures();
+	size_t idx = 0;
 	for (const auto& groundTexture : groundTextures)
 	{
 		if (groundTexture.second->initialized)
 		{
-			godot::HBoxContainer* hBoxContainer = createControl<godot::HBoxContainer>(vBoxContainer);
+			godot::PanelContainer* panel = createControl<godot::PanelContainer>(vBoxContainer, (std::string("SelTexturePanel_TexFrame") + std::to_string(idx)).c_str());
+			godot::HBoxContainer* hBoxContainer = createControl<godot::HBoxContainer>(panel);
+			//int i = hBoxContainer->get_theme_constant("separation");
 			godot::TextureRect* tex = createControl<godot::TextureRect>(hBoxContainer);
 			tex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
 			tex->set_custom_minimum_size(size);
 			tex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
 			tex->set_texture(groundTexture.second->m_tex);
-			e = GDN_TheWorld_Globals::connectSignal(tex, "godot::TextureRect", "gui_input", this, "gui_input_event", "SelTexturePanelSelectedTexture", groundTexture.first.c_str());
+			e = GDN_TheWorld_Globals::connectSignal(tex, "godot::TextureRect", "gui_input", this, "gui_input_event", "SelTexturePanel_SelectedTexture", groundTexture.first.c_str(), idx);
 			godot::Label* label = createControl<godot::Label>(hBoxContainer, "", groundTexture.first.c_str());
 		}
 	}
+
+	label = createControl<godot::Label>(vBoxContainer, "", " ");
 
 	return wnd;
 }
@@ -1282,6 +1330,64 @@ void GDN_TheWorld_Edit::voidSignalManager(godot::Object* obj, godot::String sign
 			m_scrollPanelsNeedResize = true;
 		}
 	}
+	else if (TheWorld_Utils::to_lower(_signal) == "mouse_entered")
+	{
+		if (_className == "godot::PanelContainer")
+		{
+			if (godot::String(custom1) == c_lowElevationEditTextureName.c_str())
+			{
+				m_innerData->m_lowElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_highElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_dirtTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_rocksTexPanel->remove_theme_stylebox_override("panel");
+				
+				m_innerData->m_lowElevationTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxHighlightedFrame);
+			}
+			else if (godot::String(custom1) == c_highElevationEditTextureName.c_str())
+			{
+				m_innerData->m_lowElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_highElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_dirtTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_rocksTexPanel->remove_theme_stylebox_override("panel");
+
+				m_innerData->m_highElevationTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxHighlightedFrame);
+			}
+			else if (godot::String(custom1) == c_dirtEditTextureName.c_str())
+			{
+				m_innerData->m_lowElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_highElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_dirtTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_rocksTexPanel->remove_theme_stylebox_override("panel");
+
+				m_innerData->m_dirtTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxHighlightedFrame);
+			}
+			else if (godot::String(custom1) == c_rocksEditTextureName.c_str())
+			{
+				m_innerData->m_lowElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_highElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_dirtTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_rocksTexPanel->remove_theme_stylebox_override("panel");
+
+				m_innerData->m_rocksTexPanel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxHighlightedFrame);
+			}
+		}
+	}
+	else if (TheWorld_Utils::to_lower(_signal) == "mouse_exited")
+	{
+		if (_className == "godot::PanelContainer")
+		{
+			if (godot::String(custom1) == c_lowElevationEditTextureName.c_str()
+				|| godot::String(custom1) == c_highElevationEditTextureName.c_str()
+				|| godot::String(custom1) == c_dirtEditTextureName.c_str()
+				|| godot::String(custom1) == c_rocksEditTextureName.c_str())
+			{
+				m_innerData->m_lowElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_highElevationTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_dirtTexPanel->remove_theme_stylebox_override("panel");
+				m_innerData->m_rocksTexPanel->remove_theme_stylebox_override("panel");
+			}
+		}
+	}
 }
 
 void GDN_TheWorld_Edit::guiInputEvent(const godot::Ref<godot::InputEvent>& event, godot::Object* obj, godot::String signal, godot::String className, int instanceId, godot::String objectName, godot::Variant custom1, godot::Variant custom2, godot::Variant custom3)
@@ -1298,14 +1404,14 @@ void GDN_TheWorld_Edit::guiInputEvent(const godot::Ref<godot::InputEvent>& event
 		const godot::InputEventMouseButton* eventMouseButton = godot::Object::cast_to<godot::InputEventMouseButton>(event.ptr());
 		
 		if ( (_objectName == "LowElevationTex" || _objectName == "HighElevationTex" || _objectName == "DirtTex" || _objectName == "RocksTex")
-			&& eventMouseButton != nullptr && eventMouseButton->is_pressed() && eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_LEFT
+			&& eventMouseButton != nullptr && eventMouseButton->is_double_click() && eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_LEFT
 			&& m_viewer->isQuadrantSelectedForEdit())
 		{
 			m_innerData->m_openSelTexturesRequired = true;
-			m_innerData->m_selectedTex = (godot::TextureRect*)obj;
+			//m_innerData->m_selectedTex = (godot::TextureRect*)obj;
 			m_innerData->m_selectedTexName = godot::String(custom1).utf8().get_data();
 		}
-		else if (godot::String(custom1) == "SelTexturePanelSelectedTexture")
+		else if (godot::String(custom1) == "SelTexturePanel_SelectedTexture")
 		{
 			if (eventMouseButton != nullptr && eventMouseButton->is_double_click() && eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_LEFT)
 			{
@@ -1320,7 +1426,7 @@ void GDN_TheWorld_Edit::guiInputEvent(const godot::Ref<godot::InputEvent>& event
 	}
 	else if (TheWorld_Utils::to_lower(_signal) == "window_input")
 	{
-		if (godot::String(custom1) == "SelTexturePanelWindow")
+		if (godot::String(custom1) == "SelTexturePanel_Window")
 		{
 			const godot::InputEventKey* eventKey = godot::Object::cast_to<godot::InputEventKey>(event.ptr());
 
