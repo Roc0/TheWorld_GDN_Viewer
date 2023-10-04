@@ -24,142 +24,176 @@ namespace godot
 {
 	//class GDN_TheWorld_Viewer;
 
-	class TheWorld_Edit_InnerData
-	{
-	public:
-		TheWorld_Edit_InnerData()
-		{
-			m_mainPanelContainer = nullptr;
-			m_mainTabContainer = nullptr;
-			m_mainTerrainScrollContainer = nullptr;
-			m_mainTerrainVBoxContainer = nullptr;
-			m_noiseVBoxContainer = nullptr;
-			m_noiseButton = nullptr;
-			m_infoVBoxContainer = nullptr;
-			m_infoButton = nullptr;
-			m_infoLabel = nullptr;
-			m_terrEditVBoxContainer = nullptr;
-			m_terrEditButton = nullptr;
-			m_seed = nullptr;
-			m_frequency = nullptr;
-			m_fractalOctaves = nullptr;
-			m_fractalLacunarity = nullptr;
-			m_fractalGain = nullptr;
-			m_fractalWeightedStrength = nullptr;
-			m_fractalPingPongStrength = nullptr;
-			m_amplitudeLabel = nullptr;
-			m_scaleFactorLabel = nullptr;
-			m_desideredMinHeightLabel = nullptr;
-			m_elapsedLabel = nullptr;
-			m_elapsed1Label = nullptr;
-			m_numQuadrantToSaveLabel = nullptr;
-			m_numQuadrantToUploadLabel = nullptr;
-			m_message = nullptr;
-			m_allCheckBox = nullptr;
-			m_terrTypeOptionButton = nullptr;
-			m_lookDevOptionButton = nullptr;
-			m_lowElevationTexPanel = nullptr;
-			m_highElevationTexPanel = nullptr;
-			m_dirtTexPanel = nullptr;
-			m_rocksTexPanel = nullptr;
-			m_lowElevationTex = nullptr;
-			m_highElevationTex = nullptr;
-			m_dirtTex = nullptr;
-			m_rocksTex = nullptr;
-			m_lowElevationTexName = nullptr;
-			m_highElevationTexName = nullptr;
-			m_dirtTexName = nullptr;
-			m_rocksTexName = nullptr;
-			m_lowElevationTexSelected = false;
-			m_highElevationTexSelected = false;
-			m_dirtTexSelected = false;
-			m_rocksTexSelected = false;
-			//m_mouseInLowElevationTex = false;
-			//m_mouseInHighElevationTex = false;
-			//m_mouseInDirtTex = false;
-			//m_mouseInRocksTex = false;
-			m_openSelTexturesRequired = false;
-			m_closeSelTexturesRequired = false;
-			//m_selectedTex = nullptr;
-			m_selTexturePanel = nullptr;
-		}
-		~TheWorld_Edit_InnerData()
-		{
-		}
-
-	public:
-		godot::Control* m_mainPanelContainer;
-		godot::Control* m_mainTabContainer;
-		godot::ScrollContainer* m_mainTerrainScrollContainer;
-		godot::Control* m_mainTerrainVBoxContainer;
-
-		godot::Label* m_elapsedLabel;
-		godot::Label* m_elapsed1Label;
-
-		godot::Label* m_numQuadrantToSaveLabel;
-		godot::Label* m_numQuadrantToUploadLabel;
-
-		godot::Label* m_message;
-		godot::String m_lastMessage;
-
-		godot::CheckBox* m_allCheckBox;
-		godot::OptionButton* m_terrTypeOptionButton;
-		godot::OptionButton* m_lookDevOptionButton;
-
-		godot::Button* m_infoButton;
-		godot::Control* m_infoVBoxContainer;
-		godot::Label* m_infoLabel;
-
-		godot::Button* m_noiseButton;
-		godot::Control* m_noiseVBoxContainer;
-		godot::LineEdit* m_seed;
-		godot::LineEdit* m_frequency;
-		godot::LineEdit* m_fractalOctaves;
-		godot::LineEdit* m_fractalLacunarity;
-		godot::LineEdit* m_fractalGain;
-		godot::LineEdit* m_fractalWeightedStrength;
-		godot::LineEdit* m_fractalPingPongStrength;
-		godot::LineEdit* m_amplitudeLabel;
-		godot::LineEdit* m_scaleFactorLabel;
-		godot::LineEdit* m_desideredMinHeightLabel;
-
-		godot::Control* m_terrEditVBoxContainer;
-		godot::Button* m_terrEditButton;
-
-		godot::PanelContainer* m_lowElevationTexPanel;
-		godot::PanelContainer* m_highElevationTexPanel;
-		godot::PanelContainer* m_dirtTexPanel;
-		godot::PanelContainer* m_rocksTexPanel;
-		godot::TextureRect* m_lowElevationTex;
-		godot::TextureRect* m_highElevationTex;
-		godot::TextureRect* m_dirtTex;
-		godot::TextureRect* m_rocksTex;
-		godot::Label* m_lowElevationTexName;
-		godot::Label* m_highElevationTexName;
-		godot::Label* m_dirtTexName;
-		godot::Label* m_rocksTexName;
-		bool m_lowElevationTexSelected;
-		bool m_highElevationTexSelected;
-		bool m_dirtTexSelected;
-		bool m_rocksTexSelected;
-		//bool m_mouseInLowElevationTex;
-		//bool m_mouseInHighElevationTex;
-		//bool m_mouseInDirtTex;
-		//bool m_mouseInRocksTex;
-
-		bool m_openSelTexturesRequired;
-		bool m_closeSelTexturesRequired;
-		std::string m_selectedTexSlotName;
-		std::string m_selectedTexName;
-		godot::Window* m_selTexturePanel;
-
-		godot::Ref<godot::StyleBoxFlat> m_styleBoxSelectedFrame;
-		godot::Ref<godot::StyleBoxFlat> m_styleBoxHighlightedFrame;
-	};
-	
 	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
 	{
 		GDCLASS(GDN_TheWorld_Edit, MarginContainer)
+
+	public:
+
+		class InnerData
+		{
+		public:
+			class SelTexturePanel
+			{
+			public:
+				class TextureItemPanel
+				{
+				public:
+					TextureItemPanel()
+					{
+						m_panel = nullptr;
+						m_idx = -1;
+						m_selected = false;
+					}
+					~TextureItemPanel()
+					{
+					}
+
+				public:
+					godot::PanelContainer* m_panel;
+					int32_t m_idx;
+					bool m_selected;
+				};
+
+			public:
+				SelTexturePanel()
+				{
+					m_openSelTexturesRequired = false;
+					m_closeSelTexturesRequired = false;
+					m_changeTextureRequired = false;
+					m_wnd = nullptr;
+				}
+				~SelTexturePanel()
+				{
+				}
+
+			public:
+				bool m_openSelTexturesRequired;
+				bool m_closeSelTexturesRequired;
+				bool m_changeTextureRequired;
+				std::string m_selectedTexSlotName;
+				std::string m_selectedTexName;
+				std::string m_newTexSlotName;
+				std::string m_newTexName;
+				godot::Window* m_wnd;
+				map<std::string, std::unique_ptr<TextureItemPanel>> m_textureItems;
+			};
+
+		public:
+			InnerData()
+			{
+				m_selTexturePanel = std::make_unique<SelTexturePanel>();
+				m_mainPanelContainer = nullptr;
+				m_mainTabContainer = nullptr;
+				m_mainTerrainScrollContainer = nullptr;
+				m_mainTerrainVBoxContainer = nullptr;
+				m_noiseVBoxContainer = nullptr;
+				m_noiseButton = nullptr;
+				m_infoVBoxContainer = nullptr;
+				m_infoButton = nullptr;
+				m_infoLabel = nullptr;
+				m_terrEditVBoxContainer = nullptr;
+				m_terrEditButton = nullptr;
+				m_seed = nullptr;
+				m_frequency = nullptr;
+				m_fractalOctaves = nullptr;
+				m_fractalLacunarity = nullptr;
+				m_fractalGain = nullptr;
+				m_fractalWeightedStrength = nullptr;
+				m_fractalPingPongStrength = nullptr;
+				m_amplitudeLabel = nullptr;
+				m_scaleFactorLabel = nullptr;
+				m_desideredMinHeightLabel = nullptr;
+				m_elapsedLabel = nullptr;
+				m_elapsed1Label = nullptr;
+				m_numQuadrantToSaveLabel = nullptr;
+				m_numQuadrantToUploadLabel = nullptr;
+				m_message = nullptr;
+				m_allCheckBox = nullptr;
+				m_terrTypeOptionButton = nullptr;
+				m_lookDevOptionButton = nullptr;
+				m_lowElevationTexPanel = nullptr;
+				m_highElevationTexPanel = nullptr;
+				m_dirtTexPanel = nullptr;
+				m_rocksTexPanel = nullptr;
+				m_lowElevationTex = nullptr;
+				m_highElevationTex = nullptr;
+				m_dirtTex = nullptr;
+				m_rocksTex = nullptr;
+				m_lowElevationTexName = nullptr;
+				m_highElevationTexName = nullptr;
+				m_dirtTexName = nullptr;
+				m_rocksTexName = nullptr;
+				m_lowElevationTexSelected = false;
+				m_highElevationTexSelected = false;
+				m_dirtTexSelected = false;
+				m_rocksTexSelected = false;
+			}
+			~InnerData()
+			{
+			}
+
+		public:
+			godot::Ref<godot::StyleBoxFlat> m_styleBoxSelectedFrame;
+			godot::Ref<godot::StyleBoxFlat> m_styleBoxHighlightedFrame;
+
+			godot::Control* m_mainPanelContainer;
+			godot::Control* m_mainTabContainer;
+			godot::ScrollContainer* m_mainTerrainScrollContainer;
+			godot::Control* m_mainTerrainVBoxContainer;
+
+			godot::Label* m_elapsedLabel;
+			godot::Label* m_elapsed1Label;
+
+			godot::Label* m_numQuadrantToSaveLabel;
+			godot::Label* m_numQuadrantToUploadLabel;
+
+			godot::Label* m_message;
+			godot::String m_lastMessage;
+
+			godot::CheckBox* m_allCheckBox;
+			godot::OptionButton* m_terrTypeOptionButton;
+			godot::OptionButton* m_lookDevOptionButton;
+
+			godot::Button* m_infoButton;
+			godot::Control* m_infoVBoxContainer;
+			godot::Label* m_infoLabel;
+
+			godot::Button* m_noiseButton;
+			godot::Control* m_noiseVBoxContainer;
+			godot::LineEdit* m_seed;
+			godot::LineEdit* m_frequency;
+			godot::LineEdit* m_fractalOctaves;
+			godot::LineEdit* m_fractalLacunarity;
+			godot::LineEdit* m_fractalGain;
+			godot::LineEdit* m_fractalWeightedStrength;
+			godot::LineEdit* m_fractalPingPongStrength;
+			godot::LineEdit* m_amplitudeLabel;
+			godot::LineEdit* m_scaleFactorLabel;
+			godot::LineEdit* m_desideredMinHeightLabel;
+
+			godot::Control* m_terrEditVBoxContainer;
+			godot::Button* m_terrEditButton;
+
+			godot::PanelContainer* m_lowElevationTexPanel;
+			godot::PanelContainer* m_highElevationTexPanel;
+			godot::PanelContainer* m_dirtTexPanel;
+			godot::PanelContainer* m_rocksTexPanel;
+			godot::TextureRect* m_lowElevationTex;
+			godot::TextureRect* m_highElevationTex;
+			godot::TextureRect* m_dirtTex;
+			godot::TextureRect* m_rocksTex;
+			godot::Label* m_lowElevationTexName;
+			godot::Label* m_highElevationTexName;
+			godot::Label* m_dirtTexName;
+			godot::Label* m_rocksTexName;
+			bool m_lowElevationTexSelected;
+			bool m_highElevationTexSelected;
+			bool m_dirtTexSelected;
+			bool m_rocksTexSelected;
+
+			std::unique_ptr<SelTexturePanel> m_selTexturePanel;
+		};
 
 		enum Margin {
 			MARGIN_LEFT,
@@ -326,7 +360,7 @@ namespace godot
 		bool m_requiredUIAcceptFocus;
 		bool m_UIAcceptingFocus;
 
-		std::unique_ptr<TheWorld_Edit_InnerData> m_innerData;
+		std::unique_ptr<InnerData> m_innerData;
 
 		bool m_controlNeedResize;
 		bool m_scrollPanelsNeedResize;
