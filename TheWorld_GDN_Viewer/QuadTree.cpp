@@ -695,8 +695,8 @@ bool QuadTree::updateMaterialParams(void)
 	if (!isValid())
 		return updated;
 	
-	if ((int)m_viewer->Globals()->status() < (int)TheWorldStatus::worldDeployed)
-		return updated;
+	//if ((int)m_viewer->Globals()->status() < (int)TheWorldStatus::worldDeployed)
+	//	return updated;
 
 	if (getQuadrant()->getShaderTerrainData()->materialParamsNeedUpdate())
 	{
@@ -1334,25 +1334,29 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 	if (lowElevationTexName.size() == 0)
 	{
 		terrainEdit->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
-		lowElevationTexName = TheWorld_Utils::TerrainEdit::getTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
+		//lowElevationTexName = TheWorld_Utils::TerrainEdit::getDefaultTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
+		lowElevationTexName = terrainEdit->extraValues.lowElevationTexName_r;
 	}
 	std::string highElevationTexName = terrainEdit->extraValues.highElevationTexName_g;
 	if (highElevationTexName.size() == 0)
 	{
 		terrainEdit->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::highElevation);
-		highElevationTexName = TheWorld_Utils::TerrainEdit::getTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::highElevation);
+		//highElevationTexName = TheWorld_Utils::TerrainEdit::getDefaultTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::highElevation);
+		highElevationTexName = terrainEdit->extraValues.highElevationTexName_g;
 	}
 	std::string dirtTexName = terrainEdit->extraValues.dirtTexName_b;
 	if (dirtTexName.size() == 0)
 	{
 		terrainEdit->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::dirt);
-		dirtTexName = TheWorld_Utils::TerrainEdit::getTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::dirt);
+		//dirtTexName = TheWorld_Utils::TerrainEdit::getDefaultTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::dirt);
+		dirtTexName = terrainEdit->extraValues.dirtTexName_b;
 	}
 	std::string rocksTexName = terrainEdit->extraValues.rocksTexName_a;
 	if (rocksTexName.size() == 0)
 	{
 		terrainEdit->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::rocks);
-		rocksTexName = TheWorld_Utils::TerrainEdit::getTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::rocks);
+		//rocksTexName = TheWorld_Utils::TerrainEdit::getDefaultTextureNameForTerrainType(terrainEdit->terrainType, TheWorld_Utils::TerrainEdit::TextureType::rocks);
+		rocksTexName = terrainEdit->extraValues.rocksTexName_a;
 	}
 
 	m_viewer->getMainProcessingMutex().lock();

@@ -128,6 +128,7 @@ namespace godot
 				m_highElevationTexSelected = false;
 				m_dirtTexSelected = false;
 				m_rocksTexSelected = false;
+				m_onGoing = false;
 			}
 			~InnerData()
 			{
@@ -192,6 +193,18 @@ namespace godot
 			bool m_dirtTexSelected;
 			bool m_rocksTexSelected;
 
+			std::string m_elapsed;
+			bool m_onGoing;
+			std::string m_minHeightStr;
+			std::string m_maxHeightStr;
+			std::string m_counterStr;
+			std::string m_note1Str;
+			std::string m_mouseHitStr;
+			std::string m_mouseQuadHitStr;
+			std::string m_mouseQuadHitPosStr;
+			std::string m_mouseQuadSelStr;
+			std::string m_mouseQuadSelPosStr;
+
 			std::unique_ptr<SelTexturePanel> m_selTexturePanel;
 		};
 
@@ -247,6 +260,7 @@ namespace godot
 		//void editModeInfoPanel(void);
 		//void editModeTerrEditPanel(void);
 		void setSizeUI(void);
+		void changeTextureAction(void);
 		void editModeGenerateAction(void);
 		void editModeBlendAction(void);
 		void editModeGenNormalsAction(void);
@@ -369,15 +383,6 @@ namespace godot
 		// filler
 		//char filler[72];	// 72 OK (73 no) oppure 32 + 1 std::string (sembra che occupi 40 byte)
 		// filler
-		std::string* m_minHeightStr;
-		std::string* m_maxHeightStr;
-		std::string* m_counterStr;
-		std::string* m_note1Str;
-		std::string* m_mouseHitStr;
-		std::string* m_mouseQuadHitStr;
-		std::string* m_mouseQuadHitPosStr;
-		std::string* m_mouseQuadSelStr;
-		std::string* m_mouseQuadSelPosStr;
 		
 		bool m_lastMessageChanged;
 

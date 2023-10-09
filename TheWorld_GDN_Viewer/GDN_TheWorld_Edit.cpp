@@ -72,15 +72,6 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 	m_controlNeedResize = false;
 	m_scrollPanelsNeedResize = false;
 	m_infoLabelTextChanged = false;
-	m_minHeightStr = new std::string();
-	m_maxHeightStr = new std::string();
-	m_counterStr = new std::string();
-	m_note1Str = new std::string();
-	m_mouseHitStr = new std::string();
-	m_mouseQuadHitStr = new std::string();
-	m_mouseQuadHitPosStr = new std::string();
-	m_mouseQuadSelStr = new std::string();
-	m_mouseQuadSelPosStr = new std::string();
 	m_allItems = 0;
 	m_completedItems = 0;
 	m_elapsedCompleted = 0;
@@ -95,16 +86,6 @@ GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 GDN_TheWorld_Edit::~GDN_TheWorld_Edit()
 {
 	deinit();
-
-	delete m_minHeightStr;
-	delete m_maxHeightStr;
-	delete m_counterStr;
-	delete m_note1Str;
-	delete m_mouseHitStr;
-	delete m_mouseQuadHitStr;
-	delete m_mouseQuadHitPosStr;
-	delete m_mouseQuadSelStr;
-	delete m_mouseQuadSelPosStr;
 }
 
 void GDN_TheWorld_Edit::replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply)
@@ -298,6 +279,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	godot::Error e;
 
 	m_innerData->m_mainPanelContainer = createControl<godot::PanelContainer>(this, "");
+	e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_mainPanelContainer, "godot::PanelContainer", "mouse_entered", this, "void_signal_manager", "MainPanelContainer");
+	e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_mainPanelContainer, "godot::PanelContainer", "mouse_exited", this, "void_signal_manager", "MainPanelContainer");
 
 	m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "", "", "", nullptr, "", "", "", "", self_modulate_to_transparency);
 	//m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "");
@@ -510,8 +493,8 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 
 	controlNeedResize();
 
-	size_t numToSave = 0;
-	size_t numToUpload = 0;
+	size_t numToSave;
+	size_t numToUpload;
 	refreshNumToSaveUpload(numToSave, numToUpload);
 
 	m_tp.Start("EditModeWorker", 1, this);
@@ -826,65 +809,70 @@ float GDN_TheWorld_Edit::desideredMinHeight(void)
 
 void GDN_TheWorld_Edit::setMinHeight(float minHeight)
 {
-	*m_minHeightStr = std::to_string(minHeight);
+	m_innerData->m_minHeightStr = std::to_string(minHeight);
 	m_infoLabelTextChanged = true;
 }
 
 float GDN_TheWorld_Edit::minHeight(void)
 {
-	float ret = std::stof(*m_minHeightStr);
+	float ret = std::stof(m_innerData->m_minHeightStr);
 	return ret;
 	return 0;
 }
 
 void GDN_TheWorld_Edit::setMaxHeight(float maxHeight)
 {
-	*m_maxHeightStr = std::to_string(maxHeight);
+	m_innerData->m_maxHeightStr = std::to_string(maxHeight);
 	m_infoLabelTextChanged = true;
 }
 
 float GDN_TheWorld_Edit::maxHeight(void)
 {
-	float ret = std::stof(*m_maxHeightStr);
+	float ret = std::stof(m_innerData->m_maxHeightStr);
 	return ret;
 	return 0;
 }
 
 void GDN_TheWorld_Edit::setElapsed(size_t elapsed, bool onGoing)
 {
-	std::lock_guard<std::recursive_mutex> lock(m_mtxUI);
+	//std::lock_guard<std::recursive_mutex> lock(m_mtxUI);
 
-	if (onGoing)
-	{
-		if (!m_onGoingElapsedLabel)
-		{
-			//m_elapsedLabelNormalColor = m_elapsedLabel->get("custom_colors/font_color");
-			m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 0, 0));
-			m_onGoingElapsedLabel = true;
-		}
-	}
-	else
-	{
-		if (m_onGoingElapsedLabel)
-		{
-			m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 1, 1));
-			m_onGoingElapsedLabel = false;
-		}
-	}
+	m_innerData->m_onGoing = onGoing;
+
+	//if (m_innerData->m_onGoing)
+	//{
+	//	if (!m_onGoingElapsedLabel)
+	//	{
+	//		m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 0, 0));
+	//		m_onGoingElapsedLabel = true;
+	//	}
+	//}
+	//else
+	//{
+	//	if (m_onGoingElapsedLabel)
+	//	{
+	//		m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 1, 1));
+	//		m_onGoingElapsedLabel = false;
+	//	}
+	//}
 	
 	if (elapsed == 0)
 	{
-		m_innerData->m_elapsedLabel->set_text("");
+		//m_innerData->m_elapsedLabel->set_text("");
+		m_innerData->m_elapsed = "";
 	}
 	else
 	{
-		m_innerData->m_elapsedLabel->set_text(std::to_string(elapsed).c_str());
+		//m_innerData->m_elapsedLabel->set_text(std::to_string(elapsed).c_str());
+		m_innerData->m_elapsed = std::to_string(elapsed);
 	}
+
+	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setCounter(size_t current, size_t all)
 {
-	*m_counterStr = std::to_string(current) + "/" + std::to_string(all);
+	m_innerData->m_counterStr = std::to_string(current) + "/" + std::to_string(all);
 	m_infoLabelTextChanged = true;
 }
 
@@ -892,18 +880,18 @@ void GDN_TheWorld_Edit::setNote1(size_t num)
 {
 	if (num == 0)
 	{
-		*m_note1Str = "";
+		m_innerData->m_note1Str = "";
 	}
 	else
 	{
-		*m_note1Str = std::to_string(num);
+		m_innerData->m_note1Str = std::to_string(num);
 	}
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setNote1(std::string msg)
 {
-	*m_note1Str = msg;
+	m_innerData->m_note1Str = msg;
 	m_infoLabelTextChanged = true;
 }
 
@@ -918,31 +906,31 @@ size_t GDN_TheWorld_Edit::elapsed(void)
 
 void GDN_TheWorld_Edit::setMouseHitLabelText(std::string text)
 {
-	*m_mouseHitStr = text;
+	m_innerData->m_mouseHitStr = text;
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setMouseQuadHitLabelText(std::string text)
 {
-	*m_mouseQuadHitStr = text;
+	m_innerData->m_mouseQuadHitStr = text;
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setMouseQuadHitPosLabelText(std::string text)
 {
-	*m_mouseQuadHitPosStr = text;
+	m_innerData->m_mouseQuadHitPosStr = text;
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setMouseQuadSelLabelText(std::string text)
 {
-	*m_mouseQuadSelStr = text;
+	m_innerData->m_mouseQuadSelStr = text;
 	m_infoLabelTextChanged = true;
 }
 
 void GDN_TheWorld_Edit::setMouseQuadSelPosLabelText(std::string text)
 {
-	*m_mouseQuadSelPosStr = text;
+	m_innerData->m_mouseQuadSelPosStr = text;
 	m_infoLabelTextChanged = true;
 }
 
@@ -1144,6 +1132,10 @@ void GDN_TheWorld_Edit::_process(double _delta)
 		if (m_lastMessageChanged)
 		{
 			m_innerData->m_message->set_text(m_innerData->m_lastMessage);
+
+			size_t numToSave, numToUpload;
+			refreshNumToSaveUpload(numToSave, numToUpload);
+
 			m_lastMessageChanged = false;
 		}
 	}
@@ -1202,25 +1194,92 @@ void GDN_TheWorld_Edit::_process(double _delta)
 
 	if (m_innerData->m_selTexturePanel->m_changeTextureRequired)
 	{
-		std::string s = m_innerData->m_selTexturePanel->m_newTexSlotName;
-		s = m_innerData->m_selTexturePanel->m_newTexName;
-
+		changeTextureAction();
 		m_innerData->m_selTexturePanel->m_changeTextureRequired = false;
 	}
 	
 	if (m_infoLabelTextChanged)
 	{
-		std::string infoLabelText = "Min: " + *m_minHeightStr + " Max: " + *m_maxHeightStr + "\n"
-			+ "Hit: " + *m_mouseHitStr + "\n"
-			+ "Quad Hit: " + *m_mouseQuadHitStr + "\n"
-			+ "Pos Hit: " + *m_mouseQuadHitPosStr + "\n"
-			+ "Quad Sel: " + *m_mouseQuadSelStr + "\n"
-			+ "Pos Sel: " + *m_mouseQuadSelPosStr;
+		std::string infoLabelText = "Min: " + m_innerData->m_minHeightStr + " Max: " + m_innerData->m_maxHeightStr + "\n"
+			+ "Hit: " + m_innerData->m_mouseHitStr + "\n"
+			+ "Quad Hit: " + m_innerData->m_mouseQuadHitStr + "\n"
+			+ "Pos Hit: " + m_innerData->m_mouseQuadHitPosStr + "\n"
+			+ "Quad Sel: " + m_innerData->m_mouseQuadSelStr + "\n"
+			+ "Pos Sel: " + m_innerData->m_mouseQuadSelPosStr;
 		m_innerData->m_infoLabel->set_text(infoLabelText.c_str());
-		m_innerData->m_elapsed1Label->set_text((*m_counterStr + " " + *m_note1Str).c_str());
+		//m_elapsedLabelNormalColor = m_elapsedLabel->get("custom_colors/font_color");
+		if (m_innerData->m_onGoing)
+		{
+			if (!m_onGoingElapsedLabel)
+			{
+				m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 0, 0));
+				m_onGoingElapsedLabel = true;
+			}
+		}
+		else
+		{
+			if (m_onGoingElapsedLabel)
+			{
+				m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 1, 1));
+				m_onGoingElapsedLabel = false;
+			}
+		}
+		m_innerData->m_elapsedLabel->set_text(m_innerData->m_elapsed.c_str());
+		m_innerData->m_elapsed1Label->set_text((m_innerData->m_counterStr + " " + m_innerData->m_note1Str).c_str());
 		
 		m_infoLabelTextChanged = false;
 	}
+}
+
+void GDN_TheWorld_Edit::changeTextureAction()
+{
+	std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>>& groundTextures = ShaderTerrainData::getGroundTextures();
+	std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>>::iterator it = groundTextures.find(m_innerData->m_selTexturePanel->m_newTexName);
+	if (it == groundTextures.end())
+		return;
+
+	QuadTree* quadTreeSel = nullptr;
+	QuadrantPos quadrantSelPos = m_viewer->getQuadrantSelForEdit(&quadTreeSel);
+
+	if (quadTreeSel == nullptr)
+		return;
+
+	TheWorld_Utils::TerrainEdit* terrainEdit = quadTreeSel->getQuadrant()->getTerrainEdit();
+
+	if (m_innerData->m_selTexturePanel->m_newTexSlotName == c_lowElevationEditTextureName)
+	{
+		strcpy_s(terrainEdit->extraValues.lowElevationTexName_r, sizeof(terrainEdit->extraValues.lowElevationTexName_r), m_innerData->m_selTexturePanel->m_newTexName.c_str());
+		m_innerData->m_lowElevationTexName->set_text(m_innerData->m_selTexturePanel->m_newTexName.c_str());
+		m_innerData->m_lowElevationTex->set_texture(it->second->m_tex);
+	}
+	else if (m_innerData->m_selTexturePanel->m_newTexSlotName == c_highElevationEditTextureName)
+	{
+		strcpy_s(terrainEdit->extraValues.highElevationTexName_g, sizeof(terrainEdit->extraValues.highElevationTexName_g), m_innerData->m_selTexturePanel->m_newTexName.c_str());
+		m_innerData->m_highElevationTexName->set_text(m_innerData->m_selTexturePanel->m_newTexName.c_str());
+		m_innerData->m_highElevationTex->set_texture(it->second->m_tex);
+	}
+	else if (m_innerData->m_selTexturePanel->m_newTexSlotName == c_dirtEditTextureName)
+	{
+		strcpy_s(terrainEdit->extraValues.dirtTexName_b, sizeof(terrainEdit->extraValues.dirtTexName_b), m_innerData->m_selTexturePanel->m_newTexName.c_str());
+		m_innerData->m_dirtTexName->set_text(m_innerData->m_selTexturePanel->m_newTexName.c_str());
+		m_innerData->m_dirtTex->set_texture(it->second->m_tex);
+	}
+	else if (m_innerData->m_selTexturePanel->m_newTexSlotName == c_rocksEditTextureName)
+	{
+		strcpy_s(terrainEdit->extraValues.rocksTexName_a, sizeof(terrainEdit->extraValues.rocksTexName_a), m_innerData->m_selTexturePanel->m_newTexName.c_str());
+		m_innerData->m_rocksTexName->set_text(m_innerData->m_selTexturePanel->m_newTexName.c_str());
+		m_innerData->m_rocksTex->set_texture(it->second->m_tex);
+	}
+
+	// Quadrant has to be saved and uploaded
+	quadTreeSel->getQuadrant()->setNeedUploadToServer(true);
+	terrainEdit->needUploadToServer = true;
+	m_mapQuadToSave[quadrantSelPos] = "";
+
+	// Shader need refresh
+	quadTreeSel->getQuadrant()->setTextureUpdated(true);
+	quadTreeSel->getQuadrant()->getShaderTerrainData()->materialParamsNeedReset(true);
+
 }
 
 godot::Window* GDN_TheWorld_Edit::initSelTexturePanel(void)
@@ -1441,6 +1500,9 @@ void GDN_TheWorld_Edit::voidSignalManager(godot::Object* obj, godot::String sign
 				if (m_innerData->m_selTexturePanel->m_textureItems.contains(textureName) && !m_innerData->m_selTexturePanel->m_textureItems[textureName]->m_selected)
 					m_innerData->m_selTexturePanel->m_textureItems[textureName]->m_panel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxHighlightedFrame);
 			}
+			else if (godot::String(custom1) == "MainPanelContainer")
+			{
+			}
 		}
 	}
 	else if (TheWorld_Utils::to_lower(_signal) == "mouse_exited")
@@ -1474,6 +1536,9 @@ void GDN_TheWorld_Edit::voidSignalManager(godot::Object* obj, godot::String sign
 				std::string textureName = godot::String(custom2).utf8().get_data();
 				if (m_innerData->m_selTexturePanel->m_textureItems.contains(textureName) && !m_innerData->m_selTexturePanel->m_textureItems[textureName]->m_selected)
 					m_innerData->m_selTexturePanel->m_textureItems[textureName]->m_panel->remove_theme_stylebox_override("panel");
+			}
+			else if (godot::String(custom1) == "MainPanelContainer")
+			{
 			}
 		}
 	}
@@ -1563,11 +1628,10 @@ void GDN_TheWorld_Edit::guiInputEvent(const godot::Ref<godot::InputEvent>& event
 						}
 					}
 					m_innerData->m_selTexturePanel->m_textureItems[selectedTextureName]->m_selected = true;
+					m_innerData->m_selTexturePanel->m_textureItems[selectedTextureName]->m_panel->add_theme_stylebox_override("panel", m_innerData->m_styleBoxSelectedFrame);
 					m_innerData->m_selTexturePanel->m_changeTextureRequired = true;
 					m_innerData->m_selTexturePanel->m_newTexSlotName = m_innerData->m_selTexturePanel->m_selectedTexSlotName;
 					m_innerData->m_selTexturePanel->m_newTexName = selectedTextureName;
-
-					//godot::Ref<godot::Texture> selectedTexture = groundTextures[selectedTextureName]->m_tex;
 				}
 			}
 			else if (eventMouseButton != nullptr && eventMouseButton->is_pressed() && eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_LEFT)
@@ -1702,9 +1766,9 @@ void GDN_TheWorld_Edit::editModeSave(void)
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
 
-	size_t numToSave = 0;
-	size_t numToUpload = 0;
-	refreshNumToSaveUpload(numToSave, numToUpload);
+	//size_t numToSave = 0;
+	//size_t numToUpload = 0;
+	//refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
 }
@@ -1815,9 +1879,9 @@ void GDN_TheWorld_Edit::editModeUpload(void)
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
 
-	size_t numToSave = 0;
-	size_t numToUpload = 0;
-	refreshNumToSaveUpload(numToSave, numToUpload);
+	//size_t numToSave = 0;
+	//size_t numToUpload = 0;
+	//refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
 }
@@ -2001,9 +2065,9 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
 
-	size_t numToSave = 0;
-	size_t numToUpload = 0;
-	refreshNumToSaveUpload(numToSave, numToUpload);
+	//size_t numToSave = 0;
+	//size_t numToUpload = 0;
+	//refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
 }
@@ -2416,9 +2480,9 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
 
-	size_t numToSave = 0;
-	size_t numToUpload = 0;
-	refreshNumToSaveUpload(numToSave, numToUpload);
+	//size_t numToSave = 0;
+	//size_t numToUpload = 0;
+	//refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
 }
@@ -2626,9 +2690,9 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool force)
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
 
-	size_t numToSave = 0;
-	size_t numToUpload = 0;
-	refreshNumToSaveUpload(numToSave, numToUpload);
+	//size_t numToSave = 0;
+	//size_t numToUpload = 0;
+	//refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
 }
@@ -2776,9 +2840,9 @@ void GDN_TheWorld_Edit::editModeApplyTextures(void)
 	setCounter(m_completedItems, m_allItems);
 	setNote1(m_lastElapsed);
 
-	size_t numToSave = 0;
-	size_t numToUpload = 0;
-	refreshNumToSaveUpload(numToSave, numToUpload);
+	//size_t numToSave = 0;
+	//size_t numToUpload = 0;
+	//refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
 
