@@ -86,7 +86,7 @@ namespace godot
 				m_mainPanelContainer = nullptr;
 				m_mainTabContainer = nullptr;
 				m_mainTerrainScrollContainer = nullptr;
-				m_mainTerrainVBoxContainer = nullptr;
+				m_mainVBoxContainer = nullptr;
 				m_noiseVBoxContainer = nullptr;
 				m_noiseButton = nullptr;
 				m_infoVBoxContainer = nullptr;
@@ -129,6 +129,7 @@ namespace godot
 				m_dirtTexSelected = false;
 				m_rocksTexSelected = false;
 				m_onGoing = false;
+				m_mouseInsideMainPanel = false;
 			}
 			~InnerData()
 			{
@@ -141,7 +142,7 @@ namespace godot
 			godot::Control* m_mainPanelContainer;
 			godot::Control* m_mainTabContainer;
 			godot::ScrollContainer* m_mainTerrainScrollContainer;
-			godot::Control* m_mainTerrainVBoxContainer;
+			godot::Control* m_mainVBoxContainer;
 
 			godot::Label* m_elapsedLabel;
 			godot::Label* m_elapsed1Label;
@@ -206,6 +207,8 @@ namespace godot
 			std::string m_mouseQuadSelPosStr;
 
 			std::unique_ptr<SelTexturePanel> m_selTexturePanel;
+
+			bool m_mouseInsideMainPanel;
 		};
 
 		enum Margin {
@@ -237,6 +240,7 @@ namespace godot
 		virtual void _ready(void) override;
 		virtual void _process(double _delta) override;
 		virtual void _input(const Ref<InputEvent>& event) override;
+		virtual void _unhandled_input(const Ref<InputEvent>& event) override;
 
 		virtual void replyFromServer(TheWorld_ClientServer::ClientServerExecution& reply);
 
