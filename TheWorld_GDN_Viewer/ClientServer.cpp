@@ -184,6 +184,12 @@ namespace TheWorld_ClientServer
 		
 		return THEWORLD_CLIENTSERVER_RC_OK;
 	}
+
+	size_t ClientInterface::getNumCallbacksRunning(void)
+	{
+		size_t maxThreads;
+		return m_tpCallBack.getNumWorkingThreads(maxThreads);
+	}
 	
 	int ClientInterface::replied(std::string& method, std::string& ref, bool& replied, size_t& numReplyParams, bool& error, int& errorCode, std::string& errorMessage)
 	{
@@ -281,7 +287,7 @@ namespace TheWorld_ClientServer
 
 		MapClientServerExecution toCallCallback;
 
-		m_tp.Start("ReceiverFromServer", 24);
+		m_tpCallBack.Start("CallBackFromServer", 24);
 
 		while (true)
 		{
@@ -360,7 +366,7 @@ namespace TheWorld_ClientServer
 						{
 							std::function<void(void)> f = std::bind(&ClientServerExecution::callCallback, itReply->second.get());
 							itReply->second->clientExecutionStatus(ExecutionStatus::InProgress);
-							m_tp.QueueJob(f);
+							m_tpCallBack.QueueJob(f);
 						}
 					}
 				}
@@ -369,7 +375,7 @@ namespace TheWorld_ClientServer
 			Sleep(THEWORLD_CLIENTSERVER_RECEIVER_SLEEP_TIME);
 		}
 		
-		m_tp.Stop();
+		m_tpCallBack.Stop();
 
 		toCallCallback.clear();
 

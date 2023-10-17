@@ -545,12 +545,13 @@ void GDN_TheWorld_Viewer::deinit(void)
 			if (parent != nullptr)
 				parent->call_deferred("remove_child", editModeUIControl);
 			editModeUIControl->queue_free();
+			m_editModeUIControl = nullptr;
 		}
 
 		GDN_TheWorld_Camera* camera = CameraNode(true);
 		if (camera != nullptr)
 		{
-			Node* parent = camera->get_parent();
+			//Node* parent = camera->get_parent();
 			//if (parent != nullptr)									// TESTING
 			//	parent->call_deferred("remove_child", camera);			// TESTING
 			//camera->queue_free();										// TESTING
@@ -584,221 +585,234 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 			
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2 ") + __FUNCTION__, THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES);
 
-			//TheWorld_Viewer_Utils::TimerMs clock("GDN_TheWorld_Viewer::replyFromServer", "CLIENT SIDE", false, true);
-			
-			if (reply.getNumReplyParams() < 3)
+			enum class TheWorldStatus status = Globals()->status();
+			if (status == TheWorldStatus::worldUnDeployInProgress || status < TheWorldStatus::worldDeployInProgress)
 			{
-				std::string m = std::string("Reply MapManager::getVertices error (not enough params replied)");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-
-			ClientServerVariant v = reply.getReplyParam(0);
-			const auto _cameraPosX(std::get_if<float>(&v));
-			if (_cameraPosX == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not return a float as first return param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float cameraPosX = *_cameraPosX;
-
-			v = reply.getReplyParam(1);
-			const auto _cameraPosZ(std::get_if<float>(&v));
-			if (_cameraPosZ == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not return a float as second return param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float cameraPosZ = *_cameraPosZ;
-
-			ClientServerVariant vbuffGridVertices = reply.getReplyParam(2);
-			const auto _buffGridVerticesFromServer(std::get_if<std::string>(&vbuffGridVertices));
-			if (_buffGridVerticesFromServer == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not return a string as third return param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-
-			v = reply.getInputParam(2);
-			const auto _lowerXGridVertex(std::get_if<float>(&v));
-			if (_lowerXGridVertex == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a float as third input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float lowerXGridVertex = *_lowerXGridVertex;
-
-			v = reply.getInputParam(3);
-			const auto _lowerZGridVertex(std::get_if<float>(&v));
-			if (_lowerZGridVertex == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a float as forth input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float lowerZGridVertex = *_lowerZGridVertex;
-
-			v = reply.getInputParam(4);
-			const auto _numVerticesPerSize(std::get_if<int>(&v));
-			if (_numVerticesPerSize == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have an int as fifth input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			int numVerticesPerSize = *_numVerticesPerSize;
-
-			v = reply.getInputParam(5);
-			const auto _gridStepInWU(std::get_if<float>(&v));
-			if (_gridStepInWU == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a float as sixth input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float gridStepInWU = *_gridStepInWU;
-
-			v = reply.getInputParam(6);
-			const auto _level(std::get_if<int>(&v));
-			if (_level == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have an int as seventh input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			int level = *_level;
-
-			v = reply.getInputParam(7);
-			const auto _meshIdFromServer(std::get_if<std::string>(&v));
-			if (_meshIdFromServer == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a string as eight input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			std::string meshIdFromServer = *_meshIdFromServer;
-
-			v = reply.getInputParam(8);
-			const auto _setCamera(std::get_if<bool>(&v));
-			if (_setCamera == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a bool as nineth input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			bool setCamera = *_setCamera;
-
-			v = reply.getInputParam(9);
-			const auto _cameraDistanceFromTerrainForced(std::get_if<float>(&v));
-			if (_cameraDistanceFromTerrainForced == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a float as tenth input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float cameraDistanceFromTerrainForced = *_cameraDistanceFromTerrainForced;
-
-			v = reply.getInputParam(10);
-			const auto _cameraPosY(std::get_if<float>(&v));
-			if (_cameraPosY == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a float as eleventh input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float cameraPosY = *_cameraPosY;
-
-			v = reply.getInputParam(11);
-			const auto _cameraYaw(std::get_if<float>(&v));
-			if (_cameraYaw == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a float as twelveth input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float cameraYaw = *_cameraYaw;
-
-			v = reply.getInputParam(12);
-			const auto _cameraPitch(std::get_if<float>(&v));
-			if (_cameraPitch == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a float as thirteenth input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float cameraPitch = *_cameraPitch;
-
-			v = reply.getInputParam(13);
-			const auto _cameraRoll(std::get_if<float>(&v));
-			if (_cameraRoll == NULL)
-			{
-				std::string m = std::string("Reply MapManager::getVertices did not have a float as fourteenth input param");
-				throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
-			}
-			float cameraRoll = *_cameraRoll;
-
-			QuadrantPos quadrantPos(lowerXGridVertex, lowerZGridVertex, level, numVerticesPerSize, gridStepInWU);
-
-			m_mtxQuadTreeAndMainProcessing.lock();
-			if (m_mapQuadTree.contains(quadrantPos) && !m_mapQuadTree[quadrantPos]->statusToErase())
-			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1 ") + __FUNCTION__, "Elab. quadrant");
-				QuadTree* quadTree = m_mapQuadTree[quadrantPos].get();
-				m_mtxQuadTreeAndMainProcessing.unlock();
-				
-				if (m_stopDeploy)
+				GDN_TheWorld_Globals* globals = Globals();
+				if (globals != nullptr)
 				{
-					quadTree->setStatus(QuadrantStatus::initialized);
-				}
-				else
-				{
-					if (quadTree->statusGetTerrainDataInProgress() || quadTree->statusRefreshTerrainDataInProgress())
-					{
-						std::recursive_mutex& quadrantMutex = quadTree->getQuadrantMutex();
-						std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
-
-						std::string meshIdFromBuffer;
-						{
-							// ATTENZIONE
-							//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
-							TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1 ") + __FUNCTION__, "quadTree->getQuadrant()->refreshGridVertices");
-							quadTree->getQuadrant()->refreshGridVerticesFromServer(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer, true);
-						}
-
-						{
-							// ATTENZIONE
-							//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-							quadTree->materialParamsNeedReset(true);
-							//quadTree->resetMaterialParams(true);
-						}
-
-						if (setCamera)
-						{
-							TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.2 ") + __FUNCTION__, "setCamera");
-
-							forceRefreshMapQuadTree();
-
-							quadTree->setVisible(true);
-
-							size_t cameraInGridIndex = quadTree->getQuadrant()->getIndexFromHeighmap(cameraPosX, cameraPosZ, level);
-							if (cameraInGridIndex == -1)
-								throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Not found WorldViewer Pos").c_str()));
-
-							float cameraHeight = quadTree->getQuadrant()->getAltitudeFromHeigthmap(cameraInGridIndex);
-
-							Vector3 cameraPos(cameraPosX, cameraPosY, cameraPosZ);		// MapManager coordinates are local coordinates of WorldNode
-							if (cameraDistanceFromTerrainForced != 0.0f)
-								cameraPos.y = cameraHeight + cameraDistanceFromTerrainForced;
-							float offset = cameraDistanceFromTerrainForced == 0.0f ? 300 : cameraDistanceFromTerrainForced;
-							//Vector3 lookAt(cameraPosX + offset, cameraHeight, cameraPosZ + offset);
-							Vector3 lookAt(cameraPosX, cameraHeight, cameraPosZ - abs(offset));		// camera look at terrain along north direction
-
-							// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
-							//Transform t = get_transform();
-							//t.origin = Vector3(quadTree->getQuadrant()->getGridVertices()[0].posX(), 0, quadTree->getQuadrant()->getGridVertices()[0].posZ());
-							//set_transform(t);
-
-							//WorldCamera()->initCameraInWorld(cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
-							WorldCamera()->call_deferred("init_camera_in_world", cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
-
-							m_initialWordlViewerPosSet = true;
-						}
-
-						quadTree->setStatus(QuadrantStatus::initialized);
-					}
+					std::string msg = std::string("GDN_TheWorld_Viewer::replyFromServer - ") + THEWORLD_CLIENTSERVER_METHOD_MAPM_GETQUADRANTVERTICES + " - Status " + std::to_string(int(status)) + ": cannot proceed deploying quadrant";
+					globals->debugPrint(msg.c_str());
 				}
 			}
 			else
-				m_mtxQuadTreeAndMainProcessing.unlock();
+			{
+				//TheWorld_Viewer_Utils::TimerMs clock("GDN_TheWorld_Viewer::replyFromServer", "CLIENT SIDE", false, true);
+
+				if (reply.getNumReplyParams() < 3)
+				{
+					std::string m = std::string("Reply MapManager::getVertices error (not enough params replied)");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+
+				ClientServerVariant v = reply.getReplyParam(0);
+				const auto _cameraPosX(std::get_if<float>(&v));
+				if (_cameraPosX == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not return a float as first return param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float cameraPosX = *_cameraPosX;
+
+				v = reply.getReplyParam(1);
+				const auto _cameraPosZ(std::get_if<float>(&v));
+				if (_cameraPosZ == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not return a float as second return param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float cameraPosZ = *_cameraPosZ;
+
+				ClientServerVariant vbuffGridVertices = reply.getReplyParam(2);
+				const auto _buffGridVerticesFromServer(std::get_if<std::string>(&vbuffGridVertices));
+				if (_buffGridVerticesFromServer == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not return a string as third return param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+
+				v = reply.getInputParam(2);
+				const auto _lowerXGridVertex(std::get_if<float>(&v));
+				if (_lowerXGridVertex == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a float as third input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float lowerXGridVertex = *_lowerXGridVertex;
+
+				v = reply.getInputParam(3);
+				const auto _lowerZGridVertex(std::get_if<float>(&v));
+				if (_lowerZGridVertex == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a float as forth input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float lowerZGridVertex = *_lowerZGridVertex;
+
+				v = reply.getInputParam(4);
+				const auto _numVerticesPerSize(std::get_if<int>(&v));
+				if (_numVerticesPerSize == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have an int as fifth input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				int numVerticesPerSize = *_numVerticesPerSize;
+
+				v = reply.getInputParam(5);
+				const auto _gridStepInWU(std::get_if<float>(&v));
+				if (_gridStepInWU == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a float as sixth input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float gridStepInWU = *_gridStepInWU;
+
+				v = reply.getInputParam(6);
+				const auto _level(std::get_if<int>(&v));
+				if (_level == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have an int as seventh input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				int level = *_level;
+
+				v = reply.getInputParam(7);
+				const auto _meshIdFromServer(std::get_if<std::string>(&v));
+				if (_meshIdFromServer == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a string as eight input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				std::string meshIdFromServer = *_meshIdFromServer;
+
+				v = reply.getInputParam(8);
+				const auto _setCamera(std::get_if<bool>(&v));
+				if (_setCamera == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a bool as nineth input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				bool setCamera = *_setCamera;
+
+				v = reply.getInputParam(9);
+				const auto _cameraDistanceFromTerrainForced(std::get_if<float>(&v));
+				if (_cameraDistanceFromTerrainForced == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a float as tenth input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float cameraDistanceFromTerrainForced = *_cameraDistanceFromTerrainForced;
+
+				v = reply.getInputParam(10);
+				const auto _cameraPosY(std::get_if<float>(&v));
+				if (_cameraPosY == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a float as eleventh input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float cameraPosY = *_cameraPosY;
+
+				v = reply.getInputParam(11);
+				const auto _cameraYaw(std::get_if<float>(&v));
+				if (_cameraYaw == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a float as twelveth input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float cameraYaw = *_cameraYaw;
+
+				v = reply.getInputParam(12);
+				const auto _cameraPitch(std::get_if<float>(&v));
+				if (_cameraPitch == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a float as thirteenth input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float cameraPitch = *_cameraPitch;
+
+				v = reply.getInputParam(13);
+				const auto _cameraRoll(std::get_if<float>(&v));
+				if (_cameraRoll == NULL)
+				{
+					std::string m = std::string("Reply MapManager::getVertices did not have a float as fourteenth input param");
+					throw(GDN_TheWorld_Exception(__FUNCTION__, m.c_str()));
+				}
+				float cameraRoll = *_cameraRoll;
+
+				QuadrantPos quadrantPos(lowerXGridVertex, lowerZGridVertex, level, numVerticesPerSize, gridStepInWU);
+
+				m_mtxQuadTreeAndMainProcessing.lock();
+				if (m_mapQuadTree.contains(quadrantPos) && !m_mapQuadTree[quadrantPos]->statusToErase())
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1 ") + __FUNCTION__, "Elab. quadrant");
+					QuadTree* quadTree = m_mapQuadTree[quadrantPos].get();
+					m_mtxQuadTreeAndMainProcessing.unlock();
+
+					if (m_stopDeploy)
+					{
+						quadTree->setStatus(QuadrantStatus::initialized);
+					}
+					else
+					{
+						if (quadTree->statusGetTerrainDataInProgress() || quadTree->statusRefreshTerrainDataInProgress())
+						{
+							std::recursive_mutex& quadrantMutex = quadTree->getQuadrantMutex();
+							std::lock_guard<std::recursive_mutex> lock(quadrantMutex);
+
+							std::string meshIdFromBuffer;
+							{
+								// ATTENZIONE
+								//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);	// SUPERDEBUGRIC : to remove when the mock for altitudes is removed from cache.refreshMeshCacheFromBuffer
+								TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.1 ") + __FUNCTION__, "quadTree->getQuadrant()->refreshGridVertices");
+								quadTree->getQuadrant()->refreshGridVerticesFromServer(*_buffGridVerticesFromServer, meshIdFromServer, meshIdFromBuffer, true);
+							}
+
+							{
+								// ATTENZIONE
+								//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+								quadTree->materialParamsNeedReset(true);
+								//quadTree->resetMaterialParams(true);
+							}
+
+							if (setCamera)
+							{
+								TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 2.1.2 ") + __FUNCTION__, "setCamera");
+
+								forceRefreshMapQuadTree();
+
+								quadTree->setVisible(true);
+
+								size_t cameraInGridIndex = quadTree->getQuadrant()->getIndexFromHeighmap(cameraPosX, cameraPosZ, level);
+								if (cameraInGridIndex == -1)
+									throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Not found WorldViewer Pos").c_str()));
+
+								float cameraHeight = quadTree->getQuadrant()->getAltitudeFromHeigthmap(cameraInGridIndex);
+
+								Vector3 cameraPos(cameraPosX, cameraPosY, cameraPosZ);		// MapManager coordinates are local coordinates of WorldNode
+								if (cameraDistanceFromTerrainForced != 0.0f)
+									cameraPos.y = cameraHeight + cameraDistanceFromTerrainForced;
+								float offset = cameraDistanceFromTerrainForced == 0.0f ? 300 : cameraDistanceFromTerrainForced;
+								//Vector3 lookAt(cameraPosX + offset, cameraHeight, cameraPosZ + offset);
+								Vector3 lookAt(cameraPosX, cameraHeight, cameraPosZ - abs(offset));		// camera look at terrain along north direction
+
+								// Viewer stuff: set viewer position relative to world node at the first point of the bitmap and altitude 0 so that that point is at position (0,0,0) respect to the viewer
+								//Transform t = get_transform();
+								//t.origin = Vector3(quadTree->getQuadrant()->getGridVertices()[0].posX(), 0, quadTree->getQuadrant()->getGridVertices()[0].posZ());
+								//set_transform(t);
+
+								//WorldCamera()->initCameraInWorld(cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
+								WorldCamera()->call_deferred("init_camera_in_world", cameraPos, lookAt, cameraYaw, cameraPitch, cameraRoll);
+
+								m_initialWordlViewerPosSet = true;
+							}
+
+							quadTree->setStatus(QuadrantStatus::initialized);
+						}
+					}
+				}
+				else
+					m_mtxQuadTreeAndMainProcessing.unlock();
+			}
 		}
 		else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UPLOADCACHEBUFFER)
 		{
@@ -1042,6 +1056,13 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 				//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
 			}
 
+			enum class TheWorldStatus status = Globals()->status();
+
+			while (Globals()->Client()->getNumCallbacksRunning() > 1)
+			{
+				Sleep(5);
+			}
+			
 			m_mapQuadTree.clear();
 
 			if (Globals()->connectedToServer() && m_initialized)
@@ -4232,6 +4253,8 @@ void GDN_TheWorld_Viewer::streamer(void)
 {
 	m_streamerThreadRunning = true;
 
+	Globals()->debugPrint("streamer thread STARTED");
+
 	while (!m_streamerThreadRequiredExit)
 	{
 		try
@@ -4300,6 +4323,8 @@ void GDN_TheWorld_Viewer::streamer(void)
 
 		Sleep(STREAMER_SLEEP_TIME);
 	}
+
+	Globals()->debugPrint("streamer thread STPOPPED");
 
 	m_streamerThreadRunning = false;
 }

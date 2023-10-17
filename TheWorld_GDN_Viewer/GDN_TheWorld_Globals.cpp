@@ -521,10 +521,17 @@ namespace godot
 
 	bool GDN_TheWorld_Globals::canDisconnectFromServer(void)
 	{
+		bool can;
+		
 		if (m_client == nullptr)
+			can = true;
+		else
+			can = m_client->canDisconnect();
+
+		if (can)
 			return true;
 		else
-			return m_client->canDisconnect();
+			return false;
 	}
 
 	void GDN_TheWorld_Globals::disconnectFromServer(void)

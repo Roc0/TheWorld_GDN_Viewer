@@ -363,6 +363,7 @@ namespace TheWorld_ClientServer
 		virtual int getReplyParam(std::string& ref, size_t index, ClientServerVariant& ReplyParam);
 		virtual int getReplyParams(std::string& ref, std::vector <ClientServerVariant>& replyParams);
 		virtual int replied(std::string& method, std::string& ref, bool& replied, size_t& numReplyParams, bool& error, int& errorCode, std::string& errorMessage);
+		virtual size_t getNumCallbacksRunning(void);
 		virtual bool quitting(void) = 0;
 
 	private:
@@ -379,7 +380,7 @@ namespace TheWorld_ClientServer
 		std::thread m_receiverThread;
 		bool m_receiverThreadRequiredExit;
 		bool m_receiverThreadRunning;
-		TheWorld_Utils::ThreadPool m_tp;
+		TheWorld_Utils::ThreadPool m_tpCallBack;
 	};
 
 	class ServerInterface : public TheWorld_Utils::ThreadInitDeinit

@@ -282,6 +282,13 @@ namespace godot
 		void editModeApplyTextures(void);
 		void editModeSave(void);
 		void editModeUpload(void);
+		void generateNormalsForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
+			float x, float z, float distance,
+			TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer,
+			TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer,
+			TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_normalsBuffer,
+			TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer,
+			TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer);
 
 		void manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData& quadrantData, QuadTree* quadTree, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer& heights16Buffer, TheWorld_Utils::MemoryBuffer& heights32Buffer);
 

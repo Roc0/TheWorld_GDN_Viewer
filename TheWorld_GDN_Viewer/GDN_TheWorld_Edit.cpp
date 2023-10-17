@@ -61,7 +61,6 @@ void GDN_TheWorld_Edit::_bind_methods()
 
 GDN_TheWorld_Edit::GDN_TheWorld_Edit()
 {
-	m_innerData = std::make_unique<InnerData>();
 	m_quitting = false;
 	m_initialized = false;
 	m_ready = false;
@@ -232,6 +231,8 @@ void GDN_TheWorld_Edit::setUIAcceptFocus(bool b)
 
 void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 {
+	m_innerData = std::make_unique<InnerData>();
+
 	m_viewer = viewer;
 
 	//TheWorld_Utils::WorldModifierPos pos(0, 4096, 4096, TheWorld_Utils::WMType::elevator, 0);
@@ -569,6 +570,7 @@ void GDN_TheWorld_Edit::deinit(void)
 	if (m_initialized)
 	{
 		m_tp.Stop();
+		m_innerData.reset();
 		m_initialized = false;
 	}
 }
@@ -2699,7 +2701,28 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool force)
 					southHeights32Buffer = &southQuadTree->getQuadrant()->getFloat32HeightsBuffer();
 				}
 				TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer(true);
-				cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer);
+
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.1 ") + __FUNCTION__, "Single QuadTree - CPU");
+					cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer);
+				}
+
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.1 ") + __FUNCTION__, "Single QuadTree - GPU");
+					TheWorld_Utils::MemoryBuffer* westHeights32Buffer = nullptr;
+					TheWorld_Utils::MemoryBuffer* northHeights32Buffer = nullptr;
+					TheWorld_Utils::MemoryBuffer* westNormalsBuffer = nullptr;
+					TheWorld_Utils::MemoryBuffer* eastNormalsBuffer = nullptr;
+					TheWorld_Utils::MemoryBuffer* northNormalsBuffer = nullptr;
+					TheWorld_Utils::MemoryBuffer* southNormalsBuffer = nullptr;
+					generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), 0.0f, 0.0f, 0.0f,
+						float32HeigthsBuffer, normalsBuffer,
+						*westHeights32Buffer, *westNormalsBuffer,
+						*eastHeights32Buffer, *eastNormalsBuffer,
+						*northHeights32Buffer, *northNormalsBuffer,
+						*southHeights32Buffer, *southNormalsBuffer);
+				}
+
 				if (eastQuadTree != nullptr)
 					eastQuadTree->getQuadrant()->unlockInternalData();
 				if (southQuadTree != nullptr)
@@ -2746,6 +2769,17 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool force)
 	//refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
+}
+
+void GDN_TheWorld_Edit::generateNormalsForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
+	float x, float z, float distance,
+	TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer,
+	TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer,
+	TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_normalsBuffer,
+	TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer,
+	TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer)
+{
+
 }
 
 void GDN_TheWorld_Edit::editModeApplyTexturesAction(void)
