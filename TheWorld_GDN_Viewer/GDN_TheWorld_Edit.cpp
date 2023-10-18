@@ -36,10 +36,10 @@
 
 using namespace godot;
 
-const std::string c_lowElevationEditTextureName = "Low Elevation";
-const std::string c_highElevationEditTextureName = "High Elevation";
-const std::string c_dirtEditTextureName = "Dirt";
-const std::string c_rocksEditTextureName = "Rocks";
+const std::string c_lowElevationEditTextureName = "Low Elevation Texture";
+const std::string c_highElevationEditTextureName = "High Elevation Texture";
+const std::string c_dirtEditTextureName = "Dirt Texture";
+const std::string c_rocksEditTextureName = "Rocks Texture";
 
 void GDN_TheWorld_Edit::_bind_methods()
 {
@@ -225,6 +225,12 @@ void GDN_TheWorld_Edit::setUIAcceptFocus(bool b)
 	m_innerData->m_desideredMinHeightLabel->set_focus_mode(focusMode);
 	m_innerData->m_fractalWeightedStrength->set_focus_mode(focusMode);
 	m_innerData->m_fractalPingPongStrength->set_focus_mode(focusMode);
+	m_innerData->m_slopeVerticalFactor->set_focus_mode(focusMode);
+	m_innerData->m_slopeFlatFactor->set_focus_mode(focusMode);
+	m_innerData->m_dirtOnRocksFactor->set_focus_mode(focusMode);
+	m_innerData->m_highElevationFactor->set_focus_mode(focusMode);
+	m_innerData->m_lowElevationFactor->set_focus_mode(focusMode);
+	m_innerData->m_splatMapMode->set_focus_mode(focusMode);
 
 	m_UIAcceptingFocus = b;
 }
@@ -276,9 +282,12 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//const Color self_modulate(1.0f, 1.0f, 1.0f, 1.0f);
 
 	godot::HBoxContainer* hBoxContainer = nullptr;
+	godot::VBoxContainer* vBoxContainer = nullptr;
 	godot::Control* separator = nullptr;
 	godot::Button* button = nullptr;
 	godot::Label* label = nullptr;
+	godot::HSplitContainer* hSplitContainer = nullptr;
+	godot::LineEdit* lineEdit = nullptr;
 	godot::Error e;
 
 	m_innerData->m_mainPanelContainer = createControl<godot::PanelContainer>(this, "");
@@ -443,18 +452,33 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 
 		godot::Vector2 size(70, 70);
 		
-		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_lowElevationEditTextureName.c_str());
-		m_innerData->m_lowElevationTexPanel = createControl<godot::PanelContainer>(m_innerData->m_terrEditVBoxContainer, "LowElevationTexPanel");
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTexPanel, "godot::PanelContainer", "mouse_entered", this, "void_signal_manager", c_lowElevationEditTextureName.c_str());
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTexPanel, "godot::PanelContainer", "mouse_exited", this, "void_signal_manager", c_lowElevationEditTextureName.c_str());
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTexPanel, "godot::PanelContainer", "gui_input", this, "gui_input_event", c_lowElevationEditTextureName.c_str());
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_lowElevationTexPanel);
-		m_innerData->m_lowElevationTex = createControl<godot::TextureRect>(hBoxContainer);
-		m_innerData->m_lowElevationTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
-		m_innerData->m_lowElevationTex->set_custom_minimum_size(size);
-		m_innerData->m_lowElevationTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
-		m_innerData->m_lowElevationTexName = createControl<godot::Label>(hBoxContainer);
-		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
+		godot::Size2 labelMinimumSize(150, 0);
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(hBoxContainer, "", "High Elev. Factor");
+		label->set_custom_minimum_size(labelMinimumSize);
+		m_innerData->m_highElevationFactor = createControl<godot::LineEdit>(hBoxContainer);
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(hBoxContainer, "", "Low Elev. Factor");
+		label->set_custom_minimum_size(labelMinimumSize);
+		m_innerData->m_lowElevationFactor = createControl<godot::LineEdit>(hBoxContainer);
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(hBoxContainer, "", "Slope Vert. Factor");
+		label->set_custom_minimum_size(labelMinimumSize);
+		m_innerData->m_slopeVerticalFactor = createControl<godot::LineEdit>(hBoxContainer);
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(hBoxContainer, "", "Slope Flat Factor");
+		label->set_custom_minimum_size(labelMinimumSize);
+		m_innerData->m_slopeFlatFactor = createControl<godot::LineEdit>(hBoxContainer);
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(hBoxContainer, "", "Dirt On Rocks Factor");
+		label->set_custom_minimum_size(labelMinimumSize);
+		m_innerData->m_dirtOnRocksFactor = createControl<godot::LineEdit>(hBoxContainer);
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_terrEditVBoxContainer);
+		label = createControl<godot::Label>(hBoxContainer, "", "Splatmap Mode");
+		label->set_custom_minimum_size(labelMinimumSize);
+		m_innerData->m_splatMapMode = createControl<godot::LineEdit>(hBoxContainer);
+
+		separator = createControl<HSeparator>(m_innerData->m_terrEditVBoxContainer);
 
 		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_highElevationEditTextureName.c_str());
 		m_innerData->m_highElevationTexPanel = createControl<godot::PanelContainer>(m_innerData->m_terrEditVBoxContainer, "HighElevationTexPanel");
@@ -469,17 +493,17 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_innerData->m_highElevationTexName = createControl<godot::Label>(hBoxContainer);
 		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 
-		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_dirtEditTextureName.c_str());
-		m_innerData->m_dirtTexPanel = createControl<godot::PanelContainer>(m_innerData->m_terrEditVBoxContainer, "DirtTexPanel");
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTexPanel, "godot::PanelContainer", "mouse_entered", this, "void_signal_manager", c_dirtEditTextureName.c_str());
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTexPanel, "godot::PanelContainer", "mouse_exited", this, "void_signal_manager", c_dirtEditTextureName.c_str());
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTexPanel, "godot::PanelContainer", "gui_input", this, "gui_input_event", c_dirtEditTextureName.c_str());
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_dirtTexPanel);
-		m_innerData->m_dirtTex = createControl<godot::TextureRect>(hBoxContainer);
-		m_innerData->m_dirtTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
-		m_innerData->m_dirtTex->set_custom_minimum_size(size);
-		m_innerData->m_dirtTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
-		m_innerData->m_dirtTexName = createControl<godot::Label>(hBoxContainer);
+		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_lowElevationEditTextureName.c_str());
+		m_innerData->m_lowElevationTexPanel = createControl<godot::PanelContainer>(m_innerData->m_terrEditVBoxContainer, "LowElevationTexPanel");
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTexPanel, "godot::PanelContainer", "mouse_entered", this, "void_signal_manager", c_lowElevationEditTextureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTexPanel, "godot::PanelContainer", "mouse_exited", this, "void_signal_manager", c_lowElevationEditTextureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_lowElevationTexPanel, "godot::PanelContainer", "gui_input", this, "gui_input_event", c_lowElevationEditTextureName.c_str());
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_lowElevationTexPanel);
+		m_innerData->m_lowElevationTex = createControl<godot::TextureRect>(hBoxContainer);
+		m_innerData->m_lowElevationTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
+		m_innerData->m_lowElevationTex->set_custom_minimum_size(size);
+		m_innerData->m_lowElevationTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
+		m_innerData->m_lowElevationTexName = createControl<godot::Label>(hBoxContainer);
 		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 
 		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_rocksEditTextureName.c_str());
@@ -493,6 +517,19 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_innerData->m_rocksTex->set_custom_minimum_size(size);
 		m_innerData->m_rocksTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
 		m_innerData->m_rocksTexName = createControl<godot::Label>(hBoxContainer);
+		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
+
+		label = createControl<godot::Label>(m_innerData->m_terrEditVBoxContainer, "", c_dirtEditTextureName.c_str());
+		m_innerData->m_dirtTexPanel = createControl<godot::PanelContainer>(m_innerData->m_terrEditVBoxContainer, "DirtTexPanel");
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTexPanel, "godot::PanelContainer", "mouse_entered", this, "void_signal_manager", c_dirtEditTextureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTexPanel, "godot::PanelContainer", "mouse_exited", this, "void_signal_manager", c_dirtEditTextureName.c_str());
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_dirtTexPanel, "godot::PanelContainer", "gui_input", this, "gui_input_event", c_dirtEditTextureName.c_str());
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_dirtTexPanel);
+		m_innerData->m_dirtTex = createControl<godot::TextureRect>(hBoxContainer);
+		m_innerData->m_dirtTex->set_expand_mode(godot::TextureRect::EXPAND_IGNORE_SIZE);
+		m_innerData->m_dirtTex->set_custom_minimum_size(size);
+		m_innerData->m_dirtTex->set_stretch_mode(godot::TextureRect::STRETCH_SCALE);
+		m_innerData->m_dirtTexName = createControl<godot::Label>(hBoxContainer);
 		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 	}
 	
@@ -618,6 +655,12 @@ void GDN_TheWorld_Edit::setEmptyTerrainEditValues(void)
 	setScaleFactor(1.0f);
 	setMinHeight(0.0f);
 	setMaxHeight(0.0f);
+	setSlopeVerticalFactor(0.0f);
+	setSlopeFlatFactor(0.0f);
+	setDirtOnRocksFactor(0.0f);
+	setHighElevationFactor(0.0f);
+	setLowEleveationFactor(0.0f);
+	setSplatMapMode(1);
 
 	m_innerData->m_lowElevationTexName->set_text("");
 	m_innerData->m_highElevationTexName->set_text("");
@@ -656,6 +699,13 @@ void GDN_TheWorld_Edit::setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrai
 	setDesideredMinHeight(terrainEdit.noise.desideredMinHeight);
 	setMinHeight(terrainEdit.minHeight);
 	setMaxHeight(terrainEdit.maxHeight);
+
+	setSlopeVerticalFactor(4.0f);
+	setSlopeFlatFactor(1.0f);
+	setDirtOnRocksFactor(2.0f);
+	setHighElevationFactor(4.0f);
+	setLowEleveationFactor(2.0f);
+	setSplatMapMode(1);
 
 	std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>>& groundTextures = ShaderTerrainData::getGroundTextures();
 
@@ -812,6 +862,84 @@ float GDN_TheWorld_Edit::desideredMinHeight(void)
 	godot::String s = m_innerData->m_desideredMinHeightLabel->get_text();
 	const char* str = s.utf8().get_data();
 	float ret = std::stof(std::string(str));
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setSlopeVerticalFactor(float value)
+{
+	m_innerData->m_slopeVerticalFactor->set_text(std::to_string(value).c_str());
+}
+
+float GDN_TheWorld_Edit::slopeVerticalFactor(void)
+{
+	godot::String s = m_innerData->m_slopeVerticalFactor->get_text();
+	const char* str = s.utf8().get_data();
+	float ret = std::stof(std::string(str));
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setSlopeFlatFactor(float value)
+{
+	m_innerData->m_slopeFlatFactor->set_text(std::to_string(value).c_str());
+}
+
+float GDN_TheWorld_Edit::slopeFlatFactor(void)
+{
+	godot::String s = m_innerData->m_slopeFlatFactor->get_text();
+	const char* str = s.utf8().get_data();
+	float ret = std::stof(std::string(str));
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setDirtOnRocksFactor(float value)
+{
+	m_innerData->m_dirtOnRocksFactor->set_text(std::to_string(value).c_str());
+}
+
+float GDN_TheWorld_Edit::dirtOnRocksFactor(void)
+{
+	godot::String s = m_innerData->m_dirtOnRocksFactor->get_text();
+	const char* str = s.utf8().get_data();
+	float ret = std::stof(std::string(str));
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setHighElevationFactor(float value)
+{
+	m_innerData->m_highElevationFactor->set_text(std::to_string(value).c_str());
+}
+
+float GDN_TheWorld_Edit::highElevationFactor(void)
+{
+	godot::String s = m_innerData->m_highElevationFactor->get_text();
+	const char* str = s.utf8().get_data();
+	float ret = std::stof(std::string(str));
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setLowEleveationFactor(float value)
+{
+	m_innerData->m_lowElevationFactor->set_text(std::to_string(value).c_str());
+}
+
+float GDN_TheWorld_Edit::lowEleveationFactor(void)
+{
+	godot::String s = m_innerData->m_lowElevationFactor->get_text();
+	const char* str = s.utf8().get_data();
+	float ret = std::stof(std::string(str));
+	return ret;
+}
+
+void GDN_TheWorld_Edit::setSplatMapMode(size_t value)
+{
+	m_innerData->m_splatMapMode->set_text(std::to_string(value).c_str());
+}
+
+size_t GDN_TheWorld_Edit::splatMapMode(void)
+{
+	godot::String s = m_innerData->m_splatMapMode->get_text();
+	const char* str = s.utf8().get_data();
+	size_t ret = size_t(std::stoi(std::string(str)));
 	return ret;
 }
 
@@ -2598,10 +2726,10 @@ void GDN_TheWorld_Edit::editModeGenNormalsAction(void)
 
 void GDN_TheWorld_Edit::editModeGenNormals(void)
 {
-	editModeGenNormals_1(true);
+	editModeGenNormals_1(true, false);
 }
 
-void GDN_TheWorld_Edit::editModeGenNormals_1(bool force)
+void GDN_TheWorld_Edit::editModeGenNormals_1(bool forceGenSelectedQuad, bool evaluateSelectedQuadOnly)
 {
 	if (m_actionClock.counterStarted())
 	{
@@ -2628,130 +2756,177 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool force)
 		return;
 	}
 
-	if (quadTreeSel != nullptr && force)
-		quadTreeSel->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;
-
 	std::vector<QuadrantPos> allQuandrantPos;
 	m_viewer->getAllQuadrantPos(allQuandrantPos);
 
-	std::vector<QuadrantPos> quandrantPos;
-	for (auto& pos : allQuandrantPos)
+	std::vector<QuadrantPos> quandrantPosToRegen;
 	{
-		QuadTree* quadTree = m_viewer->getQuadTree(pos);
-		if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
-		{
-			//quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;		// SUPERDEBUGRIC: force to generate normals
-			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
-			if (normalsBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
-			{
-				if (allCheched || pos == quadrantSelPos)
-				{
-					quandrantPos.push_back(pos);
-					quadTree->getQuadrant()->setNeedUploadToServer(true);
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.1 ") + __FUNCTION__, "Select quads");
 
-					if (!allCheched)
-						break;
+		if (evaluateSelectedQuadOnly)
+		{
+			if (quadTreeSel != nullptr)
+			{
+				if (forceGenSelectedQuad)
+				{
+					quadTreeSel->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;
+					quadTreeSel->getQuadrant()->setNeedUploadToServer(true);
+					quandrantPosToRegen.push_back(quadrantSelPos);
+				}
+				else
+				{
+					TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTreeSel->getQuadrant()->getNormalsBuffer(true);
+					if (normalsBuffer.size() == 0 || quadTreeSel->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
+					{
+						quadTreeSel->getQuadrant()->setNeedUploadToServer(true);
+						quandrantPosToRegen.push_back(quadrantSelPos);
+					}
+				}
+			}
+
+		}
+		else
+		{
+			if (quadTreeSel != nullptr && forceGenSelectedQuad)
+				quadTreeSel->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;
+
+			int num = 0;
+			for (auto& pos : allQuandrantPos)
+			{
+				num++;
+				QuadTree* quadTree = m_viewer->getQuadTree(pos);
+				if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
+				{
+					//quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen = true;		// SUPERDEBUGRIC: force to generate normals
+					TheWorld_Utils::MemoryBuffer* pn = nullptr;
+					{
+						TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.1.1 ") + __FUNCTION__, "getNormalsBuffer quad");
+						TheWorld_Utils::MemoryBuffer& n = quadTree->getQuadrant()->getNormalsBuffer(true);
+						pn = &n;
+					}
+					TheWorld_Utils::MemoryBuffer& normalsBuffer = *pn;
+					if (normalsBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
+					{
+						if (allCheched || pos == quadrantSelPos)
+						{
+							quadTree->getQuadrant()->setNeedUploadToServer(true);
+							quandrantPosToRegen.push_back(pos);
+
+							if (!allCheched)
+								break;
+						}
+					}
 				}
 			}
 		}
 	}
 
-	m_completedItems = 0;
-	m_elapsedCompleted = 0;
-	m_lastElapsed = 0;
-	m_allItems = quandrantPos.size();
-	for (auto& pos : quandrantPos)
 	{
-		if (m_actionStopRequested)
-		{
-			m_actionStopRequested = false;
-			break;
-		}
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2 ") + __FUNCTION__, "Loop quads");
 
-		QuadTree* quadTree = m_viewer->getQuadTree(pos);
-		if (quadTree != nullptr)
+		m_completedItems = 0;
+		m_elapsedCompleted = 0;
+		m_lastElapsed = 0;
+		m_allItems = quandrantPosToRegen.size();
+		for (auto& pos : quandrantPosToRegen)
 		{
-			quadTree->getQuadrant()->lockInternalData();
-
-			TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
-			if (normalsBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
+			if (m_actionStopRequested)
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.1 ") + __FUNCTION__, "Single QuadTree");
-
-				TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
-				TheWorld_Utils::MemoryBuffer& heightsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
-				size_t numElements = heightsBuffer.size() / sizeof(float);
-				my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
-
-				TheWorld_Utils::MemoryBuffer emptyHeights32Buffer;
-				TheWorld_Utils::MemoryBuffer* eastHeights32Buffer = &emptyHeights32Buffer;
-				QuadrantPos p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::EastXPlus);
-				QuadTree* eastQuadTree = m_viewer->getQuadTree(p);
-				if (eastQuadTree != nullptr)
-				{
-					eastQuadTree->getQuadrant()->lockInternalData();
-					eastHeights32Buffer = &eastQuadTree->getQuadrant()->getFloat32HeightsBuffer();
-				}
-				TheWorld_Utils::MemoryBuffer* southHeights32Buffer = &emptyHeights32Buffer;
-				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::SouthZPlus);
-				QuadTree* southQuadTree = m_viewer->getQuadTree(p);
-				if (southQuadTree != nullptr)
-				{
-					southQuadTree->getQuadrant()->lockInternalData();
-					southHeights32Buffer = &southQuadTree->getQuadrant()->getFloat32HeightsBuffer();
-				}
-				TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer(true);
-
-				{
-					TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.1 ") + __FUNCTION__, "Single QuadTree - CPU");
-					cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer);
-				}
-
-				{
-					TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.1 ") + __FUNCTION__, "Single QuadTree - GPU");
-					TheWorld_Utils::MemoryBuffer* westHeights32Buffer = nullptr;
-					TheWorld_Utils::MemoryBuffer* northHeights32Buffer = nullptr;
-					TheWorld_Utils::MemoryBuffer* westNormalsBuffer = nullptr;
-					TheWorld_Utils::MemoryBuffer* eastNormalsBuffer = nullptr;
-					TheWorld_Utils::MemoryBuffer* northNormalsBuffer = nullptr;
-					TheWorld_Utils::MemoryBuffer* southNormalsBuffer = nullptr;
-					generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), 0.0f, 0.0f, 0.0f,
-						float32HeigthsBuffer, normalsBuffer,
-						*westHeights32Buffer, *westNormalsBuffer,
-						*eastHeights32Buffer, *eastNormalsBuffer,
-						*northHeights32Buffer, *northNormalsBuffer,
-						*southHeights32Buffer, *southNormalsBuffer);
-				}
-
-				if (eastQuadTree != nullptr)
-					eastQuadTree->getQuadrant()->unlockInternalData();
-				if (southQuadTree != nullptr)
-					southQuadTree->getQuadrant()->unlockInternalData();
-
-				//std::vector<float> vectGridHeights;
-				//heightsBuffer.populateFloatVector(vectGridHeights);
-				//cache.deprecated_generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
-				
-				m_mapQuadToSave[pos] = "";
-				quadTree->getQuadrant()->getTerrainEdit()->needUploadToServer = true;
-				quadTree->getQuadrant()->setNeedUploadToServer(true);
-				
-				quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen = false;
-				quadTree->getQuadrant()->setNormalsUpdated(true);
-
-				quadTree->getQuadrant()->resetSplatmapBuffer();
-
-				quadTree->getQuadrant()->resetGlobalmapBuffer();
-
-				quadTree->materialParamsNeedReset(true);
-
-				m_completedItems++;
-				size_t partialCount = m_actionClock.partialDuration().count();
-				m_lastElapsed = partialCount - m_elapsedCompleted;
-				m_elapsedCompleted = partialCount;
+				m_actionStopRequested = false;
+				break;
 			}
 
-			quadTree->getQuadrant()->unlockInternalData();
+			QuadTree* quadTree = m_viewer->getQuadTree(pos);
+			if (quadTree != nullptr)
+			{
+				quadTree->getQuadrant()->lockInternalData();
+
+				TheWorld_Utils::MemoryBuffer* pn = nullptr;
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.1 ") + __FUNCTION__, "getNormalsBuffer quad");
+					TheWorld_Utils::MemoryBuffer& n = quadTree->getQuadrant()->getNormalsBuffer(true);
+					pn = &n;
+				}
+				TheWorld_Utils::MemoryBuffer& normalsBuffer = *pn;
+				if (normalsBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2 ") + __FUNCTION__, "Single QuadTree");
+
+					TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
+					TheWorld_Utils::MemoryBuffer& heightsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
+					size_t numElements = heightsBuffer.size() / sizeof(float);
+					my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
+
+					TheWorld_Utils::MemoryBuffer emptyHeights32Buffer;
+					TheWorld_Utils::MemoryBuffer* eastHeights32Buffer = &emptyHeights32Buffer;
+					QuadrantPos p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::EastXPlus);
+					QuadTree* eastQuadTree = m_viewer->getQuadTree(p);
+					if (eastQuadTree != nullptr)
+					{
+						eastQuadTree->getQuadrant()->lockInternalData();
+						eastHeights32Buffer = &eastQuadTree->getQuadrant()->getFloat32HeightsBuffer();
+					}
+					TheWorld_Utils::MemoryBuffer* southHeights32Buffer = &emptyHeights32Buffer;
+					p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::SouthZPlus);
+					QuadTree* southQuadTree = m_viewer->getQuadTree(p);
+					if (southQuadTree != nullptr)
+					{
+						southQuadTree->getQuadrant()->lockInternalData();
+						southHeights32Buffer = &southQuadTree->getQuadrant()->getFloat32HeightsBuffer();
+					}
+					TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer(true);
+
+					{
+						TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.1 ") + __FUNCTION__, "Single QuadTree - CPU");
+						cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer);
+					}
+
+					{
+						TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.2 ") + __FUNCTION__, "Single QuadTree - GPU");
+						TheWorld_Utils::MemoryBuffer* westHeights32Buffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* northHeights32Buffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* westNormalsBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* eastNormalsBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* northNormalsBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* southNormalsBuffer = nullptr;
+						generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), 0.0f, 0.0f, 0.0f,
+							float32HeigthsBuffer, normalsBuffer,
+							*westHeights32Buffer, *westNormalsBuffer,
+							*eastHeights32Buffer, *eastNormalsBuffer,
+							*northHeights32Buffer, *northNormalsBuffer,
+							*southHeights32Buffer, *southNormalsBuffer);
+					}
+
+					if (eastQuadTree != nullptr)
+						eastQuadTree->getQuadrant()->unlockInternalData();
+					if (southQuadTree != nullptr)
+						southQuadTree->getQuadrant()->unlockInternalData();
+
+					//std::vector<float> vectGridHeights;
+					//heightsBuffer.populateFloatVector(vectGridHeights);
+					//cache.deprecated_generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), vectGridHeights, normalsBuffer);
+
+					m_mapQuadToSave[pos] = "";
+					quadTree->getQuadrant()->getTerrainEdit()->needUploadToServer = true;
+					quadTree->getQuadrant()->setNeedUploadToServer(true);
+
+					quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen = false;
+					quadTree->getQuadrant()->setNormalsUpdated(true);
+
+					quadTree->getQuadrant()->resetSplatmapBuffer();
+
+					quadTree->getQuadrant()->resetGlobalmapBuffer();
+
+					quadTree->materialParamsNeedReset(true);
+
+					m_completedItems++;
+					size_t partialCount = m_actionClock.partialDuration().count();
+					m_lastElapsed = partialCount - m_elapsedCompleted;
+					m_elapsedCompleted = partialCount;
+				}
+
+				quadTree->getQuadrant()->unlockInternalData();
+			}
 		}
 	}
 
@@ -2779,7 +2954,18 @@ void GDN_TheWorld_Edit::generateNormalsForBlendedQuadrants(size_t numVerticesPer
 	TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer,
 	TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer)
 {
+	// distance == 0 ==> all the quadrant
+}
 
+void GDN_TheWorld_Edit::generateSplatmapForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
+	float x, float z, float distance,
+	TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer,
+	TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer, TheWorld_Utils::MemoryBuffer& west_splatmapBuffer,
+	TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_normalsBuffer, TheWorld_Utils::MemoryBuffer& east_splatmapBuffer,
+	TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer, TheWorld_Utils::MemoryBuffer& north_splatmapBuffer,
+	TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer, TheWorld_Utils::MemoryBuffer& south_splatmapBuffer)
+{
+	// distance == 0 ==> all the quadrant
 }
 
 void GDN_TheWorld_Edit::editModeApplyTexturesAction(void)
@@ -2804,7 +2990,7 @@ void GDN_TheWorld_Edit::editModeApplyTextures(void)
 		return;
 	}
 
-	editModeGenNormals_1(false);
+	editModeGenNormals_1(false, true);
 
 	m_actionInProgress = true;
 
@@ -2834,85 +3020,136 @@ void GDN_TheWorld_Edit::editModeApplyTextures(void)
 	m_viewer->getAllQuadrantPos(allQuandrantPos);
 
 	std::vector<QuadrantPos> quandrantPos;
-	for (auto& pos : allQuandrantPos)
 	{
-		QuadTree* quadTree = m_viewer->getQuadTree(pos);
-		if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
-		{
-			//quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen = true;		// SUPERDEBUGRIC: force to generate textures
-			TheWorld_Utils::MemoryBuffer& splatmapBuffer = quadTree->getQuadrant()->getSplatmapBuffer(true);
-			if (splatmapBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen)
-			{
-				if (allCheched || pos == quadrantSelPos)
-				{
-					quandrantPos.push_back(pos);
-					quadTree->getQuadrant()->setNeedUploadToServer(true);
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.1 ") + __FUNCTION__, "Select Quads");
 
-					if (!allCheched)
-						break;
+		for (auto& pos : allQuandrantPos)
+		{
+			QuadTree* quadTree = m_viewer->getQuadTree(pos);
+			if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
+			{
+				//quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen = true;		// SUPERDEBUGRIC: force to generate textures
+				TheWorld_Utils::MemoryBuffer* sp = nullptr;
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.1.1 ") + __FUNCTION__, "getSplatmapBuffer quad");
+					TheWorld_Utils::MemoryBuffer& s = quadTree->getQuadrant()->getSplatmapBuffer(true);
+					sp = &s;
+				}
+				TheWorld_Utils::MemoryBuffer& splatmapBuffer = *sp;
+				if (splatmapBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen)
+				{
+					if (allCheched || pos == quadrantSelPos)
+					{
+						quandrantPos.push_back(pos);
+						quadTree->getQuadrant()->setNeedUploadToServer(true);
+
+						if (!allCheched)
+							break;
+					}
 				}
 			}
 		}
 	}
 
-	m_completedItems = 0;
-	m_elapsedCompleted = 0;
-	m_lastElapsed = 0;
-	m_allItems = quandrantPos.size();
-	for (auto& pos : quandrantPos)
 	{
-		if (m_actionStopRequested)
-		{
-			m_actionStopRequested = false;
-			break;
-		}
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.2 ") + __FUNCTION__, "Loop Quads");
 
-		QuadTree* quadTree = m_viewer->getQuadTree(pos);
-		if (quadTree != nullptr)
+		m_completedItems = 0;
+		m_elapsedCompleted = 0;
+		m_lastElapsed = 0;
+		m_allItems = quandrantPos.size();
+		for (auto& pos : quandrantPos)
 		{
-			quadTree->getQuadrant()->lockInternalData();
-
-			TheWorld_Utils::MemoryBuffer& splatmapBuffer = quadTree->getQuadrant()->getSplatmapBuffer(true);
-			if (splatmapBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen)
+			if (m_actionStopRequested)
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.1 ") + __FUNCTION__, "Single QuadTree");
-
-				
-				TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
-				
-				TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
-				TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
-				TheWorld_Utils::MemoryBuffer& splatmapBuffer = quadTree->getQuadrant()->getSplatmapBuffer();
-				size_t numElements = float32HeigthsBuffer.size() / sizeof(float);
-				my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
-
-				cache.generateSplatmap(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), quadTree->getQuadrant()->getTerrainEdit(), float32HeigthsBuffer, normalsBuffer, splatmapBuffer);
-
-				m_mapQuadToSave[pos] = "";
-				quadTree->getQuadrant()->getTerrainEdit()->needUploadToServer = true;
-				quadTree->getQuadrant()->setNeedUploadToServer(true);
-
-				quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen = false;
-				quadTree->getQuadrant()->setSplatmapUpdated(true);
-
-				quadTree->getQuadrant()->resetGlobalmapBuffer();
-
-				quadTree->materialParamsNeedReset(true);
-
-				{
-					quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
-					quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::highElevation);
-					quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::dirt);
-					quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::rocks);
-				}
-
-				m_completedItems++;
-				size_t partialCount = m_actionClock.partialDuration().count();
-				m_lastElapsed = partialCount - m_elapsedCompleted;
-				m_elapsedCompleted = partialCount;
+				m_actionStopRequested = false;
+				break;
 			}
 
-			quadTree->getQuadrant()->unlockInternalData();
+			QuadTree* quadTree = m_viewer->getQuadTree(pos);
+			if (quadTree != nullptr)
+			{
+				quadTree->getQuadrant()->lockInternalData();
+
+				TheWorld_Utils::MemoryBuffer* sp = nullptr;
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.2.1 ") + __FUNCTION__, "getSplatmapBuffer quad");
+					TheWorld_Utils::MemoryBuffer& s = quadTree->getQuadrant()->getSplatmapBuffer(true);
+					sp = &s;
+				}
+				TheWorld_Utils::MemoryBuffer& splatmapBuffer = *sp;
+				if (splatmapBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen)
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.2.2 ") + __FUNCTION__, "Single QuadTree");
+
+
+					TheWorld_Utils::MeshCacheBuffer& cache = quadTree->getQuadrant()->getMeshCacheBuffer();
+
+					TheWorld_Utils::MemoryBuffer& normalsBuffer = quadTree->getQuadrant()->getNormalsBuffer(true);
+					TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
+					TheWorld_Utils::MemoryBuffer& splatmapBuffer = quadTree->getQuadrant()->getSplatmapBuffer();
+					size_t numElements = float32HeigthsBuffer.size() / sizeof(float);
+					my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
+
+					{
+						TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.2.2.1 ") + __FUNCTION__, "Single QuadTree - CPU");
+						cache.generateSplatmap(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), quadTree->getQuadrant()->getTerrainEdit(), float32HeigthsBuffer, normalsBuffer, splatmapBuffer,
+							slopeVerticalFactor(),
+							slopeFlatFactor(),
+							dirtOnRocksFactor(),
+							highElevationFactor(),
+							lowEleveationFactor(),
+							splatMapMode());
+					}
+
+					{
+						TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.2.2.2 ") + __FUNCTION__, "Single QuadTree - GPU");
+						TheWorld_Utils::MemoryBuffer* westHeights32Buffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* eastHeights32Buffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* northHeights32Buffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* southHeights32Buffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* westNormalsBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* eastNormalsBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* northNormalsBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* southNormalsBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* westSplatmapBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* eastSplatmapBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* northSplatmapBuffer = nullptr;
+						TheWorld_Utils::MemoryBuffer* southSplatmapBuffer = nullptr;
+						generateSplatmapForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), 0.0f, 0.0f, 0.0f,
+							float32HeigthsBuffer, normalsBuffer, splatmapBuffer,
+							*westHeights32Buffer, *westNormalsBuffer, *westSplatmapBuffer,
+							*eastHeights32Buffer, *eastNormalsBuffer, *eastSplatmapBuffer,
+							*northHeights32Buffer, *northNormalsBuffer, *northSplatmapBuffer,
+							*southHeights32Buffer, *southNormalsBuffer, *southSplatmapBuffer);
+					}
+
+					m_mapQuadToSave[pos] = "";
+					quadTree->getQuadrant()->getTerrainEdit()->needUploadToServer = true;
+					quadTree->getQuadrant()->setNeedUploadToServer(true);
+
+					quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen = false;
+					quadTree->getQuadrant()->setSplatmapUpdated(true);
+
+					quadTree->getQuadrant()->resetGlobalmapBuffer();
+
+					quadTree->materialParamsNeedReset(true);
+
+					{
+						quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
+						quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::highElevation);
+						quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::dirt);
+						quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::rocks);
+					}
+
+					m_completedItems++;
+					size_t partialCount = m_actionClock.partialDuration().count();
+					m_lastElapsed = partialCount - m_elapsedCompleted;
+					m_elapsedCompleted = partialCount;
+				}
+
+				quadTree->getQuadrant()->unlockInternalData();
+			}
 		}
 	}
 

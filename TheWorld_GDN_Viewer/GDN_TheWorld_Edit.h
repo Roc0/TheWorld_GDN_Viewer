@@ -16,6 +16,7 @@
 #include <godot_cpp/classes/ref.hpp>
 #include <godot_cpp/classes/style_box_flat.hpp>
 #include <godot_cpp/classes/style_box_empty.hpp>
+#include <godot_cpp/classes/h_split_container.hpp>
 #pragma warning (pop)
 
 #include <WorldModifier.h>
@@ -130,6 +131,13 @@ namespace godot
 				m_rocksTexSelected = false;
 				m_onGoing = false;
 				m_mouseInsideMainPanel = false;
+				m_slopeVerticalFactor = nullptr;
+				m_slopeFlatFactor = nullptr;
+				m_dirtOnRocksFactor = nullptr;
+				m_highElevationFactor = nullptr;
+				m_lowElevationFactor = nullptr;
+				m_splatMapMode = nullptr;
+
 			}
 			~InnerData()
 			{
@@ -177,6 +185,12 @@ namespace godot
 			godot::Control* m_terrEditVBoxContainer;
 			godot::Button* m_terrEditButton;
 
+			godot::LineEdit* m_slopeVerticalFactor;
+			godot::LineEdit* m_slopeFlatFactor;
+			godot::LineEdit* m_dirtOnRocksFactor;
+			godot::LineEdit* m_highElevationFactor;
+			godot::LineEdit* m_lowElevationFactor;
+			godot::LineEdit* m_splatMapMode;
 			godot::PanelContainer* m_lowElevationTexPanel;
 			godot::PanelContainer* m_highElevationTexPanel;
 			godot::PanelContainer* m_dirtTexPanel;
@@ -278,7 +292,7 @@ namespace godot
 		void editModeGenerate(void);
 		void editModeBlend(void);
 		void editModeGenNormals(void);
-		void editModeGenNormals_1(bool force);
+		void editModeGenNormals_1(bool forceGenSelectedQuad, bool evaluateSelectedQuadOnly);
 		void editModeApplyTextures(void);
 		void editModeSave(void);
 		void editModeUpload(void);
@@ -289,6 +303,13 @@ namespace godot
 			TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_normalsBuffer,
 			TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer,
 			TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer);
+		void generateSplatmapForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
+			float x, float z, float distance,
+			TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer,
+			TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer, TheWorld_Utils::MemoryBuffer& west_splatmapBuffer,
+			TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_normalsBuffer, TheWorld_Utils::MemoryBuffer& east_splatmapBuffer,
+			TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer, TheWorld_Utils::MemoryBuffer& north_splatmapBuffer,
+			TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer, TheWorld_Utils::MemoryBuffer& south_splatmapBuffer);
 
 		void manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData& quadrantData, QuadTree* quadTree, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer& heights16Buffer, TheWorld_Utils::MemoryBuffer& heights32Buffer);
 
@@ -329,6 +350,18 @@ namespace godot
 		void setCounter(size_t curr, size_t all);
 		void setNote1(size_t num);
 		void setNote1(std::string msg);
+		void setSlopeVerticalFactor(float value);
+		float slopeVerticalFactor(void);
+		void setSlopeFlatFactor(float value);
+		float slopeFlatFactor(void);
+		void setDirtOnRocksFactor(float value);
+		float dirtOnRocksFactor(void);
+		void setHighElevationFactor(float value);
+		float highElevationFactor(void);
+		void setLowEleveationFactor(float value);
+		float lowEleveationFactor(void);
+		void setSplatMapMode(size_t value);
+		size_t splatMapMode(void);
 
 		bool actionInProgress(void)
 		{

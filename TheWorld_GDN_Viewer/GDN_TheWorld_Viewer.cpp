@@ -4324,7 +4324,7 @@ void GDN_TheWorld_Viewer::streamer(void)
 		Sleep(STREAMER_SLEEP_TIME);
 	}
 
-	Globals()->debugPrint("streamer thread STPOPPED");
+	Globals()->debugPrint("streamer thread STOPPED");
 
 	m_streamerThreadRunning = false;
 }
