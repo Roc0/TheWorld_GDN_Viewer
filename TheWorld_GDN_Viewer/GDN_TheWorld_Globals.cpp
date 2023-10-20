@@ -60,6 +60,13 @@ namespace godot
 		const char* s = userPath.utf8().get_data();
 		std::string dir = std::string(s) + "\\TheWorld";
 
+		if (dir.length() < 10)
+		{
+			std::string msg = std::string("Beccato " + dir);
+			PLOG_ERROR << msg;
+			throw(GDN_TheWorld_Exception(__FUNCTION__, msg.c_str()));
+		}
+
 		return dir;
 	}
 

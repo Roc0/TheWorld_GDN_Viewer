@@ -17,6 +17,8 @@
 #include <godot_cpp/classes/style_box_flat.hpp>
 #include <godot_cpp/classes/style_box_empty.hpp>
 #include <godot_cpp/classes/h_split_container.hpp>
+#include <godot_cpp/classes/sub_viewport.hpp>
+#include <godot_cpp/classes/sprite2d.hpp>
 #pragma warning (pop)
 
 #include <WorldModifier.h>
@@ -25,7 +27,67 @@ namespace godot
 {
 	//class GDN_TheWorld_Viewer;
 
-	class GDN_TheWorld_Edit : public MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
+	class GDN_TheWorld_MapModder : public godot::Node
+	{
+		GDCLASS(GDN_TheWorld_MapModder, Node)
+
+	protected:
+		static void _bind_methods();
+		void _notification(int p_what);
+
+	public:
+		GDN_TheWorld_MapModder();
+		~GDN_TheWorld_MapModder();
+
+		//
+		// Godot Standard Functions
+		//
+		virtual void _ready(void) override;
+		virtual void _process(double _delta) override;
+		virtual void _physics_process(double _delta) override;
+		virtual void _input(const Ref<InputEvent>& event) override;
+
+		void initForNormals(GDN_TheWorld_Viewer* viewer, GDN_TheWorld_Edit* edit, TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, size_t tileSize, size_t viewportBorder = 0);
+		void deinit(void);
+		void startProcessing(void);
+		bool working(void);
+		TheWorld_Utils::MemoryBuffer& getOutBuffer(void);
+		void startProcessRequired(bool b);
+		bool startProcessRequired(void);
+		void deinitRequired(bool b);
+		bool deinitRequired(void);
+
+	private:
+		bool workToDo(void);
+
+	private:
+		const int32_t c_uninitialized = 0;
+		const int32_t c_initializedForNormals = 1;
+		int32_t m_initialized = c_uninitialized;
+
+		bool m_startProcessingRequired = false;
+		bool m_deinitRequired = false;
+
+		GDN_TheWorld_Viewer* m_viewer = nullptr;
+		GDN_TheWorld_Edit* m_edit = nullptr;
+		size_t m_tileSize = 0;
+		size_t m_viewportBorder = 0;
+		TheWorld_Utils::MemoryBuffer* m_float32HeigthsBuffer = nullptr;
+
+		godot::SubViewport* m_viewport = nullptr;
+		godot::Sprite2D* m_map = nullptr;
+
+		const int16_t c_tileStatusWaiting = 0;
+		const int16_t c_tileStatusProcessing = 1;
+		std::map<godot::Vector2i, int16_t> m_tiles;
+		std::queue<godot::Vector2i> m_tilesQueue;
+		godot::Vector2i m_currentTile;
+		bool m_processingTile = false;
+
+		TheWorld_Utils::MemoryBuffer m_outBuffer;
+	};
+
+	class GDN_TheWorld_Edit : public godot::MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
 	{
 		GDCLASS(GDN_TheWorld_Edit, MarginContainer)
 
@@ -296,7 +358,7 @@ namespace godot
 		void editModeApplyTextures(void);
 		void editModeSave(void);
 		void editModeUpload(void);
-		void generateNormalsForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
+		void generateNormals(size_t numVerticesPerSize, float gridStepInWU,
 			float x, float z, float distance,
 			TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer,
 			TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer,
@@ -433,6 +495,8 @@ namespace godot
 		std::map<QuadrantPos, std::string> m_mapQuadToSave;
 
 		TheWorld_Utils::ThreadPool m_tp;
+
+		GDN_TheWorld_MapModder* m_mapModder = nullptr;
 	};
 }
 

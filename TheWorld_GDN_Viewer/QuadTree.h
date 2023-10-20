@@ -645,6 +645,7 @@ namespace godot
 #define SHADER_PARAM_COLORMAP_OPACITY_PER_TEXTURE	"u_colormap_opacity_per_texture"
 
 #define SHADER_PARAM_LOOKDEV_MAP		"u_map"
+#define SHADER_PARAM_LOOKDEV_LOD		"u_lod"
 
 	public:
 
@@ -655,6 +656,7 @@ namespace godot
 			, Splat = 3
 			, Color = 4
 			, Global = 5
+			, ChunkLod = 6
 		};
 
 		ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
@@ -682,6 +684,8 @@ namespace godot
 		void updateMaterialParams(LookDev lookdev);
 		Ref<Material> getRegularMaterial(void);
 		Ref<Material> getLookDevMaterial(void);
+		std::map<int, godot::Ref<godot::ShaderMaterial>>& getLookDevChunkLodMaterials(void);
+		godot::Ref<godot::Material> getLookDevChunkLodMaterial(int lod);
 		static void releaseGlobals(void);
 		static void getGroundTextures(godot::String dirName, GDN_TheWorld_Viewer* viewer = nullptr);
 		static std::map<std::string, std::unique_ptr<GroundTexture>>& getGroundTextures(void)
@@ -704,8 +708,9 @@ namespace godot
 	private:
 		GDN_TheWorld_Viewer* m_viewer;
 		QuadTree* m_quadTree;
-		Ref<ShaderMaterial> m_regularMaterial;
-		Ref<ShaderMaterial> m_lookDevMaterial;
+		godot::Ref<godot::ShaderMaterial> m_regularMaterial;
+		godot::Ref<godot::ShaderMaterial> m_lookDevMaterial;
+		std::map<int, godot::Ref<godot::ShaderMaterial>> m_lookDevChunkLodMaterials;
 		bool m_materialParamsNeedUpdate;
 		bool m_materialParamsNeedReset;
 
@@ -904,7 +909,7 @@ namespace godot
 		}
 		void setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev);
 		void setRegularMaterial(void);
-		Ref<Material> getCurrentMaterial(void);
+		Ref<Material> getCurrentMaterial(int lod);
 		bool resetMaterialParams(bool force = false);
 		bool materialParamsNeedReset(void);
 		void materialParamsNeedReset(bool b);

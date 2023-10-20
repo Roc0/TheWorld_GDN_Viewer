@@ -25,6 +25,9 @@
 #include <godot_cpp/classes/input_event_key.hpp>
 #include <godot_cpp/classes/style_box_flat.hpp>
 #include <godot_cpp/classes/style_box_empty.hpp>
+#include <godot_cpp/classes/world3d.hpp>
+#include <godot_cpp/classes/resource_loader.hpp>
+#include <godot_cpp/classes/viewport_texture.hpp>
 #pragma warning (pop)
 
 #include <string>
@@ -40,6 +43,258 @@ const std::string c_lowElevationEditTextureName = "Low Elevation Texture";
 const std::string c_highElevationEditTextureName = "High Elevation Texture";
 const std::string c_dirtEditTextureName = "Dirt Texture";
 const std::string c_rocksEditTextureName = "Rocks Texture";
+
+void GDN_TheWorld_MapModder::_bind_methods()
+{
+}
+
+GDN_TheWorld_MapModder::GDN_TheWorld_MapModder()
+{
+}
+
+GDN_TheWorld_MapModder::~GDN_TheWorld_MapModder()
+{
+	deinit();
+}
+
+void GDN_TheWorld_MapModder::initForNormals(GDN_TheWorld_Viewer* viewer, GDN_TheWorld_Edit* edit, TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, size_t tileSize, size_t viewportBorder)
+{
+	my_assert(m_initialized == c_uninitialized);
+	
+	if (m_initialized == c_uninitialized)
+	{
+		m_viewer = viewer;
+		m_edit = edit;
+		m_float32HeigthsBuffer = float32HeigthsBuffer;
+		m_tileSize = tileSize;
+		m_viewportBorder = viewportBorder;
+		deinitRequired(false);
+		startProcessRequired(true);
+		set_process(false);
+
+		m_initialized = c_initializedForNormals;
+	}
+}
+
+bool GDN_TheWorld_MapModder::working(void)
+{
+	if (startProcessRequired())
+		return true;
+
+	if (m_processingTile)
+		return true;
+	
+	return workToDo();
+}
+
+bool GDN_TheWorld_MapModder::workToDo(void)
+{
+	if (m_tilesQueue.size() > 0)
+		return true;
+	else
+		return false;
+}
+
+TheWorld_Utils::MemoryBuffer& GDN_TheWorld_MapModder::getOutBuffer(void)
+{
+	return m_outBuffer;
+}
+
+void GDN_TheWorld_MapModder::startProcessing(void)
+{
+	TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1 ") + __FUNCTION__, "ALL");
+
+	my_assert(m_initialized != c_uninitialized);
+
+	set_process(false);
+	// clear
+	m_tiles.clear();
+	std::queue<godot::Vector2i> empty;
+	std::swap(m_tilesQueue, empty);
+	m_processingTile = false;
+
+	godot::Node* parent = get_parent();
+	if (parent != nullptr)
+		parent->remove_child(this);
+	m_edit->add_child(this);
+	my_assert(is_inside_tree());
+
+	m_viewport = memnew(godot::SubViewport);
+	add_child(m_viewport);
+	m_viewport->set_size(godot::Vector2i(int32_t(m_tileSize + m_viewportBorder * 2), int32_t(m_tileSize + m_viewportBorder * 2)));
+	m_viewport->set_update_mode(godot::SubViewport::UpdateMode::UPDATE_DISABLED);
+	m_viewport->set_clear_mode(godot::SubViewport::ClearMode::CLEAR_MODE_ALWAYS);
+	godot::Ref<godot::World3D> w = memnew(godot::World3D);
+	m_viewport->set_world_3d(w);
+	m_viewport->set_use_own_world_3d(true);
+
+	m_map = memnew(godot::Sprite2D);
+	m_map->set_centered(false);
+	m_viewport->add_child(m_map);
+
+	// assume square buffer
+	size_t imageSize = (size_t)sqrt(float(m_float32HeigthsBuffer->size() / sizeof(float)));
+	my_assert(size_t(pow((float)imageSize, 2) * sizeof(float)) == m_float32HeigthsBuffer->size());
+	my_assert((float(imageSize) / float(m_tileSize)) * m_tileSize == imageSize);
+
+	godot::Vector2i viewportSize = m_viewport->get_size();
+	my_assert(viewportSize.x == viewportSize.y);
+	my_assert(imageSize >= viewportSize.x);
+
+	if (m_initialized == c_initializedForNormals)
+	{
+		godot::Ref<godot::Image> image;
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.1 ") + __FUNCTION__, "Create Image from heights buffer");
+
+			godot::PackedByteArray data;
+			data.resize((int64_t)m_float32HeigthsBuffer->size());
+			{
+				memcpy((char*)data.ptrw(), m_float32HeigthsBuffer->ptr(), m_float32HeigthsBuffer->size());
+			}
+
+			godot::Ref<godot::Image> im = godot::Image::create_from_data((int32_t)imageSize, (int32_t)imageSize, false, Image::FORMAT_RF, data);
+			image = im;
+		}
+
+		godot::Ref<godot::Image> texture;
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.2 ") + __FUNCTION__, "Create Texture from heights image");
+			Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+			texture = tex;
+		}
+
+		m_map->set_texture(texture);
+
+		size_t numFullTiles = (size_t)std::floor(float(imageSize) / float(m_tileSize));
+
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.3 ") + __FUNCTION__, "Put tiles in queue");
+
+			for (int y = 0; y < numFullTiles; y++)
+				for (int x = 0; x < numFullTiles; x++)
+				{
+					godot::Vector2i tilePos(x, y);
+					if (m_tiles.contains(tilePos) && m_tiles[tilePos] == c_tileStatusWaiting)
+						continue;
+					else
+					{
+						m_tiles[tilePos] = c_tileStatusWaiting;
+						m_tilesQueue.push(tilePos);
+					}
+				}
+		}
+
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.4 ") + __FUNCTION__, "Material stuff");
+
+			godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
+			godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
+			godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/tools/shaders/height2normal.gdshader");
+			mat->set_shader(shader);
+			m_map->set_material(mat);
+		}
+	}
+
+	set_process(true);
+	startProcessRequired(false);
+}
+
+void GDN_TheWorld_MapModder::deinit(void)
+{
+	if (m_initialized != c_uninitialized)
+	{
+		set_process(false);
+
+		// clear
+		m_tiles.clear();
+		std::queue<godot::Vector2i> empty;
+		std::swap(m_tilesQueue, empty);
+		m_processingTile = false;
+
+		Node* parent = m_viewport->get_parent();
+		if (parent != nullptr)
+			parent->remove_child(m_viewport);
+		m_viewport->queue_free();
+		m_viewport = nullptr;
+
+		m_viewer = nullptr;
+		m_edit = nullptr;
+
+		deinitRequired(false);
+		startProcessRequired(false);
+		
+		m_initialized = c_uninitialized;
+	}
+}
+
+void GDN_TheWorld_MapModder::startProcessRequired(bool b)
+{
+	m_startProcessingRequired = b;
+}
+
+bool GDN_TheWorld_MapModder::startProcessRequired(void)
+{
+	return m_startProcessingRequired;
+}
+
+void GDN_TheWorld_MapModder::deinitRequired(bool b)
+{
+	m_deinitRequired = b;
+}
+
+bool GDN_TheWorld_MapModder::deinitRequired(void)
+{
+	return m_deinitRequired;
+}
+
+void GDN_TheWorld_MapModder::_notification(int p_what)
+{
+}
+
+void GDN_TheWorld_MapModder::_ready(void)
+{
+}
+
+void GDN_TheWorld_MapModder::_process(double _delta)
+{
+	if (!is_processing())
+		return;
+
+	if (m_processingTile)
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("MapModder _process 1 ") + __FUNCTION__, "Processing tile");
+
+		godot::Ref<godot::Image> image = m_viewport->get_texture()->get_image();
+		godot::Image::Format f = image->get_format();
+
+		if (m_tiles.contains(m_currentTile) && m_tiles[m_currentTile] == c_tileStatusProcessing)
+			m_tiles.erase(m_currentTile);
+		
+		m_processingTile = false;
+	}
+	
+	if (workToDo())
+	{
+		godot::Vector2i tile = m_tilesQueue.front();
+		m_tilesQueue.pop();
+		godot::Vector2 pos = (godot::Vector2((float)tile.x, (float)tile.y) * (float)m_tileSize * -1) + godot::Vector2((float)m_viewportBorder, (float)m_viewportBorder);
+		m_map->set_position(pos);
+		m_viewport->set_update_mode(godot::SubViewport::UpdateMode::UPDATE_ONCE);
+		m_currentTile = tile;
+		m_tiles[tile] = c_tileStatusProcessing;
+		m_processingTile = true;
+	}
+}
+
+void GDN_TheWorld_MapModder::_physics_process(double _delta)
+{
+}
+
+void GDN_TheWorld_MapModder::_input(const Ref<InputEvent>& event)
+{
+}
+
 
 void GDN_TheWorld_Edit::_bind_methods()
 {
@@ -379,6 +634,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev splatmap", (int64_t)ShaderTerrainData::LookDev::Splat);
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev colors", (int64_t)ShaderTerrainData::LookDev::Color);
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev globalmap", (int64_t)ShaderTerrainData::LookDev::Global);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev chunk lod", (int64_t)ShaderTerrainData::LookDev::ChunkLod);
 	}
 
 	{
@@ -1405,6 +1661,21 @@ void GDN_TheWorld_Edit::_process(double _delta)
 		
 		m_infoLabelTextChanged = false;
 	}
+
+	if (m_mapModder != nullptr && m_mapModder->startProcessRequired())
+	{
+		m_mapModder->startProcessing();
+		//m_mapModder->startProcessRequired(false);
+	}
+
+	if (m_mapModder != nullptr && m_mapModder->deinitRequired())
+	{
+		m_mapModder->deinit();
+		//m_mapModder->deinitRequired(false);
+		m_mapModder->queue_free();
+		m_mapModder = nullptr;
+	}
+
 }
 
 void GDN_TheWorld_Edit::changeTextureAction()
@@ -2878,18 +3149,19 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool forceGenSelectedQuad, bool eva
 
 					{
 						TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.1 ") + __FUNCTION__, "Single QuadTree - CPU");
-						cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer);
+						//cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer);
 					}
 
 					{
 						TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.2 ") + __FUNCTION__, "Single QuadTree - GPU");
+						
 						TheWorld_Utils::MemoryBuffer* westHeights32Buffer = nullptr;
 						TheWorld_Utils::MemoryBuffer* northHeights32Buffer = nullptr;
 						TheWorld_Utils::MemoryBuffer* westNormalsBuffer = nullptr;
 						TheWorld_Utils::MemoryBuffer* eastNormalsBuffer = nullptr;
 						TheWorld_Utils::MemoryBuffer* northNormalsBuffer = nullptr;
 						TheWorld_Utils::MemoryBuffer* southNormalsBuffer = nullptr;
-						generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), 0.0f, 0.0f, 0.0f,
+						generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), 0.0f, 0.0f, 0.0f,
 							float32HeigthsBuffer, normalsBuffer,
 							*westHeights32Buffer, *westNormalsBuffer,
 							*eastHeights32Buffer, *eastNormalsBuffer,
@@ -2946,7 +3218,7 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool forceGenSelectedQuad, bool eva
 	setMessage(godot::String("Completed!"), true);
 }
 
-void GDN_TheWorld_Edit::generateNormalsForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
+void GDN_TheWorld_Edit::generateNormals(size_t numVerticesPerSize, float gridStepInWU,
 	float x, float z, float distance,
 	TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer,
 	TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer,
@@ -2955,6 +3227,15 @@ void GDN_TheWorld_Edit::generateNormalsForBlendedQuadrants(size_t numVerticesPer
 	TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer)
 {
 	// distance == 0 ==> all the quadrant
+	my_assert(m_mapModder == nullptr);
+	
+	m_viewer->getMainProcessingMutex().lock();
+	m_mapModder = memnew(GDN_TheWorld_MapModder);
+	m_viewer->getMainProcessingMutex().unlock();
+	m_mapModder->initForNormals(m_viewer, this, &float32HeigthsBuffer, 1024, 1);
+	while (m_mapModder->working())
+		Sleep(5);
+	m_mapModder->deinitRequired(true);
 }
 
 void GDN_TheWorld_Edit::generateSplatmapForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,

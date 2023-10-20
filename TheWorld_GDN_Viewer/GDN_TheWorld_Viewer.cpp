@@ -1060,7 +1060,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 			while (Globals()->Client()->getNumCallbacksRunning() > 1)
 			{
-				Sleep(5);
+				Sleep(1);
 			}
 			
 			m_mapQuadTree.clear();

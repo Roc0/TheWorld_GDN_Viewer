@@ -36,6 +36,7 @@ void initialize_tw_main_module(ModuleInitializationLevel p_level)
     ClassDB::register_class<godot::GDN_TheWorld_Camera>();
     ClassDB::register_class<godot::GDN_TheWorld_Quadrant>();
     ClassDB::register_class<godot::GDN_TheWorld_Edit>();
+    ClassDB::register_class<godot::GDN_TheWorld_MapModder>();
 }
 
 void uninitialize_tw_main_module(ModuleInitializationLevel p_level)
