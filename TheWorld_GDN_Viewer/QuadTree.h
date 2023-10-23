@@ -624,7 +624,9 @@ namespace godot
 #define SHADER_PARAM_INVERSE_TRANSFORM	"u_terrain_inverse_transform"
 #define SHADER_PARAM_NORMAL_BASIS		"u_terrain_normal_basis"
 #define SHADER_PARAM_GRID_STEP			"u_grid_step"
+
 #define SHADER_PARAM_EDITMODE_SELECTED	"u_editmode_selected"
+#define SHADER_PARAM_MOUSE_HIT			"u_mouse_hit"
 
 #define SHADER_PARAM_VERTICES_PER_CHUNK	"u_num_vertices_per_chunk"
 #define SHADER_PARAM_LOOKDEV_LOD		"u_lod"
@@ -704,6 +706,7 @@ namespace godot
 		{
 			s_groundTexturesNeedProcessing = b;
 		}
+		void mouseHitChanged(godot::Vector3 mouseHit);
 
 	private:
 		//void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
@@ -1029,6 +1032,11 @@ namespace godot
 		bool editModeSel(void)
 		{
 			return m_editModeSel;
+		}
+
+		enum class ShaderTerrainData::LookDev getLookDev(void)
+		{
+			return m_lookDev;
 		}
 
 	private:

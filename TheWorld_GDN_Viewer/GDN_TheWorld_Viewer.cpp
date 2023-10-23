@@ -2302,7 +2302,11 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 							std::string mouseQuadrantHitTag;
 							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
 							if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+							{
 								mouseQuadrantHitTag = it->second->getTag();
+
+								it->second->getQuadrant()->getShaderTerrainData()->mouseHitChanged(m_mouseHit);
+							}
 
 							if (m_editMode && editModeUIControl && editModeUIControl->initilized())
 							{

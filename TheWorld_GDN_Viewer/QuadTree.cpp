@@ -1386,6 +1386,23 @@ void ShaderTerrainData::getGroundTexture(godot::String fileName, ShaderTerrainDa
 	groundTexture->initialized = true;
 }
 
+void ShaderTerrainData::mouseHitChanged(godot::Vector3 mouseHit)
+{
+	enum class ShaderTerrainData::LookDev lookdev = m_quadTree->getLookDev();
+
+	if (lookdev == LookDev::ChunkLod)
+	{
+		std::map<int, godot::Ref<godot::ShaderMaterial>>& lookDevChunkLodMaterials = getLookDevChunkLodMaterials();
+		for (auto& item : lookDevChunkLodMaterials)
+			item.second->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, godot::Vector2(mouseHit.x, mouseHit.z));
+	}
+	else
+	{
+		godot::Ref<godot::ShaderMaterial> currentMaterial = (lookdev == LookDev::NotSet ? getRegularMaterial() : getLookDevMaterial());
+		currentMaterial->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, godot::Vector2(mouseHit.x, mouseHit.z));
+	}
+}
+
 void ShaderTerrainData::releaseGlobals(void)
 {
 	//std::lock_guard<std::recursive_mutex> lock(s_groundTexturesMutex);

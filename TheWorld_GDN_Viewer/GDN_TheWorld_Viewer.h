@@ -42,7 +42,7 @@ namespace godot
 #define MIN_MAP_SCALE 0.01F
 #define TIME_INTERVAL_BETWEEN_DUMP 0			// secs, 0 = diasble periodic dump
 #define TIME_INTERVAL_BETWEEN_STATISTICS 100	// ms, 0 = diasble periodic dump
-#define TIME_INTERVAL_BETWEEN_MOUSE_TRACK 250	// ms
+#define TIME_INTERVAL_BETWEEN_MOUSE_TRACK 100	// 250	// ms
 
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
