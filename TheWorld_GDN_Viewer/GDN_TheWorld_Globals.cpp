@@ -57,8 +57,11 @@ namespace godot
 	std::string GDN_TheWorld_Globals::getClientDataDir(void)
 	{
 		String userPath = OS::get_singleton()->get_user_data_dir();
-		const char* s = userPath.utf8().get_data();
-		std::string dir = std::string(s) + "\\TheWorld";
+		godot::PackedByteArray array = userPath.to_ascii_buffer();
+		std::string dir((char*)array.ptr(), array.size());
+		size_t l = dir.length();
+		//const char* s = userPath.utf8().get_data();
+		//std::string dir = std::string(s) + "\\TheWorld";
 
 		if (dir.length() < 10)
 		{

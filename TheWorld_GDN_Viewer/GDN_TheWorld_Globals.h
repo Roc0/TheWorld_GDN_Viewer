@@ -265,7 +265,9 @@ namespace godot
 				String msg = "DEBUG - " + editor_string + message;
 				if (godotPrint)
 					godot::UtilityFunctions::print(msg);
-				std::string m = msg.utf8().get_data();
+				godot::PackedByteArray array = msg.to_ascii_buffer();
+				std::string m((char*)array.ptr(), array.size());
+				//std::string m = msg.utf8().get_data();
 				PLOG_DEBUG << m;
 			}
 		}
@@ -278,7 +280,9 @@ namespace godot
 			String msg = "WARNING - " + editor_string + message;
 			if (godotPrint)
 				godot::UtilityFunctions::print(msg);
-			std::string m = msg.utf8().get_data();
+			godot::PackedByteArray array = msg.to_ascii_buffer();
+			std::string m((char*)array.ptr(), array.size());
+			//std::string m = msg.utf8().get_data();
 			PLOG_WARNING << m;
 		}
 
@@ -290,7 +294,9 @@ namespace godot
 			String msg = "ERROR - " + editor_string + message;
 			if (godotPrint)
 				godot::UtilityFunctions::print(msg);
-			std::string m = msg.utf8().get_data();
+			godot::PackedByteArray array = msg.to_ascii_buffer();
+			std::string m((char*)array.ptr(), array.size());
+			//std::string m = msg.utf8().get_data();
 			PLOG_ERROR << m;
 		}
 
@@ -309,7 +315,9 @@ namespace godot
 		{
 			if (godotPrint)
 				godot::UtilityFunctions::print(message);
-			std::string m = message.utf8().get_data();
+			godot::PackedByteArray array = message.to_ascii_buffer();
+			std::string m((char*)array.ptr(), array.size());
+			//std::string m = message.utf8().get_data();
 			PLOG_INFO << m;
 		}
 
@@ -450,8 +458,10 @@ namespace godot
 
 		void setAppInError(int errorCode, String errorText)
 		{
-			const char* m = errorText.utf8().get_data();
-			_setAppInError(errorCode, m);
+			godot::PackedByteArray array = errorText.to_ascii_buffer();
+			std::string err((char*)array.ptr(), array.size());
+			//const char* m = errorText.utf8().get_data();
+			_setAppInError(errorCode, err.c_str());
 		}
 		void _setAppInError(int errorCode, std::string errorText)
 		{

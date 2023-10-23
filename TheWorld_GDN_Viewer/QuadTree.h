@@ -623,8 +623,13 @@ namespace godot
 
 #define SHADER_PARAM_INVERSE_TRANSFORM	"u_terrain_inverse_transform"
 #define SHADER_PARAM_NORMAL_BASIS		"u_terrain_normal_basis"
-#define SHADER_PARAM_GRID_STEP			"u_grid_step_in_wu"
+#define SHADER_PARAM_GRID_STEP			"u_grid_step"
 #define SHADER_PARAM_EDITMODE_SELECTED	"u_editmode_selected"
+
+#define SHADER_PARAM_VERTICES_PER_CHUNK	"u_num_vertices_per_chunk"
+#define SHADER_PARAM_LOOKDEV_LOD		"u_lod"
+#define	SHADER_PARAM_LOD_GRID_STEP		"u_lod_grid_step"
+#define	SHADER_PARAM_LOD_CHUNK_SIZE		"u_lod_chunk_size"
 
 #define SHADER_PARAM_GROUND_ALBEDO_BUMP_0		"u_ground_albedo_bump_0"
 #define SHADER_PARAM_GROUND_ALBEDO_BUMP_1		"u_ground_albedo_bump_1"
@@ -645,7 +650,6 @@ namespace godot
 #define SHADER_PARAM_COLORMAP_OPACITY_PER_TEXTURE	"u_colormap_opacity_per_texture"
 
 #define SHADER_PARAM_LOOKDEV_MAP		"u_map"
-#define SHADER_PARAM_LOOKDEV_LOD		"u_lod"
 
 	public:
 
@@ -682,10 +686,10 @@ namespace godot
 			m_materialParamsNeedUpdate = b;
 		}
 		void updateMaterialParams(LookDev lookdev);
-		Ref<Material> getRegularMaterial(void);
-		Ref<Material> getLookDevMaterial(void);
+		Ref<Material> getRegularMaterial(bool reload = false);
+		Ref<Material> getLookDevMaterial(bool reload = false);
 		std::map<int, godot::Ref<godot::ShaderMaterial>>& getLookDevChunkLodMaterials(void);
-		godot::Ref<godot::Material> getLookDevChunkLodMaterial(int lod);
+		godot::Ref<godot::Material> getLookDevChunkLodMaterial(int lod, bool reload = false);
 		static void releaseGlobals(void);
 		static void getGroundTextures(godot::String dirName, GDN_TheWorld_Viewer* viewer = nullptr);
 		static std::map<std::string, std::unique_ptr<GroundTexture>>& getGroundTextures(void)
@@ -907,9 +911,10 @@ namespace godot
 		{
 			return m_worldQuadrant; 
 		}
-		void setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev);
-		void setRegularMaterial(void);
+		void setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev, bool reload = false);
+		void setRegularMaterial(bool reload = false);
 		Ref<Material> getCurrentMaterial(int lod);
+		void reloadCurrentMaterial(void);
 		bool resetMaterialParams(bool force = false);
 		bool materialParamsNeedReset(void);
 		void materialParamsNeedReset(bool b);

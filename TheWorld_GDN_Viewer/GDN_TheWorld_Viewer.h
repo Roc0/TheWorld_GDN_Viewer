@@ -379,7 +379,7 @@ namespace godot
 		{
 			//godot::PackedByteArray byteStream = s.to_utf8_buffer();
 			const char* str = s.utf8().get_data();
-			std::string ret = str;
+			std::string ret = s.utf8().get_data();
 			//char* str = s.alloc_c_string();
 			//std::string ret = str;
 			//godot::api->godot_free(str);
@@ -436,6 +436,22 @@ namespace godot
 		}
 		
 		void viewportSizeChanged(void);
+		bool ReloadAllShadersRequired(void)
+		{
+			return m_reloadAllShadersRequired;
+		}
+		void ReloadAllShadersRequired(bool b)
+		{
+			m_reloadAllShadersRequired = b;
+		}
+		bool ReloadSelectedQuadrantShaderRequired(void)
+		{
+			return m_reloadSelectedQuadrantShaderRequired;
+		}
+		void ReloadSelectedQuadrantShaderRequired(bool b)
+		{
+			m_reloadSelectedQuadrantShaderRequired = b;
+		}
 
 	private:
 		void _findChildNodes(godot::Array& foundNodes, godot::Array& searchNodes, String searchClass);
@@ -589,6 +605,8 @@ namespace godot
 		float m_shaderParam_globalmapBlendDistance;
 		godot::Plane  m_shaderParam_colormapOpacity;
 		bool m_shaderParamChanged;
+		bool m_reloadAllShadersRequired = false;
+		bool m_reloadSelectedQuadrantShaderRequired = false;
 
 		// streamer thread
 		std::thread m_streamerThread;
@@ -601,7 +619,6 @@ namespace godot
 		size_t m_depthQuadOnPerimeter;
 		size_t m_cacheQuadOnPerimeter;
 	};
-
 }
 
 //	/root

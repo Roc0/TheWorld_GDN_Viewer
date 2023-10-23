@@ -31,6 +31,11 @@ namespace godot
 	{
 		GDCLASS(GDN_TheWorld_MapModder, Node)
 
+	public:
+		//enum class outImageFormat
+		//{
+		//};
+
 	protected:
 		static void _bind_methods();
 		void _notification(int p_what);
@@ -51,7 +56,7 @@ namespace godot
 		void deinit(void);
 		void startProcessing(void);
 		bool working(void);
-		TheWorld_Utils::MemoryBuffer& getOutBuffer(void);
+		TheWorld_Utils::MemoryBuffer* getOutBuffer(void);
 		void startProcessRequired(bool b);
 		bool startProcessRequired(void);
 		void deinitRequired(bool b);
@@ -72,6 +77,7 @@ namespace godot
 		GDN_TheWorld_Edit* m_edit = nullptr;
 		size_t m_tileSize = 0;
 		size_t m_viewportBorder = 0;
+		size_t m_imageSize = 0;
 		TheWorld_Utils::MemoryBuffer* m_float32HeigthsBuffer = nullptr;
 
 		godot::SubViewport* m_viewport = nullptr;
@@ -84,7 +90,8 @@ namespace godot
 		godot::Vector2i m_currentTile;
 		bool m_processingTile = false;
 
-		TheWorld_Utils::MemoryBuffer m_outBuffer;
+		godot::Ref<godot::Image> m_outImage;
+		std::unique_ptr<TheWorld_Utils::MemoryBuffer> m_outBuffer;
 	};
 
 	class GDN_TheWorld_Edit : public godot::MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
@@ -348,6 +355,7 @@ namespace godot
 		void editModeSaveAction(void);
 		void editModeUploadAction(void);
 		void editModeStopAction(void);
+		void editModeReloadShader(void);
 		void editModeSelectTerrainTypeAction(int32_t index);
 		void editModeSelectLookDevAction(int32_t index);
 
@@ -360,18 +368,18 @@ namespace godot
 		void editModeUpload(void);
 		void generateNormals(size_t numVerticesPerSize, float gridStepInWU,
 			float x, float z, float distance,
-			TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer,
-			TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer,
-			TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_normalsBuffer,
-			TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer,
-			TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer);
+			TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer,
+			TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer,
+			TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer,
+			TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer,
+			TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer);
 		void generateSplatmapForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
 			float x, float z, float distance,
-			TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer,
-			TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer, TheWorld_Utils::MemoryBuffer& west_splatmapBuffer,
-			TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_normalsBuffer, TheWorld_Utils::MemoryBuffer& east_splatmapBuffer,
-			TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer, TheWorld_Utils::MemoryBuffer& north_splatmapBuffer,
-			TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer, TheWorld_Utils::MemoryBuffer& south_splatmapBuffer);
+			TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer, TheWorld_Utils::MemoryBuffer* splatmapBuffer,
+			TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer, TheWorld_Utils::MemoryBuffer* west_splatmapBuffer,
+			TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer, TheWorld_Utils::MemoryBuffer* east_splatmapBuffer,
+			TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer, TheWorld_Utils::MemoryBuffer* north_splatmapBuffer,
+			TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer);
 
 		void manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData& quadrantData, QuadTree* quadTree, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer& heights16Buffer, TheWorld_Utils::MemoryBuffer& heights32Buffer);
 

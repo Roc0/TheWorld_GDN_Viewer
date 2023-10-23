@@ -44,7 +44,7 @@ namespace fs = std::filesystem;
 //			- calcolare le normali dinamicamente se la normal map presenta un vettore nullo
 //			- eseguire lo streching verso l'esterno dei vertici sul perimetro in modo da sovrapporsi con i chunk adiacenti ed evitare l'effetto "Fireflies along seams" --SE CI LIMITIAMO A QUESTO BASTA UNA SOLA DIREZIONE PER I VERTICI SUL BORDO(NEI 4 ANGOLI PREVALE UNO DEI DUE BORDI)--
 // . nello shader calcolare il LOD in base alla distanza dalla camera
-// . in base al LOD corrente verificare se il VERTEX è sul perimetro del chunk: si verifica se le coordinate sono 0 o vicine ad esso oppure se sono pari allo step in WU (u_grid_step_in_wu) * il numero di vertici della grid 
+// . in base al LOD corrente verificare se il VERTEX è sul perimetro del chunk: si verifica se le coordinate sono 0 o vicine ad esso oppure se sono pari allo step in WU (u_grid_step) * il numero di vertici della grid 
 //		che separano vertici aidacenti della mesh al lod corrente (da calcolare in base al lod) per il numero dei vertici di una mesh (u_num_vertices_per_chunk_side)
 // . eseguire lo streching verso l'esterno dei vertici sul perimetro in modo da sovrapporsi con i chunk adiacenti ed evitare l'effetto "Fireflies along seams" --SE CI LIMITIAMO A QUESTO BASTA UNA SOLA DIREZIONE PER I VERTICI SUL BORDO(NEI 4 ANGOLI PREVALE UNO DEI DUE BORDI)--
 //		la quantità dello stretching dipende dal lod corrente (maggiore per lod minori ovvero per risoluzioni maggiori)
@@ -293,7 +293,7 @@ void GDN_TheWorld_Viewer::setShaderParam(godot::String name, godot::Variant valu
 //		ResourceLoader* resLoader = ResourceLoader::get_singleton();
 //		//String shaderPath = "res://addons/twviewer/shaders/regularChunk.shader";
 //		String shaderPath = "res://addons/twviewer/shaders/simple4.shader";
-//		Ref<Shader> shader = resLoader->load(shaderPath);
+//		Ref<Shader> shader = resLoader->load(shaderPath, "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
 //		mat->set_shader(shader);
 //		m_regularMaterial = mat;
 //	}
@@ -310,7 +310,7 @@ void GDN_TheWorld_Viewer::setShaderParam(godot::String name, godot::Variant valu
 //		getMainProcessingMutex().unlock();
 //		ResourceLoader* resLoader = ResourceLoader::get_singleton();
 //		String shaderPath = "res://addons/twviewer/shaders/lookdevChunk.shader";
-//		Ref<Shader> shader = resLoader->load(shaderPath);
+//		Ref<Shader> shader = resLoader->load(shaderPath, "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
 //		mat->set_shader(shader);
 //		m_lookDevMaterial = mat;
 //	}
@@ -2280,8 +2280,10 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 					if (collider->has_meta("QuadrantName"))
 					{
 						godot::String s = collider->get_meta("QuadrantName", "");
-						const char* str = s.utf8().get_data();
-						std::string mouseQuadrantHitName = str;
+						godot::PackedByteArray array = s.to_ascii_buffer();
+						std::string mouseQuadrantHitName((char*)array.ptr(), array.size());
+						//const char* str = s.utf8().get_data();
+						//std::string mouseQuadrantHitName = str;
 						if (mouseQuadrantHitName != m_mouseQuadrantHitName)
 						{
 							/*s = collider->get_meta("QuadrantTag", "");
@@ -2933,6 +2935,29 @@ void GDN_TheWorld_Viewer::process_materialParam(void)
 		this->m_updateMaterialParamsDuration += clock1.duration().count();
 		});
 
+	if (ReloadSelectedQuadrantShaderRequired())
+	{
+		QuadTree* quadTreeSel = nullptr;
+		QuadrantPos quadrantSelPos = getQuadrantSelForEdit(&quadTreeSel);
+
+		if (quadTreeSel != nullptr)
+		{
+			quadTreeSel->reloadCurrentMaterial();
+		}
+		
+		ReloadSelectedQuadrantShaderRequired(false);
+	}
+
+	if (ReloadAllShadersRequired())
+	{
+		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+		{
+			itQuadTree->second->reloadCurrentMaterial();
+		}
+
+		ReloadAllShadersRequired(false);
+	}
+	
 	if (m_shaderParamChanged)
 	{
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)

@@ -738,13 +738,13 @@ bool QuadTree::updateMaterialParams(void)
 	return updated;
 }
 
-void QuadTree::setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev)
+void QuadTree::setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev, bool reload)
 {
 	my_assert(lookDev != ShaderTerrainData::LookDev::NotSet);
 	if (lookDev == ShaderTerrainData::LookDev::NotSet)
 		return;
 
-	if (m_lookDev == lookDev)
+	if (!reload && m_lookDev == lookDev)
 		return;
 
 	getQuadrant()->setHeightsUpdated(true);
@@ -757,6 +757,15 @@ void QuadTree::setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev)
 	{
 		if (isValid())
 		{
+			if (reload)
+			{
+				std::map<int, godot::Ref<godot::ShaderMaterial>> lookDevChunkLodMaterials = getQuadrant()->getShaderTerrainData()->getLookDevChunkLodMaterials();
+				for (auto& item : lookDevChunkLodMaterials)
+				{
+					getQuadrant()->getShaderTerrainData()->getLookDevChunkLodMaterial(item.first, reload);
+				}
+			}
+
 			for (Chunk::MapChunk::iterator it = m_mapChunk.begin(); it != m_mapChunk.end(); it++)
 			{
 				for (Chunk::MapChunkPerLod::iterator it1 = it->second.begin(); it1 != it->second.end(); it1++)
@@ -769,18 +778,22 @@ void QuadTree::setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev)
 	}
 	else
 	{
-		Chunk::SetMaterialChunkAction action(getQuadrant()->getShaderTerrainData()->getLookDevMaterial());
+		Chunk::SetMaterialChunkAction action(getQuadrant()->getShaderTerrainData()->getLookDevMaterial(reload));
 		ForAllChunk(action);
 	}
 
 	m_lookDev = lookDev;
 }
 
-void QuadTree::setRegularMaterial(void)
+void QuadTree::setRegularMaterial(bool reload)
 {
 	materialParamsNeedReset(true);
 
-	Chunk::SetMaterialChunkAction action(getQuadrant()->getShaderTerrainData()->getRegularMaterial());
+	getQuadrant()->setHeightsUpdated(true);
+	getQuadrant()->setNormalsUpdated(true);
+	getQuadrant()->setSplatmapUpdated(true);
+
+	Chunk::SetMaterialChunkAction action(getQuadrant()->getShaderTerrainData()->getRegularMaterial(reload));
 	ForAllChunk(action);
 
 	m_lookDev = ShaderTerrainData::LookDev::NotSet;
@@ -797,6 +810,20 @@ Ref<Material> QuadTree::getCurrentMaterial(int lod)
 		}
 		else
 			return getQuadrant()->getShaderTerrainData()->getLookDevMaterial();
+}
+
+void QuadTree::reloadCurrentMaterial(void)
+{
+	bool reload = true;
+
+	if (m_lookDev == ShaderTerrainData::LookDev::NotSet)
+	{
+		setRegularMaterial(reload);
+	}
+	else
+	{
+		setLookDevMaterial(m_lookDev, reload);
+	}
 }
 
 bool QuadTree::resetMaterialParams(bool force)
@@ -1021,31 +1048,35 @@ ShaderTerrainData::~ShaderTerrainData()
 
 void ShaderTerrainData::init(void)
 {
-	m_viewer->getMainProcessingMutex().lock();
-	godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
-	m_viewer->getMainProcessingMutex().unlock();
-	godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
-	String shaderPath = "res://addons/twviewer/shaders/regularChunk.gdshader";		// from simple4.gdshader
-	godot::Ref<godot::Shader> shader = resLoader->load(shaderPath);
-	mat->set_shader(shader);
-	m_regularMaterial = mat;
 }
 
-godot::Ref<godot::Material> ShaderTerrainData::getRegularMaterial(void)
+godot::Ref<godot::Material> ShaderTerrainData::getRegularMaterial(bool reload)
 {
+	if (m_regularMaterial == nullptr || reload)
+	{
+		m_viewer->getMainProcessingMutex().lock();
+		godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
+		m_viewer->getMainProcessingMutex().unlock();
+		godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
+		String shaderPath = "res://addons/twviewer/shaders/regularChunk.gdshader";		// from simple4.gdshader
+		godot::Ref<godot::Shader> shader = resLoader->load(shaderPath, "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
+		mat->set_shader(shader);
+		m_regularMaterial = mat;
+	}
+	
 	return m_regularMaterial;
 }
 
-godot::Ref<godot::Material> ShaderTerrainData::getLookDevMaterial(void)
+godot::Ref<godot::Material> ShaderTerrainData::getLookDevMaterial(bool reload)
 {
-	if (m_lookDevMaterial == nullptr)
+	if (m_lookDevMaterial == nullptr || reload)
 	{
 		m_viewer->getMainProcessingMutex().lock();
 		Ref<ShaderMaterial> mat = memnew(ShaderMaterial);
 		m_viewer->getMainProcessingMutex().unlock();
 		ResourceLoader* resLoader = ResourceLoader::get_singleton();
 		String shaderPath = "res://addons/twviewer/shaders/lookdevChunk.gdshader";
-		Ref<Shader> shader = resLoader->load(shaderPath);
+		Ref<Shader> shader = resLoader->load(shaderPath, "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
 		mat->set_shader(shader);
 		m_lookDevMaterial = mat;
 	}
@@ -1058,18 +1089,26 @@ std::map<int, godot::Ref<godot::ShaderMaterial>>& ShaderTerrainData::getLookDevC
 	return m_lookDevChunkLodMaterials;
 }
 
-godot::Ref<godot::Material> ShaderTerrainData::getLookDevChunkLodMaterial(int lod)
+godot::Ref<godot::Material> ShaderTerrainData::getLookDevChunkLodMaterial(int lod, bool reload)
 {
-	if (!m_lookDevChunkLodMaterials.contains(lod))
+	if (!m_lookDevChunkLodMaterials.contains(lod) || reload)
 	{
 		m_viewer->getMainProcessingMutex().lock();
 		Ref<ShaderMaterial> mat = memnew(ShaderMaterial);
 		m_viewer->getMainProcessingMutex().unlock();
 		ResourceLoader* resLoader = ResourceLoader::get_singleton();
 		String shaderPath = "res://addons/twviewer/shaders/lookdevChunkLod.gdshader";
-		Ref<Shader> shader = resLoader->load(shaderPath);
+		Ref<Shader> shader = resLoader->load(shaderPath, "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
 		mat->set_shader(shader);
+		float numVerticesPerChuckSide = (float)m_viewer->Globals()->numVerticesPerChuckSide();
+		float gridStepInWU = m_viewer->Globals()->gridStepInWU();
+		float lodGridStepInWU = m_viewer->Globals()->gridStepInHeightmapWUs(lod);
+		float lodChunkSizeInWu = numVerticesPerChuckSide * lodGridStepInWU;
 		mat->set_shader_parameter(SHADER_PARAM_LOOKDEV_LOD, float(lod));
+		mat->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
+		mat->set_shader_parameter(SHADER_PARAM_VERTICES_PER_CHUNK, numVerticesPerChuckSide);
+		mat->set_shader_parameter(SHADER_PARAM_LOD_GRID_STEP, lodGridStepInWU);
+		mat->set_shader_parameter(SHADER_PARAM_LOD_CHUNK_SIZE, lodChunkSizeInWu);
 		m_lookDevChunkLodMaterials[lod] = mat;
 	}
 
@@ -1503,7 +1542,7 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("WorldDeploy 3.3 ") + __FUNCTION__, "Create empty Image for normals");
 			m_viewer->getMainProcessingMutex().lock();
-			godot::Ref<godot::Image> im = godot::Image::create(_resolution, _resolution, false, Image::FORMAT_RGB8);
+			godot::Ref<godot::Image> im = godot::Image::create(_resolution, _resolution, false, godot::Image::FORMAT_RGB8);
 			m_viewer->getMainProcessingMutex().unlock();
 			image = im;
 			image->fill(godot::Color(0, 0, 0, 1.0));
@@ -1750,13 +1789,16 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 
 		if (lookdev == LookDev::ChunkLod)
 		{
+			//float numVerticesPerChuckSide = (float)m_viewer->Globals()->numVerticesPerChuckSide();
+			
 			std::map<int, godot::Ref<godot::ShaderMaterial>>& lookDevChunkLodMaterials = getLookDevChunkLodMaterials();
 
 			for (auto& item : lookDevChunkLodMaterials)
 			{
 				item.second->set_shader_parameter(SHADER_PARAM_INVERSE_TRANSFORM, inverseTransform);
 				item.second->set_shader_parameter(SHADER_PARAM_NORMAL_BASIS, normalBasis);
-				item.second->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
+				//item.second->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
+				//item.second->set_shader_parameter(SHADER_PARAM_VERTICES_PER_CHUNK, numVerticesPerChuckSide);
 				item.second->set_shader_parameter(SHADER_PARAM_EDITMODE_SELECTED, editMode);
 				if (m_heightMapTexModified && m_heightMapTexture != nullptr)
 					item.second->set_shader_parameter(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
@@ -1769,9 +1811,15 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 		{
 			godot::Ref<godot::ShaderMaterial> currentMaterial;
 			if (lookdev == LookDev::NotSet)
-				currentMaterial = m_regularMaterial;
+			{
+				//currentMaterial = m_regularMaterial;
+				currentMaterial = getRegularMaterial();
+			}
 			else
-				currentMaterial = m_lookDevMaterial;
+			{
+				//currentMaterial = m_lookDevMaterial;
+				currentMaterial = getLookDevMaterial();
+			}
 
 			// u_terrain_colormap=Color(1,1,1,1) u_terrain_splatmap u_ground_albedo_bump_0/4 u_ground_normal_roughness_0/4
 

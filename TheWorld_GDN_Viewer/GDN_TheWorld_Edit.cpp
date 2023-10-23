@@ -95,9 +95,43 @@ bool GDN_TheWorld_MapModder::workToDo(void)
 		return false;
 }
 
-TheWorld_Utils::MemoryBuffer& GDN_TheWorld_MapModder::getOutBuffer(void)
+TheWorld_Utils::MemoryBuffer* GDN_TheWorld_MapModder::getOutBuffer(void)
 {
-	return m_outBuffer;
+	TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1 ") + __FUNCTION__, "ALL");
+
+	m_outBuffer.reset();
+	m_outBuffer = std::make_unique< TheWorld_Utils::MemoryBuffer>();
+	
+	if (m_initialized == c_initializedForNormals)
+	{
+		godot::Image::Format outImageFormat = m_outImage->get_format();
+
+		if (outImageFormat != godot::Image::FORMAT_RGB8)
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1.2 ") + __FUNCTION__, "convert format");
+			m_outImage->convert(godot::Image::FORMAT_RGB8);
+		}
+
+		{
+			int32_t w = m_outImage->get_width();
+			int32_t h = m_outImage->get_height();
+			godot::Color c;
+			for (int x = 0; x < w; x++)
+				for (int y = 0; y < h; y++)
+					c = m_outImage->get_pixel(x, y);
+		}
+		
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1.2 ") + __FUNCTION__, "copy out buffer");
+			godot::PackedByteArray data = m_outImage->get_data();
+			int64_t bufferSize = data.size();
+			m_outBuffer->reserve(bufferSize);
+			memcpy(m_outBuffer->ptr(), data.ptr(), bufferSize);
+			m_outBuffer->adjustSize(bufferSize);
+		}
+	}
+	
+	return m_outBuffer.get();
 }
 
 void GDN_TheWorld_MapModder::startProcessing(void)
@@ -132,17 +166,17 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 	m_map->set_centered(false);
 	m_viewport->add_child(m_map);
 
-	// assume square buffer
-	size_t imageSize = (size_t)sqrt(float(m_float32HeigthsBuffer->size() / sizeof(float)));
-	my_assert(size_t(pow((float)imageSize, 2) * sizeof(float)) == m_float32HeigthsBuffer->size());
-	my_assert((float(imageSize) / float(m_tileSize)) * m_tileSize == imageSize);
-
-	godot::Vector2i viewportSize = m_viewport->get_size();
-	my_assert(viewportSize.x == viewportSize.y);
-	my_assert(imageSize >= viewportSize.x);
-
 	if (m_initialized == c_initializedForNormals)
 	{
+		// assume square buffer
+		m_imageSize = (size_t)sqrt(float(m_float32HeigthsBuffer->size() / sizeof(float)));
+		my_assert(size_t(pow((float)m_imageSize, 2) * sizeof(float)) == m_float32HeigthsBuffer->size());
+		my_assert((float(m_imageSize) / float(m_tileSize)) * m_tileSize == m_imageSize);
+
+		godot::Vector2i viewportSize = m_viewport->get_size();
+		my_assert(viewportSize.x == viewportSize.y);
+		my_assert(m_imageSize >= viewportSize.x);
+
 		godot::Ref<godot::Image> image;
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.1 ") + __FUNCTION__, "Create Image from heights buffer");
@@ -153,7 +187,7 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 				memcpy((char*)data.ptrw(), m_float32HeigthsBuffer->ptr(), m_float32HeigthsBuffer->size());
 			}
 
-			godot::Ref<godot::Image> im = godot::Image::create_from_data((int32_t)imageSize, (int32_t)imageSize, false, Image::FORMAT_RF, data);
+			godot::Ref<godot::Image> im = godot::Image::create_from_data((int32_t)m_imageSize, (int32_t)m_imageSize, false, Image::FORMAT_RF, data);
 			image = im;
 		}
 
@@ -166,7 +200,7 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 
 		m_map->set_texture(texture);
 
-		size_t numFullTiles = (size_t)std::floor(float(imageSize) / float(m_tileSize));
+		size_t numFullTiles = (size_t)std::floor(float(m_imageSize) / float(m_tileSize));
 
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.3 ") + __FUNCTION__, "Put tiles in queue");
@@ -190,7 +224,7 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 
 			godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
 			godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
-			godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/tools/shaders/height2normal.gdshader");
+			godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/tools/shaders/height2normal.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
 			mat->set_shader(shader);
 			m_map->set_material(mat);
 		}
@@ -265,8 +299,19 @@ void GDN_TheWorld_MapModder::_process(double _delta)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("MapModder _process 1 ") + __FUNCTION__, "Processing tile");
 
-		godot::Ref<godot::Image> image = m_viewport->get_texture()->get_image();
-		godot::Image::Format f = image->get_format();
+		godot::Ref<godot::Image> viewportImage = m_viewport->get_texture()->get_image();
+		godot::Image::Format viewportImageFormat = viewportImage->get_format();
+
+		if (m_outImage == nullptr)
+		{
+			godot::Ref<godot::Image> im = godot::Image::create((int32_t)m_imageSize, (int32_t)m_imageSize, false, viewportImageFormat);
+			m_outImage = im;
+		}
+
+		godot::Vector2i pos = m_currentTile * (int32_t)m_tileSize;
+		int32_t w = viewportImage->get_width();
+		int32_t h = viewportImage->get_height();
+		m_outImage->blit_rect(viewportImage, godot::Rect2i((int32_t)m_viewportBorder, (int32_t)m_viewportBorder, w - (int32_t)m_viewportBorder, h - (int32_t)m_viewportBorder), pos);
 
 		if (m_tiles.contains(m_currentTile) && m_tiles[m_currentTile] == c_tileStatusProcessing)
 			m_tiles.erase(m_currentTile);
@@ -305,6 +350,7 @@ void GDN_TheWorld_Edit::_bind_methods()
 	ClassDB::bind_method(D_METHOD("edit_mode_save"), &GDN_TheWorld_Edit::editModeSaveAction);
 	ClassDB::bind_method(D_METHOD("edit_mode_upload"), &GDN_TheWorld_Edit::editModeUploadAction);
 	ClassDB::bind_method(D_METHOD("edit_mode_stop"), &GDN_TheWorld_Edit::editModeStopAction);
+	ClassDB::bind_method(D_METHOD("edit_mode_reload_shader"), &GDN_TheWorld_Edit::editModeReloadShader);
 	ClassDB::bind_method(D_METHOD("edit_mode_sel_terr_type"), &GDN_TheWorld_Edit::editModeSelectTerrainTypeAction);
 	ClassDB::bind_method(D_METHOD("edit_mode_sel_lookdev"), &GDN_TheWorld_Edit::editModeSelectLookDevAction);
 	ClassDB::bind_method(D_METHOD("mouse_entered_main_panel"), &GDN_TheWorld_Edit::editModeMouseEnteredMainPanel);
@@ -585,16 +631,18 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainVBoxContainer);
 		button = createControl<godot::Button>(hBoxContainer, "", "Save", "pressed", this, "edit_mode_save");
-		separator = createControl<godot::VSeparator>(hBoxContainer);
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
 		button = createControl<godot::Button>(hBoxContainer, "", "Upload", "pressed", this, "edit_mode_upload");
-		separator = createControl<godot::VSeparator>(hBoxContainer);
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
 		button = createControl<godot::Button>(hBoxContainer, "", "Stop", "pressed", this, "edit_mode_stop");
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
+		button = createControl<godot::Button>(hBoxContainer, "", "Reload shader", "pressed", this, "edit_mode_reload_shader");
 
 		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainVBoxContainer);
 		button = createControl<godot::Button>(hBoxContainer, "", "Blend", "pressed", this, "edit_mode_blend");
-		separator = createControl<godot::VSeparator>(hBoxContainer);
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
 		button = createControl<godot::Button>(hBoxContainer, "", "Gen. Normals", "pressed", this, "edit_mode_gen_normals");
-		separator = createControl<godot::VSeparator>(hBoxContainer);
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
 		button = createControl<godot::Button>(hBoxContainer, "", "Apply Texs", "pressed", this, "edit_mode_apply_textures");
 		m_innerData->m_allCheckBox = createControl<godot::CheckBox>(hBoxContainer);
 		m_innerData->m_allCheckBox->set_text("All");
@@ -2133,6 +2181,16 @@ void GDN_TheWorld_Edit::editModeStopAction(void)
 	m_actionStopRequested = true;
 }
 
+void GDN_TheWorld_Edit::editModeReloadShader(void)
+{
+	bool allCheched = m_innerData->m_allCheckBox->is_pressed();
+
+	if (allCheched)
+		m_viewer->ReloadAllShadersRequired(true);
+	else
+		m_viewer->ReloadSelectedQuadrantShaderRequired(true);
+}
+
 void GDN_TheWorld_Edit::editModeSaveAction(void)
 {
 	if (m_actionInProgress)
@@ -3148,11 +3206,6 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool forceGenSelectedQuad, bool eva
 					TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer(true);
 
 					{
-						TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.1 ") + __FUNCTION__, "Single QuadTree - CPU");
-						//cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer);
-					}
-
-					{
 						TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.2 ") + __FUNCTION__, "Single QuadTree - GPU");
 						
 						TheWorld_Utils::MemoryBuffer* westHeights32Buffer = nullptr;
@@ -3162,11 +3215,16 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool forceGenSelectedQuad, bool eva
 						TheWorld_Utils::MemoryBuffer* northNormalsBuffer = nullptr;
 						TheWorld_Utils::MemoryBuffer* southNormalsBuffer = nullptr;
 						generateNormals(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), 0.0f, 0.0f, 0.0f,
-							float32HeigthsBuffer, normalsBuffer,
-							*westHeights32Buffer, *westNormalsBuffer,
-							*eastHeights32Buffer, *eastNormalsBuffer,
-							*northHeights32Buffer, *northNormalsBuffer,
-							*southHeights32Buffer, *southNormalsBuffer);
+							&float32HeigthsBuffer, &normalsBuffer,
+							westHeights32Buffer, westNormalsBuffer,
+							eastHeights32Buffer, eastNormalsBuffer,
+							northHeights32Buffer, northNormalsBuffer,
+							southHeights32Buffer, southNormalsBuffer);
+					}
+
+					{
+						TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.1 ") + __FUNCTION__, "Single QuadTree - CPU");
+						cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer);
 					}
 
 					if (eastQuadTree != nullptr)
@@ -3220,31 +3278,43 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool forceGenSelectedQuad, bool eva
 
 void GDN_TheWorld_Edit::generateNormals(size_t numVerticesPerSize, float gridStepInWU,
 	float x, float z, float distance,
-	TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer,
-	TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer,
-	TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_normalsBuffer,
-	TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer,
-	TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer)
+	TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer,
+	TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer,
+	TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer,
+	TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer,
+	TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer)
 {
 	// distance == 0 ==> all the quadrant
 	my_assert(m_mapModder == nullptr);
 	
+	size_t numHeights = (size_t)sqrt(float(float32HeigthsBuffer->size() / sizeof(float)));
+	my_assert(size_t(pow((float)numHeights, 2) * sizeof(float)) == float32HeigthsBuffer->size());
+
 	m_viewer->getMainProcessingMutex().lock();
 	m_mapModder = memnew(GDN_TheWorld_MapModder);
 	m_viewer->getMainProcessingMutex().unlock();
-	m_mapModder->initForNormals(m_viewer, this, &float32HeigthsBuffer, 1024, 1);
+	m_mapModder->initForNormals(m_viewer, this, float32HeigthsBuffer, 1024, 1);
 	while (m_mapModder->working())
 		Sleep(5);
+	TheWorld_Utils::MemoryBuffer* normals = m_mapModder->getOutBuffer();
+	
+	my_assert(normalsBuffer->size() == 0 || normals->size() == normalsBuffer->size());
+	size_t numNormals = (size_t)sqrt(float(normalsBuffer->size() / sizeof(TheWorld_Utils::_RGB)));
+	my_assert(size_t(pow((float)numNormals, 2) * sizeof(TheWorld_Utils::_RGB)) == normalsBuffer->size());
+	my_assert(numHeights == numNormals);
+	normalsBuffer->reserve(normals->size());
+	memcpy(normalsBuffer->ptr(), normals->ptr(), normals->size());
+	normalsBuffer->adjustSize(normals->size());
 	m_mapModder->deinitRequired(true);
 }
 
 void GDN_TheWorld_Edit::generateSplatmapForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
 	float x, float z, float distance,
-	TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& normalsBuffer, TheWorld_Utils::MemoryBuffer& splatmapBuffer,
-	TheWorld_Utils::MemoryBuffer& west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& west_normalsBuffer, TheWorld_Utils::MemoryBuffer& west_splatmapBuffer,
-	TheWorld_Utils::MemoryBuffer& east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& east_normalsBuffer, TheWorld_Utils::MemoryBuffer& east_splatmapBuffer,
-	TheWorld_Utils::MemoryBuffer& north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& north_normalsBuffer, TheWorld_Utils::MemoryBuffer& north_splatmapBuffer,
-	TheWorld_Utils::MemoryBuffer& south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer& south_normalsBuffer, TheWorld_Utils::MemoryBuffer& south_splatmapBuffer)
+	TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer, TheWorld_Utils::MemoryBuffer* splatmapBuffer,
+	TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer, TheWorld_Utils::MemoryBuffer* west_splatmapBuffer,
+	TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer, TheWorld_Utils::MemoryBuffer* east_splatmapBuffer,
+	TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer, TheWorld_Utils::MemoryBuffer* north_splatmapBuffer,
+	TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer)
 {
 	// distance == 0 ==> all the quadrant
 }
@@ -3398,11 +3468,11 @@ void GDN_TheWorld_Edit::editModeApplyTextures(void)
 						TheWorld_Utils::MemoryBuffer* northSplatmapBuffer = nullptr;
 						TheWorld_Utils::MemoryBuffer* southSplatmapBuffer = nullptr;
 						generateSplatmapForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), 0.0f, 0.0f, 0.0f,
-							float32HeigthsBuffer, normalsBuffer, splatmapBuffer,
-							*westHeights32Buffer, *westNormalsBuffer, *westSplatmapBuffer,
-							*eastHeights32Buffer, *eastNormalsBuffer, *eastSplatmapBuffer,
-							*northHeights32Buffer, *northNormalsBuffer, *northSplatmapBuffer,
-							*southHeights32Buffer, *southNormalsBuffer, *southSplatmapBuffer);
+							&float32HeigthsBuffer, &normalsBuffer, &splatmapBuffer,
+							westHeights32Buffer, westNormalsBuffer, westSplatmapBuffer,
+							eastHeights32Buffer, eastNormalsBuffer, eastSplatmapBuffer,
+							northHeights32Buffer, northNormalsBuffer, northSplatmapBuffer,
+							southHeights32Buffer, southNormalsBuffer, southSplatmapBuffer);
 					}
 
 					m_mapQuadToSave[pos] = "";
