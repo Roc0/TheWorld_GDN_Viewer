@@ -1214,7 +1214,7 @@ void GDN_TheWorld_Viewer::toggleQuadrantSelected(void)
 					if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 					{
 						quadTreeSel = it->second.get();
-						it->second->setEditModeSel(true);
+						it->second->setEditModeQuadrantSelected(true);
 						it->second->materialParamsNeedReset(true);
 					}
 				}
@@ -1227,7 +1227,7 @@ void GDN_TheWorld_Viewer::toggleQuadrantSelected(void)
 				MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantSelPos);
 				if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 				{
-					it->second->setEditModeSel(false);
+					it->second->setEditModeQuadrantSelected(false);
 					it->second->materialParamsNeedReset(true);
 				}
 			}
@@ -1341,18 +1341,43 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent>& event)
 void GDN_TheWorld_Viewer::toggleTrackMouse(void)
 {
 	if (!m_editMode)
-		m_trackMouse = !m_trackMouse;
-	if (m_trackMouse)
+	{
+		if (trackMouse())
+			trackMouse(false);
+		else
+			trackMouse(true);
+	}
+
+	if (trackMouse())
 		m_mouseQuadrantHitName = "";
+}
+
+bool GDN_TheWorld_Viewer::trackMouse(void)
+{
+	return m_trackMouse;
+}
+
+void GDN_TheWorld_Viewer::trackMouse(bool b)
+{
+	m_trackMouse = b;
+	if (!m_trackMouse)
+	{
+		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+
+		for (auto& it : m_mapQuadTree)
+		{
+			it.second->mouseHitChanged(godot::Vector3(), false);
+		}
+	}
 }
 
 void GDN_TheWorld_Viewer::toggleEditMode(void)
 {
 	m_editMode = !m_editMode;
 	if (m_editMode)
-		m_trackMouse = true;
+		trackMouse(true);
 	else
-		m_trackMouse = false;
+		trackMouse(false);
 }
 
 void GDN_TheWorld_Viewer::toggleDebugVisibility(void)
@@ -2298,14 +2323,26 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 							QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
 							//quadrantHitPos.setTag(mouseQuadrantHitTag);
 
-							// Get current Tag
+							// Get previous quadrant if exist
+							if (!m_quadrantHitPos.empty())
+							{
+								MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
+								if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+								{
+									it->second->mouseHitChanged(godot::Vector3(), false);
+								}
+							}
+
+							// Get current quadrant
 							std::string mouseQuadrantHitTag;
+							QuadTree* quadrantHit = nullptr;
 							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
 							if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 							{
 								mouseQuadrantHitTag = it->second->getTag();
 
-								it->second->getQuadrant()->getShaderTerrainData()->mouseHitChanged(m_mouseHit);
+								quadrantHit = it->second.get();
+								quadrantHit->mouseHitChanged(m_mouseHit, true);
 							}
 
 							if (m_editMode && editModeUIControl && editModeUIControl->initilized())
@@ -2338,6 +2375,12 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 							m_mouseQuadrantHitPos = mouseQuadrantHitPos;
 							m_mouseQuadrantHitSize = mouseQuadrantHitSize;
 							m_quadrantHitPos = quadrantHitPos;
+							m_quadrantHit = quadrantHit;
+						}
+						else
+						{
+							if (m_quadrantHit != nullptr)
+								m_quadrantHit->mouseHitChanged(m_mouseHit, true);
 						}
 					}
 					//godot::PoolStringArray metas = collider->get_meta_list();
@@ -2354,11 +2397,22 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 			}
 			else
 			{
+				// Get previous quadrant if exist
+				if (!m_quadrantHitPos.empty())
+				{
+					MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
+					if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+					{
+						it->second->mouseHitChanged(godot::Vector3(), false);
+					}
+				}
+
 				m_mouseQuadrantHitName = "";
 				m_mouseQuadrantHitTag = "";
 				m_mouseQuadrantHitPos = godot::Vector3();
 				m_mouseQuadrantHitSize = 0.0f;
 				m_quadrantHitPos = QuadrantPos();
+				m_quadrantHit = nullptr;
 			}
 
 			m_timeElapsedFromLastMouseTrack = timeElapsed;

@@ -42,7 +42,7 @@ namespace godot
 #define MIN_MAP_SCALE 0.01F
 #define TIME_INTERVAL_BETWEEN_DUMP 0			// secs, 0 = diasble periodic dump
 #define TIME_INTERVAL_BETWEEN_STATISTICS 100	// ms, 0 = diasble periodic dump
-#define TIME_INTERVAL_BETWEEN_MOUSE_TRACK 100	// 250	// ms
+#define TIME_INTERVAL_BETWEEN_MOUSE_TRACK 50	// 250	// ms
 
 	// World Node Local Coordinate System is the same as MapManager coordinate system
 	// Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
@@ -176,6 +176,8 @@ namespace godot
 		{
 			m_editor3dOverlay = (godot::Control*)editor3dOverlay;
 		}
+		bool trackMouse(void);
+		void trackMouse(bool b);
 		void toggleTrackMouse(void);
 		void toggleEditMode(void);
 		void toggleDebugVisibility(void);
@@ -183,7 +185,7 @@ namespace godot
 		void rotateDrawingMode(void);
 		bool getTrackMouseState(void)
 		{
-			return m_trackMouse;
+			return trackMouse();
 		}
 		void toggleQuadrantSelected(void);
 		godot::Camera3D* getCamera(void);
@@ -350,10 +352,6 @@ namespace godot
 				return 0.0;
 		}
 
-		bool trackMouse(void)
-		{
-			return m_trackMouse;
-		}
 		void setMouseHitChunk(Chunk* chunk)
 		{
 			m_mouseHitChunk = chunk;
@@ -552,6 +550,7 @@ namespace godot
 		float m_mouseQuadrantHitSize;
 		godot::Vector3 m_mouseQuadrantHitPos;
 		QuadrantPos m_quadrantHitPos;
+		QuadTree* m_quadrantHit = nullptr;
 		QuadrantPos m_quadrantSelPos;
 		Chunk* m_mouseHitChunk;
 		//QuadTree* m_mouseHitQuadTree;

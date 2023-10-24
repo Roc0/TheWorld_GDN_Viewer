@@ -153,7 +153,6 @@ QuadTree::QuadTree(GDN_TheWorld_Viewer* viewer, QuadrantPos quadrantPos)
 	m_GDN_Quadrant = nullptr;
 	m_tag = quadrantPos.getTag();
 	int ret = timespec_get(&m_refreshTime, TIME_UTC);
-	m_editModeSel = false;
 	m_lookDev = ShaderTerrainData::LookDev::NotSet;
 }
 
@@ -272,6 +271,30 @@ void QuadTree::ForAllChunk(Chunk::ChunkAction& chunkAction)
 			chunkAction.exec(it1->second);
 		}
 	}
+}
+
+void QuadTree::mouseHitChanged(godot::Vector3 mouseHit, bool hit)
+{
+	m_hitByMouse = hit;
+
+	godot::Vector2 uvMouseHit;
+
+	if (hit)
+	{
+		QuadrantPos pos = getQuadrant()->getPos();
+		float s = pos.getSizeInWU();							// DEBUG ONLY
+		float dx = mouseHit.x - pos.getLowerXGridVertex();		// DEBUG ONLY
+		float dz = mouseHit.z - pos.getLowerZGridVertex();		// DEBUG ONLY
+		uvMouseHit.x = (mouseHit.x - pos.getLowerXGridVertex()) / pos.getSizeInWU();
+		uvMouseHit.y = (mouseHit.z - pos.getLowerZGridVertex()) / pos.getSizeInWU();
+	}
+	else
+	{
+		uvMouseHit.x = -1;
+		uvMouseHit.y = -1;
+	}
+
+	getQuadrant()->getShaderTerrainData()->mouseHitChanged(uvMouseHit);
 }
 
 void QuadTree::update(Vector3 cameraPosGlobalCoord, enum class UpdateStage updateStage, int& numSplitRequired)
@@ -1061,6 +1084,10 @@ godot::Ref<godot::Material> ShaderTerrainData::getRegularMaterial(bool reload)
 		String shaderPath = "res://addons/twviewer/shaders/regularChunk.gdshader";		// from simple4.gdshader
 		godot::Ref<godot::Shader> shader = resLoader->load(shaderPath, "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
 		mat->set_shader(shader);
+		float gridStepInWU = m_viewer->Globals()->gridStepInWU();
+		mat->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
+		mat->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, godot::Vector2(-1, -1));
+		mat->set_shader_parameter(SHADER_PARAM_EDITMODE_SELECTED, float(0.0f));
 		m_regularMaterial = mat;
 	}
 	
@@ -1078,6 +1105,10 @@ godot::Ref<godot::Material> ShaderTerrainData::getLookDevMaterial(bool reload)
 		String shaderPath = "res://addons/twviewer/shaders/lookdevChunk.gdshader";
 		Ref<Shader> shader = resLoader->load(shaderPath, "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
 		mat->set_shader(shader);
+		float gridStepInWU = m_viewer->Globals()->gridStepInWU();
+		mat->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
+		mat->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, godot::Vector2(-1, -1));
+		mat->set_shader_parameter(SHADER_PARAM_EDITMODE_SELECTED, float(0.0f));
 		m_lookDevMaterial = mat;
 	}
 
@@ -1109,6 +1140,8 @@ godot::Ref<godot::Material> ShaderTerrainData::getLookDevChunkLodMaterial(int lo
 		mat->set_shader_parameter(SHADER_PARAM_VERTICES_PER_CHUNK, numVerticesPerChuckSide);
 		mat->set_shader_parameter(SHADER_PARAM_LOD_GRID_STEP, lodGridStepInWU);
 		mat->set_shader_parameter(SHADER_PARAM_LOD_CHUNK_SIZE, lodChunkSizeInWu);
+		mat->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, godot::Vector2(-1, -1));
+		mat->set_shader_parameter(SHADER_PARAM_EDITMODE_SELECTED, float(0.0f));
 		m_lookDevChunkLodMaterials[lod] = mat;
 	}
 
@@ -1386,7 +1419,7 @@ void ShaderTerrainData::getGroundTexture(godot::String fileName, ShaderTerrainDa
 	groundTexture->initialized = true;
 }
 
-void ShaderTerrainData::mouseHitChanged(godot::Vector3 mouseHit)
+void ShaderTerrainData::mouseHitChanged(godot::Vector2 mouseHit)
 {
 	enum class ShaderTerrainData::LookDev lookdev = m_quadTree->getLookDev();
 
@@ -1394,12 +1427,12 @@ void ShaderTerrainData::mouseHitChanged(godot::Vector3 mouseHit)
 	{
 		std::map<int, godot::Ref<godot::ShaderMaterial>>& lookDevChunkLodMaterials = getLookDevChunkLodMaterials();
 		for (auto& item : lookDevChunkLodMaterials)
-			item.second->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, godot::Vector2(mouseHit.x, mouseHit.z));
+			item.second->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, mouseHit);
 	}
 	else
 	{
 		godot::Ref<godot::ShaderMaterial> currentMaterial = (lookdev == LookDev::NotSet ? getRegularMaterial() : getLookDevMaterial());
-		currentMaterial->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, godot::Vector2(mouseHit.x, mouseHit.z));
+		currentMaterial->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, mouseHit);
 	}
 }
 
@@ -1795,9 +1828,9 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 		// This is needed to properly transform normals if the terrain is scaled
 		Basis normalBasis = globalTransform.basis.inverse().transposed();
 
-		float gridStepInWU = m_viewer->Globals()->gridStepInWU();
+		//float gridStepInWU = m_viewer->Globals()->gridStepInWU();
 
-		bool selected = m_quadTree->editModeSel();
+		bool selected = m_quadTree->editModeQuadrantSelected();
 		float editMode = 0.0f;
 		if (selected)
 			editMode = 1.0f;
@@ -1847,7 +1880,7 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 			currentMaterial->set_shader_parameter(SHADER_PARAM_NORMAL_BASIS, normalBasis);
 
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));
-			currentMaterial->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
+			//currentMaterial->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
 
 			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_EDITMODE_SELECTED) + String(" quad_selected=") + String(std::to_string(sel).c_str()));
 			currentMaterial->set_shader_parameter(SHADER_PARAM_EDITMODE_SELECTED, editMode);

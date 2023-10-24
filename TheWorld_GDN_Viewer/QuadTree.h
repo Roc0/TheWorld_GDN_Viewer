@@ -706,7 +706,7 @@ namespace godot
 		{
 			s_groundTexturesNeedProcessing = b;
 		}
-		void mouseHitChanged(godot::Vector3 mouseHit);
+		void mouseHitChanged(godot::Vector2 mouseHit);
 
 	private:
 		//void debugPrintTexture(std::string tex_name, Ref<Texture> tex);
@@ -1025,19 +1025,22 @@ namespace godot
 			return m_mapChunk;
 		}
 
-		void setEditModeSel(bool b)
+		void setEditModeQuadrantSelected(bool b)
 		{
-			m_editModeSel = b;
+			m_editModeQuadrantSelected = b;
 		}
-		bool editModeSel(void)
+
+		bool editModeQuadrantSelected(void)
 		{
-			return m_editModeSel;
+			return m_editModeQuadrantSelected;
 		}
 
 		enum class ShaderTerrainData::LookDev getLookDev(void)
 		{
 			return m_lookDev;
 		}
+
+		void mouseHitChanged(godot::Vector3 mouseHit, bool hit);
 
 	private:
 		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode, enum class UpdateStage updateStage, int& numSplitRequired);
@@ -1055,7 +1058,8 @@ namespace godot
 		Quadrant* m_worldQuadrant;
 		std::timespec m_refreshTime;
 		GDN_TheWorld_Quadrant* m_GDN_Quadrant;
-		bool m_editModeSel;
+		bool m_editModeQuadrantSelected = false;
+		bool m_hitByMouse = false;
 		enum class ShaderTerrainData::LookDev m_lookDev;
 
 		// Statistics

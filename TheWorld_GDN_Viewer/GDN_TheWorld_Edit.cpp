@@ -226,6 +226,8 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 			godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
 			godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/tools/shaders/height2normal.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
 			mat->set_shader(shader);
+			float gridStepInWU = m_viewer->Globals()->gridStepInWU();
+			mat->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
 			m_map->set_material(mat);
 		}
 	}
