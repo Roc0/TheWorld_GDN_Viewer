@@ -1041,6 +1041,7 @@ namespace godot
 		}
 
 		void mouseHitChanged(godot::Vector3 mouseHit, bool hit);
+		void getAdjacentQuadrants(std::list<QuadTree*>& adjacentQuadrantsHit);
 
 	private:
 		void internalUpdate(Vector3 cameraPosGlobalCoord, Quad* quadTreeNode, enum class UpdateStage updateStage, int& numSplitRequired);

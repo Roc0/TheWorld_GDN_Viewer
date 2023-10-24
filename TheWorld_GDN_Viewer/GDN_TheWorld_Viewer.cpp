@@ -192,8 +192,6 @@ GDN_TheWorld_Viewer::GDN_TheWorld_Viewer()
 	m_numFlushedQuadrant = 0;
 	m_numinitializedVisibleQuadrant = 0;
 	m_debugContentVisibility = true;
-	m_trackMouse = false;
-	m_editMode = false;
 	m_timeElapsedFromLastMouseTrack = 0;
 	m_mouseQuadrantHitSize = 0;
 	m_mouseHitChunk = nullptr;
@@ -1197,7 +1195,7 @@ void GDN_TheWorld_Viewer::_ready(void)
 
 void GDN_TheWorld_Viewer::toggleQuadrantSelected(void)
 {
-	if (m_trackMouse)
+	if (trackMouse())
 	{
 		m_mouseQuadrantHitName = "";
 
@@ -2264,7 +2262,7 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 {
 
 	godot::Node* collider = nullptr;
-	if (m_trackMouse)
+	if (trackMouse())
 	{
 		int64_t timeElapsed = TIME()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
@@ -2324,18 +2322,23 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 							//quadrantHitPos.setTag(mouseQuadrantHitTag);
 
 							// Get previous quadrant if exist
-							if (!m_quadrantHitPos.empty())
-							{
-								MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
-								if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-								{
-									it->second->mouseHitChanged(godot::Vector3(), false);
-								}
-							}
+							//if (!m_quadrantHitPos.empty())
+							//{
+							//	MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
+							//	if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+							//	{
+							//		it->second->mouseHitChanged(godot::Vector3(), false);
+							//	}
+							//}
+							if (m_quadrantHit != nullptr)
+								m_quadrantHit->mouseHitChanged(godot::Vector3(), false);
+							for (auto& item : m_adjacentQuadrantsHit)
+								item->mouseHitChanged(godot::Vector3(), false);
 
 							// Get current quadrant
 							std::string mouseQuadrantHitTag;
 							QuadTree* quadrantHit = nullptr;
+							std::list<QuadTree*> adjacentQuadrantsHit;
 							MapQuadTree::iterator it = m_mapQuadTree.find(quadrantHitPos);
 							if (it != m_mapQuadTree.end() && !it->second->statusToErase())
 							{
@@ -2343,6 +2346,10 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 
 								quadrantHit = it->second.get();
 								quadrantHit->mouseHitChanged(m_mouseHit, true);
+								quadrantHit->getAdjacentQuadrants(adjacentQuadrantsHit);
+								for (auto& item : adjacentQuadrantsHit)
+									item->mouseHitChanged(m_mouseHit, true);
+
 							}
 
 							if (m_editMode && editModeUIControl && editModeUIControl->initilized())
@@ -2376,11 +2383,18 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 							m_mouseQuadrantHitSize = mouseQuadrantHitSize;
 							m_quadrantHitPos = quadrantHitPos;
 							m_quadrantHit = quadrantHit;
+							m_adjacentQuadrantsHit.clear();
+							for (auto& item : adjacentQuadrantsHit)
+								m_adjacentQuadrantsHit.push_back(item);
 						}
 						else
 						{
 							if (m_quadrantHit != nullptr)
+							{
 								m_quadrantHit->mouseHitChanged(m_mouseHit, true);
+								for (auto& item : m_adjacentQuadrantsHit)
+									item->mouseHitChanged(m_mouseHit, true);
+							}
 						}
 					}
 					//godot::PoolStringArray metas = collider->get_meta_list();
@@ -2398,14 +2412,18 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 			else
 			{
 				// Get previous quadrant if exist
-				if (!m_quadrantHitPos.empty())
-				{
-					MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
-					if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-					{
-						it->second->mouseHitChanged(godot::Vector3(), false);
-					}
-				}
+				//if (!m_quadrantHitPos.empty())
+				//{
+				//	MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
+				//	if (it != m_mapQuadTree.end() && !it->second->statusToErase())
+				//	{
+				//		it->second->mouseHitChanged(godot::Vector3(), false);
+				//	}
+				//}
+				if (m_quadrantHit != nullptr)
+					m_quadrantHit->mouseHitChanged(godot::Vector3(), false);
+				for (auto& item : m_adjacentQuadrantsHit)
+					item->mouseHitChanged(godot::Vector3(), false);
 
 				m_mouseQuadrantHitName = "";
 				m_mouseQuadrantHitTag = "";
@@ -2413,6 +2431,7 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 				m_mouseQuadrantHitSize = 0.0f;
 				m_quadrantHitPos = QuadrantPos();
 				m_quadrantHit = nullptr;
+				m_adjacentQuadrantsHit.clear();
 			}
 
 			m_timeElapsedFromLastMouseTrack = timeElapsed;

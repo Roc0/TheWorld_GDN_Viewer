@@ -297,6 +297,45 @@ void QuadTree::mouseHitChanged(godot::Vector3 mouseHit, bool hit)
 	getQuadrant()->getShaderTerrainData()->mouseHitChanged(uvMouseHit);
 }
 
+void QuadTree::getAdjacentQuadrants(std::list<QuadTree*>& adjacentQuadrantsHit)
+{
+	adjacentQuadrantsHit.clear();
+	QuadrantPos currentPos = getQuadrant()->getPos();
+
+	QuadrantPos pos = currentPos.getQuadrantPos(QuadrantPos::DirectionSlot::WestXMinus);
+	QuadTree* quadTree = m_viewer->getQuadTree(pos);
+	if (quadTree != nullptr)
+		adjacentQuadrantsHit.push_back(quadTree);
+	pos = currentPos.getQuadrantPos(QuadrantPos::DirectionSlot::EastXPlus);
+	quadTree = m_viewer->getQuadTree(pos);
+	if (quadTree != nullptr)
+		adjacentQuadrantsHit.push_back(quadTree);
+	pos = currentPos.getQuadrantPos(QuadrantPos::DirectionSlot::NorthZMinus);
+	quadTree = m_viewer->getQuadTree(pos);
+	if (quadTree != nullptr)
+		adjacentQuadrantsHit.push_back(quadTree);
+	pos = currentPos.getQuadrantPos(QuadrantPos::DirectionSlot::SouthZPlus);
+	quadTree = m_viewer->getQuadTree(pos);
+	if (quadTree != nullptr)
+		adjacentQuadrantsHit.push_back(quadTree);
+	pos = currentPos.getQuadrantPos(QuadrantPos::DirectionSlot::NorthwestZMinusXMinus);
+	quadTree = m_viewer->getQuadTree(pos);
+	if (quadTree != nullptr)
+		adjacentQuadrantsHit.push_back(quadTree);
+	pos = currentPos.getQuadrantPos(QuadrantPos::DirectionSlot::NortheastZMinusXPlus);
+	quadTree = m_viewer->getQuadTree(pos);
+	if (quadTree != nullptr)
+		adjacentQuadrantsHit.push_back(quadTree);
+	pos = currentPos.getQuadrantPos(QuadrantPos::DirectionSlot::SouthwestZPlusXMinus);
+	quadTree = m_viewer->getQuadTree(pos);
+	if (quadTree != nullptr)
+		adjacentQuadrantsHit.push_back(quadTree);
+	pos = currentPos.getQuadrantPos(QuadrantPos::DirectionSlot::SoutheastZPlusXPlus);
+	quadTree = m_viewer->getQuadTree(pos);
+	if (quadTree != nullptr)
+		adjacentQuadrantsHit.push_back(quadTree);
+}
+
 void QuadTree::update(Vector3 cameraPosGlobalCoord, enum class UpdateStage updateStage, int& numSplitRequired)
 {
 	if (!isValid())
@@ -1559,6 +1598,43 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 				godot::Ref<godot::Image> im = godot::Image::create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, data);
 				m_viewer->getMainProcessingMutex().unlock();
 				image = im;
+
+				// Test elapsed resize
+				//{
+				//	godot::Ref<godot::Image> image;
+				//	int32_t w, h;
+				//	{
+				//		TheWorld_Utils::GuardProfiler profiler(std::string("Test Image 1.1 ") + __FUNCTION__, "Create Image from heights buffer");
+				//		m_viewer->getMainProcessingMutex().lock();
+				//		godot::Ref<godot::Image> im = godot::Image::create_from_data(_resolution, _resolution, false, Image::FORMAT_RH, data);
+				//		m_viewer->getMainProcessingMutex().unlock();
+				//		image = im;
+				//		w = image->get_width();
+				//		h = image->get_height();
+				//	}
+				//	int32_t res;
+				//	{
+				//		TheWorld_Utils::GuardProfiler profiler(std::string("Test Image 1.2 ") + __FUNCTION__, "Resize 1025");
+				//		res = 1025;
+				//		image->resize(res, res, godot::Image::Interpolation::INTERPOLATE_BILINEAR);
+				//		w = image->get_width();
+				//		h = image->get_height();
+				//	}
+				//	{
+				//		TheWorld_Utils::GuardProfiler profiler(std::string("Test Image 1.3 ") + __FUNCTION__, "Resize 513");
+				//		res = 513;
+				//		image->resize(res, res, godot::Image::Interpolation::INTERPOLATE_BILINEAR);
+				//		w = image->get_width();
+				//		h = image->get_height();
+				//	}
+				//	{
+				//		TheWorld_Utils::GuardProfiler profiler(std::string("Test Image 1.4 ") + __FUNCTION__, "Resize 257");
+				//		res = 257;
+				//		image->resize(res, res, godot::Image::Interpolation::INTERPOLATE_BILINEAR);
+				//		w = image->get_width();
+				//		h = image->get_height();
+				//	}
+				//}
 			}
 
 			{

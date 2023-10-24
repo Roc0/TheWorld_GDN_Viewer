@@ -540,8 +540,8 @@ namespace godot
 		TheWorld_Utils::TimerMs m_streamingTime;
 		// Statistics data
 
-		bool m_trackMouse;
-		bool m_editMode;
+		bool m_trackMouse = false;
+		bool m_editMode = false;
 		int64_t m_timeElapsedFromLastMouseTrack;
 		godot::Vector3 m_mouseHit;
 		bool m_mouseTrackedOnTerrain;
@@ -551,6 +551,7 @@ namespace godot
 		godot::Vector3 m_mouseQuadrantHitPos;
 		QuadrantPos m_quadrantHitPos;
 		QuadTree* m_quadrantHit = nullptr;
+		std::list<QuadTree*> m_adjacentQuadrantsHit;
 		QuadrantPos m_quadrantSelPos;
 		Chunk* m_mouseHitChunk;
 		//QuadTree* m_mouseHitQuadTree;
