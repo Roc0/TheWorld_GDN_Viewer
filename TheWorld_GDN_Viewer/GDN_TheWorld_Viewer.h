@@ -12,6 +12,9 @@
 #include <godot_cpp/classes/texture.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
 #include <godot_cpp/classes/camera3d.hpp>
+#include <godot_cpp/classes/mesh_instance3d.hpp>
+#include <godot_cpp/classes/immediate_mesh.hpp>
+#include <godot_cpp/classes/standard_material3d.hpp>
 #pragma warning(pop)
 
 #include <map>
@@ -27,6 +30,56 @@
 
 namespace godot
 {
+	// Thanks to lokimckay: https://github.com/godotengine/godot-docs/issues/5901#issuecomment-1172923676
+	// and JonathanDotCel https://github.com/godotengine/godot-docs/issues/5901#issuecomment-1742096560
+	// C++ conversion
+	class GDN_TheWorld_Drawer : public godot::MeshInstance3D
+	{
+		GDCLASS(GDN_TheWorld_Drawer, MeshInstance3D)
+
+	private:
+		class Drawing
+		{
+		public:
+			enum class DrawingType
+			{
+				not_set = -1
+				, line = 0
+				, sphere = 1
+			};
+			
+			enum class DrawingType drawingType = DrawingType::not_set;
+			godot::Vector3 start;
+			godot::Vector3 end;
+			float radius = 0;
+			godot::Color color;
+		};
+
+	public:
+		GDN_TheWorld_Drawer();
+		~GDN_TheWorld_Drawer();
+
+		static void _bind_methods();
+
+		void clearDrawings();
+		void drawLine(godot::Vector3 start, godot::Vector3 end, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
+		void drawSphere(godot::Vector3 center, float radius, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
+
+		virtual void _ready(void) override;
+		virtual void _process(double _delta) override;
+
+		int32_t addLine(godot::Vector3 start, godot::Vector3 end, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
+		int32_t addSphere(godot::Vector3 center, float radius, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
+		void removeDrawing(int32_t idx);
+
+	private:
+		godot::Ref<godot::ImmediateMesh> m_mesh;
+		godot::Ref<godot::StandardMaterial3D> m_mat;
+		int32_t m_firstAvailableIdx = 0;
+
+		std::map<int32_t, std::unique_ptr<Drawing>> m_drawings;
+	};
+
 	class MeshCache;
 	class QuadTree;
 	class Chunk;
@@ -275,7 +328,7 @@ namespace godot
 		godot::Vector3 getMouseHit(void)
 		{
 			if (m_mouseTrackedOnTerrain)
-				return m_mouseHit;
+				return m_trackedMouseHit;
 			else
 				return godot::Vector3();
 		}
@@ -284,7 +337,7 @@ namespace godot
 			if (m_mouseTrackedOnTerrain)
 			{
 				godot::Camera3D* camera = getCamera();
-				return camera->get_global_transform().origin.distance_to(m_mouseHit);
+				return camera->get_global_transform().origin.distance_to(m_trackedMouseHit);
 			}
 			else
 				return 0.0f;
@@ -450,6 +503,8 @@ namespace godot
 		{
 			m_reloadSelectedQuadrantShaderRequired = b;
 		}
+		void trackedMouseHitChanged(QuadTree* quadrantHit, std::list<QuadTree*>& adjacentQuadrantsHit, bool hit, godot::Vector3 m_mouseHit);
+		void clearMapQuadTree(void);
 
 	private:
 		void _findChildNodes(godot::Array& foundNodes, godot::Array& searchNodes, String searchClass);
@@ -543,7 +598,8 @@ namespace godot
 		bool m_trackMouse = false;
 		bool m_editMode = false;
 		int64_t m_timeElapsedFromLastMouseTrack;
-		godot::Vector3 m_mouseHit;
+		godot::Vector3 m_trackedMouseHit;
+		godot::Vector3 m_previousTrackedMouseHit;
 		bool m_mouseTrackedOnTerrain;
 		std::string m_mouseQuadrantHitName;
 		std::string m_mouseQuadrantHitTag;
@@ -554,7 +610,7 @@ namespace godot
 		std::list<QuadTree*> m_adjacentQuadrantsHit;
 		QuadrantPos m_quadrantSelPos;
 		Chunk* m_mouseHitChunk;
-		//QuadTree* m_mouseHitQuadTree;
+		GDN_TheWorld_Drawer* m_normalGizmo = nullptr;
 
 		bool m_debugContentVisibility;
 		bool m_updateTerrainVisibilityRequired;

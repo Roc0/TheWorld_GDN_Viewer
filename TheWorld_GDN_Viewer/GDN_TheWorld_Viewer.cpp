@@ -55,6 +55,135 @@ namespace fs = std::filesystem;
 // Viewer Node origin is in the lower corner (X and Z) of the vertex bitmap at altitude 0
 // Chunk and QuadTree coordinates are in Viewer Node local coordinate System
 
+GDN_TheWorld_Drawer::GDN_TheWorld_Drawer()
+{
+}
+
+GDN_TheWorld_Drawer::~GDN_TheWorld_Drawer()
+{
+}
+
+void GDN_TheWorld_Drawer::_bind_methods()
+{
+}
+
+void GDN_TheWorld_Drawer::_process(double _delta)
+{
+	if (!m_drawings.empty())
+	{
+		m_mesh->clear_surfaces();
+		for (auto& item : m_drawings)
+		{
+			if (item.second->drawingType == Drawing::DrawingType::line)
+				drawLine(item.second->start, item.second->end, item.second->color);
+			else if (item.second->drawingType == Drawing::DrawingType::sphere)
+				drawSphere(item.second->start, item.second->radius, item.second->color);
+		}
+	}
+}
+
+void GDN_TheWorld_Drawer::_ready(void)
+{
+	godot::Ref<godot::StandardMaterial3D> mat = memnew(godot::StandardMaterial3D);
+	m_mat = mat;
+	m_mat->set("no_depth_test", false);
+	m_mat->set("shading_mode", (int)godot::BaseMaterial3D::ShadingMode::SHADING_MODE_UNSHADED);
+	m_mat->set("vertex_color_use_as_albedo", true);
+	m_mat->set("transparency", (int)godot::BaseMaterial3D::Transparency::TRANSPARENCY_ALPHA);
+
+	godot::Ref<godot::ImmediateMesh> mesh = memnew(godot::ImmediateMesh);
+	m_mesh = mesh;
+	//m_mesh->surface_set_material(0, m_mat);
+
+	set_mesh(m_mesh);
+	set_material_override(m_mat);
+}
+
+void GDN_TheWorld_Drawer::clearDrawings()
+{
+	m_mesh->clear_surfaces();
+}
+
+void GDN_TheWorld_Drawer::drawLine(godot::Vector3 start, godot::Vector3 end, godot::Color c)
+{
+	m_mesh->surface_begin(godot::Mesh::PrimitiveType::PRIMITIVE_LINES);
+	m_mesh->surface_set_color(c);
+	m_mesh->surface_add_vertex(start);
+	m_mesh->surface_add_vertex(end);
+	m_mesh->surface_end();
+}
+
+void GDN_TheWorld_Drawer::drawSphere(godot::Vector3 center, float radius, godot::Color c)
+{
+	float numSteps = 16;
+	float stepSize = (kPi2) / numSteps;
+
+	// move here from the center
+	std::vector<godot::Vector3> primaryAxis;
+	primaryAxis.push_back(Vector3Up);
+	primaryAxis.push_back(Vector3Right);
+	primaryAxis.push_back(Vector3Forward);
+
+	// then rotate around this axis
+	std::vector<godot::Vector3> rotationAxis;
+	rotationAxis.push_back(Vector3Right);
+	rotationAxis.push_back(Vector3Forward);
+	rotationAxis.push_back(Vector3Up);
+
+	m_mesh->surface_begin(godot::Mesh::PrimitiveType::PRIMITIVE_LINE_STRIP);
+	m_mesh->surface_set_color(c);
+
+	for (int axis = 0; axis < primaryAxis.size(); axis++)
+	{
+		// ad an extra step to close the gap on the final disc of each rotation
+		for (float i = 0; i <= numSteps; i++)
+		{
+			Vector3 vert = (primaryAxis[axis] * radius);
+			vert = vert.rotated(rotationAxis[axis], stepSize * i);
+			vert += center;
+			m_mesh->surface_add_vertex(vert);
+		}
+		// throw in an extra center vert to tidy up the lines between axes
+		m_mesh->surface_add_vertex(center);
+
+	}
+	m_mesh->surface_end();
+}
+
+int32_t GDN_TheWorld_Drawer::addLine(godot::Vector3 start, godot::Vector3 end, godot::Color c)
+{
+	int32_t idx = m_firstAvailableIdx++;
+	m_drawings[idx] = std::make_unique<Drawing>();
+	Drawing* drawing = m_drawings[idx].get();
+
+	drawing->drawingType = Drawing::DrawingType::line;
+	drawing->start = start;
+	drawing->end = end;
+	drawing->color = c;
+
+	return idx;
+}
+
+int32_t GDN_TheWorld_Drawer::addSphere(godot::Vector3 center, float radius, godot::Color c)
+{
+	int32_t idx = m_firstAvailableIdx++;
+	m_drawings[idx] = std::make_unique<Drawing>();
+	Drawing* drawing = m_drawings[idx].get();
+
+	drawing->drawingType = Drawing::DrawingType::sphere;
+	drawing->start = center;
+	drawing->radius = radius;
+	drawing->color = c;
+
+	return idx;
+}
+
+void GDN_TheWorld_Drawer::removeDrawing(int32_t idx)
+{
+	if (m_drawings.contains(idx))
+		m_drawings.erase(idx);
+}
+
 void GDN_TheWorld_Viewer::_bind_methods()
 {
 	ClassDB::bind_method(D_METHOD("debug_print", "p_msg"), &GDN_TheWorld_Viewer::debugPrint);
@@ -445,6 +574,9 @@ bool GDN_TheWorld_Viewer::init(void)
 	std::map<std::string, std::unique_ptr<ShaderTerrainData::GroundTexture>>& groundTextures = ShaderTerrainData::getGroundTextures();
 	globals->addElementToInitialize((int)groundTextures.size());
 	
+	m_normalGizmo = memnew(GDN_TheWorld_Drawer);
+	this->add_child(m_normalGizmo);
+	
 	globals->addNumElementInitialized();
 
 	m_initialized = true;
@@ -492,6 +624,15 @@ void GDN_TheWorld_Viewer::deinit(void)
 		if (globals != nullptr)
 			globals->debugPrint("Exit world");
 
+		if (m_normalGizmo != nullptr)
+		{
+			Node* parent = m_normalGizmo->get_parent();
+			if (parent != nullptr)
+				parent->remove_child(m_normalGizmo);
+			m_normalGizmo->queue_free();
+			m_normalGizmo = nullptr;
+		}
+		
 		//if (m_initialWordlViewerPosSet)
 		//{
 		std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
@@ -523,7 +664,7 @@ void GDN_TheWorld_Viewer::deinit(void)
 		//	godot::GDN_TheWorld_Globals::s_elapsed4 = 0;
 		//	godot::GDN_TheWorld_Globals::s_elapsed5 = 0;
 		//}
-		m_mapQuadTree.clear();
+		clearMapQuadTree();
 		//{
 		//	size_t el1 = godot::GDN_TheWorld_Globals::s_elapsed1 / godot::GDN_TheWorld_Globals::s_num;
 		//	size_t el2 = godot::GDN_TheWorld_Globals::s_elapsed2 / godot::GDN_TheWorld_Globals::s_num;
@@ -780,7 +921,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 								quadTree->setVisible(true);
 
-								size_t cameraInGridIndex = quadTree->getQuadrant()->getIndexFromHeighmap(cameraPosX, cameraPosZ, level);
+								size_t cameraInGridIndex = quadTree->getQuadrant()->getIndexFromMap(cameraPosX, cameraPosZ);
 								if (cameraInGridIndex == -1)
 									throw(GDN_TheWorld_Exception(__FUNCTION__, std::string("Not found WorldViewer Pos").c_str()));
 
@@ -926,7 +1067,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
 
-			m_mapQuadTree.clear();
+			clearMapQuadTree();
 			m_mapQuadTree[quadrantPos] = make_unique<QuadTree>(this, quadrantPos);
 			m_mapQuadTree[quadrantPos]->init(cameraPosX, cameraPosY, cameraPosZ, cameraYaw, cameraPitch, cameraRoll, true, cameraDistanceFromTerrainForced);
 		}
@@ -1061,7 +1202,7 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 				Sleep(1);
 			}
 			
-			m_mapQuadTree.clear();
+			clearMapQuadTree();
 
 			if (Globals()->connectedToServer() && m_initialized)
 				Globals()->setStatus(TheWorldStatus::sessionInitialized);
@@ -1366,6 +1507,7 @@ void GDN_TheWorld_Viewer::trackMouse(bool b)
 		{
 			it.second->mouseHitChanged(godot::Vector3(), false);
 		}
+		m_normalGizmo->clearDrawings();
 	}
 }
 
@@ -2287,16 +2429,17 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 
 			if (rayArray.has("position"))
 			{
-				m_mouseHit = rayArray["position"];
+				m_trackedMouseHit = rayArray["position"];
 				m_mouseTrackedOnTerrain = true;
-				if (m_editMode && editModeUIControl && editModeUIControl->initilized())
-					editModeUIControl->setMouseHitLabelText(std::string("X=") + std::to_string(m_mouseHit.x) + " Y=" + std::to_string(m_mouseHit.y) + " Z=" + std::to_string(m_mouseHit.z));
 			}
 			else
 				m_mouseTrackedOnTerrain = false;
 
 			if (m_mouseTrackedOnTerrain)
 			{
+				if (m_editMode && editModeUIControl && editModeUIControl->initilized())
+					editModeUIControl->setMouseHitLabelText(std::string("X=") + std::to_string(m_trackedMouseHit.x) + " Y=" + std::to_string(m_trackedMouseHit.y) + " Z=" + std::to_string(m_trackedMouseHit.z));
+
 				if (rayArray.has("collider"))
 				{
 					collider = godot::Object::cast_to<godot::Node>(rayArray["collider"]);
@@ -2321,19 +2464,11 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 							QuadrantPos quadrantHitPos(mouseQuadrantHitPos.x, mouseQuadrantHitPos.z, level, numVerticesPerSize, gridStepInWu);
 							//quadrantHitPos.setTag(mouseQuadrantHitTag);
 
-							// Get previous quadrant if exist
-							//if (!m_quadrantHitPos.empty())
-							//{
-							//	MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
-							//	if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-							//	{
-							//		it->second->mouseHitChanged(godot::Vector3(), false);
-							//	}
-							//}
-							if (m_quadrantHit != nullptr)
-								m_quadrantHit->mouseHitChanged(godot::Vector3(), false);
-							for (auto& item : m_adjacentQuadrantsHit)
-								item->mouseHitChanged(godot::Vector3(), false);
+							//if (m_quadrantHit != nullptr)
+							//	m_quadrantHit->mouseHitChanged(godot::Vector3(), false);
+							//for (auto& item : m_adjacentQuadrantsHit)
+							//	item->mouseHitChanged(godot::Vector3(), false);
+							trackedMouseHitChanged(m_quadrantHit, m_adjacentQuadrantsHit, false, godot::Vector3());
 
 							// Get current quadrant
 							std::string mouseQuadrantHitTag;
@@ -2345,11 +2480,11 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 								mouseQuadrantHitTag = it->second->getTag();
 
 								quadrantHit = it->second.get();
-								quadrantHit->mouseHitChanged(m_mouseHit, true);
+								//quadrantHit->mouseHitChanged(m_mouseHit, true);
+								//for (auto& item : adjacentQuadrantsHit)
+								//	item->mouseHitChanged(m_mouseHit, true);
 								quadrantHit->getAdjacentQuadrants(adjacentQuadrantsHit);
-								for (auto& item : adjacentQuadrantsHit)
-									item->mouseHitChanged(m_mouseHit, true);
-
+								trackedMouseHitChanged(quadrantHit, adjacentQuadrantsHit, true, m_trackedMouseHit);
 							}
 
 							if (m_editMode && editModeUIControl && editModeUIControl->initilized())
@@ -2389,12 +2524,13 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 						}
 						else
 						{
-							if (m_quadrantHit != nullptr)
-							{
-								m_quadrantHit->mouseHitChanged(m_mouseHit, true);
-								for (auto& item : m_adjacentQuadrantsHit)
-									item->mouseHitChanged(m_mouseHit, true);
-							}
+							//if (m_quadrantHit != nullptr)
+							//{
+							//	m_quadrantHit->mouseHitChanged(m_mouseHit, true);
+							//	for (auto& item : m_adjacentQuadrantsHit)
+							//		item->mouseHitChanged(m_mouseHit, true);
+							//}
+							trackedMouseHitChanged(m_quadrantHit, m_adjacentQuadrantsHit, true, m_trackedMouseHit);
 						}
 					}
 					//godot::PoolStringArray metas = collider->get_meta_list();
@@ -2411,19 +2547,11 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 			}
 			else
 			{
-				// Get previous quadrant if exist
-				//if (!m_quadrantHitPos.empty())
-				//{
-				//	MapQuadTree::iterator it = m_mapQuadTree.find(m_quadrantHitPos);
-				//	if (it != m_mapQuadTree.end() && !it->second->statusToErase())
-				//	{
-				//		it->second->mouseHitChanged(godot::Vector3(), false);
-				//	}
-				//}
-				if (m_quadrantHit != nullptr)
-					m_quadrantHit->mouseHitChanged(godot::Vector3(), false);
-				for (auto& item : m_adjacentQuadrantsHit)
-					item->mouseHitChanged(godot::Vector3(), false);
+				//if (m_quadrantHit != nullptr)
+				//	m_quadrantHit->mouseHitChanged(godot::Vector3(), false);
+				//for (auto& item : m_adjacentQuadrantsHit)
+				//	item->mouseHitChanged(godot::Vector3(), false);
+				trackedMouseHitChanged(m_quadrantHit, m_adjacentQuadrantsHit, false, godot::Vector3());
 
 				m_mouseQuadrantHitName = "";
 				m_mouseQuadrantHitTag = "";
@@ -2435,6 +2563,72 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 			}
 
 			m_timeElapsedFromLastMouseTrack = timeElapsed;
+		}
+	}
+}
+
+void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::list<QuadTree*>& adjacentQuadrantsHit, bool hit, godot::Vector3 mouseHit)
+{
+
+	if (quadrantHit != nullptr)
+	{
+		if (hit)
+		{
+			if (m_previousTrackedMouseHit != mouseHit)
+			{
+				quadrantHit->mouseHitChanged(mouseHit, true);
+				for (auto& item : adjacentQuadrantsHit)
+					item->mouseHitChanged(mouseHit, true);
+
+				size_t index = quadrantHit->getQuadrant()->getIndexFromMap(mouseHit.x, mouseHit.z);
+				if (index != -1)
+				{
+					const float lineSize = 30;
+					const float radius = 5;
+					bool ok;
+					godot::Vector3 normal = quadrantHit->getQuadrant()->getNormalFromNormalmap(index, ok);
+					m_normalGizmo->clearDrawings();
+					if (ok)
+					{
+						godot::Vector3 end = mouseHit + normal * lineSize;
+						m_normalGizmo->drawLine(mouseHit, end);
+						m_normalGizmo->drawSphere(end, radius, GDN_TheWorld_Globals::g_color_cyan);
+
+						// X-axis growing
+						end = mouseHit + Vector3Right * lineSize;
+						m_normalGizmo->drawLine(mouseHit, end);
+						m_normalGizmo->drawSphere(end, radius, GDN_TheWorld_Globals::g_color_red);
+
+						// Y-axis growing
+						end = mouseHit + Vector3Up * lineSize;
+						m_normalGizmo->drawLine(mouseHit, end);
+						m_normalGizmo->drawSphere(end, radius, GDN_TheWorld_Globals::g_color_green);
+
+						// Z-axis growing
+						end = mouseHit + Vector3Back * lineSize;
+						m_normalGizmo->drawLine(mouseHit, end);
+						m_normalGizmo->drawSphere(end, radius, GDN_TheWorld_Globals::g_color_blue);
+
+						//static int32_t lineIdx = -1;
+						//static int32_t sphereIdx = -1;
+						//if (lineIdx != -1)
+						//	m_normalGizmo->removeDrawing(lineIdx);
+						//if (sphereIdx != -1)
+						//	m_normalGizmo->removeDrawing(sphereIdx);
+						//lineIdx = m_normalGizmo->addLine(mouseHit, end);
+						//sphereIdx = m_normalGizmo->addSphere(end, 5, GDN_TheWorld_Globals::g_color_cyan);
+					}
+				}
+
+				m_previousTrackedMouseHit = mouseHit;
+			}
+		}
+		else
+		{
+			quadrantHit->mouseHitChanged(godot::Vector3(), false);
+			for (auto& item : adjacentQuadrantsHit)
+				item->mouseHitChanged(godot::Vector3(), false);
+			m_normalGizmo->clearDrawings();
 		}
 	}
 }
@@ -3209,6 +3403,16 @@ void GDN_TheWorld_Viewer::_physics_process(double _delta)
 	}
 }
 
+void GDN_TheWorld_Viewer::clearMapQuadTree(void)
+{
+	std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
+
+	m_mapQuadTree.clear();
+	//m_cameraQuadTree = nullptr;
+	m_quadrantHit = nullptr;
+	m_adjacentQuadrantsHit.clear();
+}
+
 void GDN_TheWorld_Viewer::getAllQuadrantPos(std::vector<QuadrantPos>& allQuandrantPos)
 {
 	allQuandrantPos.clear();
@@ -3919,7 +4123,7 @@ void GDN_TheWorld_Viewer::deployWorld(float cameraX, float cameraY, float camera
 
 		//std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
 
-		//m_mapQuadTree.clear();
+		//clearMapQuadTree();
 		//m_mapQuadTree[quadrantPos] = make_unique<QuadTree>(this, quadrantPos);
 		//m_mapQuadTree[quadrantPos]->init(cameraX, cameraY, cameraZ, cameraYaw, cameraPitch, cameraRoll, true, cameraDistanceFromTerrainForced);
 	}

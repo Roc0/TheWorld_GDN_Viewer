@@ -6,6 +6,11 @@
 //	#include <PoolArrays.hpp>
 //#endif
 
+//#pragma warning(push, 0)
+//#include <godot_cpp/classes/engine.hpp>
+////#include <godot_cpp/classes/vector3.hpp>
+//#pragma warning(pop)
+
 #include "framework.h"
 #include <cfloat>
 #include <assert.h> 
@@ -19,23 +24,20 @@
 #include <exception>
 #include <plog/Log.h>
 #include "gsl\assert"
+//#include <Eigen/Dense>
 
-//#include <Godot.hpp>
-//#include <Vector3.hpp>
-//#include <boost/algorithm/string.hpp>
+#define Vector3One godot::Vector3(1, 1, 1)
+#define Vector3Zero godot::Vector3(0, 0, 0)
+#define Vector3Up godot::Vector3(0, 1, 0)
+#define Vector3Down godot::Vector3(0, -1, 0)
+#define Vector3Forward godot::Vector3(0, 0, -1)
+#define Vector3Back godot::Vector3(0, 0, 1)
+#define Vector3Left godot::Vector3(-1, 0, 0)
+#define Vector3Right godot::Vector3(1, 0, 0)
 
-#define Vector3One Vector3(1, 1, 1)
-#define Vector3Zero Vector3(0, 0, 0)
-#define Vector3Up Vector3(0, 1, 0)
-#define Vector3Down Vector3(0, -1, 0)
-#define Vector3Forward Vector3(0, 0, -1)
-#define Vector3Back Vector3(0, 0, 1)
-#define Vector3Left Vector3(-1, 0, 0)
-#define Vector3Right Vector3(1, 0, 0)
-
-#define Vector3X Vector3(1, 0, 0)
-#define Vector3Y Vector3(0, 1, 0)
-#define Vector3Z Vector3(0, 0, 1)
+#define Vector3X godot::Vector3(1, 0, 0)
+#define Vector3Y godot::Vector3(0, 1, 0)
+#define Vector3Z godot::Vector3(0, 0, 1)
 
 //#define TEXT(s) #s
 //#define IS_EDITOR_HINT() godot::Engine::get_singleton()->is_editor_hint()

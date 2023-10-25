@@ -314,10 +314,11 @@ namespace godot
 			return m_collider.get();
 		}
 
-		size_t getIndexFromHeighmap(float posX, float posZ, size_t level);
+		size_t getIndexFromMap(float posX, float posZ);
 		float getAltitudeFromHeigthmap(size_t index);
 		float getPosXFromHeigthmap(size_t index);
 		float getPosZFromHeigthmap(size_t index);
+		godot::Vector3 getNormalFromNormalmap(size_t index, bool& ok);
 
 		TheWorld_Utils::MemoryBuffer& getFloat16HeightsBuffer(bool reloadFromCache = true)
 		{
@@ -341,11 +342,11 @@ namespace godot
 			return m_float32HeigthsBuffer;
 		}
 
-		TheWorld_Utils::MemoryBuffer& getNormalsBuffer(bool reloadFromCache = true)
+		TheWorld_Utils::MemoryBuffer& getNormalsBuffer(bool reloadFromCache = true, bool force = false)
 		{
 			if (m_normalsBuffer.empty() && reloadFromCache)
 			{
-				if (!getTerrainEdit()->normalsNeedRegen)
+				if (!getTerrainEdit()->normalsNeedRegen || force)
 				{
 					TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
 					float minAltitude, maxAltitude;

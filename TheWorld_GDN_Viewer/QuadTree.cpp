@@ -8,6 +8,7 @@
 
 #include "Profiler.h"
 #include "half.h"
+#include "Utils.h"
 
 #include "assert.h"
 #include <filesystem>
@@ -2300,7 +2301,7 @@ TheWorld_Utils::MeshCacheBuffer& Quadrant::getMeshCacheBuffer(void)
 	return m_cache;
 }
 
-size_t Quadrant::getIndexFromHeighmap(float posX, float posZ, size_t level)
+size_t Quadrant::getIndexFromMap(float posX, float posZ)
 {
 	if (posX < m_quadrantPos.getLowerXGridVertex() || posX > m_quadrantPos.getLowerXGridVertex() + m_quadrantPos.getSizeInWU()
 		|| posZ < m_quadrantPos.getLowerZGridVertex() || posZ > m_quadrantPos.getLowerZGridVertex() + m_quadrantPos.getSizeInWU())
@@ -2333,6 +2334,24 @@ float Quadrant::getPosZFromHeigthmap(size_t index)
 {
 	size_t numStepsZAxis = size_t(index / m_quadrantPos.getNumVerticesPerSize());
 	return m_quadrantPos.getLowerZGridVertex() + numStepsZAxis * m_quadrantPos.getGridStepInWU();
+}
+
+godot::Vector3 Quadrant::getNormalFromNormalmap(size_t index, bool& ok)
+{
+	ok = true;
+
+	struct TheWorld_Utils::_RGB* rgb = (struct TheWorld_Utils::_RGB*)getNormalsBuffer(true, true).ptr();
+	if (rgb == nullptr)
+	{
+		ok = false;
+		return godot::Vector3();
+	}
+
+	rgb += index;
+	godot::Vector3 packedNormal(float(rgb->r) / 255, float(rgb->g) / 255, float(rgb->b) / 255);
+	godot::Vector3 normal;
+	TheWorld_Utils::unpackNormal(packedNormal.x, packedNormal.y, packedNormal.z, normal.x, normal.y, normal.z);
+	return normal;
 }
 
 void Quadrant::populateGridVertices(float cameraX, float cameraY, float cameraZ, float cameraYaw, float cameraPitch, float cameraRoll, bool setCamera, float cameraDistanceFromTerrainForced)
