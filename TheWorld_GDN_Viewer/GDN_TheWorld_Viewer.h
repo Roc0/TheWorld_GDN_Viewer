@@ -30,62 +30,14 @@
 
 namespace godot
 {
-	// Thanks to lokimckay: https://github.com/godotengine/godot-docs/issues/5901#issuecomment-1172923676
-	// and JonathanDotCel https://github.com/godotengine/godot-docs/issues/5901#issuecomment-1742096560
-	// C++ conversion
-	class GDN_TheWorld_Drawer : public godot::MeshInstance3D
-	{
-		GDCLASS(GDN_TheWorld_Drawer, MeshInstance3D)
-
-	private:
-		class Drawing
-		{
-		public:
-			enum class DrawingType
-			{
-				not_set = -1
-				, line = 0
-				, sphere = 1
-			};
-			
-			enum class DrawingType drawingType = DrawingType::not_set;
-			godot::Vector3 start;
-			godot::Vector3 end;
-			float radius = 0;
-			godot::Color color;
-		};
-
-	public:
-		GDN_TheWorld_Drawer();
-		~GDN_TheWorld_Drawer();
-
-		static void _bind_methods();
-
-		void clearDrawings();
-		void drawLine(godot::Vector3 start, godot::Vector3 end, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
-		void drawSphere(godot::Vector3 center, float radius, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
-
-		virtual void _ready(void) override;
-		virtual void _process(double _delta) override;
-
-		int32_t addLine(godot::Vector3 start, godot::Vector3 end, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
-		int32_t addSphere(godot::Vector3 center, float radius, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
-		void removeDrawing(int32_t idx);
-
-	private:
-		godot::Ref<godot::ImmediateMesh> m_mesh;
-		godot::Ref<godot::StandardMaterial3D> m_mat;
-		int32_t m_firstAvailableIdx = 0;
-
-		std::map<int32_t, std::unique_ptr<Drawing>> m_drawings;
-	};
-
 	class MeshCache;
 	class QuadTree;
 	class Chunk;
 	class GDN_TheWorld_Globals;
 	class GDN_TheWorld_Camera;
 	class GDN_TheWorld_Edit;
+	class GDN_TheWorld_Drawer;
+	class GDN_TheWorld_Gizmo3d;
 
 	typedef std::map<QuadrantPos, std::unique_ptr<QuadTree>> MapQuadTree;
 
@@ -610,7 +562,8 @@ namespace godot
 		std::list<QuadTree*> m_adjacentQuadrantsHit;
 		QuadrantPos m_quadrantSelPos;
 		Chunk* m_mouseHitChunk;
-		GDN_TheWorld_Drawer* m_normalGizmo = nullptr;
+		GDN_TheWorld_Drawer* m_normalDrawer = nullptr;
+		GDN_TheWorld_Gizmo3d* m_gizmo = nullptr;
 
 		bool m_debugContentVisibility;
 		bool m_updateTerrainVisibilityRequired;

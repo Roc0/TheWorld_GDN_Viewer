@@ -12,6 +12,7 @@
 #include "GDN_TheWorld_Quadrant.h"
 #include "GDN_TheWorld_Edit.h"
 #include "Chunk.h"
+#include "Tools.h"
 
 #pragma warning(push, 0)
 #include <gdextension_interface.h>
@@ -38,6 +39,7 @@ void initialize_tw_main_module(ModuleInitializationLevel p_level)
     ClassDB::register_class<godot::GDN_TheWorld_Edit>();
     ClassDB::register_class<godot::GDN_TheWorld_MapModder>();
     ClassDB::register_class<godot::GDN_TheWorld_Drawer>();
+    ClassDB::register_class<godot::GDN_TheWorld_Gizmo3d>();
 }
 
 void uninitialize_tw_main_module(ModuleInitializationLevel p_level)

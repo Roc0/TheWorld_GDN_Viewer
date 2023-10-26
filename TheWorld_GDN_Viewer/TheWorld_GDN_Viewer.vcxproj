@@ -184,6 +184,7 @@
     <ClInclude Include="GDN_TheWorld_Viewer.h" />
     <ClInclude Include="QuadTree.h" />
     <ClInclude Include="register_types.h" />
+    <ClInclude Include="Tools.h" />
     <ClInclude Include="UnicodeDefine.h" />
     <ClInclude Include="Viewer_Utils.h" />
   </ItemGroup>
@@ -251,6 +252,10 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="register_types.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Tools.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
