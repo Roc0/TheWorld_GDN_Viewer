@@ -1,7 +1,9 @@
 
 #include "GDN_Template.h"
 
+#pragma warning (push, 0)
 //#include <godot_cpp/core/class_db.hpp>
+#pragma warning(pop)
 
 using namespace godot;
 

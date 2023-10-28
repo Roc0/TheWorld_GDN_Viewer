@@ -5,8 +5,10 @@
 
 #include <string>
 
+#pragma warning (push, 0)
 #include <godot_cpp/classes/base_material3d.hpp>
 #include <godot_cpp/classes/standard_material3d.hpp>
+#pragma warning(pop)
 
 //using namespace godot;
 namespace godot

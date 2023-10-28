@@ -7,9 +7,6 @@
 #include <godot_cpp/classes/ref.hpp>
 #pragma warning (pop)
 
-//#include <Reference.hpp>
-//#include <ArrayMesh.hpp>
-
 #include "Utils.h"
 
 #define GD_ACTIVE_CAMERA_GROUP	"ActiveCamera"

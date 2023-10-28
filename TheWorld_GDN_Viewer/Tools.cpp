@@ -3,6 +3,11 @@
 #include "Utils.h"
 #include "Viewer_Utils.h"
 
+#pragma warning(push, 0)
+#include <godot_cpp/classes/label3d.hpp>
+#include <godot_cpp/classes/sphere_mesh.hpp>
+#pragma warning(pop)
+
 using namespace godot;
 
 GDN_TheWorld_Gizmo3d::GDN_TheWorld_Gizmo3d()
@@ -19,6 +24,10 @@ void GDN_TheWorld_Gizmo3d::_bind_methods()
 
 void GDN_TheWorld_Gizmo3d::_ready(void)
 {
+	const double pixel_size = 0.05;		// 0.005
+	const int32_t font_size = 128;		// 32
+	const int32_t outline_size = 36;	// 12
+
 	// X Axis GDN_TheWorld_Globals::g_color_red 
 	godot::Ref<godot::CylinderMesh> xAzisMesh = memnew(godot::CylinderMesh);
 	xAzisMesh->set_cap_bottom(false);
@@ -48,11 +57,24 @@ void GDN_TheWorld_Gizmo3d::_ready(void)
 	m_xAxisArrowheadMesh->set_rotation_degrees(godot::Vector3(0.0f, 0.0f, 270.0f));
 	m_xAxisArrowheadMesh->set_position(godot::Vector3(m_arrowheadSize / 2 + m_arrowSize, 0.0f, 0.0f));
 
-	//m_xAxisLabel = memnew(godot::Label3D);
-	//add_child(m_xAxisLabel);
-	//m_xAxisLabel->set_text("X");
-	//m_xAxisLabel->set_position(godot::Vector3(m_arrowheadSize + m_arrowSize + 5, 0.0f, 0.0f));
-	//m_xAxisLabel->set_modulate(GDN_TheWorld_Globals::g_color_red);
+	m_xAxisLabel = memnew(godot::Label3D);
+	add_child(m_xAxisLabel);
+	m_xAxisLabel->set_text("X");
+	m_xAxisLabel->set_position(godot::Vector3(m_arrowheadSize + m_arrowSize + 5, 0.0f, 0.0f));
+	m_xAxisLabel->set_font_size(font_size);
+	m_xAxisLabel->set_pixel_size(pixel_size);
+	m_xAxisLabel->set_outline_size(outline_size);
+	m_xAxisLabel->set_modulate(GDN_TheWorld_Globals::g_color_red);
+	m_xAxisLabel->set_outline_modulate(godot::Color(0.27f, 0.27f, 0.27f, 1.0f));
+
+	//godot::SphereMesh* xAxisSphereMesh = memnew(godot::SphereMesh);
+	//xAxisSphereMesh->set_height(m_arrowRadius * m_arrowheadRadiusMultiplier);
+	//xAxisSphereMesh->set_radius((m_arrowRadius * m_arrowheadRadiusMultiplier) / 2);
+	//godot::MeshInstance3D* xAxisSphereMeshI3d = memnew(godot::MeshInstance3D);
+	//xAxisSphereMeshI3d->set_mesh(xAxisSphereMesh);
+	//xAxisSphereMeshI3d->set_material_override(xAxisMat);
+	//add_child(xAxisSphereMeshI3d);
+	//xAxisSphereMeshI3d->set_position(godot::Vector3(m_arrowheadSize + m_arrowSize + 5, 0.0f, 0.0f));
 
 	// Y Axis GDN_TheWorld_Globals::g_color_green 
 	godot::Ref<godot::CylinderMesh> yAzisMesh = memnew(godot::CylinderMesh);
@@ -80,6 +102,16 @@ void GDN_TheWorld_Gizmo3d::_ready(void)
 	m_yAxisArrowheadMesh->set_material_override(yAxisMat);
 	add_child(m_yAxisArrowheadMesh);
 	m_yAxisArrowheadMesh->set_position(godot::Vector3(0.0f, m_arrowheadSize / 2 + m_arrowSize, 0.0f));
+
+	m_yAxisLabel = memnew(godot::Label3D);
+	add_child(m_yAxisLabel);
+	m_yAxisLabel->set_text("Y");
+	m_yAxisLabel->set_position(godot::Vector3(0.0f, m_arrowheadSize + m_arrowSize + 5, 0.0f));
+	m_yAxisLabel->set_font_size(font_size);
+	m_yAxisLabel->set_pixel_size(pixel_size);
+	m_yAxisLabel->set_outline_size(outline_size);
+	m_yAxisLabel->set_modulate(GDN_TheWorld_Globals::g_color_green);
+	m_yAxisLabel->set_outline_modulate(godot::Color(0.27f, 0.27f, 0.27f, 1.0f));
 
 	// Z Axis GDN_TheWorld_Globals::g_color_blue 
 	godot::Ref<godot::CylinderMesh> zAzisMesh = memnew(godot::CylinderMesh);
@@ -109,6 +141,16 @@ void GDN_TheWorld_Gizmo3d::_ready(void)
 	add_child(m_zAxisArrowheadMesh);
 	m_zAxisArrowheadMesh->set_rotation_degrees(godot::Vector3(90.0f, 0.0f, 0.0f));
 	m_zAxisArrowheadMesh->set_position(godot::Vector3(0.0f, 0.0f, m_arrowheadSize / 2 + m_arrowSize));
+
+	m_zAxisLabel = memnew(godot::Label3D);
+	add_child(m_zAxisLabel);
+	m_zAxisLabel->set_text("Z");
+	m_zAxisLabel->set_position(godot::Vector3(0.0f, 0.0f, m_arrowheadSize + m_arrowSize + 5));
+	m_zAxisLabel->set_font_size(font_size);
+	m_zAxisLabel->set_pixel_size(pixel_size);
+	m_zAxisLabel->set_outline_size(outline_size);
+	m_zAxisLabel->set_modulate(GDN_TheWorld_Globals::g_color_blue);
+	m_zAxisLabel->set_outline_modulate(godot::Color(0.27f, 0.27f, 0.27f, 1.0f));
 }
 
 void GDN_TheWorld_Gizmo3d::_process(double _delta)

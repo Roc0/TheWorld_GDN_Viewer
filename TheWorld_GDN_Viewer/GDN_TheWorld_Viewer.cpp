@@ -1371,6 +1371,8 @@ void GDN_TheWorld_Viewer::toggleTrackMouse(void)
 		else
 			trackMouse(true);
 	}
+	else
+		m_previousTrackedMouseHit = godot::Vector3();
 
 	if (trackMouse())
 		m_mouseQuadrantHitName = "";
@@ -1408,6 +1410,7 @@ void GDN_TheWorld_Viewer::trackMouse(bool b)
 
 void GDN_TheWorld_Viewer::toggleEditMode(void)
 {
+	m_previousTrackedMouseHit = godot::Vector3();
 	m_editMode = !m_editMode;
 	if (m_editMode)
 		trackMouse(true);
@@ -2462,7 +2465,7 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 				size_t index = quadrantHit->getQuadrant()->getIndexFromMap(mouseHit.x, mouseHit.z);
 				if (index != -1)
 				{
-					const float lineSize = 30;
+					const float lineSize = 50;
 					const float radius = 1;
 					bool ok;
 					godot::Vector3 normal = quadrantHit->getQuadrant()->getNormalFromNormalmap(index, ok);
@@ -3129,6 +3132,9 @@ void GDN_TheWorld_Viewer::process_materialParam(void)
 			bool reset = false;
 			reset = itQuadTree->second->resetMaterialParams();
 			bool updated = itQuadTree->second->updateMaterialParams();
+
+			if (updated)
+				m_previousTrackedMouseHit = godot::Vector3();
 
 			if ((reset || updated) && !m_desideredLookDevChanged)
 				break;
