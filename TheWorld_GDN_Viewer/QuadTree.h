@@ -628,6 +628,8 @@ namespace godot
 
 #define SHADER_PARAM_EDITMODE_SELECTED	"u_editmode_selected"
 #define SHADER_PARAM_MOUSE_HIT			"u_mouse_hit"
+#define SHADER_PARAM_MOUSE_HIT_RADIUS	"u_mouse_hit_radius"
+#define SHADER_PARAM_QUAD_BORDER_LINE_THICKNESS	"u_quad_border_line_thickness"
 
 #define SHADER_PARAM_VERTICES_PER_CHUNK	"u_num_vertices_per_chunk"
 #define SHADER_PARAM_LOOKDEV_LOD		"u_lod"

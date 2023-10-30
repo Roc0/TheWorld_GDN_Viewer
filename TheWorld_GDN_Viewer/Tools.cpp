@@ -1,4 +1,5 @@
 #include "GDN_TheWorld_Globals.h"
+#include "GDN_TheWorld_Viewer.h"
 #include "Tools.h"
 #include "Utils.h"
 #include "Viewer_Utils.h"
@@ -155,6 +156,16 @@ void GDN_TheWorld_Gizmo3d::_ready(void)
 
 void GDN_TheWorld_Gizmo3d::_process(double _delta)
 {
+	if (m_camera != nullptr)
+	{
+		godot::Vector3 cameraPos = m_camera->get_global_transform().origin;
+		m_xAxisLabel->look_at(cameraPos, godot::Vector3(0, 1, 0));
+		m_xAxisLabel->rotate_y(TheWorld_Utils::kPi);
+		m_yAxisLabel->look_at(cameraPos, godot::Vector3(0, 1, 0));
+		m_yAxisLabel->rotate_y(TheWorld_Utils::kPi);
+		m_zAxisLabel->look_at(cameraPos, godot::Vector3(0, 1, 0));
+		m_zAxisLabel->rotate_y(TheWorld_Utils::kPi);
+	}
 }
 
 GDN_TheWorld_Drawer::GDN_TheWorld_Drawer()
@@ -167,21 +178,6 @@ GDN_TheWorld_Drawer::~GDN_TheWorld_Drawer()
 
 void GDN_TheWorld_Drawer::_bind_methods()
 {
-}
-
-void GDN_TheWorld_Drawer::_process(double _delta)
-{
-	if (!m_drawings.empty())
-	{
-		m_mesh->clear_surfaces();
-		for (auto& item : m_drawings)
-		{
-			if (item.second->drawingType == Drawing::DrawingType::line)
-				drawLine(item.second->start, item.second->end, item.second->color);
-			else if (item.second->drawingType == Drawing::DrawingType::sphere)
-				drawSphere(item.second->start, item.second->radius, item.second->color);
-		}
-	}
 }
 
 void GDN_TheWorld_Drawer::_ready(void)
@@ -203,6 +199,70 @@ void GDN_TheWorld_Drawer::_ready(void)
 
 	set_mesh(m_mesh);
 	set_material_override(m_mat);
+}
+
+void GDN_TheWorld_Drawer::_process(double _delta)
+{
+	if (!m_drawings.empty() && is_visible())
+	{
+		const double pixel_size = 0.05;		// 0.005
+		const int32_t font_size = 128;		// 32
+		const int32_t outline_size = 36;	// 12
+
+		m_mesh->clear_surfaces();
+		for (auto& item : m_drawings)
+		{
+			if (item.second->drawingType == Drawing::DrawingType::line)
+			{
+				drawLine(item.second->start, item.second->end, item.second->color);
+				if (item.second->labelPos == Drawing::LabelPos::not_set)
+				{
+					if (item.second->label != nullptr)
+					{
+						Node* parent = item.second->label->get_parent();
+						if (parent != nullptr)
+							parent->remove_child(item.second->label);
+						item.second->label->queue_free();
+						item.second->label = nullptr;
+					}
+				}
+				else
+				{
+					if (item.second->label == nullptr)
+					{
+						item.second->label = memnew(godot::Label3D);
+						add_child(item.second->label);
+						item.second->label->set_font_size(font_size);
+						item.second->label->set_pixel_size(pixel_size);
+						item.second->label->set_outline_size(outline_size);
+						item.second->label->set_outline_modulate(godot::Color(0.27f, 0.27f, 0.27f, 1.0f));
+					}
+					item.second->label->set_text(item.second->labelText.c_str());
+					if (item.second->labelPos == Drawing::LabelPos::start)
+					{
+						// TODO
+					}
+					else if (item.second->labelPos == Drawing::LabelPos::center)
+					{
+						// TODO
+					}
+					else if (item.second->labelPos == Drawing::LabelPos::end)
+					{
+						item.second->label->set_position(item.second->end + (item.second->end - item.second->start).normalized() * item.second->labelOffset);
+					}
+					item.second->label->set_modulate(item.second->color);
+					if (m_camera != nullptr)
+					{
+						godot::Vector3 cameraPos = m_camera->get_global_transform().origin;
+						item.second->label->look_at(cameraPos, godot::Vector3(0, 1, 0));
+						item.second->label->rotate_y(TheWorld_Utils::kPi);
+					}
+				}
+			}
+			else if (item.second->drawingType == Drawing::DrawingType::sphere)
+				drawSphere(item.second->start, item.second->radius, item.second->color);
+		}
+	}
 }
 
 void GDN_TheWorld_Drawer::clearDrawings()
@@ -256,7 +316,7 @@ void GDN_TheWorld_Drawer::drawSphere(godot::Vector3 center, float radius, godot:
 	m_mesh->surface_end();
 }
 
-int32_t GDN_TheWorld_Drawer::addLine(godot::Vector3 start, godot::Vector3 end, godot::Color c)
+int32_t GDN_TheWorld_Drawer::addLine(godot::Vector3 start, godot::Vector3 end, std::string labelText, enum class Drawing::LabelPos labelPos, float labelOffset, godot::Color c)
 {
 	int32_t idx = m_firstAvailableIdx++;
 	m_drawings[idx] = std::make_unique<Drawing>();
@@ -266,8 +326,33 @@ int32_t GDN_TheWorld_Drawer::addLine(godot::Vector3 start, godot::Vector3 end, g
 	drawing->start = start;
 	drawing->end = end;
 	drawing->color = c;
+	drawing->labelPos = labelPos;
+	drawing->labelOffset = labelOffset;
+	drawing->labelText = labelText;
 
 	return idx;
+}
+
+void GDN_TheWorld_Drawer::updateLine(int32_t idx, godot::Vector3 start, godot::Vector3 end, std::string labelText, enum class Drawing::LabelPos labelPos, float labelOffset, godot::Color c)
+{
+	if (!m_drawings.contains(idx))
+		return;
+
+	Drawing* drawing = m_drawings[idx].get();
+
+	if (drawing->drawingType != Drawing::DrawingType::line)
+		return;
+
+	drawing->start = start;
+	drawing->end = end;
+	if (c.a != 0.0f)
+		drawing->color = c;
+	if (labelPos != Drawing::LabelPos::not_set)
+		drawing->labelPos = labelPos;
+	if (labelOffset >= 0)
+		drawing->labelOffset = labelOffset;
+	if (labelText != "@")
+		drawing->labelText = labelText;
 }
 
 int32_t GDN_TheWorld_Drawer::addSphere(godot::Vector3 center, float radius, godot::Color c)
@@ -282,6 +367,23 @@ int32_t GDN_TheWorld_Drawer::addSphere(godot::Vector3 center, float radius, godo
 	drawing->color = c;
 
 	return idx;
+}
+
+void GDN_TheWorld_Drawer::updateSphere(int32_t idx, godot::Vector3 center, float radius, godot::Color c)
+{
+	if (!m_drawings.contains(idx))
+		return;
+
+	Drawing* drawing = m_drawings[idx].get();
+
+	if (drawing->drawingType != Drawing::DrawingType::sphere)
+		return;
+
+	drawing->start = center;
+	if (radius >= 0)
+		drawing->radius = radius;
+	if (c.a != 0.0f)
+		drawing->color = c;
 }
 
 void GDN_TheWorld_Drawer::removeDrawing(int32_t idx)

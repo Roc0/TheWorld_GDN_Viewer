@@ -1692,12 +1692,12 @@ void ShaderTerrainData::resetMaterialParams(LookDev lookdev)
 
 			//{
 			//	struct TheWorld_Utils::_RGB* rgb = (struct TheWorld_Utils::_RGB*)normalsBuffer.ptr();
-			//	image->lock();
+			//	//image->lock();
 			//	Color c = image->get_pixel(0, 0);
 			//	size_t c_r = (size_t)(c.r * 255);
 			//	size_t c_g = (size_t)(c.g * 255);
 			//	size_t c_b = (size_t)(c.b * 255);
-			//	image->unlock();
+			//	//image->unlock();
 			//}
 		}
 
@@ -1905,8 +1905,6 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 		// This is needed to properly transform normals if the terrain is scaled
 		Basis normalBasis = globalTransform.basis.inverse().transposed();
 
-		//float gridStepInWU = m_viewer->Globals()->gridStepInWU();
-
 		bool selected = m_quadTree->editModeQuadrantSelected();
 		float editMode = 0.0f;
 		if (selected)
@@ -1916,17 +1914,15 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 
 		if (lookdev == LookDev::ChunkLod)
 		{
-			//float numVerticesPerChuckSide = (float)m_viewer->Globals()->numVerticesPerChuckSide();
-			
 			std::map<int, godot::Ref<godot::ShaderMaterial>>& lookDevChunkLodMaterials = getLookDevChunkLodMaterials();
 
 			for (auto& item : lookDevChunkLodMaterials)
 			{
 				item.second->set_shader_parameter(SHADER_PARAM_INVERSE_TRANSFORM, inverseTransform);
 				item.second->set_shader_parameter(SHADER_PARAM_NORMAL_BASIS, normalBasis);
-				//item.second->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
-				//item.second->set_shader_parameter(SHADER_PARAM_VERTICES_PER_CHUNK, numVerticesPerChuckSide);
 				item.second->set_shader_parameter(SHADER_PARAM_EDITMODE_SELECTED, editMode);
+				item.second->set_shader_parameter(SHADER_PARAM_QUAD_BORDER_LINE_THICKNESS, m_viewer->getShaderParamQuadBorderLineThickness());
+				item.second->set_shader_parameter(SHADER_PARAM_MOUSE_HIT_RADIUS, m_viewer->getShaderParamMouseHitRadius());
 				if (m_heightMapTexModified && m_heightMapTexture != nullptr)
 					item.second->set_shader_parameter(SHADER_PARAM_TERRAIN_HEIGHTMAP, m_heightMapTexture);
 		
@@ -1938,29 +1934,15 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 		{
 			godot::Ref<godot::ShaderMaterial> currentMaterial;
 			if (lookdev == LookDev::NotSet)
-			{
-				//currentMaterial = m_regularMaterial;
 				currentMaterial = getRegularMaterial();
-			}
 			else
-			{
-				//currentMaterial = m_lookDevMaterial;
 				currentMaterial = getLookDevMaterial();
-			}
 
-			// u_terrain_colormap=Color(1,1,1,1) u_terrain_splatmap u_ground_albedo_bump_0/4 u_ground_normal_roughness_0/4
-
-			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_INVERSE_TRANSFORM) + String(" t=") + String(t));
 			currentMaterial->set_shader_parameter(SHADER_PARAM_INVERSE_TRANSFORM, inverseTransform);
-
-			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_NORMAL_BASIS) + String(" b=") + String(b));
 			currentMaterial->set_shader_parameter(SHADER_PARAM_NORMAL_BASIS, normalBasis);
-
-			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_GRID_STEP) + String(" grid_step=") + String(std::to_string(f).c_str()));
-			//currentMaterial->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
-
-			//m_viewer->Globals()->debugPrint("setting shader_param=" + String(SHADER_PARAM_EDITMODE_SELECTED) + String(" quad_selected=") + String(std::to_string(sel).c_str()));
 			currentMaterial->set_shader_parameter(SHADER_PARAM_EDITMODE_SELECTED, editMode);
+			currentMaterial->set_shader_parameter(SHADER_PARAM_QUAD_BORDER_LINE_THICKNESS, m_viewer->getShaderParamQuadBorderLineThickness());
+			currentMaterial->set_shader_parameter(SHADER_PARAM_MOUSE_HIT_RADIUS, m_viewer->getShaderParamMouseHitRadius());
 
 			m_viewer->getMainProcessingMutex().lock();
 			if (m_quadTree->getQuadrant()->textureUpdated() && lookdev == LookDev::NotSet)

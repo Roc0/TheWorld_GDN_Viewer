@@ -52,7 +52,12 @@ namespace godot
 		virtual void _physics_process(double _delta) override;
 		virtual void _input(const Ref<InputEvent>& event) override;
 
-		void initForNormals(GDN_TheWorld_Viewer* viewer, GDN_TheWorld_Edit* edit, TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, size_t tileSize, size_t viewportBorder = 0);
+		void custom_ready(GDN_TheWorld_Viewer* viewer, GDN_TheWorld_Edit* edit);
+		void debug_process(double _delta);
+
+		void framePostDraw(void);
+
+		void initForNormals(TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, size_t tileSize, size_t viewportBorder = 0);
 		void deinit(void);
 		void startProcessing(void);
 		bool working(void);
@@ -92,6 +97,9 @@ namespace godot
 
 		godot::Ref<godot::Image> m_outImage;
 		std::unique_ptr<TheWorld_Utils::MemoryBuffer> m_outBuffer;
+		bool m_frameAvailable = false;
+
+		godot::Sprite2D* m_sprite = nullptr;
 	};
 
 	class GDN_TheWorld_Edit : public godot::MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
@@ -236,6 +244,8 @@ namespace godot
 
 			godot::Button* m_infoButton;
 			godot::Control* m_infoVBoxContainer;
+			godot::CheckBox* m_showGizmo = nullptr;
+			godot::CheckBox* m_showNormal = nullptr;
 			godot::Label* m_infoLabel;
 
 			godot::Button* m_noiseButton;
@@ -342,6 +352,7 @@ namespace godot
 		godot::Window* initSelTexturePanel(void);
 		void voidSignalManager(godot::Object* obj, godot::String signal, godot::String className, int instanceId, godot::String objectName, godot::Variant custom1, godot::Variant custom2, godot::Variant custom3);
 		void guiInputEvent(const godot::Ref<godot::InputEvent>& event, godot::Object* obj, godot::String signal, godot::String className, int instanceId, godot::String objectName, godot::Variant custom1, godot::Variant custom2, godot::Variant custom3);
+		void toggledSignalManager(const bool pressed, godot::Object* obj, godot::String signal, godot::String className, int instanceId, godot::String objectName, godot::Variant custom1, godot::Variant custom2, godot::Variant custom3);
 		void controlNeedResize(void);
 		//void editModeNoisePanel(void);
 		//void editModeInfoPanel(void);
@@ -465,6 +476,15 @@ namespace godot
 		}
 
 		godot::Size2 getTerrainScrollPanelSize(void);
+		size_t getNumWorkingThread(void)
+		{
+			size_t maxThreads;
+			return m_tp.getNumWorkingThreads(maxThreads);
+		}
+		void requestedQuit(void)
+		{
+			m_requestedThreadExit = true;
+		}
 
 	private:
 		bool m_initialized;
@@ -503,6 +523,7 @@ namespace godot
 		std::map<QuadrantPos, std::string> m_mapQuadToSave;
 
 		TheWorld_Utils::ThreadPool m_tp;
+		bool m_requestedThreadExit = false;
 
 		GDN_TheWorld_MapModder* m_mapModder = nullptr;
 	};

@@ -152,6 +152,14 @@ namespace godot
 			return m_shaderParam_colormapOpacity;
 		}
 
+		float getShaderParamQuadBorderLineThickness(void)
+		{
+			return m_shaderParam_quad_border_line_thickness;
+		}
+		float getShaderParamMouseHitRadius(void)
+		{
+			return m_shaderParam_mouse_hit_radius;
+		}
 		void setShaderParam(godot::String name, godot::Variant value);
 		void debugPrint(String message)
 		{
@@ -457,6 +465,22 @@ namespace godot
 		}
 		void trackedMouseHitChanged(QuadTree* quadrantHit, std::list<QuadTree*>& adjacentQuadrantsHit, bool hit, godot::Vector3 m_mouseHit);
 		void clearMapQuadTree(void);
+		bool gizmoVisible(void)
+		{
+			return m_gizmoVisible;
+		}
+		void gizmoVisible(bool b)
+		{
+			m_gizmoVisible = b;
+		}
+		bool normalVisible(void)
+		{
+			return m_normalVisible;
+		}
+		void normalVisible(bool b)
+		{
+			m_normalVisible = b;
+		}
 
 	private:
 		void _findChildNodes(godot::Array& foundNodes, godot::Array& searchNodes, String searchClass);
@@ -563,7 +587,11 @@ namespace godot
 		QuadrantPos m_quadrantSelPos;
 		Chunk* m_mouseHitChunk;
 		GDN_TheWorld_Drawer* m_normalDrawer = nullptr;
+		int32_t m_normalLineIdx = -1;
+		int32_t m_normalSphereIdx = -1;
+		bool m_normalVisible = false;
 		GDN_TheWorld_Gizmo3d* m_gizmo = nullptr;
+		bool m_gizmoVisible = false;
 
 		bool m_debugContentVisibility;
 		bool m_updateTerrainVisibilityRequired;
@@ -612,6 +640,8 @@ namespace godot
 		godot::Plane m_shaderParam_tileReduction;
 		float m_shaderParam_globalmapBlendStart;
 		float m_shaderParam_globalmapBlendDistance;
+		float m_shaderParam_quad_border_line_thickness = 0.005f;
+		float m_shaderParam_mouse_hit_radius = 0.001f;
 		godot::Plane  m_shaderParam_colormapOpacity;
 		bool m_shaderParamChanged;
 		bool m_reloadAllShadersRequired = false;

@@ -7,6 +7,7 @@
 #include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/classes/cylinder_mesh.hpp>
 #include <godot_cpp/classes/label3d.hpp>
+#include <godot_cpp/classes/camera3d.hpp>
 #pragma warning(pop)
 
 #include <map>
@@ -15,6 +16,9 @@
 
 namespace godot
 {
+	class GDN_TheWorld_Viewer;
+
+
 	class GDN_TheWorld_Gizmo3d : public godot::Node3D
 	{
 		GDCLASS(GDN_TheWorld_Gizmo3d, Node3D)
@@ -27,6 +31,15 @@ namespace godot
 
 		virtual void _ready(void) override;
 		virtual void _process(double _delta) override;
+
+		void set_viewer(GDN_TheWorld_Viewer* viewer)
+		{
+			m_viewer = viewer;
+		}
+		void set_camera(godot::Camera3D* camera)
+		{
+			m_camera = camera;
+		}
 
 	private:
 		godot::MeshInstance3D* m_xAzisMesh = nullptr;
@@ -48,6 +61,9 @@ namespace godot
 		float m_arrowheadRadiusMultiplier = 2.5f;
 		float m_arrowSize = 30;
 		float m_arrowheadSize = 10;
+
+		GDN_TheWorld_Viewer* m_viewer = nullptr;
+		godot::Camera3D* m_camera = nullptr;
 	};
 
 	// Thanks to lokimckay: https://github.com/godotengine/godot-docs/issues/5901#issuecomment-1172923676
@@ -57,7 +73,7 @@ namespace godot
 	{
 		GDCLASS(GDN_TheWorld_Drawer, MeshInstance3D)
 
-	private:
+	public:
 		class Drawing
 		{
 		public:
@@ -67,12 +83,23 @@ namespace godot
 				, line = 0
 				, sphere = 1
 			};
+			enum class LabelPos
+			{
+				not_set = -1
+				, start = 0
+				, center = 1
+				, end = 2
+			};
 
 			enum class DrawingType drawingType = DrawingType::not_set;
 			godot::Vector3 start;
 			godot::Vector3 end;
-			float radius = 0;
+			float radius = -1;
 			godot::Color color;
+			godot::Label3D* label = nullptr;
+			float labelOffset = -1;
+			enum class LabelPos labelPos = LabelPos::not_set;
+			std::string labelText;
 		};
 
 	public:
@@ -88,15 +115,21 @@ namespace godot
 		virtual void _ready(void) override;
 		virtual void _process(double _delta) override;
 
-		int32_t addLine(godot::Vector3 start, godot::Vector3 end, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
-		int32_t addSphere(godot::Vector3 center, float radius, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
+		int32_t addLine(godot::Vector3 start, godot::Vector3 end, std::string labelText = "@", enum class Drawing::LabelPos labelPos = Drawing::LabelPos::not_set, float labelOffset = -1, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 0.0f));
+		void updateLine(int32_t idx, godot::Vector3 start, godot::Vector3 end, std::string labelText = "@", enum class Drawing::LabelPos labelPos = Drawing::LabelPos::not_set, float labelOffset = -1, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 0.0f));
+		int32_t addSphere(godot::Vector3 center, float radius = -1, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 0.0f));
+		void updateSphere(int32_t idx, godot::Vector3 center, float radius = -1, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 0.0f));
 		void removeDrawing(int32_t idx);
+		void set_camera(godot::Camera3D* camera)
+		{
+			m_camera = camera;
+		}
 
 	private:
 		godot::Ref<godot::ImmediateMesh> m_mesh;
 		godot::Ref<godot::StandardMaterial3D> m_mat;
 		int32_t m_firstAvailableIdx = 0;
-
 		std::map<int32_t, std::unique_ptr<Drawing>> m_drawings;
+		godot::Camera3D* m_camera = nullptr;
 	};
 }
