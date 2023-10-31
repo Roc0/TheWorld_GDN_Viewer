@@ -2611,7 +2611,7 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	{
 		m_actionClock.tock();
 		m_actionInProgress = false;
-		setMessage(godot::String("Completed!"), false);
+		setMessage(godot::String("No quad selected!"), false);
 		return;
 	}
 
@@ -2728,7 +2728,8 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 
 	
 	// 8. notify all chunk of the quadrant that heigths have been changed (invalidates all cached chunk and quad AABB)
-	Chunk::HeightsChangedChunkAction action(m_viewer->is_visible_in_tree());
+	//Chunk::HeightsChangedChunkAction action(m_viewer->is_visible_in_tree());
+	Chunk::HeightsChangedChunkAction action(true);
 	m_viewer->m_refreshRequired = true;
 	quadTreeSel->ForAllChunk(action);
 
@@ -2762,6 +2763,8 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 	//refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
+
+	editModeApplyTextures_1(false, true);
 }
 
 void GDN_TheWorld_Edit::editModeBlendAction(void)
@@ -3213,7 +3216,8 @@ void GDN_TheWorld_Edit::manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::Ca
 		quadTree->getQuadrant()->getGlobalCoordAABB().set_position(startPosition);
 		quadTree->getQuadrant()->getGlobalCoordAABB().set_size(size);
 
-		Chunk::HeightsChangedChunkAction action(m_viewer->is_visible_in_tree());
+		//Chunk::HeightsChangedChunkAction action(m_viewer->is_visible_in_tree());
+		Chunk::HeightsChangedChunkAction action(true);
 		m_viewer->m_refreshRequired = true;
 		quadTree->ForAllChunk(action);
 
@@ -3499,7 +3503,13 @@ void GDN_TheWorld_Edit::generateSplatmapForBlendedQuadrants(size_t numVerticesPe
 	TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer, TheWorld_Utils::MemoryBuffer* west_splatmapBuffer,
 	TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer, TheWorld_Utils::MemoryBuffer* east_splatmapBuffer,
 	TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer, TheWorld_Utils::MemoryBuffer* north_splatmapBuffer,
-	TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer)
+	TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer,
+	float slopeVerticalFactor,	// if higher slope will have higher maximum and so rocks will be more diffuse on slopes
+	float slopeFlatFactor,		// if higher slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
+	float dirtOnRocksFactor,	// if higher dirt will be more diffuse on rocks
+	float highElevationFactor,	// if higher high elevation amount will be higher at lower altitude
+	float lowElevationFactor,	// if higher low elevation amount will be higher at higher altitude
+	size_t splatMapMode)
 {
 	// distance == 0 ==> all the quadrant
 }
@@ -3517,8 +3527,12 @@ void GDN_TheWorld_Edit::editModeApplyTexturesAction(void)
 	std::function<void(void)> f = std::bind(&GDN_TheWorld_Edit::editModeApplyTextures, this);
 	m_tp.QueueJob(f);
 }
-
 void GDN_TheWorld_Edit::editModeApplyTextures(void)
+{
+	editModeApplyTextures_1(true, false);
+}
+
+void GDN_TheWorld_Edit::editModeApplyTextures_1(bool forceApplySelectedQuad, bool evaluateSelectedQuadOnly)
 {
 	if (m_actionClock.counterStarted())
 	{
@@ -3549,9 +3563,6 @@ void GDN_TheWorld_Edit::editModeApplyTextures(void)
 		return;
 	}
 
-	if (quadTreeSel != nullptr)
-		quadTreeSel->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen = true;
-
 	std::vector<QuadrantPos> allQuandrantPos;
 	m_viewer->getAllQuadrantPos(allQuandrantPos);
 
@@ -3559,28 +3570,58 @@ void GDN_TheWorld_Edit::editModeApplyTextures(void)
 	{
 		TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.1 ") + __FUNCTION__, "Select Quads");
 
-		for (auto& pos : allQuandrantPos)
+		if (evaluateSelectedQuadOnly)
 		{
-			QuadTree* quadTree = m_viewer->getQuadTree(pos);
-			if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
+			if (quadTreeSel != nullptr)
 			{
-				//quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen = true;		// SUPERDEBUGRIC: force to generate textures
-				TheWorld_Utils::MemoryBuffer* sp = nullptr;
+				if (forceApplySelectedQuad)
 				{
-					TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.1.1 ") + __FUNCTION__, "getSplatmapBuffer quad");
-					TheWorld_Utils::MemoryBuffer& s = quadTree->getQuadrant()->getSplatmapBuffer(true);
-					sp = &s;
+					quadTreeSel->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen = true;
+					quadTreeSel->getQuadrant()->setNeedUploadToServer(true);
+					quandrantPos.push_back(quadrantSelPos);
 				}
-				TheWorld_Utils::MemoryBuffer& splatmapBuffer = *sp;
-				if (splatmapBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen)
+				else
 				{
-					if (allCheched || pos == quadrantSelPos)
+					TheWorld_Utils::MemoryBuffer& splatmapBuffer = quadTreeSel->getQuadrant()->getSplatmapBuffer(true);
+					if (splatmapBuffer.size() == 0 || quadTreeSel->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen)
 					{
-						quandrantPos.push_back(pos);
-						quadTree->getQuadrant()->setNeedUploadToServer(true);
+						quadTreeSel->getQuadrant()->setNeedUploadToServer(true);
+						quandrantPos.push_back(quadrantSelPos);
+					}
+				}
+			}
 
-						if (!allCheched)
-							break;
+		}
+		else
+		{
+			if (quadTreeSel != nullptr && forceApplySelectedQuad)
+				quadTreeSel->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen = true;
+
+			{
+				for (auto& pos : allQuandrantPos)
+				{
+					QuadTree* quadTree = m_viewer->getQuadTree(pos);
+					if (quadTree != nullptr && !quadTree->getQuadrant()->empty())
+					{
+						//quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen = true;		// SUPERDEBUGRIC: force to generate textures
+						TheWorld_Utils::MemoryBuffer* sp = nullptr;
+						{
+							TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.1.1 ") + __FUNCTION__, "getSplatmapBuffer quad");
+							TheWorld_Utils::MemoryBuffer& s = quadTree->getQuadrant()->getSplatmapBuffer(true);
+							sp = &s;
+						}
+						TheWorld_Utils::MemoryBuffer& splatmapBuffer = *sp;
+						if (splatmapBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->extraValues.splatmapNeedRegen)
+						{
+							if (allCheched || pos == quadrantSelPos)
+							{
+								quandrantPos.push_back(pos);
+								quadTree->getQuadrant()->setNeedUploadToServer(true);
+
+								if (!allCheched)
+									break;
+							}
+						}
 					}
 				}
 			}
@@ -3657,7 +3698,13 @@ void GDN_TheWorld_Edit::editModeApplyTextures(void)
 							westHeights32Buffer, westNormalsBuffer, westSplatmapBuffer,
 							eastHeights32Buffer, eastNormalsBuffer, eastSplatmapBuffer,
 							northHeights32Buffer, northNormalsBuffer, northSplatmapBuffer,
-							southHeights32Buffer, southNormalsBuffer, southSplatmapBuffer);
+							southHeights32Buffer, southNormalsBuffer, southSplatmapBuffer,
+							slopeVerticalFactor(),
+							slopeFlatFactor(),
+							dirtOnRocksFactor(),
+							highElevationFactor(),
+							lowEleveationFactor(),
+							splatMapMode());
 					}
 
 					m_mapQuadToSave[pos] = "";

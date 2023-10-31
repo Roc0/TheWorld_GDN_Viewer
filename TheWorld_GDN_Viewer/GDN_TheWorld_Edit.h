@@ -375,6 +375,7 @@ namespace godot
 		void editModeGenNormals(void);
 		void editModeGenNormals_1(bool forceGenSelectedQuad, bool evaluateSelectedQuadOnly);
 		void editModeApplyTextures(void);
+		void editModeApplyTextures_1(bool forceApplySelectedQuad, bool evaluateSelectedQuadOnly);
 		void editModeSave(void);
 		void editModeUpload(void);
 		void generateNormals(size_t numVerticesPerSize, float gridStepInWU,
@@ -390,7 +391,13 @@ namespace godot
 			TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer, TheWorld_Utils::MemoryBuffer* west_splatmapBuffer,
 			TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer, TheWorld_Utils::MemoryBuffer* east_splatmapBuffer,
 			TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer, TheWorld_Utils::MemoryBuffer* north_splatmapBuffer,
-			TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer);
+			TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer,
+			float slopeVerticalFactor,	// if higher slope will have higher maximum and so rocks will be more diffuse on slopes
+			float slopeFlatFactor,		// if higher slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
+			float dirtOnRocksFactor,	// if higher dirt will be more diffuse on rocks
+			float highElevationFactor,	// if higher high elevation amount will be higher at lower altitude
+			float lowElevationFactor,	// if higher low elevation amount will be higher at higher altitude
+			size_t splatMapMode);
 
 		void manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData& quadrantData, QuadTree* quadTree, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer& heights16Buffer, TheWorld_Utils::MemoryBuffer& heights32Buffer);
 

@@ -1071,21 +1071,23 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 		}
 		else if (method == THEWORLD_CLIENTSERVER_METHOD_MAPM_UNDEPLOYWORLD)
 		{
-			std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
-		
-			for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 			{
-				if (!itQuadTree->second->isValid())
-					continue;
+				std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing);
 
-				if (!itQuadTree->second->isVisible())
-					continue;
+				for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
+				{
+					if (!itQuadTree->second->isValid())
+						continue;
 
-				Chunk::ExitWorldChunkAction action;
-				itQuadTree->second->ForAllChunk(action);
+					if (!itQuadTree->second->isVisible())
+						continue;
 
-				itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
-				//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
+					Chunk::ExitWorldChunkAction action;
+					itQuadTree->second->ForAllChunk(action);
+
+					itQuadTree->second->getQuadrant()->getCollider()->exitWorld();
+					//itQuadTree->second->getQuadrant()->getCollider()->onGlobalTransformChanged();
+				}
 			}
 
 			enum class TheWorldStatus status = Globals()->status();
@@ -1101,7 +1103,10 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 				Sleep(1);
 			}
 
-			clearMapQuadTree();
+			{
+				std::lock_guard<std::recursive_mutex> lock(m_mtxQuadTreeAndMainProcessing); 
+				clearMapQuadTree();
+			}
 
 			if (Globals()->connectedToServer() && m_initialized)
 				Globals()->setStatus(TheWorldStatus::sessionInitialized);
@@ -3323,6 +3328,7 @@ void GDN_TheWorld_Viewer::clearMapQuadTree(void)
 	m_quadrantHit = nullptr;
 	m_adjacentQuadrantsHit.clear();
 	m_previousTrackedMouseHit = godot::Vector3();
+	m_quadrantSelPos.reset();
 }
 
 void GDN_TheWorld_Viewer::getAllQuadrantPos(std::vector<QuadrantPos>& allQuandrantPos)
