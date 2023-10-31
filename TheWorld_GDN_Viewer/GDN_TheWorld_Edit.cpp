@@ -59,13 +59,13 @@ GDN_TheWorld_MapModder::~GDN_TheWorld_MapModder()
 {
 	deinit();
 
-	if (m_sprite != nullptr)
+	if (m_debugSprite != nullptr)
 	{
-		Node* parent = m_sprite->get_parent();
+		Node* parent = m_debugSprite->get_parent();
 		if (parent != nullptr)
-			parent->remove_child(m_sprite);
-		m_sprite->queue_free();
-		m_sprite = nullptr;
+			parent->remove_child(m_debugSprite);
+		m_debugSprite->queue_free();
+		m_debugSprite = nullptr;
 	}
 }
 
@@ -120,27 +120,38 @@ TheWorld_Utils::MemoryBuffer* GDN_TheWorld_MapModder::getOutBuffer(void)
 	{
 		godot::Image::Format outImageFormat = m_outImage->get_format();
 
+		// DEBUG DO NOT REMOVE
+		{
+			godot::Color c;
+			float originalHeight, pongHeinght;
+			size_t numVerticesPerSize = m_viewer->Globals()->numVerticesPerQuadrantSize();
+			int32_t w = m_outImage->get_width();
+			int32_t h = m_outImage->get_height();
+			// for rgba8 must be set m_viewport->set_transparent_background(true);
+			if (outImageFormat == godot::Image::FORMAT_RGBA8)
+			{
+				godot::Ref<godot::Image> image = godot::Image::create_from_data(w, h, false, godot::Image::FORMAT_RF, m_outImage->get_data());
+				for (int x = 0; x < w; x++)
+					for (int y = 0; y < h; y++)
+					{
+						originalHeight = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
+						pongHeinght = image->get_pixel(x, y).r;
+					}
+			}
+			for (int x = 0; x < w; x++)
+				for (int y = 0; y < h; y++)
+				{
+					originalHeight = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
+					c = m_outImage->get_pixel(x, y);
+				}
+		}
+		// DEBUG DO NOT REMOVE
+
 		if (outImageFormat != godot::Image::FORMAT_RGB8)
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1.2 ") + __FUNCTION__, "convert format");
 			m_outImage->convert(godot::Image::FORMAT_RGB8);
 		}
-
-		// DEBUG
-		//{
-		//	int32_t w = m_outImage->get_width();
-		//	int32_t h = m_outImage->get_height();
-		//	size_t numVerticesPerSize = m_viewer->Globals()->numVerticesPerQuadrantSize();
-		//	godot::Color c;
-		//	float height;
-		//	for (int x = 0; x < w; x++)
-		//		for (int y = 0; y < h; y++)
-		//		{
-		//			height = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
-		//			c = m_outImage->get_pixel(x, y);
-		//		}
-		//}
-		// DEBUG
 
 		{
 			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1.2 ") + __FUNCTION__, "copy out buffer");
@@ -184,6 +195,7 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 	godot::Ref<godot::World3D> w = memnew(godot::World3D);
 	m_viewport->set_world_3d(w);
 	m_viewport->set_use_own_world_3d(true);
+	//m_viewport->set_transparent_background(true);		// needed to have output texture RGBA8
 
 	m_map = memnew(godot::Sprite2D);
 	m_map->set_centered(false);
@@ -196,8 +208,9 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 	{
 		// assume square buffer
 		m_imageSize = (size_t)sqrt(float(m_float32HeigthsBuffer->size() / sizeof(float)));
-		my_assert(size_t(pow((float)m_imageSize, 2) * sizeof(float)) == m_float32HeigthsBuffer->size());
-		my_assert((float(m_imageSize) / float(m_tileSize)) * m_tileSize == m_imageSize);
+		my_assert(size_t(pow((float)m_imageSize, 2) * sizeof(float)) == m_float32HeigthsBuffer->size());	// verify buffer is square
+		//my_assert((float(m_imageSize) / float(m_tileSize)) * m_tileSize == m_imageSize);
+		my_assert(m_imageSize / m_tileSize * m_tileSize == m_imageSize - 1);								// verify tile can cover all the image with the exception of the left/botton border
 
 		godot::Vector2i viewportSize = m_viewport->get_size();
 		my_assert(viewportSize.x == viewportSize.y);
@@ -268,9 +281,12 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 
 		m_map->set_texture(texture);
 
-		m_sprite->set_texture(m_viewport->get_texture());
-		//m_sprite->set_texture(texture);
-		m_sprite->set_position(m_sprite->get_texture()->get_size() / 2);
+		if (m_debugSprite != nullptr)
+		{
+			m_debugSprite->set_texture(m_viewport->get_texture());
+			//m_debugSprite->set_texture(texture);
+			m_debugSprite->set_position(m_debugSprite->get_texture()->get_size() / 2);
+		}
 	}
 
 	set_process(true);
@@ -293,8 +309,8 @@ void GDN_TheWorld_MapModder::deinit(void)
 		std::swap(m_tilesQueue, empty);
 		m_processingTile = false;
 
-		if (m_sprite != nullptr)
-			m_sprite->set_texture(nullptr);
+		if (m_debugSprite != nullptr)
+			m_debugSprite->set_texture(nullptr);
 
 		Node* parent = m_viewport->get_parent();
 		if (parent != nullptr)
@@ -337,31 +353,29 @@ void GDN_TheWorld_MapModder::_ready(void)
 {
 }
 
-void GDN_TheWorld_MapModder::custom_ready(GDN_TheWorld_Viewer* viewer, GDN_TheWorld_Edit* edit)
+void GDN_TheWorld_MapModder::custom_ready(GDN_TheWorld_Viewer* viewer, GDN_TheWorld_Edit* edit, bool debug)
 {
 	m_viewer = viewer;
 	m_edit = edit;
 	
-	if (m_sprite == nullptr)
+	if (m_debugSprite == nullptr && debug)
 	{
-		m_sprite = memnew(godot::Sprite2D);
-		m_viewer->add_child(m_sprite);
+		m_debugSprite = memnew(godot::Sprite2D);
+		m_viewer->add_child(m_debugSprite);
 	}
 }
 
 void GDN_TheWorld_MapModder::debug_process(double _delta)
 {
-	// DEBUG
 	{
-		if (m_sprite != nullptr)
+		if (m_debugSprite != nullptr)
 		{
 			if (m_viewer->editMode())
-				m_sprite->set_visible(true);
+				m_debugSprite->set_visible(true);
 			else
-				m_sprite->set_visible(false);
+				m_debugSprite->set_visible(false);
 		}
 	}
-	// DEBUG
 }
 
 void GDN_TheWorld_MapModder::_process(double _delta)
@@ -374,23 +388,23 @@ void GDN_TheWorld_MapModder::_process(double _delta)
 		TheWorld_Utils::GuardProfiler profiler(std::string("MapModder _process 1 ") + __FUNCTION__, "Processing tile");
 
 		// DEBUG
-		godot::Ref<godot::ViewportTexture> viewportTexture = m_viewport->get_texture();
-		bool b = viewportTexture->has_alpha();
-		godot::Ref<godot::Image> viewportImageTexture = viewportTexture->get_image();
-		godot::Image::Format viewportImageTextureFormat = viewportImageTexture->get_format();
+		//godot::Ref<godot::ViewportTexture> viewportTexture = m_viewport->get_texture();
+		//bool b = viewportTexture->has_alpha();
+		//godot::Ref<godot::Image> viewportImageTexture = viewportTexture->get_image();
+		//godot::Image::Format viewportImageTextureFormat = viewportImageTexture->get_format();
+		//godot::Vector2i size = viewportImageTexture->get_size();
 		// DEBUG
 
-		godot::Ref<godot::Image> viewportImage = viewportTexture->get_image();
+		godot::Ref<godot::Image> viewportImage = m_viewport->get_texture()->get_image();
 		godot::Image::Format viewportImageFormat = viewportImage->get_format();
-		godot::Vector2i size = viewportImage->get_size();
 
 		// DEBUG
-		{
-			int32_t x = (int32_t)m_viewportBorder, y = (int32_t)m_viewportBorder;
-			Color c = viewportImage->get_pixel(x, y);
-			size_t numVerticesPerSize = m_viewer->Globals()->numVerticesPerQuadrantSize();
-			float height = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
-		}
+		//{
+		//	int32_t x = (int32_t)m_viewportBorder, y = (int32_t)m_viewportBorder;
+		//	Color c = viewportImage->get_pixel(x, y);
+		//	size_t numVerticesPerSize = m_viewer->Globals()->numVerticesPerQuadrantSize();
+		//	float height = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
+		//}
 		// DEBUG
 
 		if (m_outImage == nullptr)
@@ -402,6 +416,7 @@ void GDN_TheWorld_MapModder::_process(double _delta)
 		godot::Vector2i pos = m_currentTile * (int32_t)m_tileSize;
 		int32_t w = viewportImage->get_width();
 		int32_t h = viewportImage->get_height();
+		// pixels on border (border size = m_viewportBorder) are colculated but are ignored as they exceed the tile
 		m_outImage->blit_rect(viewportImage, godot::Rect2i((int32_t)m_viewportBorder, (int32_t)m_viewportBorder, w - (int32_t)m_viewportBorder, h - (int32_t)m_viewportBorder), pos);
 
 		if (m_tiles.contains(m_currentTile) && m_tiles[m_currentTile] == c_tileStatusProcessing)
@@ -411,17 +426,22 @@ void GDN_TheWorld_MapModder::_process(double _delta)
 		m_frameAvailable = false;
 	}
 	
-	if (!m_processingTile && workToDo())
+	if (!m_processingTile)
 	{
-		godot::Vector2i tile = m_tilesQueue.front();
-		m_tilesQueue.pop();
-		godot::Vector2 pos = (godot::Vector2((float)tile.x, (float)tile.y) * (float)m_tileSize * -1) + godot::Vector2((float)m_viewportBorder, (float)m_viewportBorder);
-		m_map->set_position(pos);
-		m_viewport->set_update_mode(godot::SubViewport::UpdateMode::UPDATE_ONCE);
-		m_currentTile = tile;
-		m_tiles[tile] = c_tileStatusProcessing;
-		m_processingTile = true;
-		m_frameAvailable = false;
+		if (workToDo())
+		{
+			godot::Vector2i tile = m_tilesQueue.front();
+			m_tilesQueue.pop();
+			godot::Vector2 pos = (godot::Vector2((float)tile.x, (float)tile.y) * (float)m_tileSize * -1) + godot::Vector2((float)m_viewportBorder, (float)m_viewportBorder);
+			m_map->set_position(pos);
+			m_viewport->set_update_mode(godot::SubViewport::UpdateMode::UPDATE_ONCE);
+			m_currentTile = tile;
+			m_tiles[tile] = c_tileStatusProcessing;
+			m_processingTile = true;
+			m_frameAvailable = false;
+		}
+		else
+			set_process(false);
 	}
 }
 

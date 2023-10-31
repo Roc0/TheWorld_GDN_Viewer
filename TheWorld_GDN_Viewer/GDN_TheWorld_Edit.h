@@ -52,7 +52,7 @@ namespace godot
 		virtual void _physics_process(double _delta) override;
 		virtual void _input(const Ref<InputEvent>& event) override;
 
-		void custom_ready(GDN_TheWorld_Viewer* viewer, GDN_TheWorld_Edit* edit);
+		void custom_ready(GDN_TheWorld_Viewer* viewer, GDN_TheWorld_Edit* edit, bool debug = false);
 		void debug_process(double _delta);
 
 		void framePostDraw(void);
@@ -99,7 +99,7 @@ namespace godot
 		std::unique_ptr<TheWorld_Utils::MemoryBuffer> m_outBuffer;
 		bool m_frameAvailable = false;
 
-		godot::Sprite2D* m_sprite = nullptr;
+		godot::Sprite2D* m_debugSprite = nullptr;
 	};
 
 	class GDN_TheWorld_Edit : public godot::MarginContainer, public TheWorld_Utils::ThreadInitDeinit, public TheWorld_ClientServer::ClientCallback
