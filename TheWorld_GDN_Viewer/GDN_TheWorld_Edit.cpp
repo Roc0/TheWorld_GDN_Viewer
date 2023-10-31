@@ -120,32 +120,24 @@ TheWorld_Utils::MemoryBuffer* GDN_TheWorld_MapModder::getOutBuffer(void)
 	{
 		godot::Image::Format outImageFormat = m_outImage->get_format();
 
-		// DEBUG DO NOT REMOVE
-		{
-			godot::Color c;
-			float originalHeight, pongHeinght;
-			size_t numVerticesPerSize = m_viewer->Globals()->numVerticesPerQuadrantSize();
-			int32_t w = m_outImage->get_width();
-			int32_t h = m_outImage->get_height();
-			// for rgba8 must be set m_viewport->set_transparent_background(true);
-			if (outImageFormat == godot::Image::FORMAT_RGBA8)
-			{
-				godot::Ref<godot::Image> image = godot::Image::create_from_data(w, h, false, godot::Image::FORMAT_RF, m_outImage->get_data());
-				for (int x = 0; x < w; x++)
-					for (int y = 0; y < h; y++)
-					{
-						originalHeight = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
-						pongHeinght = image->get_pixel(x, y).r;
-					}
-			}
-			for (int x = 0; x < w; x++)
-				for (int y = 0; y < h; y++)
-				{
-					originalHeight = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
-					c = m_outImage->get_pixel(x, y);
-				}
-		}
-		// DEBUG DO NOT REMOVE
+		// DEBUG CHECK DO NOT REMOVE
+		//{
+		//	float originalHeight, pongHeinght;
+		//	size_t numVerticesPerSize = m_viewer->Globals()->numVerticesPerQuadrantSize();
+		//	int32_t w = m_outImage->get_width();
+		//	int32_t h = m_outImage->get_height();
+		//	if (outImageFormat == godot::Image::FORMAT_RGBA8)	// debug pong shader which reply in each pixel exactly the heigth in input to the fragment
+		//	{	// for rgba8 must be set m_viewport->set_transparent_background(true);
+		//		godot::Ref<godot::Image> image = godot::Image::create_from_data(w, h, false, godot::Image::FORMAT_RF, m_outImage->get_data());
+		//		for (int x = 0; x < w; x++)
+		//			for (int y = 0; y < h; y++)
+		//			{
+		//				originalHeight = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
+		//				pongHeinght = image->get_pixel(x, y).r;
+		//			}
+		//	}
+		//}
+		// DEBUG CHECK DO NOT REMOVE
 
 		if (outImageFormat != godot::Image::FORMAT_RGB8)
 		{
@@ -154,6 +146,9 @@ TheWorld_Utils::MemoryBuffer* GDN_TheWorld_MapModder::getOutBuffer(void)
 		}
 
 		{
+			// normals from shader are in format RGB8: shader calculate and pack them filling COLOR.rgb with values in the range 0.0/1.0 then the engine trasfomr them in sequences of three byte (first for r, second for g, third for b)
+			// multiplied by 255 so to have normals we have to divide each byte by 255 obtaining three floats and unpack the relative vector of floats
+			
 			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1.2 ") + __FUNCTION__, "copy out buffer");
 			godot::PackedByteArray data = m_outImage->get_data();
 			int64_t bufferSize = data.size();
@@ -161,6 +156,28 @@ TheWorld_Utils::MemoryBuffer* GDN_TheWorld_MapModder::getOutBuffer(void)
 			memcpy(m_outBuffer->ptr(), data.ptr(), bufferSize);
 			m_outBuffer->adjustSize(bufferSize);
 		}
+
+		// DEBUG CHECK DO NOT REMOVE
+		//{
+		//	godot::Color c;
+		//	float originalHeight;
+		//	size_t numVerticesPerSize = m_viewer->Globals()->numVerticesPerQuadrantSize();
+		//	int32_t w = m_outImage->get_width();
+		//	int32_t h = m_outImage->get_height();
+		//	for (int x = 0; x < w; x++)
+		//		for (int y = 0; y < h; y++)
+		//		{
+		//			originalHeight = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
+		//			c = m_outImage->get_pixel(x, y);	// packed normal 0.0-1.0
+		//			float normX, normY, normZ;
+		//			TheWorld_Utils::unpackNormal(c.r, c.g, c.b, normX, normY, normZ);	// unpacked normal 0.0-1.0
+		//			TheWorld_Utils::_RGB rgb = m_outBuffer->at<TheWorld_Utils::_RGB>(x, y, numVerticesPerSize);	// 0-255
+		//			float _normX, _normY, _normZ;
+		//			TheWorld_Utils::unpackNormal(float(rgb.r) / 255, float(rgb.g) / 255, float(rgb.b) / 255, _normX, _normY, _normZ);	// unpacked normal 0.0-1.0
+		//			my_assert(normX == _normX && normY == _normY && normZ == _normZ);
+		//		}
+		//}
+		// DEBUG CHECK DO NOT REMOVE
 	}
 	
 	return m_outBuffer.get();
@@ -3467,8 +3484,8 @@ void GDN_TheWorld_Edit::generateNormals(size_t numVerticesPerSize, float gridSte
 	TheWorld_Utils::MemoryBuffer* normals = m_mapModder->getOutBuffer();
 	
 	my_assert(normalsBuffer->size() == 0 || normals->size() == normalsBuffer->size());
-	size_t numNormals = (size_t)sqrt(float(normalsBuffer->size() / sizeof(TheWorld_Utils::_RGB)));
-	my_assert(size_t(pow((float)numNormals, 2) * sizeof(TheWorld_Utils::_RGB)) == normalsBuffer->size());
+	size_t numNormals = (size_t)sqrt(float(normals->size() / sizeof(TheWorld_Utils::_RGB)));
+	my_assert(size_t(pow((float)numNormals, 2) * sizeof(TheWorld_Utils::_RGB)) == normals->size());
 	my_assert(numHeights == numNormals);
 	normalsBuffer->reserve(normals->size());
 	memcpy(normalsBuffer->ptr(), normals->ptr(), normals->size());
