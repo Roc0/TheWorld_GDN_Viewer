@@ -58,9 +58,19 @@ namespace godot
 		void framePostDraw(void);
 
 		void initForNormals(TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, size_t tileSize, size_t viewportBorder = 0);
+		void initForSplatmap(TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer,
+								float slopeVerticalFactor,
+								float slopeFlatFactor,
+								float dirtOnRocksFactor,
+								float highElevationFactor,
+								float lowElevationFactor,
+								float minHeigth,
+								float maxHeigth,
+								size_t tileSize, size_t viewportBorder = 0);
 		void deinit(void);
 		void startProcessing(void);
 		bool working(void);
+		bool ready(void);
 		TheWorld_Utils::MemoryBuffer* getOutBuffer(void);
 		void startProcessRequired(bool b);
 		bool startProcessRequired(void);
@@ -73,6 +83,7 @@ namespace godot
 	private:
 		const int32_t c_uninitialized = 0;
 		const int32_t c_initializedForNormals = 1;
+		const int32_t c_initializedForSplatmap = 2;
 		int32_t m_initialized = c_uninitialized;
 
 		bool m_startProcessingRequired = false;
@@ -84,7 +95,16 @@ namespace godot
 		size_t m_viewportBorder = 0;
 		size_t m_imageSize = 0;
 		TheWorld_Utils::MemoryBuffer* m_float32HeigthsBuffer = nullptr;
-
+		size_t m_numHeights = 0;
+		TheWorld_Utils::MemoryBuffer* m_normalsBuffer = nullptr;
+		size_t m_numNormals = 0;
+		float m_slopeVerticalFactor = 0;
+		float m_slopeFlatFactor = 0;
+		float m_dirtOnRocksFactor = 0;
+		float m_highElevationFactor = 0;
+		float m_lowElevationFactor = 0;
+		float m_minHeigth = 0;
+		float m_maxHeigth = 0;
 		godot::SubViewport* m_viewport = nullptr;
 		godot::Sprite2D* m_map = nullptr;
 
@@ -96,6 +116,7 @@ namespace godot
 		bool m_processingTile = false;
 
 		godot::Ref<godot::Image> m_outImage;
+		bool m_outImageValid = false;
 		std::unique_ptr<TheWorld_Utils::MemoryBuffer> m_outBuffer;
 		bool m_frameAvailable = false;
 
@@ -387,11 +408,11 @@ namespace godot
 			TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer);
 		void generateSplatmapForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
 			float x, float z, float distance,
-			TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer, TheWorld_Utils::MemoryBuffer* splatmapBuffer,
-			TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer, TheWorld_Utils::MemoryBuffer* west_splatmapBuffer,
-			TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer, TheWorld_Utils::MemoryBuffer* east_splatmapBuffer,
-			TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer, TheWorld_Utils::MemoryBuffer* north_splatmapBuffer,
-			TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer,
+			TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer, TheWorld_Utils::MemoryBuffer* splatmapBuffer, TheWorld_Utils::TerrainEdit* terrainEdit,
+			TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer, TheWorld_Utils::MemoryBuffer* west_splatmapBuffer, TheWorld_Utils::TerrainEdit* west_terrainEdit,
+			TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer, TheWorld_Utils::MemoryBuffer* east_splatmapBuffer, TheWorld_Utils::TerrainEdit* east_terrainEdit,
+			TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer, TheWorld_Utils::MemoryBuffer* north_splatmapBuffer, TheWorld_Utils::TerrainEdit* north_terrainEdit,
+			TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer, TheWorld_Utils::TerrainEdit* south_terrainEdit,
 			float slopeVerticalFactor,	// if higher slope will have higher maximum and so rocks will be more diffuse on slopes
 			float slopeFlatFactor,		// if higher slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
 			float dirtOnRocksFactor,	// if higher dirt will be more diffuse on rocks

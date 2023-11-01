@@ -81,6 +81,9 @@ void GDN_TheWorld_MapModder::initForNormals(TheWorld_Utils::MemoryBuffer* float3
 	if (m_initialized == c_uninitialized)
 	{
 		m_float32HeigthsBuffer = float32HeigthsBuffer;
+		m_numHeights = (size_t)sqrt(float(m_float32HeigthsBuffer->size() / sizeof(float)));
+		my_assert(size_t(pow((float)m_numHeights, 2) * sizeof(float)) == m_float32HeigthsBuffer->size());
+
 		m_tileSize = tileSize;
 		m_viewportBorder = viewportBorder;
 		deinitRequired(false);
@@ -88,6 +91,56 @@ void GDN_TheWorld_MapModder::initForNormals(TheWorld_Utils::MemoryBuffer* float3
 
 		startProcessRequired(true);
 	}
+}
+
+void GDN_TheWorld_MapModder::initForSplatmap(TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer,
+												float slopeVerticalFactor,
+												float slopeFlatFactor,
+												float dirtOnRocksFactor,
+												float highElevationFactor,
+												float lowElevationFactor,
+												float minHeigth,
+												float maxHeigth,
+												size_t tileSize, size_t viewportBorder)
+{
+	my_assert(m_initialized == c_uninitialized);
+
+	if (m_initialized == c_uninitialized)
+	{
+		m_float32HeigthsBuffer = float32HeigthsBuffer;
+		m_numHeights = (size_t)sqrt(float(m_float32HeigthsBuffer->size() / sizeof(float)));
+		my_assert(size_t(pow((float)m_numHeights, 2) * sizeof(float)) == m_float32HeigthsBuffer->size());
+		m_normalsBuffer = normalsBuffer;
+		m_numNormals = (size_t)sqrt(float(m_normalsBuffer->size() / sizeof(TheWorld_Utils::_RGB)));
+		my_assert(size_t(pow((float)m_numNormals, 2) * sizeof(TheWorld_Utils::_RGB)) == m_normalsBuffer->size());
+		my_assert(m_numNormals == 0 || m_numHeights == m_numNormals);
+		m_slopeVerticalFactor = slopeVerticalFactor;
+		m_slopeFlatFactor = slopeFlatFactor;
+		m_dirtOnRocksFactor = dirtOnRocksFactor;
+		m_highElevationFactor = highElevationFactor;
+		m_lowElevationFactor = lowElevationFactor;
+		m_tileSize = tileSize;
+		m_viewportBorder = viewportBorder;
+		m_minHeigth = minHeigth;
+		m_maxHeigth = maxHeigth;
+		deinitRequired(false);
+		m_initialized = c_initializedForSplatmap;
+
+		startProcessRequired(true);
+	}
+}
+
+bool GDN_TheWorld_MapModder::ready(void)
+{
+	if (working())
+		return false;
+
+	my_assert(m_initialized == c_uninitialized || deinitRequired());
+
+	if (m_initialized != c_uninitialized)
+		return false;
+
+	return true;
 }
 
 bool GDN_TheWorld_MapModder::working(void)
@@ -113,6 +166,9 @@ TheWorld_Utils::MemoryBuffer* GDN_TheWorld_MapModder::getOutBuffer(void)
 {
 	TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1 ") + __FUNCTION__, "ALL");
 
+	if (!m_outImageValid)
+		return nullptr;
+	
 	m_outBuffer.reset();
 	m_outBuffer = std::make_unique< TheWorld_Utils::MemoryBuffer>();
 	
@@ -146,10 +202,10 @@ TheWorld_Utils::MemoryBuffer* GDN_TheWorld_MapModder::getOutBuffer(void)
 		}
 
 		{
-			// normals from shader are in format RGB8: shader calculate and pack them filling COLOR.rgb with values in the range 0.0/1.0 then the engine trasfomr them in sequences of three byte (first for r, second for g, third for b)
-			// multiplied by 255 so to have normals we have to divide each byte by 255 obtaining three floats and unpack the relative vector of floats
+			// normals from shader are in format RGB8: shader calculate and pack them filling COLOR.rgb with values in the range 0.0/1.0 then the engine trasform them in sequences of three byte (first for r, second for g, third for b)
+			// multiplied by 255 ==> to have normals we have to divide each byte (integer in the range 0-255) by 255 obtaining three floats and unpack the relative vector of floats
 			
-			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1.2 ") + __FUNCTION__, "copy out buffer");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1.2 ") + __FUNCTION__, "copy normals out buffer");
 			godot::PackedByteArray data = m_outImage->get_data();
 			int64_t bufferSize = data.size();
 			m_outBuffer->reserve(bufferSize);
@@ -178,6 +234,19 @@ TheWorld_Utils::MemoryBuffer* GDN_TheWorld_MapModder::getOutBuffer(void)
 		//		}
 		//}
 		// DEBUG CHECK DO NOT REMOVE
+	}
+	else if (m_initialized == c_initializedForSplatmap)
+	{
+		godot::Image::Format outImageFormat = m_outImage->get_format();
+		my_assert(outImageFormat == godot::Image::FORMAT_RGBA8);
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder getOutBuffer 1.2 ") + __FUNCTION__, "copy splatmap out buffer");
+			godot::PackedByteArray data = m_outImage->get_data();
+			int64_t bufferSize = data.size();
+			m_outBuffer->reserve(bufferSize);
+			memcpy(m_outBuffer->ptr(), data.ptr(), bufferSize);
+			m_outBuffer->adjustSize(bufferSize);
+		}
 	}
 	
 	return m_outBuffer.get();
@@ -212,7 +281,6 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 	godot::Ref<godot::World3D> w = memnew(godot::World3D);
 	m_viewport->set_world_3d(w);
 	m_viewport->set_use_own_world_3d(true);
-	//m_viewport->set_transparent_background(true);		// needed to have output texture RGBA8
 
 	m_map = memnew(godot::Sprite2D);
 	m_map->set_centered(false);
@@ -221,89 +289,121 @@ void GDN_TheWorld_MapModder::startProcessing(void)
 	godot::RenderingServer* vs = godot::RenderingServer::get_singleton();
 	godot::Error e = vs->connect("frame_post_draw", Callable(this, "frame_post_draw"));
 
+	// assume square buffer
+	m_imageSize = (size_t)sqrt(float(m_float32HeigthsBuffer->size() / sizeof(float)));
+	my_assert(size_t(pow((float)m_imageSize, 2) * sizeof(float)) == m_float32HeigthsBuffer->size());	// verify buffer is square
+	//my_assert((float(m_imageSize) / float(m_tileSize)) * m_tileSize == m_imageSize);
+	my_assert(m_imageSize / m_tileSize * m_tileSize == m_imageSize - 1);								// verify tile can cover all the image with the exception of the left/botton border
+
+	godot::Vector2i viewportSize = m_viewport->get_size();
+	my_assert(viewportSize.x == viewportSize.y);
+	my_assert(m_imageSize >= viewportSize.x);
+
+	size_t numFullTiles = (size_t)std::floor(float(m_imageSize) / float(m_tileSize));
+
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.1 ") + __FUNCTION__, "Put tiles in queue");
+
+		for (int y = 0; y < numFullTiles; y++)
+			for (int x = 0; x < numFullTiles; x++)
+			{
+				godot::Vector2i tilePos(x, y);
+				if (m_tiles.contains(tilePos) && m_tiles[tilePos] == c_tileStatusWaiting)
+					continue;
+				else
+				{
+					m_tiles[tilePos] = c_tileStatusWaiting;
+					m_tilesQueue.push(tilePos);
+				}
+			}
+	}
+
+	godot::Ref<godot::ImageTexture> heigthTexture;
+
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.2 ") + __FUNCTION__, "Create Image/Texture from heights buffer");
+
+		godot::PackedByteArray data;
+		data.resize((int64_t)m_float32HeigthsBuffer->size());
+		{
+			memcpy((char*)data.ptrw(), m_float32HeigthsBuffer->ptr(), m_float32HeigthsBuffer->size());
+		}
+		godot::Ref<godot::Image> image = godot::Image::create_from_data((int32_t)m_imageSize, (int32_t)m_imageSize, false, Image::FORMAT_RF, data);
+		// DEBUG
+		//{
+		//	int32_t x = 0, y = 0;
+		//	Color c = image->get_pixel(x, y);
+		//	size_t numVerticesPerSize = m_viewer->Globals()->numVerticesPerQuadrantSize();
+		//	float height = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
+		//	int i = 0;
+		//}
+		// DEBUG
+
+		Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+		heigthTexture = tex;
+	}
+
 	if (m_initialized == c_initializedForNormals)
 	{
-		// assume square buffer
-		m_imageSize = (size_t)sqrt(float(m_float32HeigthsBuffer->size() / sizeof(float)));
-		my_assert(size_t(pow((float)m_imageSize, 2) * sizeof(float)) == m_float32HeigthsBuffer->size());	// verify buffer is square
-		//my_assert((float(m_imageSize) / float(m_tileSize)) * m_tileSize == m_imageSize);
-		my_assert(m_imageSize / m_tileSize * m_tileSize == m_imageSize - 1);								// verify tile can cover all the image with the exception of the left/botton border
-
-		godot::Vector2i viewportSize = m_viewport->get_size();
-		my_assert(viewportSize.x == viewportSize.y);
-		my_assert(m_imageSize >= viewportSize.x);
-
-		godot::Ref<godot::Image> image;
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.1 ") + __FUNCTION__, "Create Image from heights buffer");
-
-			godot::PackedByteArray data;
-			data.resize((int64_t)m_float32HeigthsBuffer->size());
-			{
-				memcpy((char*)data.ptrw(), m_float32HeigthsBuffer->ptr(), m_float32HeigthsBuffer->size());
-			}
-
-			godot::Ref<godot::Image> im = godot::Image::create_from_data((int32_t)m_imageSize, (int32_t)m_imageSize, false, Image::FORMAT_RF, data);
-			image = im;
-			// DEBUG
-			//{
-			//	int32_t x = 0, y = 0;
-			//	Color c = image->get_pixel(x, y);
-			//	size_t numVerticesPerSize = m_viewer->Globals()->numVerticesPerQuadrantSize();
-			//	float height = m_float32HeigthsBuffer->at<float>(x, y, numVerticesPerSize);
-			//	int i = 0;
-			//}
-			// DEBUG
-		}
-
-		godot::Ref<godot::ImageTexture> texture;
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.2 ") + __FUNCTION__, "Create Texture from heights image");
-			Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
-			texture = tex;
-			//godot::Vector2 size = texture->get_size();
-		}
-
-		size_t numFullTiles = (size_t)std::floor(float(m_imageSize) / float(m_tileSize));
+		//m_viewport->set_transparent_background(true);		// needed to have output texture RGBA8
 
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.3 ") + __FUNCTION__, "Put tiles in queue");
-
-			for (int y = 0; y < numFullTiles; y++)
-				for (int x = 0; x < numFullTiles; x++)
-				{
-					godot::Vector2i tilePos(x, y);
-					if (m_tiles.contains(tilePos) && m_tiles[tilePos] == c_tileStatusWaiting)
-						continue;
-					else
-					{
-						m_tiles[tilePos] = c_tileStatusWaiting;
-						m_tilesQueue.push(tilePos);
-					}
-				}
-		}
-
-		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.4 ") + __FUNCTION__, "Material stuff");
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.3 ") + __FUNCTION__, "Normals Material stuff");
 
 			godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
 			godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
 			godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/tools/shaders/height2normal.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
-			//godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/tools/shaders/universe.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
 			mat->set_shader(shader);
 			float gridStepInWU = m_viewer->Globals()->gridStepInWU();
 			mat->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
 			m_map->set_material(mat);
 		}
+	}
+	else if (m_initialized == c_initializedForSplatmap)
+	{
+		m_viewport->set_transparent_background(true);		// needed to have output texture RGBA8
 
-		m_map->set_texture(texture);
-
-		if (m_debugSprite != nullptr)
+		godot::Ref<godot::ImageTexture> normalTexture;
 		{
-			m_debugSprite->set_texture(m_viewport->get_texture());
-			//m_debugSprite->set_texture(texture);
-			m_debugSprite->set_position(m_debugSprite->get_texture()->get_size() / 2);
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.4 ") + __FUNCTION__, "Create Image/Texture from normals buffer");
+			godot::PackedByteArray data;
+			data.resize((int)m_normalsBuffer->size());
+			{
+				memcpy((char*)data.ptrw(), m_normalsBuffer->ptr(), m_normalsBuffer->size());
+			}
+			godot::Ref<godot::Image> image = godot::Image::create_from_data(int32_t(m_imageSize), int32_t(m_imageSize), false, Image::FORMAT_RGB8, data);
+			godot::Ref<godot::ImageTexture> tex = godot::ImageTexture::create_from_image(image);
+			normalTexture = tex;
 		}
+
+		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("MapModder startProcessing 1.3 ") + __FUNCTION__, "splatmap Material stuff");
+
+			godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
+			godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
+			godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/tools/shaders/height2splatmap.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
+			mat->set_shader(shader);
+			float gridStepInWU = m_viewer->Globals()->gridStepInWU();
+			mat->set_shader_parameter(SHADER_PARAM_TERRAIN_NORMALMAP, normalTexture);
+			mat->set_shader_parameter(SHADER_PARAM_SLOPE_VERTICAL_FACTOR, m_slopeVerticalFactor);
+			mat->set_shader_parameter(SHADER_PARAM_SLOPE_FLAT_FACTOR, m_slopeFlatFactor);
+			mat->set_shader_parameter(SHADER_PARAM_DIRT_ON_ROCKS_FACTOR, m_dirtOnRocksFactor);
+			mat->set_shader_parameter(SHADER_PARAM_HIGH_ELEVATION_FACTOR, m_highElevationFactor);
+			mat->set_shader_parameter(SHADER_PARAM_LOW_ELEVATION_FACTOR, m_lowElevationFactor);
+			mat->set_shader_parameter(SHADER_PARAM_MIN_HEIGHT, m_minHeigth);
+			mat->set_shader_parameter(SHADER_PARAM_MAX_HEIGHT, m_maxHeigth);
+			mat->set_shader_parameter(SHADER_PARAM_GRID_STEP, gridStepInWU);
+			m_map->set_material(mat);
+		}
+	}
+
+	m_map->set_texture(heigthTexture);
+
+	if (m_debugSprite != nullptr)
+	{
+		m_debugSprite->set_texture(m_viewport->get_texture());
+		//m_debugSprite->set_texture(texture);
+		m_debugSprite->set_position(m_debugSprite->get_texture()->get_size() / 2);
 	}
 
 	set_process(true);
@@ -319,6 +419,8 @@ void GDN_TheWorld_MapModder::deinit(void)
 			vs->disconnect("frame_post_draw", Callable(this, "frame_post_draw"));
 		
 		set_process(false);
+
+		m_outImageValid = false;
 
 		// clear
 		m_tiles.clear();
@@ -424,10 +526,11 @@ void GDN_TheWorld_MapModder::_process(double _delta)
 		//}
 		// DEBUG
 
-		if (m_outImage == nullptr)
+		if (m_outImage == nullptr || !m_outImageValid)
 		{
 			godot::Ref<godot::Image> im = godot::Image::create((int32_t)m_imageSize, (int32_t)m_imageSize, false, viewportImageFormat);
 			m_outImage = im;
+			m_outImageValid = true;
 		}
 
 		godot::Vector2i pos = m_currentTile * (int32_t)m_tileSize;
@@ -3180,6 +3283,8 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 	//refreshNumToSaveUpload(numToSave, numToUpload);
 
 	setMessage(godot::String("Completed!"), true);
+
+	editModeApplyTextures_1(false, true);
 }
 
 void GDN_TheWorld_Edit::manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData& quadrantData, QuadTree* quadTree, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer& heights16Buffer, TheWorld_Utils::MemoryBuffer& heights32Buffer)
@@ -3408,13 +3513,13 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool forceGenSelectedQuad, bool eva
 							southHeights32Buffer, southNormalsBuffer);
 					}
 
-					{
-						TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.1 ") + __FUNCTION__, "Single QuadTree - CPU");
-						//cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer, m_requestedThreadExit);
-						
-						if (m_requestedThreadExit)
-							return;
-					}
+					//{
+					//	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.1 ") + __FUNCTION__, "Single QuadTree - CPU");
+					//	cache.generateNormalsForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), float32HeigthsBuffer, *eastHeights32Buffer, *southHeights32Buffer, normalsBuffer, m_requestedThreadExit);
+					//	
+					//	if (m_requestedThreadExit)
+					//		return;
+					//}
 
 					if (eastQuadTree != nullptr)
 						eastQuadTree->getQuadrant()->unlockInternalData();
@@ -3473,16 +3578,16 @@ void GDN_TheWorld_Edit::generateNormals(size_t numVerticesPerSize, float gridSte
 	TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer,
 	TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer)
 {
-	// distance == 0 ==> all the quadrant
+	// distance == 0 ==> all the quadrant (distance is ignored atm considering "all the quadrant" by design)
 	my_assert(m_mapModder != nullptr);
 
-	if (m_mapModder->working())
-		return;
+	while (!m_mapModder->ready())
+		Sleep(5);
 	
 	size_t numHeights = (size_t)sqrt(float(float32HeigthsBuffer->size() / sizeof(float)));
 	my_assert(size_t(pow((float)numHeights, 2) * sizeof(float)) == float32HeigthsBuffer->size());
 
-	m_mapModder->initForNormals(float32HeigthsBuffer, 1024, 1);
+	m_mapModder->initForNormals(float32HeigthsBuffer, 1024, 1);		// atm border = 0 will be the same
 	while (m_mapModder->working())
 		Sleep(5);
 	TheWorld_Utils::MemoryBuffer* normals = m_mapModder->getOutBuffer();
@@ -3499,19 +3604,43 @@ void GDN_TheWorld_Edit::generateNormals(size_t numVerticesPerSize, float gridSte
 
 void GDN_TheWorld_Edit::generateSplatmapForBlendedQuadrants(size_t numVerticesPerSize, float gridStepInWU,
 	float x, float z, float distance,
-	TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer, TheWorld_Utils::MemoryBuffer* splatmapBuffer,
-	TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer, TheWorld_Utils::MemoryBuffer* west_splatmapBuffer,
-	TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer, TheWorld_Utils::MemoryBuffer* east_splatmapBuffer,
-	TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer, TheWorld_Utils::MemoryBuffer* north_splatmapBuffer,
-	TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer,
-	float slopeVerticalFactor,	// if higher slope will have higher maximum and so rocks will be more diffuse on slopes
-	float slopeFlatFactor,		// if higher slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
-	float dirtOnRocksFactor,	// if higher dirt will be more diffuse on rocks
-	float highElevationFactor,	// if higher high elevation amount will be higher at lower altitude
-	float lowElevationFactor,	// if higher low elevation amount will be higher at higher altitude
+	TheWorld_Utils::MemoryBuffer* float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* normalsBuffer, TheWorld_Utils::MemoryBuffer* splatmapBuffer, TheWorld_Utils::TerrainEdit* terrainEdit,
+	TheWorld_Utils::MemoryBuffer* west_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* west_normalsBuffer, TheWorld_Utils::MemoryBuffer* west_splatmapBuffer, TheWorld_Utils::TerrainEdit* west_terrainEdit,
+	TheWorld_Utils::MemoryBuffer* east_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* east_normalsBuffer, TheWorld_Utils::MemoryBuffer* east_splatmapBuffer, TheWorld_Utils::TerrainEdit* east_terrainEdit,
+	TheWorld_Utils::MemoryBuffer* north_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* north_normalsBuffer, TheWorld_Utils::MemoryBuffer* north_splatmapBuffer, TheWorld_Utils::TerrainEdit* north_terrainEdit,
+	TheWorld_Utils::MemoryBuffer* south_float32HeigthsBuffer, TheWorld_Utils::MemoryBuffer* south_normalsBuffer, TheWorld_Utils::MemoryBuffer* south_splatmapBuffer, TheWorld_Utils::TerrainEdit* south_terrainEdit,
+	float slopeVerticalFactor,	// raising it slope will have higher maximum and so rocks will be more diffuse on slopes
+	float slopeFlatFactor,		// raising it slope will have lesser mininum and maximum so rocks will be less diffuse on slopes
+	float dirtOnRocksFactor,	// raising it dirt will be more diffuse on rocks
+	float highElevationFactor,	// raising it high elevation amount will be greater at lower altitude
+	float lowElevationFactor,	// raising it low elevation amount will be greater at higher altitude
 	size_t splatMapMode)
 {
-	// distance == 0 ==> all the quadrant
+	// distance == 0 ==> all the quadrant (distance is ignored atm considering "all the quadrant" by design)
+	my_assert(m_mapModder != nullptr);
+
+	while (!m_mapModder->ready())
+		Sleep(5);
+
+	size_t numHeights = (size_t)sqrt(float(float32HeigthsBuffer->size() / sizeof(float)));
+	my_assert(size_t(pow((float)numHeights, 2) * sizeof(float)) == float32HeigthsBuffer->size());
+	size_t numNormals = (size_t)sqrt(float(normalsBuffer->size() / sizeof(TheWorld_Utils::_RGB)));
+	my_assert(size_t(pow((float)numNormals, 2) * sizeof(TheWorld_Utils::_RGB)) == normalsBuffer->size());
+	my_assert(numNormals == 0 || numHeights == numNormals);
+
+	m_mapModder->initForSplatmap(float32HeigthsBuffer, normalsBuffer, slopeVerticalFactor, slopeFlatFactor,	dirtOnRocksFactor, highElevationFactor,	lowElevationFactor, terrainEdit->minHeight, terrainEdit->maxHeight, 1024);
+	while (m_mapModder->working())
+		Sleep(5);
+	TheWorld_Utils::MemoryBuffer* splatmap = m_mapModder->getOutBuffer();
+
+	my_assert(splatmapBuffer->size() == 0 || splatmap->size() == splatmapBuffer->size());
+	size_t numPixels = (size_t)sqrt(float(splatmap->size() / sizeof(TheWorld_Utils::_RGBA)));
+	my_assert(size_t(pow((float)numPixels, 2) * sizeof(TheWorld_Utils::_RGBA)) == splatmap->size());
+	my_assert(numHeights == numPixels);
+	splatmapBuffer->reserve(splatmap->size());
+	memcpy(splatmapBuffer->ptr(), splatmap->ptr(), splatmap->size());
+	splatmapBuffer->adjustSize(splatmap->size());
+	m_mapModder->deinitRequired(true);
 }
 
 void GDN_TheWorld_Edit::editModeApplyTexturesAction(void)
@@ -3668,16 +3797,16 @@ void GDN_TheWorld_Edit::editModeApplyTextures_1(bool forceApplySelectedQuad, boo
 					size_t numElements = float32HeigthsBuffer.size() / sizeof(float);
 					my_assert(numElements == pos.getNumVerticesPerSize() * pos.getNumVerticesPerSize());
 
-					{
-						TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.2.2.1 ") + __FUNCTION__, "Single QuadTree - CPU");
-						cache.generateSplatmap(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), quadTree->getQuadrant()->getTerrainEdit(), float32HeigthsBuffer, normalsBuffer, splatmapBuffer,
-							slopeVerticalFactor(),
-							slopeFlatFactor(),
-							dirtOnRocksFactor(),
-							highElevationFactor(),
-							lowEleveationFactor(),
-							splatMapMode());
-					}
+					//{
+					//	TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.2.2.1 ") + __FUNCTION__, "Single QuadTree - CPU");
+					//	cache.generateSplatmap(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), quadTree->getQuadrant()->getTerrainEdit(), float32HeigthsBuffer, normalsBuffer, splatmapBuffer,
+					//		slopeVerticalFactor(),
+					//		slopeFlatFactor(),
+					//		dirtOnRocksFactor(),
+					//		highElevationFactor(),
+					//		lowEleveationFactor(),
+					//		splatMapMode());
+					//}
 
 					{
 						TheWorld_Utils::GuardProfiler profiler(std::string("EditSetTextures 1.2.2.2 ") + __FUNCTION__, "Single QuadTree - GPU");
@@ -3694,11 +3823,11 @@ void GDN_TheWorld_Edit::editModeApplyTextures_1(bool forceApplySelectedQuad, boo
 						TheWorld_Utils::MemoryBuffer* northSplatmapBuffer = nullptr;
 						TheWorld_Utils::MemoryBuffer* southSplatmapBuffer = nullptr;
 						generateSplatmapForBlendedQuadrants(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), 0.0f, 0.0f, 0.0f,
-							&float32HeigthsBuffer, &normalsBuffer, &splatmapBuffer,
-							westHeights32Buffer, westNormalsBuffer, westSplatmapBuffer,
-							eastHeights32Buffer, eastNormalsBuffer, eastSplatmapBuffer,
-							northHeights32Buffer, northNormalsBuffer, northSplatmapBuffer,
-							southHeights32Buffer, southNormalsBuffer, southSplatmapBuffer,
+							&float32HeigthsBuffer, &normalsBuffer, &splatmapBuffer, quadTree->getQuadrant()->getTerrainEdit(),
+							westHeights32Buffer, westNormalsBuffer, westSplatmapBuffer, nullptr,
+							eastHeights32Buffer, eastNormalsBuffer, eastSplatmapBuffer, nullptr,
+							northHeights32Buffer, northNormalsBuffer, northSplatmapBuffer, nullptr,
+							southHeights32Buffer, southNormalsBuffer, southSplatmapBuffer, nullptr,
 							slopeVerticalFactor(),
 							slopeFlatFactor(),
 							dirtOnRocksFactor(),
@@ -3791,7 +3920,6 @@ void GDN_TheWorld_Edit::editModeSelectTerrainTypeAction(int32_t index)
 		if (q != nullptr && !q->getQuadrant()->empty())
 			eastSideTerrainEdit = q->getQuadrant()->getTerrainEdit();
 		terrainEdit.adjustValues(northSideTerrainEdit, southSideTerrainEdit, westSideTerrainEdit, eastSideTerrainEdit);
-
 	}
 
 	setTerrainEditValues(terrainEdit);

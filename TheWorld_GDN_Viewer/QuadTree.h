@@ -615,7 +615,7 @@ namespace godot
 			Ref<Texture2D> m_tex;
 		};
 
-		// Shader Params
+// Shader Params
 #define SHADER_PARAM_TERRAIN_HEIGHTMAP	"u_terrain_heightmap"
 #define SHADER_PARAM_TERRAIN_NORMALMAP	"u_terrain_normalmap"
 #define SHADER_PARAM_TERRAIN_SPLATMAP	"u_terrain_splatmap"
@@ -655,6 +655,14 @@ namespace godot
 #define SHADER_PARAM_COLORMAP_OPACITY_PER_TEXTURE	"u_colormap_opacity_per_texture"
 
 #define SHADER_PARAM_LOOKDEV_MAP		"u_map"
+
+#define SHADER_PARAM_SLOPE_VERTICAL_FACTOR	"u_slope_vertical_factor"
+#define SHADER_PARAM_SLOPE_FLAT_FACTOR		"u_slope_flat_factor"
+#define SHADER_PARAM_DIRT_ON_ROCKS_FACTOR	"u_dirt_on_rocks_factor"
+#define SHADER_PARAM_HIGH_ELEVATION_FACTOR	"u_high_elevation_factor"
+#define SHADER_PARAM_LOW_ELEVATION_FACTOR	"u_low_elevation_factor"
+#define SHADER_PARAM_MAX_HEIGHT				"u_max_heigth"
+#define SHADER_PARAM_MIN_HEIGHT				"u_min_heigth"
 
 	public:
 
