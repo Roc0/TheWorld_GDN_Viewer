@@ -398,6 +398,29 @@ namespace godot
 			return m_globalmapBuffer;
 		}
 
+		void fillQuadrantData(TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData& quadrantData)
+		{
+			quadrantData.meshId = getMeshCacheBuffer().getMeshId();
+			quadrantData.terrainEdit = getTerrainEdit();
+			quadrantData.minHeight = getTerrainEdit()->minHeight;
+			quadrantData.maxHeight = getTerrainEdit()->maxHeight;
+			TheWorld_Utils::MemoryBuffer& heights16Buffer = getFloat16HeightsBuffer();
+			quadrantData.heights16Buffer = &heights16Buffer;
+			TheWorld_Utils::MemoryBuffer& heights32Buffer = getFloat32HeightsBuffer();
+			quadrantData.heights32Buffer = &heights32Buffer;
+			TheWorld_Utils::MemoryBuffer& normalsBuffer = getNormalsBuffer();
+			quadrantData.normalsBuffer = &normalsBuffer;
+			TheWorld_Utils::MemoryBuffer& splatmapBuffer = getSplatmapBuffer();
+			quadrantData.splatmapBuffer = &splatmapBuffer;
+			TheWorld_Utils::MemoryBuffer& colormapBuffer = getColormapBuffer();
+			quadrantData.colormapBuffer = &colormapBuffer;
+			TheWorld_Utils::MemoryBuffer& globalmapBuffer = getGlobalmapBuffer();
+			quadrantData.globalmapBuffer = &globalmapBuffer;
+			quadrantData.heightsUpdated = heightsUpdated();
+			quadrantData.normalsUpdated = normalsUpdated();
+			quadrantData.texturesUpdated = textureUpdated();
+		}
+
 		void resetHeightsBuffer(void)
 		{
 			getFloat16HeightsBuffer(false).clear();

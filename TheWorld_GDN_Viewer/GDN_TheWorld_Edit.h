@@ -395,8 +395,10 @@ namespace godot
 		void editModeBlend(void);
 		void editModeGenNormals(void);
 		void editModeGenNormals_1(bool forceGenSelectedQuad, bool evaluateSelectedQuadOnly);
+		void editModeGenNormals_2(QuadTree* quadTree);
 		void editModeApplyTextures(void);
 		void editModeApplyTextures_1(bool forceApplySelectedQuad, bool evaluateSelectedQuadOnly);
+		void editModeApplyTextures_2(QuadTree* quadTree);
 		void editModeSave(void);
 		void editModeUpload(void);
 		void generateNormals(size_t numVerticesPerSize, float gridStepInWU,
