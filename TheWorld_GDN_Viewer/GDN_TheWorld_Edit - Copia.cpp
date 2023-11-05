@@ -820,8 +820,9 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	const Color self_modulate_to_transparency(0.0f, 0.0f, 0.0f, 0.5f);
 	//const Color self_modulate(1.0f, 1.0f, 1.0f, 1.0f);
 
+	godot::PanelContainer* panelContainer = nullptr;
+	//godot::MarginContainer* marginContainer = nullptr;
 	godot::HBoxContainer* hBoxContainer = nullptr;
-	godot::VBoxContainer* vBoxContainer = nullptr;
 	godot::Control* separator = nullptr;
 	godot::Button* button = nullptr;
 	godot::Label* label = nullptr;
@@ -833,7 +834,73 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 
 	m_innerData->m_mainTabContainer = createControl<godot::TabContainer>(m_innerData->m_mainPanelContainer, "", "", "", nullptr, "", "", "", "", self_modulate_to_transparency);
 
-	m_innerData->m_mainTerrainScrollContainer = createControl<godot::ScrollContainer>(m_innerData->m_mainTabContainer, "Terrain");
+	m_innerData->m_mainVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainTabContainer, "Terrain");
+
+	panelContainer = createControl<godot::PanelContainer>(m_innerData->m_mainVBoxContainer);
+
+	m_innerData->m_mainFixedVBoxContainer = createControl<godot::VBoxContainer>(panelContainer);
+
+	{
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainFixedVBoxContainer);
+		label = createControl<godot::Label>(hBoxContainer, "", "Quads to save");
+		m_innerData->m_numQuadrantToSaveLabel = createControl<godot::Label>(hBoxContainer);
+		m_innerData->m_numQuadrantToSaveLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+		label = createControl<godot::Label>(hBoxContainer, "", "Quads to upload");
+		m_innerData->m_numQuadrantToUploadLabel = createControl<godot::Label>(hBoxContainer);
+		m_innerData->m_numQuadrantToUploadLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
+
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainFixedVBoxContainer);
+		button = createControl<godot::Button>(hBoxContainer, "", "Save", "pressed", this, "edit_mode_save");
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
+		button = createControl<godot::Button>(hBoxContainer, "", "Upload", "pressed", this, "edit_mode_upload");
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
+		button = createControl<godot::Button>(hBoxContainer, "", "Stop", "pressed", this, "edit_mode_stop");
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
+		button = createControl<godot::Button>(hBoxContainer, "", "Reload shader", "pressed", this, "edit_mode_reload_shader");
+
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainFixedVBoxContainer);
+		button = createControl<godot::Button>(hBoxContainer, "", "Blend", "pressed", this, "edit_mode_blend");
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
+		button = createControl<godot::Button>(hBoxContainer, "", "Gen. Normals", "pressed", this, "edit_mode_gen_normals");
+		//separator = createControl<godot::VSeparator>(hBoxContainer);
+		button = createControl<godot::Button>(hBoxContainer, "", "Apply Texs", "pressed", this, "edit_mode_apply_textures");
+		m_innerData->m_allCheckBox = createControl<godot::CheckBox>(hBoxContainer);
+		m_innerData->m_allCheckBox->set_text("All");
+		m_innerData->m_allCheckBox->set_toggle_mode(true);
+
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainFixedVBoxContainer);
+		m_innerData->m_message = createControl<godot::Label>(hBoxContainer);
+
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainFixedVBoxContainer);
+		label = createControl<godot::Label>(hBoxContainer, "", "Elapsed");
+		m_innerData->m_elapsedLabel = createControl<godot::Label>(hBoxContainer);
+		m_innerData->m_elapsed1Label = createControl<godot::Label>(hBoxContainer);
+	}
+	//setMessage(std::string("AAAAAAAAAAAAAAAAAAAAAAA"));
+
+	{
+		//m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainFixedVBoxContainer, "", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_info_panel");
+		m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainFixedVBoxContainer, "InfoPanelToggle", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
+		m_innerData->m_infoButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
+
+		m_innerData->m_infoVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainFixedVBoxContainer);
+
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_infoVBoxContainer);
+		m_innerData->m_showGizmo = createControl<godot::CheckBox>(hBoxContainer, "ShowGizmoCheckBox");
+		m_innerData->m_showGizmo->set_text("Show Gizmo");
+		m_innerData->m_showGizmo->set_toggle_mode(true);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_showGizmo, "godot::CheckBox", "toggled", this, "toggled_signal_manager");
+		m_innerData->m_showNormal = createControl<godot::CheckBox>(hBoxContainer, "ShowNormalCheckBox");
+		m_innerData->m_showNormal->set_text("Show Normal");
+		m_innerData->m_showNormal->set_toggle_mode(true);
+		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_showNormal, "godot::CheckBox", "toggled", this, "toggled_signal_manager");
+
+		m_innerData->m_infoLabel = createControl<godot::Label>(m_innerData->m_infoVBoxContainer);
+	}
+
+	//marginContainer = createControl<godot::MarginContainer>(m_innerData->m_mainVBoxContainer);
+
+	m_innerData->m_mainTerrainScrollContainer = createControl<godot::ScrollContainer>(m_innerData->m_mainVBoxContainer);		// m_innerData->m_mainTabContainer		"Terrain"
 	m_innerData->m_mainTerrainScrollContainer->set_h_size_flags(godot::Control::SizeFlags::SIZE_FILL);
 	m_innerData->m_mainTerrainScrollContainer->set_v_size_flags(godot::Control::SizeFlags::SIZE_FILL);
 	m_innerData->m_mainTerrainScrollContainer->set_horizontal_scroll_mode(godot::ScrollContainer::SCROLL_MODE_AUTO);
@@ -849,72 +916,10 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//marginContainer->add_theme_constant_override("margin_top", 5);
 	//marginContainer->add_theme_constant_override("margin_bottom", 5);
 
-	m_innerData->m_mainVBoxContainer = createControl<godot::VBoxContainer>(marginContainer);
+	m_innerData->m_mainScrolledVBoxContainer = createControl<godot::VBoxContainer>(marginContainer);
 
 	{
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainVBoxContainer);
-		label = createControl<godot::Label>(hBoxContainer, "", "Quads to save");
-		m_innerData->m_numQuadrantToSaveLabel = createControl<godot::Label>(hBoxContainer);
-		m_innerData->m_numQuadrantToSaveLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
-		label = createControl<godot::Label>(hBoxContainer, "", "Quads to upload");
-		m_innerData->m_numQuadrantToUploadLabel = createControl<godot::Label>(hBoxContainer);
-		m_innerData->m_numQuadrantToUploadLabel->set_horizontal_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_RIGHT);
-
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainVBoxContainer);
-		button = createControl<godot::Button>(hBoxContainer, "", "Save", "pressed", this, "edit_mode_save");
-		//separator = createControl<godot::VSeparator>(hBoxContainer);
-		button = createControl<godot::Button>(hBoxContainer, "", "Upload", "pressed", this, "edit_mode_upload");
-		//separator = createControl<godot::VSeparator>(hBoxContainer);
-		button = createControl<godot::Button>(hBoxContainer, "", "Stop", "pressed", this, "edit_mode_stop");
-		//separator = createControl<godot::VSeparator>(hBoxContainer);
-		button = createControl<godot::Button>(hBoxContainer, "", "Reload shader", "pressed", this, "edit_mode_reload_shader");
-
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainVBoxContainer);
-		button = createControl<godot::Button>(hBoxContainer, "", "Blend", "pressed", this, "edit_mode_blend");
-		//separator = createControl<godot::VSeparator>(hBoxContainer);
-		button = createControl<godot::Button>(hBoxContainer, "", "Gen. Normals", "pressed", this, "edit_mode_gen_normals");
-		//separator = createControl<godot::VSeparator>(hBoxContainer);
-		button = createControl<godot::Button>(hBoxContainer, "", "Apply Texs", "pressed", this, "edit_mode_apply_textures");
-		m_innerData->m_allCheckBox = createControl<godot::CheckBox>(hBoxContainer);
-		m_innerData->m_allCheckBox->set_text("All");
-		m_innerData->m_allCheckBox->set_toggle_mode(true);
-
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainVBoxContainer);
-		m_innerData->m_message = createControl<godot::Label>(hBoxContainer);
-
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainVBoxContainer);
-		label = createControl<godot::Label>(hBoxContainer, "", "Elapsed");
-		m_innerData->m_elapsedLabel = createControl<godot::Label>(hBoxContainer);
-		m_innerData->m_elapsed1Label = createControl<godot::Label>(hBoxContainer);
-	}
-	//setMessage(std::string("AAAAAAAAAAAAAAAAAAAAAAA"));
-
-	{
-		//m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainVBoxContainer, "", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_info_panel");
-		m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainVBoxContainer, "InfoPanelToggle", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
-		m_innerData->m_infoButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
-
-		m_innerData->m_infoVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainVBoxContainer);
-
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_infoVBoxContainer);
-		m_innerData->m_showGizmo = createControl<godot::CheckBox>(hBoxContainer, "ShowGizmoCheckBox");
-		m_innerData->m_showGizmo->set_text("Show Gizmo");
-		m_innerData->m_showGizmo->set_toggle_mode(true);
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_showGizmo, "godot::CheckBox", "toggled", this, "toggled_signal_manager");
-		m_innerData->m_showNormal = createControl<godot::CheckBox>(hBoxContainer, "ShowNormalCheckBox");
-		m_innerData->m_showNormal->set_text("Show Normal");
-		m_innerData->m_showNormal->set_toggle_mode(true);
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_showNormal, "godot::CheckBox", "toggled", this, "toggled_signal_manager");
-		m_innerData->m_showNormal = createControl<godot::CheckBox>(hBoxContainer, "ShowPositionCheckBox");
-		m_innerData->m_showNormal->set_text("Show Position");
-		m_innerData->m_showNormal->set_toggle_mode(true);
-		e = GDN_TheWorld_Globals::connectSignal(m_innerData->m_showNormal, "godot::CheckBox", "toggled", this, "toggled_signal_manager");
-
-		m_innerData->m_infoLabel = createControl<godot::Label>(m_innerData->m_infoVBoxContainer);
-	}
-
-	{
-		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainVBoxContainer);
+		hBoxContainer = createControl<godot::HBoxContainer>(m_innerData->m_mainScrolledVBoxContainer);
 		m_innerData->m_lookDevOptionButton = createControl<godot::OptionButton>(hBoxContainer, "", "", "item_selected", this, "edit_mode_sel_lookdev");
 		m_innerData->m_lookDevOptionButton->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
 		m_innerData->m_lookDevOptionButton->set_toggle_mode(true);
@@ -931,11 +936,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	}
 
 	{
-		//m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainVBoxContainer, "NoisePanelToggle", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_noise_panel");
-		m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainVBoxContainer, "NoisePanelToggle", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
+		//m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainScrolledVBoxContainer, "NoisePanelToggle", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_noise_panel");
+		m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainScrolledVBoxContainer, "NoisePanelToggle", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_noiseButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
-		m_innerData->m_noiseVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainVBoxContainer);
+		m_innerData->m_noiseVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainScrolledVBoxContainer);
 		m_innerData->m_noiseVBoxContainer->hide();
 
 		separator = createControl<HSeparator>(m_innerData->m_noiseVBoxContainer);
@@ -992,11 +997,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	}
 
 	{
-		//m_innerData->m_terrEditButton = createControl<godot::Button>(m_innerData->m_mainVBoxContainer, "", (std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_terredit_panel");
-		m_innerData->m_terrEditButton = createControl<godot::Button>(m_innerData->m_mainVBoxContainer, "TerrEditPanelToggle", (std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
+		//m_innerData->m_terrEditButton = createControl<godot::Button>(m_innerData->m_mainScrolledVBoxContainer, "", (std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_terredit_panel");
+		m_innerData->m_terrEditButton = createControl<godot::Button>(m_innerData->m_mainScrolledVBoxContainer, "TerrEditPanelToggle", (std::wstring(RIGHT_ARROW) + L" " + TERRAIN_EDIT_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_terrEditButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
-		m_innerData->m_terrEditVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainVBoxContainer);
+		m_innerData->m_terrEditVBoxContainer = createControl<godot::VBoxContainer>(m_innerData->m_mainScrolledVBoxContainer);
 		m_innerData->m_terrEditVBoxContainer->hide();
 
 		godot::Vector2 size(70, 70);
@@ -1082,7 +1087,7 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		//button = createControl<godot::Button>(hBoxContainer, "", "Change", "pressed", this, "void_signal_manager");
 	}
 	
-	separator = createControl<Label>(m_innerData->m_mainVBoxContainer, "", " ");
+	separator = createControl<Label>(m_innerData->m_mainScrolledVBoxContainer, "", " ");
 
 	controlNeedResize();
 
@@ -1169,40 +1174,32 @@ void GDN_TheWorld_Edit::deinit(void)
 
 void GDN_TheWorld_Edit::setSizeUI(void)
 {
-	set_anchor(godot::Side::SIDE_RIGHT, 1.0);
-	set_anchor(godot::Side::SIDE_LEFT, 1.0);
-	//set_offset(godot::Side::SIDE_RIGHT, 0.0);
+	//set_anchor(godot::Side::SIDE_RIGHT, 1.0);
 	//set_offset(godot::Side::SIDE_TOP, 0.0);
+	//set_offset(godot::Side::SIDE_RIGHT, 0.0);
 	//set_offset(godot::Side::SIDE_BOTTOM, 0.0);
 
-#define CONTROL_DISTANCE_FROM_BORDER 5
-#define CONTROL_SIZE 410
-
-	//if (IS_EDITOR_HINT())
-	//{
-	//	std::string classsName;
-	//	godot::Node* parent = get_parent();
-	//	if (parent != nullptr)
-	//	{
-	//		godot::String s = parent->get_class();
-	//		classsName = m_viewer->to_string(s);
-	//	}
-	//	if (classsName == "Control")
-	//	{
-	//		set_offset(godot::Side::SIDE_LEFT, ((godot::Control*)get_parent())->get_size().x - 350);
-	//	}
-	//	else
-	//	{
-	//		set_offset(godot::Side::SIDE_LEFT, get_viewport()->get_visible_rect().get_size().x - 350);
-	//	}
-	//}
-	//else
-	//{
-	//	set_offset(godot::Side::SIDE_LEFT, get_viewport()->get_visible_rect().get_size().x - CONTROL_SIZE - CONTROL_DISTANCE_FROM_BORDER);
-	//}
-	set_offset(godot::Side::SIDE_LEFT, -(CONTROL_SIZE + CONTROL_DISTANCE_FROM_BORDER));
-	set_offset(godot::Side::SIDE_RIGHT, -CONTROL_DISTANCE_FROM_BORDER);
-	set_offset(godot::Side::SIDE_TOP, CONTROL_DISTANCE_FROM_BORDER);
+	if (IS_EDITOR_HINT())
+	{
+		std::string classsName;
+		godot::Node* parent = get_parent();
+		if (parent != nullptr)
+		{
+			godot::String s = parent->get_class();
+			classsName = m_viewer->to_string(s);
+		}
+		if (classsName == "Control")
+			set_offset(godot::Side::SIDE_LEFT, ((godot::Control*)get_parent())->get_size().x - 350);
+		else
+			set_offset(godot::Side::SIDE_LEFT, get_viewport()->get_visible_rect().get_size().x - 350);
+	}
+	else
+	{
+		set_anchor(godot::Side::SIDE_LEFT, 1.0);
+		set_offset(godot::Side::SIDE_LEFT, -400);
+		set_custom_minimum_size(godot::Size2(400, 600));
+		//set_offset(godot::Side::SIDE_LEFT, get_viewport()->get_visible_rect().get_size().x - 450);
+	}
 
 	m_scrollPanelsNeedResize = true;
 	m_infoLabelTextChanged = true;
@@ -1696,40 +1693,28 @@ void GDN_TheWorld_Edit::_input(const Ref<InputEvent>& event)
 	const godot::InputEventMouseMotion* eventMouseMotion = godot::Object::cast_to<godot::InputEventMouseMotion>(event.ptr());
 	const godot::InputEventMouseButton* eventMouseButton = godot::Object::cast_to<godot::InputEventMouseButton>(event.ptr());
 
-	if (m_innerData->m_mouseInsideMainPanel)
+	if (IS_EDITOR_HINT()
+		&& eventMouseButton != nullptr && eventMouseButton->is_pressed()
+		&& (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_DOWN || eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_UP)
+		&& m_innerData->m_mouseInsideMainPanel)
 	{
-		if (IS_EDITOR_HINT())
-		{
-			if (eventMouseButton != nullptr && eventMouseButton->is_pressed()
-				&& (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_DOWN || eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_UP))
-			{
-				accept_event();
+		accept_event();
 
-				if (m_innerData->m_mainTerrainScrollContainer != nullptr)
-				{
-					int vStep = 30;
-					int vScroll = m_innerData->m_mainTerrainScrollContainer->get_v_scroll();
-					double vStep1 = m_innerData->m_mainTerrainScrollContainer->get_vertical_custom_step();
-					if (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_DOWN)
-						m_innerData->m_mainTerrainScrollContainer->set_v_scroll(vScroll + vStep);
-					else
-						m_innerData->m_mainTerrainScrollContainer->set_v_scroll(vScroll - vStep);
-					//int hStep = 10;
-					//int hScroll = m_innerData->m_mainTerrainScrollContainer->get_h_scroll();
-					//if (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_DOWN)
-					//	m_innerData->m_mainTerrainScrollContainer->set_h_scroll(hScroll + hStep);
-					//else
-					//	m_innerData->m_mainTerrainScrollContainer->set_h_scroll(hScroll - hStep);
-				}
-			}
-		}
-		else
+		if (m_innerData->m_mainTerrainScrollContainer != nullptr)
 		{
-			//if (eventMouseButton != nullptr && eventMouseButton->is_pressed()
-			//	&& (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_DOWN || eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_UP))
-			//{
-			//	accept_event();
-			//}
+			int vStep = 30;
+			int vScroll = m_innerData->m_mainTerrainScrollContainer->get_v_scroll();
+			double vStep1 = m_innerData->m_mainTerrainScrollContainer->get_vertical_custom_step();
+			if (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_DOWN)
+				m_innerData->m_mainTerrainScrollContainer->set_v_scroll(vScroll + vStep);
+			else
+				m_innerData->m_mainTerrainScrollContainer->set_v_scroll(vScroll - vStep);
+			//int hStep = 10;
+			//int hScroll = m_innerData->m_mainTerrainScrollContainer->get_h_scroll();
+			//if (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_WHEEL_DOWN)
+			//	m_innerData->m_mainTerrainScrollContainer->set_h_scroll(hScroll + hStep);
+			//else
+			//	m_innerData->m_mainTerrainScrollContainer->set_h_scroll(hScroll - hStep);
 		}
 	}
 }
@@ -1799,11 +1784,11 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 
 godot::Size2 GDN_TheWorld_Edit::getTerrainScrollPanelSize(void)
 {
-	if (m_viewer == nullptr || m_innerData->m_mainVBoxContainer == nullptr)
+	if (m_viewer == nullptr || m_innerData->m_mainScrolledVBoxContainer == nullptr)
 		return godot::Size2(0.0f, 0.0f);
 
 	godot::Size2 viewportSize = m_viewer->getViewportSize();
-	godot::Rect2 contentRect = m_innerData->m_mainVBoxContainer->get_rect();
+	godot::Rect2 contentRect = m_innerData->m_mainScrolledVBoxContainer->get_rect();
 	godot::Size2 contentSize = contentRect.size;
 	
 	godot::Size2 ret = viewportSize;
@@ -1816,8 +1801,9 @@ godot::Size2 GDN_TheWorld_Edit::getTerrainScrollPanelSize(void)
 			ret.width = contentSize.width;
 	}
 
-	ret.width = 0;	// ???
-	
+	//ret.width = 0;	// ???
+	//ret.height = 50;
+
 	return ret;
 }
 
@@ -1851,7 +1837,7 @@ void GDN_TheWorld_Edit::_process(double _delta)
 
 	if (m_scrollPanelsNeedResize)
 	{
-		if (m_innerData->m_mainVBoxContainer != nullptr && m_innerData->m_mainVBoxContainer->get_rect().size != godot::Size2(0.0f, 0.0f))
+		if (m_innerData->m_mainScrolledVBoxContainer != nullptr && m_innerData->m_mainScrolledVBoxContainer->get_rect().size != godot::Size2(0.0f, 0.0f))
 		{
 			m_innerData->m_mainTerrainScrollContainer->set_custom_minimum_size(getTerrainScrollPanelSize());
 			m_scrollPanelsNeedResize = false;
@@ -2476,13 +2462,6 @@ void GDN_TheWorld_Edit::toggledSignalManager(const bool pressed, godot::Object* 
 			m_viewer->normalVisible(true);
 		else
 			m_viewer->normalVisible(false);
-	}
-	else if (_objectName == "ShowPositionCheckBox")
-	{
-		if (pressed)
-			m_viewer->positionVisible(true);
-		else
-			m_viewer->positionVisible(false);
 	}
 }
 

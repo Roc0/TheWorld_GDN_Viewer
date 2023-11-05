@@ -158,7 +158,10 @@ namespace godot
 		}
 		float getShaderParamMouseHitRadius(void)
 		{
-			return m_shaderParam_mouse_hit_radius;
+			//if (positionVisible())
+				return m_shaderParam_mouse_hit_radius;
+			//else
+			//	return 0;
 		}
 		void setShaderParam(godot::String name, godot::Variant value);
 		void debugPrint(String message)
@@ -481,6 +484,16 @@ namespace godot
 		{
 			m_normalVisible = b;
 		}
+		bool positionVisible(void)
+		{
+			return m_positionVisible;
+		}
+		void positionVisible(bool b)
+		{
+			m_positionVisible = b;
+		}
+
+		bool mouseInsideMainEditPanel(void);
 
 	private:
 		void _findChildNodes(godot::Array& foundNodes, godot::Array& searchNodes, String searchClass);
@@ -592,6 +605,7 @@ namespace godot
 		bool m_normalVisible = false;
 		GDN_TheWorld_Gizmo3d* m_gizmo = nullptr;
 		bool m_gizmoVisible = false;
+		bool m_positionVisible = false;
 
 		bool m_debugContentVisibility;
 		bool m_updateTerrainVisibilityRequired;

@@ -2546,6 +2546,15 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 	}
 }
 
+bool GDN_TheWorld_Viewer::mouseInsideMainEditPanel(void)
+{
+	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
+	if (editModeUIControl != nullptr && editModeUIControl->initilized())
+		return editModeUIControl->mouseInsideMainPanel();
+	else
+		return false;
+}
+
 void GDN_TheWorld_Viewer::process_updateQuads(Vector3& cameraPosGlobalCoord)
 {
 	// UPDATE QUADS - Stage 1

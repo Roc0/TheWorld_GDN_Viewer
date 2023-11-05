@@ -2,6 +2,7 @@
 #include "Viewer_Utils.h"
 
 #pragma warning (push, 0)
+#include <godot_cpp/classes/v_box_container.hpp>
 #include <godot_cpp/classes/margin_container.hpp>
 #include <godot_cpp/classes/panel_container.hpp>
 #include <godot_cpp/classes/tab_container.hpp>
@@ -185,7 +186,6 @@ namespace godot
 				m_mainPanelContainer = nullptr;
 				m_mainTabContainer = nullptr;
 				m_mainTerrainScrollContainer = nullptr;
-				m_mainVBoxContainer = nullptr;
 				m_noiseVBoxContainer = nullptr;
 				m_noiseButton = nullptr;
 				m_infoVBoxContainer = nullptr;
@@ -247,8 +247,10 @@ namespace godot
 
 			godot::Control* m_mainPanelContainer;
 			godot::Control* m_mainTabContainer;
+			godot::VBoxContainer* m_mainVBoxContainer = nullptr;
+			godot::VBoxContainer* m_mainFixedVBoxContainer = nullptr;
 			godot::ScrollContainer* m_mainTerrainScrollContainer;
-			godot::Control* m_mainVBoxContainer;
+			godot::VBoxContainer* m_mainScrolledVBoxContainer = nullptr;
 
 			godot::Label* m_elapsedLabel;
 			godot::Label* m_elapsed1Label;
@@ -492,10 +494,6 @@ namespace godot
 
 		void setMessage(std::string text, bool add = false);
 		void setMessage(godot::String text, bool add = false);
-		bool mouseInsideMainPanel(void)
-		{
-			return m_innerData->m_mouseInsideMainPanel;
-		}
 
 		//std::map<QuadrantPos, bool>& getMapQuadToSave(void)
 		//{

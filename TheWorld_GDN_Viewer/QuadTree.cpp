@@ -1467,12 +1467,18 @@ void ShaderTerrainData::mouseHitChanged(godot::Vector2 mouseHit)
 	{
 		std::map<int, godot::Ref<godot::ShaderMaterial>>& lookDevChunkLodMaterials = getLookDevChunkLodMaterials();
 		for (auto& item : lookDevChunkLodMaterials)
-			item.second->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, mouseHit);
+			if (m_viewer->positionVisible())
+				item.second->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, mouseHit);
+			else
+				item.second->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, godot::Vector2(-1, -1));
 	}
 	else
 	{
 		godot::Ref<godot::ShaderMaterial> currentMaterial = (lookdev == LookDev::NotSet ? getRegularMaterial() : getLookDevMaterial());
-		currentMaterial->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, mouseHit);
+		if (m_viewer->positionVisible())
+			currentMaterial->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, mouseHit);
+		else
+			currentMaterial->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, godot::Vector2(-1, -1));
 	}
 }
 

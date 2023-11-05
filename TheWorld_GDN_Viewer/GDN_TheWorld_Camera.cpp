@@ -348,6 +348,9 @@ void GDN_TheWorld_Camera::_input(const Ref<godot::InputEvent>& event)
 		return;
 	}
 
+	if (viewer->mouseInsideMainEditPanel())
+		return;
+
 	const InputEventMouseMotion* eventMouseMotion = godot::Object::cast_to<InputEventMouseMotion>(event.ptr());
 	if (eventMouseMotion != nullptr)
 	{
