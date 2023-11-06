@@ -2550,7 +2550,7 @@ bool GDN_TheWorld_Viewer::mouseInsideMainEditPanel(void)
 {
 	GDN_TheWorld_Edit* editModeUIControl = EditModeUIControl();
 	if (editModeUIControl != nullptr && editModeUIControl->initilized())
-		return editModeUIControl->mouseInsideMainPanel();
+		return editModeUIControl->mouseInsideEditPanel();
 	else
 		return false;
 }

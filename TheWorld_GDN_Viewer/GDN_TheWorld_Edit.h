@@ -185,7 +185,6 @@ namespace godot
 				m_mainPanelContainer = nullptr;
 				m_mainTabContainer = nullptr;
 				m_mainTerrainScrollContainer = nullptr;
-				m_mainVBoxContainer = nullptr;
 				m_noiseVBoxContainer = nullptr;
 				m_noiseButton = nullptr;
 				m_infoVBoxContainer = nullptr;
@@ -228,7 +227,7 @@ namespace godot
 				m_dirtTexSelected = false;
 				m_rocksTexSelected = false;
 				m_onGoing = false;
-				m_mouseInsideMainPanel = false;
+				m_mouseInsideEditPanel = false;
 				m_slopeVerticalFactor = nullptr;
 				m_slopeFlatFactor = nullptr;
 				m_dirtOnRocksFactor = nullptr;
@@ -248,7 +247,9 @@ namespace godot
 			godot::Control* m_mainPanelContainer;
 			godot::Control* m_mainTabContainer;
 			godot::ScrollContainer* m_mainTerrainScrollContainer;
-			godot::Control* m_mainVBoxContainer;
+			godot::Control* m_mainScrolledVBoxContainer = nullptr;
+			godot::Control* m_mainFixedVBoxContainer = nullptr;
+			godot::Label* m_dummyLabel = nullptr;
 
 			godot::Label* m_elapsedLabel;
 			godot::Label* m_elapsed1Label;
@@ -322,7 +323,7 @@ namespace godot
 
 			std::unique_ptr<SelTexturePanel> m_selTexturePanel;
 
-			bool m_mouseInsideMainPanel;
+			bool m_mouseInsideEditPanel;
 		};
 
 		enum Margin {
@@ -427,8 +428,8 @@ namespace godot
 		void setEmptyTerrainEditValues(void);
 		void setTerrainEditValues(TheWorld_Utils::TerrainEdit& terrainEdit);
 
-		void editModeMouseEnteredMainPanel(void);
-		void editModeMouseExitedMainPanel(void);
+		void editModeMouseEnteredEditPanel(void);
+		void editModeMouseExitedEditPanel(void);
 		void setUIAcceptFocus(bool b);
 		bool UIAcceptingFocus(void);
 
@@ -492,9 +493,9 @@ namespace godot
 
 		void setMessage(std::string text, bool add = false);
 		void setMessage(godot::String text, bool add = false);
-		bool mouseInsideMainPanel(void)
+		bool mouseInsideEditPanel(void)
 		{
-			return m_innerData->m_mouseInsideMainPanel;
+			return m_innerData->m_mouseInsideEditPanel;
 		}
 
 		//std::map<QuadrantPos, bool>& getMapQuadToSave(void)
@@ -509,7 +510,7 @@ namespace godot
 			return m_viewer->Globals();
 		}
 
-		godot::Size2 getTerrainScrollPanelSize(void);
+		godot::Size2 getTerrainScrolledPanelSize(void);
 		size_t getNumWorkingThread(void)
 		{
 			size_t maxThreads;
