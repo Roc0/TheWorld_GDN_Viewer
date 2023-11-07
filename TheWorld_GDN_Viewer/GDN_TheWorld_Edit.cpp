@@ -884,7 +884,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	//setMessage(std::string("AAAAAAAAAAAAAAAAAAAAAAA"));
 
 	{
-		//m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainFixedVBoxContainer, "", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_info_panel");
 		m_innerData->m_infoButton = createControl<godot::Button>(m_innerData->m_mainFixedVBoxContainer, "InfoPanelToggle", (std::wstring(DOWN_ARROW) + L" " + INFO_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_infoButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
@@ -922,8 +921,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_innerData->m_lookDevOptionButton = createControl<godot::OptionButton>(hBoxContainer, "", "", "item_selected", this, "edit_mode_sel_lookdev");
 		m_innerData->m_lookDevOptionButton->set_h_size_flags(godot::OptionButton::SizeFlags::SIZE_EXPAND_FILL);
 		m_innerData->m_lookDevOptionButton->set_toggle_mode(true);
-		//m_innerData->m_lookDevOptionButton->connect("item_selected", Callable(this, "edit_mode_sel_lookdev"));
-		//m_innerData->m_lookDevOptionButton->set_focus_mode(godot::Control::FocusMode::FOCUS_NONE);
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev disabled", (int64_t)ShaderTerrainData::LookDev::NotSet);
 		m_innerData->m_lookDevOptionButton->add_separator();
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev heights", (int64_t)ShaderTerrainData::LookDev::Heights);
@@ -935,7 +932,6 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 	}
 
 	{
-		//m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainScrolledVBoxContainer, "NoisePanelToggle", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "edit_mode_noise_panel");
 		m_innerData->m_noiseButton = createControl<godot::Button>(m_innerData->m_mainScrolledVBoxContainer, "NoisePanelToggle", (std::wstring(RIGHT_ARROW) + L" " + NOISE_BUTTON_TEXT).c_str(), "pressed", this, "void_signal_manager");
 		m_innerData->m_noiseButton->set_text_alignment(godot::HorizontalAlignment::HORIZONTAL_ALIGNMENT_LEFT);
 
@@ -1898,20 +1894,20 @@ void GDN_TheWorld_Edit::_process(double _delta)
 	if (!m_initialized)
 		return;
 
-	if (m_innerData->m_mainScrolledVBoxContainer != nullptr)
-	{
-		float scrollableContentHeight = m_innerData->m_mainScrolledVBoxContainer->get_global_rect().size.height;
-		float scrollableContentHeight2 = m_innerData->m_mainScrolledVBoxContainer->get_rect().size.height;
-		
-		float lookdevOptionButtonHeight = m_innerData->m_lookDevOptionButton->get_rect().size.height + 3;
-		float noiseButtonHeight = m_innerData->m_noiseButton->get_rect().size.height + 3;
-		float noiseVBoxCHeight = m_innerData->m_noiseVBoxContainer->is_visible() ? m_innerData->m_noiseVBoxContainer->get_rect().size.height + 4 : 0;
-		float terrEditButtonHeight = m_innerData->m_terrEditButton->get_rect().size.height + 3;
-		float terrEditVBoxcHeight = m_innerData->m_terrEditVBoxContainer->is_visible() ? m_innerData->m_terrEditVBoxContainer->get_rect().size.height + 4 : 0;
-		float dummyLabelHeight = m_innerData->m_dummyLabel->get_rect().size.height + 3;
-		float scrollableContentHeightCalc = lookdevOptionButtonHeight + noiseButtonHeight + noiseVBoxCHeight + terrEditButtonHeight + terrEditVBoxcHeight + dummyLabelHeight;
-		float size2 = 0;
-	}
+	//if (m_innerData->m_mainScrolledVBoxContainer != nullptr)
+	//{
+	//	float scrollableContentHeight = m_innerData->m_mainScrolledVBoxContainer->get_global_rect().size.height;
+	//	float scrollableContentHeight2 = m_innerData->m_mainScrolledVBoxContainer->get_rect().size.height;
+	//	
+	//	float lookdevOptionButtonHeight = m_innerData->m_lookDevOptionButton->get_rect().size.height + 3;
+	//	float noiseButtonHeight = m_innerData->m_noiseButton->get_rect().size.height + 3;
+	//	float noiseVBoxCHeight = m_innerData->m_noiseVBoxContainer->is_visible() ? m_innerData->m_noiseVBoxContainer->get_rect().size.height + 4 : 0;
+	//	float terrEditButtonHeight = m_innerData->m_terrEditButton->get_rect().size.height + 3;
+	//	float terrEditVBoxcHeight = m_innerData->m_terrEditVBoxContainer->is_visible() ? m_innerData->m_terrEditVBoxContainer->get_rect().size.height + 4 : 0;
+	//	float dummyLabelHeight = m_innerData->m_dummyLabel->get_rect().size.height + 3;
+	//	float scrollableContentHeightCalc = lookdevOptionButtonHeight + noiseButtonHeight + noiseVBoxCHeight + terrEditButtonHeight + terrEditVBoxcHeight + dummyLabelHeight;
+	//	float size2 = 0;
+	//}
 
 	if (m_controlNeedResize)
 	{
