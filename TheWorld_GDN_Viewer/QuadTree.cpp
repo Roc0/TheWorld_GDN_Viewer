@@ -19,10 +19,17 @@
 #include <godot_cpp/classes/texture2d.hpp>
 #include <godot_cpp/classes/compressed_texture2d.hpp>
 #include <godot_cpp/classes/project_settings.hpp>
+#include <godot_cpp/classes/world3d.hpp>
+#include <godot_cpp/classes/shader_material.hpp>
+#include <godot_cpp/classes/color_rect.hpp>
+#include <godot_cpp/classes/standard_material3d.hpp>
+#include <godot_cpp/classes/viewport_texture.hpp>
 #pragma warning(pop)
 
 using namespace godot;
 namespace fs = std::filesystem;
+
+godot::SubViewport* ShaderTerrainData::g_lookDevSubviewport = nullptr;
 
 //extern int g_num = 0;
 
@@ -810,6 +817,8 @@ void QuadTree::setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev,
 	if (!reload && m_lookDev == lookDev)
 		return;
 
+	m_lookDev = lookDev;
+	
 	getQuadrant()->setHeightsUpdated(true);
 	getQuadrant()->setNormalsUpdated(true);
 	getQuadrant()->setSplatmapUpdated(true);
@@ -841,11 +850,9 @@ void QuadTree::setLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev,
 	}
 	else
 	{
-		Chunk::SetMaterialChunkAction action(getQuadrant()->getShaderTerrainData()->getLookDevMaterial(reload));
+		Chunk::SetMaterialChunkAction action(getQuadrant()->getShaderTerrainData()->getLookDevMaterial(lookDev, reload));
 		ForAllChunk(action);
 	}
-
-	m_lookDev = lookDev;
 }
 
 void QuadTree::setRegularMaterial(bool reload)
@@ -872,7 +879,7 @@ Ref<Material> QuadTree::getCurrentMaterial(int lod)
 			return getQuadrant()->getShaderTerrainData()->getLookDevChunkLodMaterial(lod);
 		}
 		else
-			return getQuadrant()->getShaderTerrainData()->getLookDevMaterial();
+			return getQuadrant()->getShaderTerrainData()->getLookDevMaterial(m_lookDev);
 }
 
 void QuadTree::reloadCurrentMaterial(void)
@@ -1115,6 +1122,8 @@ void ShaderTerrainData::init(void)
 
 godot::Ref<godot::Material> ShaderTerrainData::getRegularMaterial(bool reload)
 {
+	freeLookDevSubViewport();
+
 	if (m_regularMaterial == nullptr || reload)
 	{
 		m_viewer->getMainProcessingMutex().lock();
@@ -1134,8 +1143,79 @@ godot::Ref<godot::Material> ShaderTerrainData::getRegularMaterial(bool reload)
 	return m_regularMaterial;
 }
 
-godot::Ref<godot::Material> ShaderTerrainData::getLookDevMaterial(bool reload)
+void ShaderTerrainData::freeLookDevSubViewport(void)
 {
+	if (g_lookDevSubviewport != nullptr)
+	{
+		Node* parent = g_lookDevSubviewport->get_parent();
+		if (parent != nullptr)
+			parent->remove_child(g_lookDevSubviewport);
+		g_lookDevSubviewport->queue_free();
+		g_lookDevSubviewport = nullptr;
+	}
+}
+
+godot::Ref<godot::Material> ShaderTerrainData::getLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev, bool reload)
+{
+	if (lookDev == ShaderTerrainData::LookDev::Universe 
+		|| lookDev == ShaderTerrainData::LookDev::ShaderArt 
+		|| lookDev == ShaderTerrainData::LookDev::ManaResourceOrb
+		|| lookDev == ShaderTerrainData::LookDev::StarNest
+		|| lookDev == ShaderTerrainData::LookDev::FlaringStar)
+		{
+		if (g_lookDevSubviewport == nullptr || reload)
+		{
+			freeLookDevSubViewport();
+
+			g_lookDevSubviewport = memnew(godot::SubViewport);
+			m_viewer->add_child(g_lookDevSubviewport);
+			g_lookDevSubviewport->set_size(godot::Vector2i(1024, 1024));
+			//g_lookDevSubviewport->set_update_mode(godot::SubViewport::UpdateMode::UPDATE_WHEN_VISIBLE);
+			//g_lookDevSubviewport->set_clear_mode(godot::SubViewport::ClearMode::CLEAR_MODE_ALWAYS);
+			godot::Ref<godot::World3D> w = memnew(godot::World3D);
+			g_lookDevSubviewport->set_world_3d(w);
+			g_lookDevSubviewport->set_use_own_world_3d(true);
+
+			godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
+			godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
+			if (lookDev == ShaderTerrainData::LookDev::Universe)
+			{
+				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/Universe.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
+				mat->set_shader(shader);
+			}
+			else if (lookDev == ShaderTerrainData::LookDev::ShaderArt)
+			{
+				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/ShaderArt.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
+				mat->set_shader(shader);
+			}
+			else if (lookDev == ShaderTerrainData::LookDev::ManaResourceOrb)
+			{
+				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/ManaResourceOrb.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
+				mat->set_shader(shader);
+			}
+			else if (lookDev == ShaderTerrainData::LookDev::StarNest)
+			{
+				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/StarNest.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
+				mat->set_shader(shader);
+			}
+			else if (lookDev == ShaderTerrainData::LookDev::FlaringStar)
+			{
+				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/FlaringStar.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
+				mat->set_shader(shader);
+			}
+
+			godot::ColorRect* colorRect = memnew(godot::ColorRect);
+			g_lookDevSubviewport->add_child(colorRect);
+			colorRect->set_size(g_lookDevSubviewport->get_size());
+			colorRect->set_anchors_preset(godot::Control::LayoutPreset::PRESET_FULL_RECT);
+			colorRect->set_material(mat);
+		}
+	}
+	else
+	{
+		freeLookDevSubViewport();
+	}
+
 	if (m_lookDevMaterial == nullptr || reload)
 	{
 		m_viewer->getMainProcessingMutex().lock();
@@ -1474,7 +1554,7 @@ void ShaderTerrainData::mouseHitChanged(godot::Vector2 mouseHit)
 	}
 	else
 	{
-		godot::Ref<godot::ShaderMaterial> currentMaterial = (lookdev == LookDev::NotSet ? getRegularMaterial() : getLookDevMaterial());
+		godot::Ref<godot::ShaderMaterial> currentMaterial = (lookdev == LookDev::NotSet ? getRegularMaterial() : getLookDevMaterial(lookdev));
 		if (m_viewer->positionVisible())
 			currentMaterial->set_shader_parameter(SHADER_PARAM_MOUSE_HIT, mouseHit);
 		else
@@ -1942,7 +2022,7 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 			if (lookdev == LookDev::NotSet)
 				currentMaterial = getRegularMaterial();
 			else
-				currentMaterial = getLookDevMaterial();
+				currentMaterial = getLookDevMaterial(lookdev);
 
 			currentMaterial->set_shader_parameter(SHADER_PARAM_INVERSE_TRANSFORM, inverseTransform);
 			currentMaterial->set_shader_parameter(SHADER_PARAM_NORMAL_BASIS, normalBasis);
@@ -2113,6 +2193,16 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 			if (lookdev == LookDev::Global && m_globalMapTexture != nullptr)
 			{
 				currentMaterial->set_shader_parameter(SHADER_PARAM_LOOKDEV_MAP, m_globalMapTexture);
+			}
+
+			if ((lookdev == LookDev::Universe 
+				|| lookdev == LookDev::ShaderArt
+				|| lookdev == LookDev::ManaResourceOrb
+				|| lookdev == LookDev::StarNest
+				|| lookdev == LookDev::FlaringStar)
+				&& g_lookDevSubviewport != nullptr)
+			{
+				currentMaterial->set_shader_parameter(SHADER_PARAM_LOOKDEV_MAP, g_lookDevSubviewport->get_texture());
 			}
 
 			//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos

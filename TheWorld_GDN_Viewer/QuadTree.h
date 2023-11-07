@@ -13,6 +13,7 @@
 #pragma warning(push, 0)
 #include <godot_cpp/classes/image_texture.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
+#include <godot_cpp/classes/sub_viewport.hpp>
 #pragma warning(pop)
 
 #define _DEBUG_AAB	1
@@ -697,6 +698,11 @@ namespace godot
 			, Color = 4
 			, Global = 5
 			, ChunkLod = 6
+			, Universe = 7
+			, ShaderArt = 8
+			, ManaResourceOrb = 9
+			, StarNest = 10
+			, FlaringStar = 11
 		};
 
 		ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
@@ -723,9 +729,10 @@ namespace godot
 		}
 		void updateMaterialParams(LookDev lookdev);
 		Ref<Material> getRegularMaterial(bool reload = false);
-		Ref<Material> getLookDevMaterial(bool reload = false);
+		Ref<Material> getLookDevMaterial(enum class ShaderTerrainData::LookDev lookDev, bool reload = false);
 		std::map<int, godot::Ref<godot::ShaderMaterial>>& getLookDevChunkLodMaterials(void);
 		godot::Ref<godot::Material> getLookDevChunkLodMaterial(int lod, bool reload = false);
+		static void freeLookDevSubViewport(void);
 		static void releaseGlobals(void);
 		static void getGroundTextures(godot::String dirName, GDN_TheWorld_Viewer* viewer = nullptr);
 		static std::map<std::string, std::unique_ptr<GroundTexture>>& getGroundTextures(void)
@@ -751,6 +758,7 @@ namespace godot
 		QuadTree* m_quadTree;
 		godot::Ref<godot::ShaderMaterial> m_regularMaterial;
 		godot::Ref<godot::ShaderMaterial> m_lookDevMaterial;
+		static godot::SubViewport* g_lookDevSubviewport;
 		std::map<int, godot::Ref<godot::ShaderMaterial>> m_lookDevChunkLodMaterials;
 		bool m_materialParamsNeedUpdate;
 		bool m_materialParamsNeedReset;

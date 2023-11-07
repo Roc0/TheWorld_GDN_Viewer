@@ -929,6 +929,11 @@ void GDN_TheWorld_Edit::init(GDN_TheWorld_Viewer* viewer)
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev colors", (int64_t)ShaderTerrainData::LookDev::Color);
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev globalmap", (int64_t)ShaderTerrainData::LookDev::Global);
 		m_innerData->m_lookDevOptionButton->add_item("Lookdev chunk lod", (int64_t)ShaderTerrainData::LookDev::ChunkLod);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev universe", (int64_t)ShaderTerrainData::LookDev::Universe);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev shader art", (int64_t)ShaderTerrainData::LookDev::ShaderArt);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev mana orb", (int64_t)ShaderTerrainData::LookDev::ManaResourceOrb);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev star nest", (int64_t)ShaderTerrainData::LookDev::StarNest);
+		m_innerData->m_lookDevOptionButton->add_item("Lookdev flaring star", (int64_t)ShaderTerrainData::LookDev::FlaringStar);
 	}
 
 	{

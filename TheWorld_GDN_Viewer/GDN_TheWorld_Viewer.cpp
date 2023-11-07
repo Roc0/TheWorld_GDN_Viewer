@@ -3102,6 +3102,8 @@ void GDN_TheWorld_Viewer::process_lookDev(void)
 {
 	if (m_desideredLookDevChanged)
 	{
+		ShaderTerrainData::freeLookDevSubViewport();
+
 		enum class ShaderTerrainData::LookDev desideredLookDev = getDesideredLookDev();
 
 		for (auto& it : m_mapQuadTree)
