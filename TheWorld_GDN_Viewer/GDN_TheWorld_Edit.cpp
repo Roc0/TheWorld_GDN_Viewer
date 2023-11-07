@@ -1809,7 +1809,7 @@ void GDN_TheWorld_Edit::_notification(int p_what)
 
 godot::Size2 GDN_TheWorld_Edit::getTerrainScrolledPanelSize(void)
 {
-	//return godot::Size2(0, 200);
+	//return godot::Size2(0, 400);
 	
 	if (m_viewer == nullptr || m_innerData->m_mainScrolledVBoxContainer == nullptr)
 		return godot::Size2(0.0f, 0.0f);
@@ -1820,10 +1820,37 @@ godot::Size2 GDN_TheWorld_Edit::getTerrainScrolledPanelSize(void)
 
 	float lookdevOptionButtonHeight = m_innerData->m_lookDevOptionButton->get_rect().size.height + 3;
 	float noiseButtonHeight = m_innerData->m_noiseButton->get_rect().size.height + 3;
-	float noiseVBoxCHeight = m_innerData->m_noiseVBoxContainer->is_visible() ? m_innerData->m_noiseVBoxContainer->get_rect().size.height + 4 : 0;
 	float terrEditButtonHeight = m_innerData->m_terrEditButton->get_rect().size.height + 3;
-	float terrEditVBoxcHeight = m_innerData->m_terrEditVBoxContainer->is_visible() ? m_innerData->m_terrEditVBoxContainer->get_rect().size.height + 4 : 0;
 	float dummyLabelHeight = m_innerData->m_dummyLabel->get_rect().size.height + 3;
+
+	static float noiseVBoxCExpandedHeight = 0;
+	float noiseVBoxCHeight;
+	if (m_innerData->m_noiseVBoxContainer->is_visible())
+	{
+		if (noiseVBoxCExpandedHeight == 0)
+		{
+			noiseVBoxCExpandedHeight = m_innerData->m_noiseVBoxContainer->get_rect().size.height + 4;
+		}
+		noiseVBoxCHeight = noiseVBoxCExpandedHeight;
+	}
+	else
+		noiseVBoxCHeight = 0;
+	//float noiseVBoxCHeight = m_innerData->m_noiseVBoxContainer->is_visible() ? m_innerData->m_noiseVBoxContainer->get_rect().size.height + 4 : 0;
+
+	static float terrEditVBoxcExpandedHeight = 0;
+	float terrEditVBoxcHeight;
+	if (m_innerData->m_terrEditVBoxContainer->is_visible())
+	{
+		if (terrEditVBoxcExpandedHeight == 0)
+		{
+			terrEditVBoxcExpandedHeight = m_innerData->m_terrEditVBoxContainer->get_rect().size.height + 4;
+		}
+		terrEditVBoxcHeight = terrEditVBoxcExpandedHeight;
+	}
+	else
+		terrEditVBoxcHeight = 0;
+	//float terrEditVBoxcHeight = m_innerData->m_terrEditVBoxContainer->is_visible() ? m_innerData->m_terrEditVBoxContainer->get_rect().size.height + 4 : 0;
+
 	float scrollableContentHeightCalc = lookdevOptionButtonHeight + noiseButtonHeight + noiseVBoxCHeight + terrEditButtonHeight + terrEditVBoxcHeight + dummyLabelHeight;
 
 	godot::Size2 ret;
@@ -1871,20 +1898,20 @@ void GDN_TheWorld_Edit::_process(double _delta)
 	if (!m_initialized)
 		return;
 
-	//if (m_innerData->m_mainScrolledVBoxContainer != nullptr)
-	//{
-	//	float scrollableContentHeight = m_innerData->m_mainScrolledVBoxContainer->get_global_rect().size.height;
-	//	float scrollableContentHeight2 = m_innerData->m_mainScrolledVBoxContainer->get_rect().size.height;
-	//	
-	//	float lookdevOptionButtonHeight = m_innerData->m_lookDevOptionButton->get_rect().size.height + 3;
-	//	float noiseButtonHeight = m_innerData->m_noiseButton->get_rect().size.height + 3;
-	//	float noiseVBoxCHeight = m_innerData->m_noiseVBoxContainer->is_visible() ? m_innerData->m_noiseVBoxContainer->get_rect().size.height + 4 : 0;
-	//	float terrEditButtonHeight = m_innerData->m_terrEditButton->get_rect().size.height + 3;
-	//	float terrEditVBoxcHeight = m_innerData->m_terrEditVBoxContainer->is_visible() ? m_innerData->m_terrEditVBoxContainer->get_rect().size.height + 4 : 0;
-	//	float dummyLabelHeight = m_innerData->m_dummyLabel->get_rect().size.height + 3;
-	//	float scrollableContentHeightCalc = lookdevOptionButtonHeight + noiseButtonHeight + noiseVBoxCHeight + terrEditButtonHeight + terrEditVBoxcHeight + dummyLabelHeight;
-	//	float size2 = 0;
-	//}
+	if (m_innerData->m_mainScrolledVBoxContainer != nullptr)
+	{
+		float scrollableContentHeight = m_innerData->m_mainScrolledVBoxContainer->get_global_rect().size.height;
+		float scrollableContentHeight2 = m_innerData->m_mainScrolledVBoxContainer->get_rect().size.height;
+		
+		float lookdevOptionButtonHeight = m_innerData->m_lookDevOptionButton->get_rect().size.height + 3;
+		float noiseButtonHeight = m_innerData->m_noiseButton->get_rect().size.height + 3;
+		float noiseVBoxCHeight = m_innerData->m_noiseVBoxContainer->is_visible() ? m_innerData->m_noiseVBoxContainer->get_rect().size.height + 4 : 0;
+		float terrEditButtonHeight = m_innerData->m_terrEditButton->get_rect().size.height + 3;
+		float terrEditVBoxcHeight = m_innerData->m_terrEditVBoxContainer->is_visible() ? m_innerData->m_terrEditVBoxContainer->get_rect().size.height + 4 : 0;
+		float dummyLabelHeight = m_innerData->m_dummyLabel->get_rect().size.height + 3;
+		float scrollableContentHeightCalc = lookdevOptionButtonHeight + noiseButtonHeight + noiseVBoxCHeight + terrEditButtonHeight + terrEditVBoxcHeight + dummyLabelHeight;
+		float size2 = 0;
+	}
 
 	if (m_controlNeedResize)
 	{
