@@ -7,9 +7,73 @@
 #pragma warning(push, 0)
 #include <godot_cpp/classes/label3d.hpp>
 #include <godot_cpp/classes/sphere_mesh.hpp>
+#include <godot_cpp/classes/resource_loader.hpp>
+#include <godot_cpp/classes/sub_viewport.hpp>
+#include <godot_cpp/classes/world3d.hpp>
+#include <godot_cpp/classes/shader_material.hpp>
+#include <godot_cpp/classes/color_rect.hpp>
+#include <godot_cpp/classes/viewport_texture.hpp>
 #pragma warning(pop)
 
 using namespace godot;
+
+GDN_TheWorld_ShaderTexture::GDN_TheWorld_ShaderTexture()
+{
+}
+
+GDN_TheWorld_ShaderTexture::~GDN_TheWorld_ShaderTexture()
+{
+	deinit();
+}
+
+void GDN_TheWorld_ShaderTexture::init(Node* parent, godot::Vector2i size, std::string shaderPath)
+{
+	deinit();
+
+	m_subviewport = memnew(godot::SubViewport);
+	parent->add_child(m_subviewport);
+	m_subviewport->set_size(size);
+	//m_subviewport->set_update_mode(godot::SubViewport::UpdateMode::UPDATE_WHEN_VISIBLE);
+	//m_subviewport->set_clear_mode(godot::SubViewport::ClearMode::CLEAR_MODE_ALWAYS);
+	godot::Ref<godot::World3D> w = memnew(godot::World3D);
+	m_subviewport->set_world_3d(w);
+	m_subviewport->set_use_own_world_3d(true);
+
+	godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
+	godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
+	godot::Ref<godot::Shader> shader = resLoader->load(shaderPath.c_str()/*, "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE*/);
+	mat->set_shader(shader);
+	m_mat = mat;
+
+	godot::ColorRect* colorRect = memnew(godot::ColorRect);
+	m_subviewport->add_child(colorRect);
+	colorRect->set_size(m_subviewport->get_size());
+	colorRect->set_anchors_preset(godot::Control::LayoutPreset::PRESET_FULL_RECT);
+	colorRect->set_material(mat);
+}
+
+void GDN_TheWorld_ShaderTexture::deinit(void)
+{
+	if (m_subviewport != nullptr)
+	{
+		Node* parent = m_subviewport->get_parent();
+		if (parent != nullptr)
+			parent->remove_child(m_subviewport);
+		m_subviewport->queue_free();
+		m_subviewport = nullptr;
+		m_mat.unref();
+	}
+}
+
+godot::Ref<godot::ViewportTexture> GDN_TheWorld_ShaderTexture::getTexture(void)
+{
+	return m_subviewport->get_texture();
+}
+
+godot::Ref<godot::ShaderMaterial> GDN_TheWorld_ShaderTexture::getMaterial(void)
+{
+	return m_mat;
+}
 
 GDN_TheWorld_Gizmo3d::GDN_TheWorld_Gizmo3d()
 {

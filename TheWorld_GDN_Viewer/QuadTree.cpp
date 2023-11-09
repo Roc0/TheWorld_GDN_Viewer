@@ -22,14 +22,13 @@
 #include <godot_cpp/classes/world3d.hpp>
 #include <godot_cpp/classes/shader_material.hpp>
 #include <godot_cpp/classes/color_rect.hpp>
-#include <godot_cpp/classes/standard_material3d.hpp>
 #include <godot_cpp/classes/viewport_texture.hpp>
 #pragma warning(pop)
 
 using namespace godot;
 namespace fs = std::filesystem;
 
-godot::SubViewport* ShaderTerrainData::g_lookDevSubviewport = nullptr;
+GDN_TheWorld_ShaderTexture* ShaderTerrainData::g_lookDevShaderTexture = nullptr;
 
 //extern int g_num = 0;
 
@@ -1145,13 +1144,11 @@ godot::Ref<godot::Material> ShaderTerrainData::getRegularMaterial(bool reload)
 
 void ShaderTerrainData::freeLookDevSubViewport(void)
 {
-	if (g_lookDevSubviewport != nullptr)
+	if (g_lookDevShaderTexture != nullptr)
 	{
-		Node* parent = g_lookDevSubviewport->get_parent();
-		if (parent != nullptr)
-			parent->remove_child(g_lookDevSubviewport);
-		g_lookDevSubviewport->queue_free();
-		g_lookDevSubviewport = nullptr;
+		g_lookDevShaderTexture->deinit();
+		delete g_lookDevShaderTexture;
+		g_lookDevShaderTexture = nullptr;
 	}
 }
 
@@ -1159,56 +1156,45 @@ godot::Ref<godot::Material> ShaderTerrainData::getLookDevMaterial(enum class Sha
 {
 	if (lookDev == ShaderTerrainData::LookDev::Universe 
 		|| lookDev == ShaderTerrainData::LookDev::ShaderArt 
-		|| lookDev == ShaderTerrainData::LookDev::ManaResourceOrb
+		|| lookDev == ShaderTerrainData::LookDev::Lightning
 		|| lookDev == ShaderTerrainData::LookDev::StarNest
-		|| lookDev == ShaderTerrainData::LookDev::FlaringStar)
+		|| lookDev == ShaderTerrainData::LookDev::FlaringStar
+		|| lookDev == ShaderTerrainData::LookDev::AnimatedDiamond
+		|| lookDev == ShaderTerrainData::LookDev::PlasmaWaves)
 		{
-		if (g_lookDevSubviewport == nullptr || reload)
+		if (g_lookDevShaderTexture == nullptr || reload)
 		{
 			freeLookDevSubViewport();
 
-			g_lookDevSubviewport = memnew(godot::SubViewport);
-			m_viewer->add_child(g_lookDevSubviewport);
-			g_lookDevSubviewport->set_size(godot::Vector2i(1024, 1024));
-			//g_lookDevSubviewport->set_update_mode(godot::SubViewport::UpdateMode::UPDATE_WHEN_VISIBLE);
-			//g_lookDevSubviewport->set_clear_mode(godot::SubViewport::ClearMode::CLEAR_MODE_ALWAYS);
-			godot::Ref<godot::World3D> w = memnew(godot::World3D);
-			g_lookDevSubviewport->set_world_3d(w);
-			g_lookDevSubviewport->set_use_own_world_3d(true);
-
-			godot::ResourceLoader* resLoader = godot::ResourceLoader::get_singleton();
-			godot::Ref<godot::ShaderMaterial> mat = memnew(godot::ShaderMaterial);
+			g_lookDevShaderTexture = new GDN_TheWorld_ShaderTexture;
+			std::string shaderPath;
 			if (lookDev == ShaderTerrainData::LookDev::Universe)
-			{
-				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/Universe.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
-				mat->set_shader(shader);
-			}
+				shaderPath = "res://addons/twviewer/shaders/Universe.gdshader";
 			else if (lookDev == ShaderTerrainData::LookDev::ShaderArt)
-			{
-				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/ShaderArt.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
-				mat->set_shader(shader);
-			}
-			else if (lookDev == ShaderTerrainData::LookDev::ManaResourceOrb)
-			{
-				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/ManaResourceOrb.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
-				mat->set_shader(shader);
-			}
+				shaderPath = "res://addons/twviewer/shaders/ShaderArt.gdshader";
+			else if (lookDev == ShaderTerrainData::LookDev::Lightning)
+				shaderPath = "res://addons/twviewer/shaders/Lightning.gdshader";
 			else if (lookDev == ShaderTerrainData::LookDev::StarNest)
-			{
-				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/StarNest.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
-				mat->set_shader(shader);
-			}
+				shaderPath = "res://addons/twviewer/shaders/StarNest.gdshader";
 			else if (lookDev == ShaderTerrainData::LookDev::FlaringStar)
+				shaderPath = "res://addons/twviewer/shaders/FlaringStar.gdshader";
+			else if (lookDev == ShaderTerrainData::LookDev::AnimatedDiamond)
+				shaderPath = "res://addons/twviewer/shaders/AnimatedDiamond.gdshader";
+			else if (lookDev == ShaderTerrainData::LookDev::PlasmaWaves)
+				shaderPath = "res://addons/twviewer/shaders/PlasmaWaves.gdshader";
+			
+			g_lookDevShaderTexture->init(m_viewer, godot::Vector2i(1024, 1024), shaderPath);
+			
+			if (lookDev == ShaderTerrainData::LookDev::Lightning)
 			{
-				godot::Ref<godot::Shader> shader = resLoader->load("res://addons/twviewer/shaders/FlaringStar.gdshader", "", godot::ResourceLoader::CacheMode::CACHE_MODE_IGNORE);
-				mat->set_shader(shader);
+				g_lookDevShaderTexture->getMaterial()->set_shader_parameter("lightning_color", godot::Color(0.0f, 1.0f, 1.0f, 1.0f));
+				g_lookDevShaderTexture->getMaterial()->set_shader_parameter("size", 0.01f);			// how thick bolt line should be 0/1
+				g_lookDevShaderTexture->getMaterial()->set_shader_parameter("width", 0.1f);			// how long the range of the bolt should be 0/1
+				g_lookDevShaderTexture->getMaterial()->set_shader_parameter("speed", 10.0f);		// how fast the lightning should change
+				g_lookDevShaderTexture->getMaterial()->set_shader_parameter("cycle", 2.0f);			// how many cycles the zigzag should be
+				g_lookDevShaderTexture->getMaterial()->set_shader_parameter("ratio", 10.0f);
+				g_lookDevShaderTexture->getMaterial()->set_shader_parameter("time_shift", 1.0f);	// because we use the sine function as a random, the same `TIME` will produce the same bolt, so if we create different bolts, we need to shift the time a little bit
 			}
-
-			godot::ColorRect* colorRect = memnew(godot::ColorRect);
-			g_lookDevSubviewport->add_child(colorRect);
-			colorRect->set_size(g_lookDevSubviewport->get_size());
-			colorRect->set_anchors_preset(godot::Control::LayoutPreset::PRESET_FULL_RECT);
-			colorRect->set_material(mat);
 		}
 	}
 	else
@@ -2197,12 +2183,14 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 
 			if ((lookdev == LookDev::Universe 
 				|| lookdev == LookDev::ShaderArt
-				|| lookdev == LookDev::ManaResourceOrb
+				|| lookdev == LookDev::Lightning
 				|| lookdev == LookDev::StarNest
-				|| lookdev == LookDev::FlaringStar)
-				&& g_lookDevSubviewport != nullptr)
+				|| lookdev == LookDev::FlaringStar
+				|| lookdev == LookDev::AnimatedDiamond
+				|| lookdev == LookDev::PlasmaWaves)
+				&& g_lookDevShaderTexture != nullptr)
 			{
-				currentMaterial->set_shader_parameter(SHADER_PARAM_LOOKDEV_MAP, g_lookDevSubviewport->get_texture());
+				currentMaterial->set_shader_parameter(SHADER_PARAM_LOOKDEV_MAP, g_lookDevShaderTexture->getTexture());
 			}
 
 			//Vector3 cameraPosViewerNodeLocalCoord = globalTransform.affine_inverse() * cameraPosGlobalCoord;	// Viewer Node (grid) local coordinates of the camera pos

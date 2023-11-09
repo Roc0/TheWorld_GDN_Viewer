@@ -9,6 +9,7 @@
 #include "Chunk.h"
 #include "Collider.h"
 //#include <Utils.h>
+#include "Tools.h"
 
 #pragma warning(push, 0)
 #include <godot_cpp/classes/image_texture.hpp>
@@ -700,9 +701,11 @@ namespace godot
 			, ChunkLod = 6
 			, Universe = 7
 			, ShaderArt = 8
-			, ManaResourceOrb = 9
+			, Lightning = 9
 			, StarNest = 10
 			, FlaringStar = 11
+			, AnimatedDiamond = 12
+			, PlasmaWaves = 13
 		};
 
 		ShaderTerrainData(GDN_TheWorld_Viewer* viewer, QuadTree* quadTree);
@@ -758,7 +761,8 @@ namespace godot
 		QuadTree* m_quadTree;
 		godot::Ref<godot::ShaderMaterial> m_regularMaterial;
 		godot::Ref<godot::ShaderMaterial> m_lookDevMaterial;
-		static godot::SubViewport* g_lookDevSubviewport;
+		//static godot::SubViewport* g_lookDevSubviewport;
+		static GDN_TheWorld_ShaderTexture* g_lookDevShaderTexture;
 		std::map<int, godot::Ref<godot::ShaderMaterial>> m_lookDevChunkLodMaterials;
 		bool m_materialParamsNeedUpdate;
 		bool m_materialParamsNeedReset;

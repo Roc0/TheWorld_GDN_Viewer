@@ -8,6 +8,9 @@
 #include <godot_cpp/classes/cylinder_mesh.hpp>
 #include <godot_cpp/classes/label3d.hpp>
 #include <godot_cpp/classes/camera3d.hpp>
+#include <godot_cpp/classes/sub_viewport.hpp>
+#include <godot_cpp/classes/viewport_texture.hpp>
+#include <godot_cpp/classes/shader_material.hpp>
 #pragma warning(pop)
 
 #include <map>
@@ -18,6 +21,21 @@ namespace godot
 {
 	class GDN_TheWorld_Viewer;
 
+	class GDN_TheWorld_ShaderTexture
+	{
+	public:
+		GDN_TheWorld_ShaderTexture();
+		~GDN_TheWorld_ShaderTexture();
+
+		void init(Node* parent, godot::Vector2i size, std::string shaderPath);
+		void deinit(void);
+		godot::Ref<godot::ViewportTexture> getTexture(void);
+		godot::Ref<godot::ShaderMaterial> getMaterial(void);
+
+	private:
+		godot::SubViewport* m_subviewport = nullptr;
+		godot::Ref<godot::ShaderMaterial> m_mat;
+	};
 
 	class GDN_TheWorld_Gizmo3d : public godot::Node3D
 	{
