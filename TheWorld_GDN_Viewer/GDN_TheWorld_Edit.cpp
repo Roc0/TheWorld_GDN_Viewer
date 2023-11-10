@@ -1560,7 +1560,7 @@ void GDN_TheWorld_Edit::setElapsed(size_t elapsed, bool onGoing)
 	//{
 	//	if (!m_onGoingElapsedLabel)
 	//	{
-	//		m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 0, 0));
+	//		m_innerData->m_elapsedLabel->add_theme_color_override("font_color", Color(1, 0, 0));
 	//		m_onGoingElapsedLabel = true;
 	//	}
 	//}
@@ -1568,7 +1568,7 @@ void GDN_TheWorld_Edit::setElapsed(size_t elapsed, bool onGoing)
 	//{
 	//	if (m_onGoingElapsedLabel)
 	//	{
-	//		m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 1, 1));
+	//		m_innerData->m_elapsedLabel->add_theme_color_override("font_color", Color(1, 1, 1));	
 	//		m_onGoingElapsedLabel = false;
 	//	}
 	//}
@@ -2036,12 +2036,11 @@ void GDN_TheWorld_Edit::_process(double _delta)
 			+ "Quad Sel: " + m_innerData->m_mouseQuadSelStr + "\n"
 			+ "Pos Sel: " + m_innerData->m_mouseQuadSelPosStr;
 		m_innerData->m_infoLabel->set_text(infoLabelText.c_str());
-		//m_elapsedLabelNormalColor = m_elapsedLabel->get("custom_colors/font_color");
 		if (m_innerData->m_onGoing)
 		{
 			if (!m_onGoingElapsedLabel)
 			{
-				m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 0, 0));
+				m_innerData->m_elapsedLabel->add_theme_color_override("font_color", Color(1, 0, 0));
 				m_onGoingElapsedLabel = true;
 			}
 		}
@@ -2049,7 +2048,7 @@ void GDN_TheWorld_Edit::_process(double _delta)
 		{
 			if (m_onGoingElapsedLabel)
 			{
-				m_innerData->m_elapsedLabel->set("custom_colors/font_color", Color(1, 1, 1));
+				m_innerData->m_elapsedLabel->add_theme_color_override("font_color", Color(1, 1, 1));
 				m_onGoingElapsedLabel = false;
 			}
 		}

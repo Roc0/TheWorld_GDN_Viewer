@@ -451,10 +451,16 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_normalDrawer = memnew(GDN_TheWorld_Drawer);
 	this->add_child(m_normalDrawer);
 	const float radius = 1;
-	m_normalLineIdx = m_normalDrawer->addLine(godot::Vector3(), godot::Vector3(), "", GDN_TheWorld_Drawer::Drawing::LabelPos::end, 15.0f, godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
+	m_normalLineIdx = m_normalDrawer->addLine(godot::Vector3(), godot::Vector3(), "", false, true, GDN_TheWorld_Drawer::Drawing::LabelPos::end, 15.0f, godot::Vector2i(-10, -25), GDN_TheWorld_Globals::g_color_black);
 	m_normalSphereIdx = m_normalDrawer->addSphere(godot::Vector3(), radius, GDN_TheWorld_Globals::g_color_cyan);
 	m_normalDrawer->set_visible(false);
 
+	m_positionDrawer = memnew(GDN_TheWorld_Drawer);
+	this->add_child(m_positionDrawer);
+	m_positionLabelXIdx = m_positionDrawer->addLabel2d(godot::Vector3(), godot::Vector2i(-10, 20), "", GDN_TheWorld_Globals::g_color_white);
+	m_positionLabelZIdx = m_positionDrawer->addLabel2d(godot::Vector3(), godot::Vector2i(-10, 40), "", GDN_TheWorld_Globals::g_color_white);
+	m_positionLabelYIdx = m_positionDrawer->addLabel2d(godot::Vector3(), godot::Vector2i(-10, 60), "", GDN_TheWorld_Globals::g_color_white);
+	m_positionDrawer->set_visible(false);
 
 	m_gizmo = memnew(GDN_TheWorld_Gizmo3d);
 	this->add_child(m_gizmo);
@@ -517,6 +523,15 @@ void GDN_TheWorld_Viewer::deinit(void)
 			m_normalDrawer = nullptr;
 		}
 		
+		if (m_positionDrawer != nullptr)
+		{
+			Node* parent = m_positionDrawer->get_parent();
+			if (parent != nullptr)
+				parent->remove_child(m_positionDrawer);
+			m_positionDrawer->queue_free();
+			m_positionDrawer = nullptr;
+		}
+
 		if (m_gizmo != nullptr)
 		{
 			Node* parent = m_gizmo->get_parent();
@@ -1415,8 +1430,8 @@ void GDN_TheWorld_Viewer::trackMouse(bool b)
 		{
 			it.second->mouseHitChanged(godot::Vector3(), false);
 		}
-		//m_normalDrawer->clearDrawings();
 		m_normalDrawer->set_visible(false);
+		m_positionDrawer->set_visible(false);
 		m_gizmo->set_visible(false);
 
 		m_mouseQuadrantHitName = "";
@@ -2043,6 +2058,9 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 	if (m_normalDrawer != nullptr)
 		m_normalDrawer->set_camera(activeCamera);
 
+	if (m_positionDrawer != nullptr)
+		m_positionDrawer->set_camera(activeCamera);
+
 	//// DEBUG
 	//{
 	//	godot::Camera3D::ProjectionType type = activeCamera->get_projection();
@@ -2490,7 +2508,6 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 					item->mouseHitChanged(mouseHit, true);
 
 				bool _normalVisible = false;
-				//m_normalDrawer->clearDrawings();
 				if (normalVisible())
 				{
 					size_t index = quadrantHit->getQuadrant()->getIndexFromMap(mouseHit.x, mouseHit.z);
@@ -2505,8 +2522,6 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 							float radAngleWithVertical = acos(normal.dot(Vector3Up));
 							float slope = (radAngleWithVertical * 180) / TheWorld_Utils::kPi;
 							
-							//m_normalDrawer->drawLine(mouseHit, end);
-							//m_normalDrawer->drawSphere(end, radius, GDN_TheWorld_Globals::g_color_cyan);
 
 							if (m_normalLineIdx != -1 && m_normalSphereIdx != -1)
 							{
@@ -2522,6 +2537,23 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 					m_normalDrawer->set_visible(true);
 				else
 					m_normalDrawer->set_visible(false);
+
+				bool _positionVisible = false;
+				if (positionVisible())
+				{
+					if (m_positionLabelXIdx != -1 && m_positionLabelYIdx != -1 && m_positionLabelZIdx != -1)
+					{
+						_positionVisible = true;
+						m_positionDrawer->updateLabel2d(m_positionLabelXIdx, mouseHit, std::string("X=") + std::to_string(mouseHit.x));
+						m_positionDrawer->updateLabel2d(m_positionLabelZIdx, mouseHit, std::string("Z=") + std::to_string(mouseHit.z));
+						m_positionDrawer->updateLabel2d(m_positionLabelYIdx, mouseHit, std::string("H=") + std::to_string(mouseHit.y));
+					}
+				}
+
+				if (_positionVisible)
+					m_positionDrawer->set_visible(true);
+				else
+					m_positionDrawer->set_visible(false);
 
 				if (gizmoVisible())
 				{
@@ -2539,8 +2571,8 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 			quadrantHit->mouseHitChanged(godot::Vector3(), false);
 			for (auto& item : adjacentQuadrantsHit)
 				item->mouseHitChanged(godot::Vector3(), false);
-			//m_normalDrawer->clearDrawings();
 			m_normalDrawer->set_visible(false);
+			m_positionDrawer->set_visible(false);
 			m_gizmo->set_visible(false);
 		}
 	}

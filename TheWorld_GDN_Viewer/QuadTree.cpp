@@ -284,7 +284,7 @@ void QuadTree::mouseHitChanged(godot::Vector3 mouseHit, bool hit)
 {
 	m_hitByMouse = hit;
 
-	godot::Vector2 uvMouseHit;
+	godot::Vector2 viewportMouseHit;
 
 	if (hit)
 	{
@@ -292,16 +292,16 @@ void QuadTree::mouseHitChanged(godot::Vector3 mouseHit, bool hit)
 		float s = pos.getSizeInWU();							// DEBUG ONLY
 		float dx = mouseHit.x - pos.getLowerXGridVertex();		// DEBUG ONLY
 		float dz = mouseHit.z - pos.getLowerZGridVertex();		// DEBUG ONLY
-		uvMouseHit.x = (mouseHit.x - pos.getLowerXGridVertex()) / pos.getSizeInWU();
-		uvMouseHit.y = (mouseHit.z - pos.getLowerZGridVertex()) / pos.getSizeInWU();
+		viewportMouseHit.x = (mouseHit.x - pos.getLowerXGridVertex()) / pos.getSizeInWU();
+		viewportMouseHit.y = (mouseHit.z - pos.getLowerZGridVertex()) / pos.getSizeInWU();
 	}
 	else
 	{
-		uvMouseHit.x = -1;
-		uvMouseHit.y = -1;
+		viewportMouseHit.x = -1;
+		viewportMouseHit.y = -1;
 	}
 
-	getQuadrant()->getShaderTerrainData()->mouseHitChanged(uvMouseHit);
+	getQuadrant()->getShaderTerrainData()->mouseHitChanged(viewportMouseHit);
 }
 
 void QuadTree::getAdjacentQuadrants(std::list<QuadTree*>& adjacentQuadrantsHit)

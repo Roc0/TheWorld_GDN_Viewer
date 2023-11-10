@@ -232,6 +232,31 @@ void GDN_TheWorld_Gizmo3d::_process(double _delta)
 	}
 }
 
+GDN_TheWorld_Drawer::Drawing::Drawing()
+{
+}
+
+GDN_TheWorld_Drawer::Drawing::~Drawing()
+{
+	if (label3d != nullptr)
+	{
+		Node* parent = label3d->get_parent();
+		if (parent != nullptr)
+			parent->remove_child(label3d);
+		label3d->queue_free();
+		label3d = nullptr;
+	}
+
+	if (label2d != nullptr)
+	{
+		Node* parent = label2d->get_parent();
+		if (parent != nullptr)
+			parent->remove_child(label2d);
+		label2d->queue_free();
+		label2d = nullptr;
+	}
+}
+
 GDN_TheWorld_Drawer::GDN_TheWorld_Drawer()
 {
 }
@@ -267,64 +292,151 @@ void GDN_TheWorld_Drawer::_ready(void)
 
 void GDN_TheWorld_Drawer::_process(double _delta)
 {
-	if (!m_drawings.empty() && is_visible())
+	if (!m_drawings.empty())
 	{
-		const double pixel_size = 0.05;		// 0.005
-		const int32_t font_size = 128;		// 32
-		const int32_t outline_size = 36;	// 12
-
-		m_mesh->clear_surfaces();
-		for (auto& item : m_drawings)
+		if (is_visible())
 		{
-			if (item.second->drawingType == Drawing::DrawingType::line)
+			const double pixel_size = 0.05;		// 0.005
+			const int32_t font_size = 128;		// 32
+			const int32_t outline_size = 36;	// 12
+
+			m_mesh->clear_surfaces();
+			for (auto& item : m_drawings)
 			{
-				drawLine(item.second->start, item.second->end, item.second->color);
-				if (item.second->labelPos == Drawing::LabelPos::not_set)
+				if (item.second->drawingType == Drawing::DrawingType::line)
 				{
-					if (item.second->label != nullptr)
+					drawLine(item.second->start, item.second->end, item.second->color);
+					if (item.second->labelPos == Drawing::LabelPos::not_set)
 					{
-						Node* parent = item.second->label->get_parent();
-						if (parent != nullptr)
-							parent->remove_child(item.second->label);
-						item.second->label->queue_free();
-						item.second->label = nullptr;
+						if (item.second->label3d != nullptr)
+						{
+							Node* parent = item.second->label3d->get_parent();
+							if (parent != nullptr)
+								parent->remove_child(item.second->label3d);
+							item.second->label3d->queue_free();
+							item.second->label3d = nullptr;
+						}
+						if (item.second->label2d != nullptr)
+						{
+							Node* parent = item.second->label2d->get_parent();
+							if (parent != nullptr)
+								parent->remove_child(item.second->label2d);
+							item.second->label2d->queue_free();
+							item.second->label2d = nullptr;
+						}
+					}
+					else
+					{
+						if (item.second->label_3d)
+						{
+							if (item.second->label3d == nullptr)
+							{
+								item.second->label3d = memnew(godot::Label3D);
+								add_child(item.second->label3d);
+								item.second->label3d->set_font_size(font_size);
+								item.second->label3d->set_pixel_size(pixel_size);
+								item.second->label3d->set_outline_size(outline_size);
+								item.second->label3d->set_outline_modulate(godot::Color(0.27f, 0.27f, 0.27f, 1.0f));
+							}
+
+							item.second->label3d->set_text(item.second->labelText.c_str());
+							item.second->label3d->set_modulate(item.second->color);
+
+							if (item.second->labelPos == Drawing::LabelPos::start)
+							{
+								// TODO
+							}
+							else if (item.second->labelPos == Drawing::LabelPos::center)
+							{
+								// TODO
+							}
+							else if (item.second->labelPos == Drawing::LabelPos::end)
+							{
+								item.second->label3d->set_position(item.second->end + (item.second->end - item.second->start).normalized() * item.second->label3dOffset);
+							}
+
+							if (m_camera != nullptr)
+							{
+								godot::Vector3 cameraPos = m_camera->get_global_transform().origin;
+								item.second->label3d->look_at(cameraPos, godot::Vector3(0, 1, 0));
+								item.second->label3d->rotate_y(TheWorld_Utils::kPi);
+							}
+						}
+
+						if (item.second->label_2d)
+						{
+							if (m_camera != nullptr)
+							{
+								if (item.second->label2d == nullptr)
+								{
+									item.second->label2d = memnew(godot::Label);
+									add_child(item.second->label2d);
+								}
+
+								item.second->label2d->set_text(item.second->labelText.c_str());
+								item.second->label2d->add_theme_color_override("font_color", item.second->color);
+
+								if (item.second->labelPos == Drawing::LabelPos::start)
+								{
+									// TODO
+								}
+								else if (item.second->labelPos == Drawing::LabelPos::center)
+								{
+									// TODO
+								}
+								else if (item.second->labelPos == Drawing::LabelPos::end)
+								{
+									godot::Vector3 position = item.second->end + (item.second->end - item.second->start).normalized() * item.second->label3dOffset;
+									godot::Vector2 viewportPos = m_camera->unproject_position(position);
+									viewportPos += item.second->label2dOffset;
+									item.second->label2d->set_position(viewportPos);
+
+								}
+							}
+						}
 					}
 				}
-				else
+				else if (item.second->drawingType == Drawing::DrawingType::sphere)
+					drawSphere(item.second->start, item.second->radius, item.second->color);
+				else if (item.second->drawingType == Drawing::DrawingType::label2d)
 				{
-					if (item.second->label == nullptr)
-					{
-						item.second->label = memnew(godot::Label3D);
-						add_child(item.second->label);
-						item.second->label->set_font_size(font_size);
-						item.second->label->set_pixel_size(pixel_size);
-						item.second->label->set_outline_size(outline_size);
-						item.second->label->set_outline_modulate(godot::Color(0.27f, 0.27f, 0.27f, 1.0f));
-					}
-					item.second->label->set_text(item.second->labelText.c_str());
-					if (item.second->labelPos == Drawing::LabelPos::start)
-					{
-						// TODO
-					}
-					else if (item.second->labelPos == Drawing::LabelPos::center)
-					{
-						// TODO
-					}
-					else if (item.second->labelPos == Drawing::LabelPos::end)
-					{
-						item.second->label->set_position(item.second->end + (item.second->end - item.second->start).normalized() * item.second->labelOffset);
-					}
-					item.second->label->set_modulate(item.second->color);
 					if (m_camera != nullptr)
 					{
-						godot::Vector3 cameraPos = m_camera->get_global_transform().origin;
-						item.second->label->look_at(cameraPos, godot::Vector3(0, 1, 0));
-						item.second->label->rotate_y(TheWorld_Utils::kPi);
+						if (item.second->label2d == nullptr)
+						{
+							item.second->label2d = memnew(godot::Label);
+							add_child(item.second->label2d);
+						}
+						godot::Vector2 viewportPos = m_camera->unproject_position(item.second->start);
+						viewportPos += item.second->label2dOffset;
+						item.second->label2d->set_position(viewportPos);
+						item.second->label2d->set_text(item.second->labelText.c_str());
+						item.second->label2d->add_theme_color_override("font_color", item.second->color);
 					}
 				}
 			}
-			else if (item.second->drawingType == Drawing::DrawingType::sphere)
-				drawSphere(item.second->start, item.second->radius, item.second->color);
+		}
+		else
+		{
+			for (auto& item : m_drawings)
+			{
+				if (item.second->label3d != nullptr)
+				{
+					Node* parent = item.second->label3d->get_parent();
+					if (parent != nullptr)
+						parent->remove_child(item.second->label3d);
+					item.second->label3d->queue_free();
+					item.second->label3d = nullptr;
+				}
+				if (item.second->label2d != nullptr)
+				{
+					Node* parent = item.second->label2d->get_parent();
+					if (parent != nullptr)
+						parent->remove_child(item.second->label2d);
+					item.second->label2d->queue_free();
+					item.second->label2d = nullptr;
+				}
+			}
 		}
 	}
 }
@@ -380,7 +492,7 @@ void GDN_TheWorld_Drawer::drawSphere(godot::Vector3 center, float radius, godot:
 	m_mesh->surface_end();
 }
 
-int32_t GDN_TheWorld_Drawer::addLine(godot::Vector3 start, godot::Vector3 end, std::string labelText, enum class Drawing::LabelPos labelPos, float labelOffset, godot::Color c)
+int32_t GDN_TheWorld_Drawer::addLine(godot::Vector3 start, godot::Vector3 end, std::string labelText, bool label3d, bool label2d, enum class Drawing::LabelPos labelPos, float label3dOffset, godot::Vector2i label2dOffset, godot::Color c)
 {
 	int32_t idx = m_firstAvailableIdx++;
 	m_drawings[idx] = std::make_unique<Drawing>();
@@ -391,13 +503,19 @@ int32_t GDN_TheWorld_Drawer::addLine(godot::Vector3 start, godot::Vector3 end, s
 	drawing->end = end;
 	drawing->color = c;
 	drawing->labelPos = labelPos;
-	drawing->labelOffset = labelOffset;
-	drawing->labelText = labelText;
+	drawing->label_3d = label3d;
+	drawing->label_2d = label2d;
+	drawing->label3dOffset = label3dOffset;
+	drawing->label2dOffset = label2dOffset;
+	if (labelText == "@")
+		drawing->labelText = "";
+	else
+		drawing->labelText = labelText;
 
 	return idx;
 }
 
-void GDN_TheWorld_Drawer::updateLine(int32_t idx, godot::Vector3 start, godot::Vector3 end, std::string labelText, enum class Drawing::LabelPos labelPos, float labelOffset, godot::Color c)
+void GDN_TheWorld_Drawer::updateLine(int32_t idx, godot::Vector3 start, godot::Vector3 end, std::string labelText, enum class Drawing::LabelPos labelPos, float label3dOffset, godot::Vector2i label2dOffset, godot::Color c)
 {
 	if (!m_drawings.contains(idx))
 		return;
@@ -413,8 +531,10 @@ void GDN_TheWorld_Drawer::updateLine(int32_t idx, godot::Vector3 start, godot::V
 		drawing->color = c;
 	if (labelPos != Drawing::LabelPos::not_set)
 		drawing->labelPos = labelPos;
-	if (labelOffset >= 0)
-		drawing->labelOffset = labelOffset;
+	if (label3dOffset >= 0)
+		drawing->label3dOffset = label3dOffset;
+	if (label2dOffset != godot::Vector2i(0, 0))
+		drawing->label2dOffset = label2dOffset;
 	if (labelText != "@")
 		drawing->labelText = labelText;
 }
@@ -446,6 +566,44 @@ void GDN_TheWorld_Drawer::updateSphere(int32_t idx, godot::Vector3 center, float
 	drawing->start = center;
 	if (radius >= 0)
 		drawing->radius = radius;
+	if (c.a != 0.0f)
+		drawing->color = c;
+}
+
+int32_t GDN_TheWorld_Drawer::addLabel2d(godot::Vector3 pos, godot::Vector2i offset, std::string labelText, godot::Color c)
+{
+	int32_t idx = m_firstAvailableIdx++;
+	m_drawings[idx] = std::make_unique<Drawing>();
+	Drawing* drawing = m_drawings[idx].get();
+
+	drawing->drawingType = Drawing::DrawingType::label2d;
+	drawing->start = pos;
+	if (labelText == "@")
+		drawing->labelText = "";
+	else
+		drawing->labelText = labelText;
+	drawing->label_3d = false;
+	drawing->label_2d = true;
+	drawing->label2dOffset = offset;
+	drawing->color = c;
+
+	return idx;
+}
+
+void GDN_TheWorld_Drawer::updateLabel2d(int32_t idx, godot::Vector3 pos, std::string labelText, godot::Color c)
+{
+	if (!m_drawings.contains(idx))
+		return;
+
+	Drawing* drawing = m_drawings[idx].get();
+
+	if (drawing->drawingType != Drawing::DrawingType::label2d)
+		return;
+
+	drawing->start = pos;
+	if (labelText != "@")
+		drawing->labelText = labelText;
+
 	if (c.a != 0.0f)
 		drawing->color = c;
 }

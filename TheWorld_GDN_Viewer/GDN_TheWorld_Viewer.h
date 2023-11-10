@@ -600,8 +600,12 @@ namespace godot
 		QuadrantPos m_quadrantSelPos;
 		Chunk* m_mouseHitChunk;
 		GDN_TheWorld_Drawer* m_normalDrawer = nullptr;
+		GDN_TheWorld_Drawer* m_positionDrawer = nullptr;
 		int32_t m_normalLineIdx = -1;
 		int32_t m_normalSphereIdx = -1;
+		int32_t m_positionLabelXIdx = -1;
+		int32_t m_positionLabelYIdx = -1;
+		int32_t m_positionLabelZIdx = -1;
 		bool m_normalVisible = false;
 		GDN_TheWorld_Gizmo3d* m_gizmo = nullptr;
 		bool m_gizmoVisible = false;
