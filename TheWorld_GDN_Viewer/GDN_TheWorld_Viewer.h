@@ -58,6 +58,14 @@ namespace godot
 	{
 		GDCLASS(GDN_TheWorld_Viewer, Node3D)
 
+		enum class TrackedInputEvent
+		{
+			MOUSE_BUTTON_LEFT = 0
+			, MOUSE_BUTTON_RIGHT = 1
+			, MOUSE_DOUBLE_BUTTON_LEFT = 2
+			, MOUSE_DOUBLE_BUTTON_RIGHT = 3
+		};
+			
 		enum Margin {
 			MARGIN_LEFT,
 			MARGIN_TOP,
@@ -491,6 +499,54 @@ namespace godot
 		void positionVisible(bool b)
 		{
 			m_positionVisible = b;
+			if (!m_positionVisible)
+				trackingDistance(false);
+		}
+		bool trackingDistance(void)
+		{
+			return m_trackingDistance;
+		}
+		void trackingDistance(bool b, godot::Vector3 savedPos = godot::Vector3())
+		{
+			m_trackingDistance = b;
+			if (m_trackingDistance)
+				m_savedPosForTrackingDistance = savedPos;
+			else
+				if (m_positionDrawer != nullptr && m_positionLineIdx != -1)
+					m_positionDrawer->updateLine(m_positionLineIdx, godot::Vector3(), godot::Vector3());
+		}
+		bool trackedInputEvent(TrackedInputEvent event, std::map<enum class TrackedInputEvent, bool>* inputEvents = nullptr)
+		{
+			if (inputEvents == nullptr)
+				inputEvents = &m_trackedInputEventsForProcess;
+
+			if (inputEvents->contains(event))
+				return (*inputEvents)[event];
+			else
+				return false;
+		}
+		void setTrackedInputEvents(std::map<enum class TrackedInputEvent, bool>* inputEvents = nullptr)
+		{
+			if (inputEvents == nullptr)
+				inputEvents = &m_trackedInputEventsForProcess;
+
+			if (!m_trackedInputEvents.empty())
+			{
+				for (auto& trackedInputEvent : m_trackedInputEvents)
+				{
+					(*inputEvents)[trackedInputEvent] = true;
+				}
+			}
+		}
+		void resetTrackedInputEvents(std::map<enum class TrackedInputEvent, bool>* inputEvents = nullptr)
+		{
+			if (inputEvents == nullptr)
+				inputEvents = &m_trackedInputEventsForProcess;
+
+			if (!inputEvents->empty())
+				inputEvents->clear();
+			if (!m_trackedInputEvents.empty())
+				m_trackedInputEvents.clear();
 		}
 
 		bool mouseInsideMainEditPanel(void);
@@ -584,6 +640,10 @@ namespace godot
 		TheWorld_Utils::TimerMs m_streamingTime;
 		// Statistics data
 
+		std::map<enum class TrackedInputEvent, bool> m_trackedInputEventsForProcess;
+		std::map<enum class TrackedInputEvent, bool> m_trackedInputEventsForTrackMouse;
+		std::list<enum class TrackedInputEvent> m_trackedInputEvents;
+
 		bool m_trackMouse = false;
 		bool m_editMode = false;
 		int64_t m_timeElapsedFromLastMouseTrack;
@@ -606,10 +666,13 @@ namespace godot
 		int32_t m_positionLabelXIdx = -1;
 		int32_t m_positionLabelYIdx = -1;
 		int32_t m_positionLabelZIdx = -1;
+		int32_t m_positionLineIdx = -1;
 		bool m_normalVisible = false;
 		GDN_TheWorld_Gizmo3d* m_gizmo = nullptr;
 		bool m_gizmoVisible = false;
 		bool m_positionVisible = false;
+		bool m_trackingDistance = false;
+		godot::Vector3 m_savedPosForTrackingDistance;
 
 		bool m_debugContentVisibility;
 		bool m_updateTerrainVisibilityRequired;

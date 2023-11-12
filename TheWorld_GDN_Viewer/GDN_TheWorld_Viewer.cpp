@@ -20,6 +20,7 @@
 #include <godot_cpp/classes/physics_ray_query_parameters3d.hpp>
 #include <godot_cpp/classes/time.hpp>
 #include <godot_cpp/classes/input.hpp>
+#include <godot_cpp/classes/input_event_mouse_button.hpp>
 #pragma warning(pop)
 
 #include <filesystem>
@@ -460,6 +461,8 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_positionLabelXIdx = m_positionDrawer->addLabel2d(godot::Vector3(), godot::Vector2i(-10, 20), "", GDN_TheWorld_Globals::g_color_white);
 	m_positionLabelZIdx = m_positionDrawer->addLabel2d(godot::Vector3(), godot::Vector2i(-10, 40), "", GDN_TheWorld_Globals::g_color_white);
 	m_positionLabelYIdx = m_positionDrawer->addLabel2d(godot::Vector3(), godot::Vector2i(-10, 60), "", GDN_TheWorld_Globals::g_color_white);
+	m_positionLineIdx = m_positionDrawer->addLine(godot::Vector3(), godot::Vector3(), "", false, true, GDN_TheWorld_Drawer::Drawing::LabelPos::center, -1.0f, godot::Vector2i(-10, -10), GDN_TheWorld_Globals::g_color_white);
+
 	m_positionDrawer->set_visible(false);
 
 	m_gizmo = memnew(GDN_TheWorld_Gizmo3d);
@@ -1357,6 +1360,19 @@ void GDN_TheWorld_Viewer::_input(const Ref<InputEvent>& event)
 	if ((int)globals->status() < (int)TheWorldStatus::sessionInitialized)
 		return;
 
+	const godot::InputEventMouseButton* eventMouseButton = godot::Object::cast_to<godot::InputEventMouseButton>(event.ptr());
+	if (eventMouseButton != nullptr)
+	{
+		if (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_LEFT && eventMouseButton->is_pressed())
+			m_trackedInputEvents.push_back(TrackedInputEvent::MOUSE_BUTTON_LEFT);
+		if (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_LEFT && eventMouseButton->is_double_click())
+			m_trackedInputEvents.push_back(TrackedInputEvent::MOUSE_DOUBLE_BUTTON_LEFT);
+		if (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_RIGHT && eventMouseButton->is_pressed())
+			m_trackedInputEvents.push_back(TrackedInputEvent::MOUSE_BUTTON_RIGHT);
+		if (eventMouseButton->get_button_index() == godot::MouseButton::MOUSE_BUTTON_RIGHT && eventMouseButton->is_double_click())
+			m_trackedInputEvents.push_back(TrackedInputEvent::MOUSE_DOUBLE_BUTTON_RIGHT);
+	}
+
 	if (event->is_action_pressed("ui_select") && m_altPressed)
 	{
 		toggleQuadrantSelected();
@@ -1995,6 +2011,8 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 	if (globals == nullptr)
 		return;
 
+	setTrackedInputEvents();
+
 	if (initRequired())
 	{
 		init();
@@ -2084,6 +2102,8 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 	auto save_duration = TheWorld_Viewer_Utils::finally([&clock, this] { clock.tock(); this->m_numProcessExecution++; this->m_processDuration += clock.duration().count(); });
 
 	process_impl(_delta, activeCamera);
+
+	resetTrackedInputEvents();
 }
 
 godot::Control* GDN_TheWorld_Viewer::getOrCreateEditModeUIControl(void)
@@ -2349,6 +2369,8 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 	godot::Node* collider = nullptr;
 	if (trackMouse())
 	{
+		setTrackedInputEvents(&m_trackedInputEventsForTrackMouse);
+
 		int64_t timeElapsed = TIME()->get_ticks_msec();
 		if (timeElapsed - m_timeElapsedFromLastMouseTrack > TIME_INTERVAL_BETWEEN_MOUSE_TRACK)
 		{
@@ -2487,8 +2509,10 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 				m_quadrantHit = nullptr;
 				m_adjacentQuadrantsHit.clear();
 				m_previousTrackedMouseHit = godot::Vector3();
-}
+			}
 
+			resetTrackedInputEvents(&m_trackedInputEventsForTrackMouse);
+			
 			m_timeElapsedFromLastMouseTrack = timeElapsed;
 		}
 	}
@@ -2501,6 +2525,11 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 	{
 		if (hit)
 		{
+			if (trackedInputEvent(TrackedInputEvent::MOUSE_DOUBLE_BUTTON_LEFT, &m_trackedInputEventsForTrackMouse))
+				trackingDistance(true, mouseHit);
+			if (trackedInputEvent(TrackedInputEvent::MOUSE_DOUBLE_BUTTON_RIGHT, &m_trackedInputEventsForTrackMouse))
+				trackingDistance(false);
+
 			if (m_previousTrackedMouseHit != mouseHit)
 			{
 				quadrantHit->mouseHitChanged(mouseHit, true);
@@ -2547,6 +2576,12 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 						m_positionDrawer->updateLabel2d(m_positionLabelXIdx, mouseHit, std::string("X=") + std::to_string(mouseHit.x));
 						m_positionDrawer->updateLabel2d(m_positionLabelZIdx, mouseHit, std::string("Z=") + std::to_string(mouseHit.z));
 						m_positionDrawer->updateLabel2d(m_positionLabelYIdx, mouseHit, std::string("H=") + std::to_string(mouseHit.y));
+					}
+
+					if (trackingDistance())
+					{
+						float distance = mouseHit.distance_to(m_savedPosForTrackingDistance);
+						m_positionDrawer->updateLine(m_positionLineIdx, m_savedPosForTrackingDistance, mouseHit, std::to_string(distance));
 					}
 				}
 

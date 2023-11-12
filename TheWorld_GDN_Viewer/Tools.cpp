@@ -303,7 +303,7 @@ void GDN_TheWorld_Drawer::_process(double _delta)
 			m_mesh->clear_surfaces();
 			for (auto& item : m_drawings)
 			{
-				if (item.second->drawingType == Drawing::DrawingType::line)
+				if (item.second->drawingType == Drawing::DrawingType::line && item.second->start != item.second->end)
 				{
 					drawLine(item.second->start, item.second->end, item.second->color);
 					if (item.second->labelPos == Drawing::LabelPos::not_set)
@@ -376,22 +376,22 @@ void GDN_TheWorld_Drawer::_process(double _delta)
 								item.second->label2d->set_text(item.second->labelText.c_str());
 								item.second->label2d->add_theme_color_override("font_color", item.second->color);
 
+								godot::Vector3 position;
 								if (item.second->labelPos == Drawing::LabelPos::start)
 								{
 									// TODO
 								}
 								else if (item.second->labelPos == Drawing::LabelPos::center)
 								{
-									// TODO
+									position = item.second->start + (item.second->end - item.second->start) / 2;
 								}
 								else if (item.second->labelPos == Drawing::LabelPos::end)
 								{
-									godot::Vector3 position = item.second->end + (item.second->end - item.second->start).normalized() * item.second->label3dOffset;
-									godot::Vector2 viewportPos = m_camera->unproject_position(position);
-									viewportPos += item.second->label2dOffset;
-									item.second->label2d->set_position(viewportPos);
-
+									position = item.second->end + (item.second->end - item.second->start).normalized() * item.second->label3dOffset;
 								}
+								godot::Vector2 viewportPos = m_camera->unproject_position(position);
+								viewportPos += item.second->label2dOffset;
+								item.second->label2d->set_position(viewportPos);
 							}
 						}
 					}
@@ -537,6 +537,27 @@ void GDN_TheWorld_Drawer::updateLine(int32_t idx, godot::Vector3 start, godot::V
 		drawing->label2dOffset = label2dOffset;
 	if (labelText != "@")
 		drawing->labelText = labelText;
+	if (start == end)
+	{
+		if (drawing->label3d != nullptr)
+		{
+			Node* parent = drawing->label3d->get_parent();
+			if (parent != nullptr)
+				parent->remove_child(drawing->label3d);
+			drawing->label3d->queue_free();
+			drawing->label3d = nullptr;
+		}
+
+		if (drawing->label2d != nullptr)
+		{
+			Node* parent = drawing->label2d->get_parent();
+			if (parent != nullptr)
+				parent->remove_child(drawing->label2d);
+			drawing->label2d->queue_free();
+			drawing->label2d = nullptr;
+		}
+
+	}
 }
 
 int32_t GDN_TheWorld_Drawer::addSphere(godot::Vector3 center, float radius, godot::Color c)
