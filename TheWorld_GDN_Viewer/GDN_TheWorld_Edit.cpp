@@ -3987,10 +3987,14 @@ void GDN_TheWorld_Edit::editModeApplyTextures_2(QuadTree* quadTree)
 		quadTree->materialParamsNeedReset(true);
 
 		{
-			quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
-			quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::highElevation);
-			quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::dirt);
-			quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::rocks);
+			if (strlen(quadTree->getQuadrant()->getTerrainEdit()->extraValues.lowElevationTexName_r) == 0)
+				quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::lowElevation);
+			if (strlen(quadTree->getQuadrant()->getTerrainEdit()->extraValues.highElevationTexName_g) == 0)
+				quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::highElevation);
+			if (strlen(quadTree->getQuadrant()->getTerrainEdit()->extraValues.dirtTexName_b) == 0)
+				quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::dirt);
+			if (strlen(quadTree->getQuadrant()->getTerrainEdit()->extraValues.rocksTexName_a) == 0)
+				quadTree->getQuadrant()->getTerrainEdit()->setTextureNameForTerrainType(TheWorld_Utils::TerrainEdit::TextureType::rocks);
 		}
 	}
 }

@@ -296,6 +296,8 @@ namespace godot
 
 		void setMeshId(std::string meshId)
 		{
+			if (meshId.length() == 0)
+				meshId = "";
 			m_meshId = meshId;
 		}
 

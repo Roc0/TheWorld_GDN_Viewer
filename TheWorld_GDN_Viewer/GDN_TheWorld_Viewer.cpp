@@ -21,6 +21,7 @@
 #include <godot_cpp/classes/time.hpp>
 #include <godot_cpp/classes/input.hpp>
 #include <godot_cpp/classes/input_event_mouse_button.hpp>
+#include <godot_cpp/classes/config_file.hpp>
 #pragma warning(pop)
 
 #include <filesystem>
