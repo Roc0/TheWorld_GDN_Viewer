@@ -147,10 +147,11 @@ namespace godot
 		int32_t addLabel2d(godot::Vector3 pos, godot::Vector2i offset, std::string labelText = "@", godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 0.0f));
 		void updateLabel2d(int32_t idx, godot::Vector3 pos, std::string labelText = "@", godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 0.0f));
 
-		void set_camera(godot::Camera3D* camera)
+		void set_camera(godot::Camera3D* camera, GDN_TheWorld_Viewer* viewer)
 		{
 			m_camera = camera;
-		}
+			m_viewer = viewer;
+ 		}
 
 	private:
 		void removeDrawing(int32_t idx);
@@ -159,6 +160,7 @@ namespace godot
 		void drawSphere(godot::Vector3 center, float radius, godot::Color c = godot::Color(0.0f, 0.0f, 0.0f, 1.0f));
 
 	private:
+		GDN_TheWorld_Viewer* m_viewer = nullptr;
 		godot::Ref<godot::ImmediateMesh> m_mesh;
 		godot::Ref<godot::StandardMaterial3D> m_mat;
 		int32_t m_firstAvailableIdx = 0;

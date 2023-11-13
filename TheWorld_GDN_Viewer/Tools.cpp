@@ -365,7 +365,7 @@ void GDN_TheWorld_Drawer::_process(double _delta)
 
 						if (item.second->label_2d)
 						{
-							if (m_camera != nullptr)
+							if (m_camera != nullptr && m_viewer != nullptr)
 							{
 								if (item.second->label2d == nullptr)
 								{
@@ -376,22 +376,70 @@ void GDN_TheWorld_Drawer::_process(double _delta)
 								item.second->label2d->set_text(item.second->labelText.c_str());
 								item.second->label2d->add_theme_color_override("font_color", item.second->color);
 
-								godot::Vector3 position;
+								//godot::Vector3 position;
+								godot::Vector2 viewportPos;
 								if (item.second->labelPos == Drawing::LabelPos::start)
 								{
 									// TODO
 								}
 								else if (item.second->labelPos == Drawing::LabelPos::center)
 								{
-									position = item.second->start + (item.second->end - item.second->start) / 2;
+									godot::Vector2 end = m_camera->unproject_position(item.second->end);
+									godot::Vector2 start = m_camera->unproject_position(item.second->start);
+									godot::Size2 viewportSize = m_viewer->getViewportSize();
+									bool startBehindCamera = m_camera->is_position_behind(item.second->start);
+
+									if (startBehindCamera)
+									{
+										godot::Vector3 newStart = item.second->start;
+										while (startBehindCamera)
+										{
+											newStart = newStart + (item.second->end - newStart) / 10;
+											startBehindCamera = m_camera->is_position_behind(newStart);
+										}
+										start = m_camera->unproject_position(newStart);
+									}
+
+									viewportPos = start + (end - start) / 2;
+										
+									if (viewportPos.x < 0 || viewportPos.x > viewportSize.x || viewportPos.y < 0 || viewportPos.y > viewportSize.y)
+									{
+										// pos outside viewport
+
+										if (end.x >= 0 && end.x <= viewportSize.x && end.y >= 0 && end.y <= viewportSize.y)
+										{
+											// end inside viewport: we need to approach end until label will be inside viewport
+											while (viewportPos.x < 0 || viewportPos.x > viewportSize.x || viewportPos.y < 0 || viewportPos.y > viewportSize.y)
+												viewportPos = viewportPos + (end - viewportPos) / 2;
+										}
+										else if (start.x >= 0 && start.x <= viewportSize.x && start.y >= 0 && start.y <= viewportSize.y)
+										{
+											// start inside viewport: we need to approach start until label will be inside viewport
+											while (viewportPos.x < 0 || viewportPos.x > viewportSize.x || viewportPos.y < 0 || viewportPos.y > viewportSize.y)
+												viewportPos = viewportPos + (start - viewportPos) / 2;
+										}
+										else
+										{
+											// label not visible
+											Node* parent = item.second->label2d->get_parent();
+											if (parent != nullptr)
+												parent->remove_child(item.second->label2d);
+											item.second->label2d->queue_free();
+											item.second->label2d = nullptr;
+										}
+									}
 								}
 								else if (item.second->labelPos == Drawing::LabelPos::end)
 								{
-									position = item.second->end + (item.second->end - item.second->start).normalized() * item.second->label3dOffset;
+									godot::Vector3 position = item.second->end + (item.second->end - item.second->start).normalized() * item.second->label3dOffset;
+									viewportPos = m_camera->unproject_position(position);
 								}
-								godot::Vector2 viewportPos = m_camera->unproject_position(position);
-								viewportPos += item.second->label2dOffset;
-								item.second->label2d->set_position(viewportPos);
+
+								if (item.second->label2d != nullptr)
+								{
+									viewportPos += item.second->label2dOffset;
+									item.second->label2d->set_position(viewportPos);
+								}
 							}
 						}
 					}

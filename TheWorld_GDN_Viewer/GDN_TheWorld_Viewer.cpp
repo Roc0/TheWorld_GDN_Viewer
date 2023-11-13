@@ -461,7 +461,9 @@ bool GDN_TheWorld_Viewer::init(void)
 	m_positionLabelXIdx = m_positionDrawer->addLabel2d(godot::Vector3(), godot::Vector2i(-10, 20), "", GDN_TheWorld_Globals::g_color_white);
 	m_positionLabelZIdx = m_positionDrawer->addLabel2d(godot::Vector3(), godot::Vector2i(-10, 40), "", GDN_TheWorld_Globals::g_color_white);
 	m_positionLabelYIdx = m_positionDrawer->addLabel2d(godot::Vector3(), godot::Vector2i(-10, 60), "", GDN_TheWorld_Globals::g_color_white);
-	m_positionLineIdx = m_positionDrawer->addLine(godot::Vector3(), godot::Vector3(), "", false, true, GDN_TheWorld_Drawer::Drawing::LabelPos::center, -1.0f, godot::Vector2i(-10, -10), GDN_TheWorld_Globals::g_color_white);
+	m_positionLineIdx = m_positionDrawer->addLine(godot::Vector3(), godot::Vector3(), "", false, true, GDN_TheWorld_Drawer::Drawing::LabelPos::center, -1.0f, godot::Vector2i(-10, -10), GDN_TheWorld_Globals::g_color_black);
+	m_positionSphereStartIdx = m_positionDrawer->addSphere(godot::Vector3(), 5, GDN_TheWorld_Globals::g_color_cyan);
+	m_positionSphereEndIdx = m_positionDrawer->addSphere(godot::Vector3(), 5, GDN_TheWorld_Globals::g_color_cyan);
 
 	m_positionDrawer->set_visible(false);
 
@@ -2074,10 +2076,10 @@ void GDN_TheWorld_Viewer::_process(double _delta)
 		m_gizmo->set_camera(activeCamera);
 
 	if (m_normalDrawer != nullptr)
-		m_normalDrawer->set_camera(activeCamera);
+		m_normalDrawer->set_camera(activeCamera, this);
 
 	if (m_positionDrawer != nullptr)
-		m_positionDrawer->set_camera(activeCamera);
+		m_positionDrawer->set_camera(activeCamera, this);
 
 	//// DEBUG
 	//{
@@ -2516,6 +2518,8 @@ void GDN_TheWorld_Viewer::process_trackMouse(godot::Camera3D* activeCamera)
 			m_timeElapsedFromLastMouseTrack = timeElapsed;
 		}
 	}
+	else
+		resetTrackedInputEvents(&m_trackedInputEventsForTrackMouse);
 }
 
 void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::list<QuadTree*>& adjacentQuadrantsHit, bool hit, godot::Vector3 mouseHit)
@@ -2525,10 +2529,13 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 	{
 		if (hit)
 		{
-			if (trackedInputEvent(TrackedInputEvent::MOUSE_DOUBLE_BUTTON_LEFT, &m_trackedInputEventsForTrackMouse))
-				trackingDistance(true, mouseHit);
-			if (trackedInputEvent(TrackedInputEvent::MOUSE_DOUBLE_BUTTON_RIGHT, &m_trackedInputEventsForTrackMouse))
-				trackingDistance(false);
+			if (positionVisible())
+			{
+				if (trackedInputEvent(TrackedInputEvent::MOUSE_DOUBLE_BUTTON_LEFT, &m_trackedInputEventsForTrackMouse))
+					trackingDistance(true, mouseHit);
+				if (trackedInputEvent(TrackedInputEvent::MOUSE_DOUBLE_BUTTON_RIGHT, &m_trackedInputEventsForTrackMouse))
+					trackingDistance(false);
+			}
 
 			if (m_previousTrackedMouseHit != mouseHit)
 			{
@@ -2582,6 +2589,8 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 					{
 						float distance = mouseHit.distance_to(m_savedPosForTrackingDistance);
 						m_positionDrawer->updateLine(m_positionLineIdx, m_savedPosForTrackingDistance, mouseHit, std::to_string(distance));
+						m_positionDrawer->updateSphere(m_positionSphereStartIdx, m_savedPosForTrackingDistance);
+						m_positionDrawer->updateSphere(m_positionSphereEndIdx, mouseHit);
 					}
 				}
 

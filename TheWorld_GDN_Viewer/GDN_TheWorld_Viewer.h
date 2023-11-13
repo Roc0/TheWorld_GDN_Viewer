@@ -667,6 +667,8 @@ namespace godot
 		int32_t m_positionLabelYIdx = -1;
 		int32_t m_positionLabelZIdx = -1;
 		int32_t m_positionLineIdx = -1;
+		int32_t m_positionSphereStartIdx = -1;
+		int32_t m_positionSphereEndIdx = -1;
 		bool m_normalVisible = false;
 		GDN_TheWorld_Gizmo3d* m_gizmo = nullptr;
 		bool m_gizmoVisible = false;
