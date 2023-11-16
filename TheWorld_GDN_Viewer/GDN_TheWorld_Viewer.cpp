@@ -803,7 +803,8 @@ void GDN_TheWorld_Viewer::replyFromServer(TheWorld_ClientServer::ClientServerExe
 
 					if (m_stopDeploy)
 					{
-						quadTree->setStatus(QuadrantStatus::initialized);
+						//quadTree->setStatus(QuadrantStatus::initialized);
+						quadTree->setStatus(QuadrantStatus::initializationStopped);
 					}
 					else
 					{

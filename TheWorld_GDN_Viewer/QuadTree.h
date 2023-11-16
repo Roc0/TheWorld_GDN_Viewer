@@ -296,8 +296,8 @@ namespace godot
 
 		void setMeshId(std::string meshId)
 		{
-			if (meshId.length() == 0)
-				meshId = "";
+			//if (meshId.length() == 0)
+			//	meshId = "";
 			m_meshId = meshId;
 		}
 
@@ -879,6 +879,7 @@ namespace godot
 		,getTerrainDataInProgress = 1
 		,initialized = 2
 		,toErase = 3
+		,initializationStopped = 4
 	};
 
 	class QuadTree

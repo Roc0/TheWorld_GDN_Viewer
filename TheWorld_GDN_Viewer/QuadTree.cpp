@@ -2605,8 +2605,8 @@ void Quadrant::refreshGridVerticesFromServer(std::string& buffer, std::string me
 	m_globalCoordAABB.set_position(startPosition);
 	m_globalCoordAABB.set_size(size);
 	
-	if (meshId.length() == 0)
-		meshId = "";
+	//if (meshId.length() == 0)
+	//	meshId = "";
 	m_meshId = meshId;
 
 	//m_collider->setData();
