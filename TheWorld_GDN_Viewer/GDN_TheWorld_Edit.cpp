@@ -2967,7 +2967,10 @@ void GDN_TheWorld_Edit::editModeGenerate(void)
 
 	setMessage(godot::String("Completed!"), true);
 
-	editModeApplyTextures_1(false, true);
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenerate 1.3 ") + __FUNCTION__, "Apply textures");
+		editModeApplyTextures_1(false, true);
+	}
 }
 
 void GDN_TheWorld_Edit::editModeBlendAction(void)
@@ -3041,319 +3044,208 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 
 		for (auto& pos : quandrantPos)
 		{
+			TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1 ") + __FUNCTION__, "Single QuadTree");
+
 			if (m_actionStopRequested)
 			{
 				m_actionStopRequested = false;
 				break;
 			}
 
-			QuadTree* quadTree = m_viewer->getQuadTree(pos);
+			TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
+			TheWorld_Utils::MemoryBuffer heights16Buffer;
+			TheWorld_Utils::MemoryBuffer heights32Buffer;
+			TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData quadrantData;
+
+			QuadTree* quadTree = nullptr;
+			{
+				TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending");
+				quadTree = prepareHeightsForQuadrantBlend(&pos, &quadrantData, &terrainEditValuesBuffer, &heights16Buffer, &heights32Buffer);
+			}
+				
 			if (quadTree != nullptr)
 			{
-				TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1 ") + __FUNCTION__, "Single QuadTree");
-
-				quadTree->getQuadrant()->lockInternalData();
-
-				TheWorld_Utils::MemoryBuffer terrainEditValuesBuffer;
-				TheWorld_Utils::MemoryBuffer heights16Buffer;
-				TheWorld_Utils::MemoryBuffer heights32Buffer;
-				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData quadrantData;
-				quadTree->getQuadrant()->getTerrainEdit()->serialize(terrainEditValuesBuffer);
-				heights16Buffer.copyFrom(quadTree->getQuadrant()->getFloat16HeightsBuffer());
-				heights32Buffer.copyFrom(quadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-				quadrantData.meshId = quadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-				quadrantData.terrainEditValues = &terrainEditValuesBuffer;
-				quadrantData.minHeight = quadTree->getQuadrant()->getTerrainEdit()->minHeight;
-				quadrantData.maxHeight = quadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-				quadrantData.heights16Buffer = &heights16Buffer;
-				quadrantData.heights32Buffer = &heights32Buffer;
-				quadrantData.normalsBuffer = nullptr;
-				quadrantData.splatmapBuffer = nullptr;
-				quadrantData.colormapBuffer = nullptr;
-				quadrantData.globalmapBuffer = nullptr;
-
+				std::vector<std::thread> threads;
+				threads.resize(8);
+								
 				TheWorld_Utils::MemoryBuffer northTerrainEditValuesBuffer;
 				TheWorld_Utils::MemoryBuffer northHeights16Buffer;
 				TheWorld_Utils::MemoryBuffer northHeights32Buffer;
 				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData northQuadrantData;
-				QuadrantPos p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
-				QuadTree* northQuadTree = m_viewer->getQuadTree(p);
-				if (northQuadTree != nullptr)
+				QuadrantPos northPos = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinus);
+				QuadTree* northQuadTree = nullptr;
 				{
-					northQuadTree->getQuadrant()->lockInternalData();
-
-					northQuadTree->getQuadrant()->getTerrainEdit()->serialize(northTerrainEditValuesBuffer);
-					northHeights16Buffer.copyFrom(northQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-					northHeights32Buffer.copyFrom(northQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-					northQuadrantData.meshId = northQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-					northQuadrantData.terrainEditValues = &northTerrainEditValuesBuffer;
-					northQuadrantData.minHeight = northQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-					northQuadrantData.maxHeight = northQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-					northQuadrantData.heights16Buffer = &northHeights16Buffer;
-					northQuadrantData.heights32Buffer = &northHeights32Buffer;
-					northQuadrantData.normalsBuffer = nullptr;
-					northQuadrantData.splatmapBuffer = nullptr;
-					northQuadrantData.colormapBuffer = nullptr;
-					northQuadrantData.globalmapBuffer = nullptr;
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.2 ") + __FUNCTION__, "Single QuadTree start thread prepare data for blending");
+					threads[0] = std::thread(&GDN_TheWorld_Edit::prepareHeightsForQuadrantBlendThread, this, &northQuadTree, &northPos, &northQuadrantData, &northTerrainEditValuesBuffer, &northHeights16Buffer, &northHeights32Buffer);
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending");
+					//northQuadTree = prepareHeightsForQuadrantBlend(&northPos, &northQuadrantData, &northTerrainEditValuesBuffer, &northHeights16Buffer, &northHeights32Buffer);
 				}
-				else
-					northQuadTree = nullptr;
 
 				TheWorld_Utils::MemoryBuffer southTerrainEditValuesBuffer;
 				TheWorld_Utils::MemoryBuffer southHeights16Buffer;
 				TheWorld_Utils::MemoryBuffer southHeights32Buffer;
 				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData southQuadrantData;
-				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
-				QuadTree* southQuadTree = m_viewer->getQuadTree(p);
-				if (southQuadTree != nullptr)
+				QuadrantPos southPos = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlus);
+				QuadTree* southQuadTree = nullptr;
 				{
-					southQuadTree->getQuadrant()->lockInternalData();
-
-					southQuadTree->getQuadrant()->getTerrainEdit()->serialize(southTerrainEditValuesBuffer);
-					southHeights16Buffer.copyFrom(southQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-					southHeights32Buffer.copyFrom(southQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-					southQuadrantData.meshId = southQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-					southQuadrantData.terrainEditValues = &southTerrainEditValuesBuffer;
-					southQuadrantData.minHeight = southQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-					southQuadrantData.maxHeight = southQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-					southQuadrantData.heights16Buffer = &southHeights16Buffer;
-					southQuadrantData.heights32Buffer = &southHeights32Buffer;
-					southQuadrantData.normalsBuffer = nullptr;
-					southQuadrantData.splatmapBuffer = nullptr;
-					southQuadrantData.colormapBuffer = nullptr;
-					southQuadrantData.globalmapBuffer = nullptr;
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.2 ") + __FUNCTION__, "Single QuadTree start thread prepare data for blending");
+					threads[1] = std::thread(&GDN_TheWorld_Edit::prepareHeightsForQuadrantBlendThread, this, &southQuadTree, &southPos, &southQuadrantData, &southTerrainEditValuesBuffer, &southHeights16Buffer, &southHeights32Buffer);
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending");
+					//southQuadTree = prepareHeightsForQuadrantBlend(&southPos, &southQuadrantData, &southTerrainEditValuesBuffer, &southHeights16Buffer, &southHeights32Buffer);
 				}
-				else
-					southQuadTree = nullptr;
 
 				TheWorld_Utils::MemoryBuffer westTerrainEditValuesBuffer;
 				TheWorld_Utils::MemoryBuffer westHeights16Buffer;
 				TheWorld_Utils::MemoryBuffer westHeights32Buffer;
 				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData westQuadrantData;
-				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
-				QuadTree* westQuadTree = m_viewer->getQuadTree(p);
-				if (westQuadTree != nullptr)
+				QuadrantPos westPos = pos.getQuadrantPos(QuadrantPos::DirectionSlot::XMinus);
+				QuadTree* westQuadTree = nullptr;
 				{
-					westQuadTree->getQuadrant()->lockInternalData();
-
-					westQuadTree->getQuadrant()->getTerrainEdit()->serialize(westTerrainEditValuesBuffer);
-					westHeights16Buffer.copyFrom(westQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-					westHeights32Buffer.copyFrom(westQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-					westQuadrantData.meshId = westQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-					westQuadrantData.terrainEditValues = &westTerrainEditValuesBuffer;
-					westQuadrantData.minHeight = westQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-					westQuadrantData.maxHeight = westQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-					westQuadrantData.heights16Buffer = &westHeights16Buffer;
-					westQuadrantData.heights32Buffer = &westHeights32Buffer;
-					westQuadrantData.normalsBuffer = nullptr;
-					westQuadrantData.splatmapBuffer = nullptr;
-					westQuadrantData.colormapBuffer = nullptr;
-					westQuadrantData.globalmapBuffer = nullptr;
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.2 ") + __FUNCTION__, "Single QuadTree start thread prepare data for blending");
+					threads[2] = std::thread(&GDN_TheWorld_Edit::prepareHeightsForQuadrantBlendThread, this, &westQuadTree, &westPos, &westQuadrantData, &westTerrainEditValuesBuffer, &westHeights16Buffer, &westHeights32Buffer);
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending");
+					//westQuadTree = prepareHeightsForQuadrantBlend(&westPos, &westQuadrantData, &westTerrainEditValuesBuffer, &westHeights16Buffer, &westHeights32Buffer);
 				}
-				else
-					westQuadTree = nullptr;
 
 				TheWorld_Utils::MemoryBuffer eastTerrainEditValuesBuffer;
 				TheWorld_Utils::MemoryBuffer eastHeights16Buffer;
 				TheWorld_Utils::MemoryBuffer eastHeights32Buffer;
 				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData eastQuadrantData;
-				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
-				QuadTree* eastQuadTree = m_viewer->getQuadTree(p);
-				if (eastQuadTree != nullptr)
+				QuadrantPos eastPos = pos.getQuadrantPos(QuadrantPos::DirectionSlot::XPlus);
+				QuadTree* eastQuadTree = nullptr;
 				{
-					eastQuadTree->getQuadrant()->lockInternalData();
-
-					eastQuadTree->getQuadrant()->getTerrainEdit()->serialize(eastTerrainEditValuesBuffer);
-					eastHeights16Buffer.copyFrom(eastQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-					eastHeights32Buffer.copyFrom(eastQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-					eastQuadrantData.meshId = eastQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-					eastQuadrantData.terrainEditValues = &eastTerrainEditValuesBuffer;
-					eastQuadrantData.minHeight = eastQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-					eastQuadrantData.maxHeight = eastQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-					eastQuadrantData.heights16Buffer = &eastHeights16Buffer;
-					eastQuadrantData.heights32Buffer = &eastHeights32Buffer;
-					eastQuadrantData.normalsBuffer = nullptr;
-					eastQuadrantData.splatmapBuffer = nullptr;
-					eastQuadrantData.colormapBuffer = nullptr;
-					eastQuadrantData.globalmapBuffer = nullptr;
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.2 ") + __FUNCTION__, "Single QuadTree start thread prepare data for blending");
+					threads[3] = std::thread(&GDN_TheWorld_Edit::prepareHeightsForQuadrantBlendThread, this, &eastQuadTree, &eastPos, &eastQuadrantData, &eastTerrainEditValuesBuffer, &eastHeights16Buffer, &eastHeights32Buffer);
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending");
+					//eastQuadTree = prepareHeightsForQuadrantBlend(&eastPos, &eastQuadrantData, &eastTerrainEditValuesBuffer, &eastHeights16Buffer, &eastHeights32Buffer);
 				}
-				else
-					eastQuadTree = nullptr;
 
 				TheWorld_Utils::MemoryBuffer northwestTerrainEditValuesBuffer;
 				TheWorld_Utils::MemoryBuffer northwestHeights16Buffer;
 				TheWorld_Utils::MemoryBuffer northwestHeights32Buffer;
 				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData northwestQuadrantData;
-				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinusXMinus);
-				QuadTree* northwestQuadTree = m_viewer->getQuadTree(p);
-				if (northwestQuadTree != nullptr)
+				QuadrantPos northwestPos = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinusXMinus);
+				QuadTree* northwestQuadTree = nullptr;
 				{
-					northwestQuadTree->getQuadrant()->lockInternalData();
-
-					northwestQuadTree->getQuadrant()->getTerrainEdit()->serialize(northwestTerrainEditValuesBuffer);
-					northwestHeights16Buffer.copyFrom(northwestQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-					northwestHeights32Buffer.copyFrom(northwestQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-					northwestQuadrantData.meshId = northwestQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-					northwestQuadrantData.terrainEditValues = &northwestTerrainEditValuesBuffer;
-					northwestQuadrantData.minHeight = northwestQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-					northwestQuadrantData.maxHeight = northwestQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-					northwestQuadrantData.heights16Buffer = &northwestHeights16Buffer;
-					northwestQuadrantData.heights32Buffer = &northwestHeights32Buffer;
-					northwestQuadrantData.normalsBuffer = nullptr;
-					northwestQuadrantData.splatmapBuffer = nullptr;
-					northwestQuadrantData.colormapBuffer = nullptr;
-					northwestQuadrantData.globalmapBuffer = nullptr;
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.2 ") + __FUNCTION__, "Single QuadTree start thread prepare data for blending");
+					threads[4] = std::thread(&GDN_TheWorld_Edit::prepareHeightsForQuadrantBlendThread, this, &northwestQuadTree, &northwestPos, &northwestQuadrantData, &northwestTerrainEditValuesBuffer, &northwestHeights16Buffer, &northwestHeights32Buffer);
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending");
+					//northwestQuadTree = prepareHeightsForQuadrantBlend(&northwestPos, &northwestQuadrantData, &northwestTerrainEditValuesBuffer, &northwestHeights16Buffer, &northwestHeights32Buffer);
 				}
-				else
-					northwestQuadTree = nullptr;
 
 				TheWorld_Utils::MemoryBuffer northeastTerrainEditValuesBuffer;
 				TheWorld_Utils::MemoryBuffer northeastHeights16Buffer;
 				TheWorld_Utils::MemoryBuffer northeastHeights32Buffer;
 				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData northeastQuadrantData;
-				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinusXPlus);
-				QuadTree* northeastQuadTree = m_viewer->getQuadTree(p);
-				if (northeastQuadTree != nullptr)
+				QuadrantPos northeastPos = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZMinusXPlus);
+				QuadTree* northeastQuadTree = nullptr;
 				{
-					northeastQuadTree->getQuadrant()->lockInternalData();
-
-					northeastQuadTree->getQuadrant()->getTerrainEdit()->serialize(northeastTerrainEditValuesBuffer);
-					northeastHeights16Buffer.copyFrom(northeastQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-					northeastHeights32Buffer.copyFrom(northeastQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-					northeastQuadrantData.meshId = northeastQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-					northeastQuadrantData.terrainEditValues = &northeastTerrainEditValuesBuffer;
-					northeastQuadrantData.minHeight = northeastQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-					northeastQuadrantData.maxHeight = northeastQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-					northeastQuadrantData.heights16Buffer = &northeastHeights16Buffer;
-					northeastQuadrantData.heights32Buffer = &northeastHeights32Buffer;
-					northeastQuadrantData.normalsBuffer = nullptr;
-					northeastQuadrantData.splatmapBuffer = nullptr;
-					northeastQuadrantData.colormapBuffer = nullptr;
-					northeastQuadrantData.globalmapBuffer = nullptr;
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.2 ") + __FUNCTION__, "Single QuadTree start thread prepare data for blending");
+					threads[5] = std::thread(&GDN_TheWorld_Edit::prepareHeightsForQuadrantBlendThread, this, &northeastQuadTree, &northeastPos, &northeastQuadrantData, &northeastTerrainEditValuesBuffer, &northeastHeights16Buffer, &northeastHeights32Buffer);
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending");
+					//northeastQuadTree = prepareHeightsForQuadrantBlend(&northeastPos, &northeastQuadrantData, &northeastTerrainEditValuesBuffer, &northeastHeights16Buffer, &northeastHeights32Buffer);
 				}
-				else
-					northeastQuadTree = nullptr;
 
 				TheWorld_Utils::MemoryBuffer southwestTerrainEditValuesBuffer;
 				TheWorld_Utils::MemoryBuffer southwestHeights16Buffer;
 				TheWorld_Utils::MemoryBuffer southwestHeights32Buffer;
 				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData southwestQuadrantData;
-				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlusXMinus);
-				QuadTree* southwestQuadTree = m_viewer->getQuadTree(p);
-				if (southwestQuadTree != nullptr)
+				QuadrantPos southwestPos = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlusXMinus);
+				QuadTree* southwestQuadTree = nullptr;
 				{
-					southwestQuadTree->getQuadrant()->lockInternalData();
-
-					southwestQuadTree->getQuadrant()->getTerrainEdit()->serialize(southwestTerrainEditValuesBuffer);
-					southwestHeights16Buffer.copyFrom(southwestQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-					southwestHeights32Buffer.copyFrom(southwestQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-					southwestQuadrantData.meshId = southwestQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-					southwestQuadrantData.terrainEditValues = &southwestTerrainEditValuesBuffer;
-					southwestQuadrantData.minHeight = southwestQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-					southwestQuadrantData.maxHeight = southwestQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-					southwestQuadrantData.heights16Buffer = &southwestHeights16Buffer;
-					southwestQuadrantData.heights32Buffer = &southwestHeights32Buffer;
-					southwestQuadrantData.normalsBuffer = nullptr;
-					southwestQuadrantData.splatmapBuffer = nullptr;
-					southwestQuadrantData.colormapBuffer = nullptr;
-					southwestQuadrantData.globalmapBuffer = nullptr;
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.2 ") + __FUNCTION__, "Single QuadTree start thread prepare data for blending");
+					threads[6] = std::thread(&GDN_TheWorld_Edit::prepareHeightsForQuadrantBlendThread, this, &southwestQuadTree, &southwestPos, &southwestQuadrantData, &southwestTerrainEditValuesBuffer, &southwestHeights16Buffer, &southwestHeights32Buffer);
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending");
+					//southwestQuadTree = prepareHeightsForQuadrantBlend(&southwestPos, &southwestQuadrantData, &southwestTerrainEditValuesBuffer, &southwestHeights16Buffer, &southwestHeights32Buffer);
 				}
-				else
-					southwestQuadTree = nullptr;
 
 				TheWorld_Utils::MemoryBuffer southeastTerrainEditValuesBuffer;
 				TheWorld_Utils::MemoryBuffer southeastHeights16Buffer;
 				TheWorld_Utils::MemoryBuffer southeastHeights32Buffer;
-
 				TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData southeastQuadrantData;
-				p = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlusXPlus);
-				QuadTree* southeastQuadTree = m_viewer->getQuadTree(p);
-				if (southeastQuadTree != nullptr)
+				QuadrantPos southeastPos = pos.getQuadrantPos(QuadrantPos::DirectionSlot::ZPlusXPlus);
+				QuadTree* southeastQuadTree = nullptr;
 				{
-					southeastQuadTree->getQuadrant()->lockInternalData();
-
-					southeastQuadTree->getQuadrant()->getTerrainEdit()->serialize(southeastTerrainEditValuesBuffer);
-					southeastHeights16Buffer.copyFrom(southeastQuadTree->getQuadrant()->getFloat16HeightsBuffer());
-					southeastHeights32Buffer.copyFrom(southeastQuadTree->getQuadrant()->getFloat32HeightsBuffer());
-
-					southeastQuadrantData.meshId = southeastQuadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
-					southeastQuadrantData.terrainEditValues = &southeastTerrainEditValuesBuffer;
-					southeastQuadrantData.minHeight = southeastQuadTree->getQuadrant()->getTerrainEdit()->minHeight;
-					southeastQuadrantData.maxHeight = southeastQuadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-					southeastQuadrantData.heights16Buffer = &southeastHeights16Buffer;
-					southeastQuadrantData.heights32Buffer = &southeastHeights32Buffer;
-					southeastQuadrantData.normalsBuffer = nullptr;
-					southeastQuadrantData.splatmapBuffer = nullptr;
-					southeastQuadrantData.colormapBuffer = nullptr;
-					southeastQuadrantData.globalmapBuffer = nullptr;
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.2 ") + __FUNCTION__, "Single QuadTree start thread prepare data for blending");
+					threads[7] = std::thread(&GDN_TheWorld_Edit::prepareHeightsForQuadrantBlendThread, this, &southeastQuadTree, &southeastPos, &southeastQuadrantData, &southeastTerrainEditValuesBuffer, &southeastHeights16Buffer, &southeastHeights32Buffer);
+					//TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending");
+					//southeastQuadTree = prepareHeightsForQuadrantBlend(&southeastPos, &southeastQuadrantData, &southeastTerrainEditValuesBuffer, &southeastHeights16Buffer, &southeastHeights32Buffer);
 				}
-				else
-					southeastQuadTree = nullptr;
+
+				for (auto& t : threads)
+					t.join();
 
 				bool lastPhase = false;
 				if (round == numRounds - 1)
 					lastPhase = true;
-				
-				bool updated = quadTree->getQuadrant()->getMeshCacheBuffer().blendQuadrant(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), lastPhase,
-					quadrantData,
-					northQuadrantData,
-					southQuadrantData,
-					westQuadrantData,
-					eastQuadrantData,
-					northwestQuadrantData,
-					northeastQuadrantData,
-					southwestQuadrantData,
-					southeastQuadrantData);
 
-				manageUpdatedHeights(quadrantData, quadTree, terrainEditValuesBuffer, heights16Buffer, heights32Buffer);
-				quadTree->getQuadrant()->unlockInternalData();
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.3 ") + __FUNCTION__, "Single QuadTree blendQuadrant");
+
+					bool updated = quadTree->getQuadrant()->getMeshCacheBuffer().blendQuadrant(pos.getNumVerticesPerSize(), pos.getGridStepInWU(), lastPhase,
+						quadrantData,
+						northQuadrantData,
+						southQuadrantData,
+						westQuadrantData,
+						eastQuadrantData,
+						northwestQuadrantData,
+						northeastQuadrantData,
+						southwestQuadrantData,
+						southeastQuadrantData);
+				}
+
+				{
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.4 ") + __FUNCTION__, "Single QuadTree manage blended data");
+					manageUpdatedHeightsAfterQuadrantBlend(quadrantData, quadTree, terrainEditValuesBuffer, heights16Buffer, heights32Buffer);
+					quadTree->getQuadrant()->unlockInternalData();
+				}
 
 				if (northQuadTree != nullptr)
 				{
-					manageUpdatedHeights(northQuadrantData, northQuadTree, northTerrainEditValuesBuffer, northHeights16Buffer, northHeights32Buffer);
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.4 ") + __FUNCTION__, "Single QuadTree manage blended data");
+					manageUpdatedHeightsAfterQuadrantBlend(northQuadrantData, northQuadTree, northTerrainEditValuesBuffer, northHeights16Buffer, northHeights32Buffer);
 					northQuadTree->getQuadrant()->unlockInternalData();
 				}
 				if (southQuadTree != nullptr)
 				{
-					manageUpdatedHeights(southQuadrantData, southQuadTree, southTerrainEditValuesBuffer, southHeights16Buffer, southHeights32Buffer);
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.4 ") + __FUNCTION__, "Single QuadTree manage blended data");
+					manageUpdatedHeightsAfterQuadrantBlend(southQuadrantData, southQuadTree, southTerrainEditValuesBuffer, southHeights16Buffer, southHeights32Buffer);
 					southQuadTree->getQuadrant()->unlockInternalData();
 				}
 				if (westQuadTree != nullptr)
 				{
-					manageUpdatedHeights(westQuadrantData, westQuadTree, westTerrainEditValuesBuffer, westHeights16Buffer, westHeights32Buffer);
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.4 ") + __FUNCTION__, "Single QuadTree manage blended data");
+					manageUpdatedHeightsAfterQuadrantBlend(westQuadrantData, westQuadTree, westTerrainEditValuesBuffer, westHeights16Buffer, westHeights32Buffer);
 					westQuadTree->getQuadrant()->unlockInternalData();
 				}
 				if (eastQuadTree != nullptr)
 				{
-					manageUpdatedHeights(eastQuadrantData, eastQuadTree, eastTerrainEditValuesBuffer, eastHeights16Buffer, eastHeights32Buffer);
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.4 ") + __FUNCTION__, "Single QuadTree manage blended data");
+					manageUpdatedHeightsAfterQuadrantBlend(eastQuadrantData, eastQuadTree, eastTerrainEditValuesBuffer, eastHeights16Buffer, eastHeights32Buffer);
 					eastQuadTree->getQuadrant()->unlockInternalData();
 				}
 				if (northwestQuadTree != nullptr)
 				{
-					manageUpdatedHeights(northwestQuadrantData, northwestQuadTree, northwestTerrainEditValuesBuffer, northwestHeights16Buffer, northwestHeights32Buffer);
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.4 ") + __FUNCTION__, "Single QuadTree manage blended data");
+					manageUpdatedHeightsAfterQuadrantBlend(northwestQuadrantData, northwestQuadTree, northwestTerrainEditValuesBuffer, northwestHeights16Buffer, northwestHeights32Buffer);
 					northwestQuadTree->getQuadrant()->unlockInternalData();
 				}
 				if (northeastQuadTree != nullptr)
 				{
-					manageUpdatedHeights(northeastQuadrantData, northeastQuadTree, northeastTerrainEditValuesBuffer, northeastHeights16Buffer, northeastHeights32Buffer);
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.4 ") + __FUNCTION__, "Single QuadTree manage blended data");
+					manageUpdatedHeightsAfterQuadrantBlend(northeastQuadrantData, northeastQuadTree, northeastTerrainEditValuesBuffer, northeastHeights16Buffer, northeastHeights32Buffer);
 					northeastQuadTree->getQuadrant()->unlockInternalData();
 				}
 				if (southwestQuadTree != nullptr)
 				{
-					manageUpdatedHeights(southwestQuadrantData, southwestQuadTree, southwestTerrainEditValuesBuffer, southwestHeights16Buffer, southwestHeights32Buffer);
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.4 ") + __FUNCTION__, "Single QuadTree manage blended data");
+					manageUpdatedHeightsAfterQuadrantBlend(southwestQuadrantData, southwestQuadTree, southwestTerrainEditValuesBuffer, southwestHeights16Buffer, southwestHeights32Buffer);
 					southwestQuadTree->getQuadrant()->unlockInternalData();
 				}
 				if (southeastQuadTree != nullptr)
 				{
-					manageUpdatedHeights(southeastQuadrantData, southeastQuadTree, southeastTerrainEditValuesBuffer, southeastHeights16Buffer, southeastHeights32Buffer);
+					TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.4 ") + __FUNCTION__, "Single QuadTree manage blended data");
+					manageUpdatedHeightsAfterQuadrantBlend(southeastQuadrantData, southeastQuadTree, southeastTerrainEditValuesBuffer, southeastHeights16Buffer, southeastHeights32Buffer);
 					southeastQuadTree->getQuadrant()->unlockInternalData();
 				}
 
@@ -3384,10 +3276,50 @@ void GDN_TheWorld_Edit::editModeBlend(void)
 
 	setMessage(godot::String("Completed!"), true);
 
-	editModeApplyTextures_1(false, false);
+	{
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.2 ") + __FUNCTION__, "Apply Textures");
+		editModeApplyTextures_1(false, false);
+	}
+}
+void GDN_TheWorld_Edit::prepareHeightsForQuadrantBlendThread(QuadTree** quadTree, QuadrantPos* pos, TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData* quadrantData, TheWorld_Utils::MemoryBuffer* terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer* heights16Buffer, TheWorld_Utils::MemoryBuffer* heights32Buffer)
+{
+	TheWorld_Utils::GuardProfiler profiler(std::string("EditBlend 1.1.2.1 ") + __FUNCTION__, "Single QuadTree prepare data for blending in thread");
+	*quadTree = prepareHeightsForQuadrantBlend(pos, quadrantData, terrainEditValuesBuffer, heights16Buffer, heights32Buffer);
 }
 
-void GDN_TheWorld_Edit::manageUpdatedHeights(TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData& quadrantData, QuadTree* quadTree, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer& heights16Buffer, TheWorld_Utils::MemoryBuffer& heights32Buffer)
+QuadTree* GDN_TheWorld_Edit::prepareHeightsForQuadrantBlend(QuadrantPos* pos, TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData* quadrantData, TheWorld_Utils::MemoryBuffer* terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer* heights16Buffer, TheWorld_Utils::MemoryBuffer* heights32Buffer)
+{
+	QuadTree* quadTree = nullptr;
+
+	{
+		std::lock_guard<std::recursive_mutex> lock(m_viewer->getMainProcessingMutex());
+		quadTree = m_viewer->getQuadTree(*pos);
+	}
+
+	if (quadTree != nullptr)
+	{
+		quadTree->getQuadrant()->lockInternalData();
+
+		quadTree->getQuadrant()->getTerrainEdit()->serialize(*terrainEditValuesBuffer);
+		heights16Buffer->copyFrom(quadTree->getQuadrant()->getFloat16HeightsBuffer());
+		heights32Buffer->copyFrom(quadTree->getQuadrant()->getFloat32HeightsBuffer());
+
+		quadrantData->meshId = quadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
+		quadrantData->terrainEditValues = terrainEditValuesBuffer;
+		quadrantData->minHeight = quadTree->getQuadrant()->getTerrainEdit()->minHeight;
+		quadrantData->maxHeight = quadTree->getQuadrant()->getTerrainEdit()->maxHeight;
+		quadrantData->heights16Buffer = heights16Buffer;
+		quadrantData->heights32Buffer = heights32Buffer;
+		quadrantData->normalsBuffer = nullptr;
+		quadrantData->splatmapBuffer = nullptr;
+		quadrantData->colormapBuffer = nullptr;
+		quadrantData->globalmapBuffer = nullptr;
+	}
+
+	return quadTree;
+}
+
+void GDN_TheWorld_Edit::manageUpdatedHeightsAfterQuadrantBlend(TheWorld_Utils::MeshCacheBuffer::CacheQuadrantData& quadrantData, QuadTree* quadTree, TheWorld_Utils::MemoryBuffer& terrainEditValuesBuffer, TheWorld_Utils::MemoryBuffer& heights16Buffer, TheWorld_Utils::MemoryBuffer& heights32Buffer)
 {
 	if (quadrantData.heightsUpdated)
 	{
@@ -3591,16 +3523,18 @@ void GDN_TheWorld_Edit::editModeGenNormals_1(bool forceGenSelectedQuad, bool eva
 
 void GDN_TheWorld_Edit::editModeGenNormals_2(QuadTree* quadTree)
 {
+	TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.1 ") + __FUNCTION__, "getNormalsBuffer single quad");
+
 	TheWorld_Utils::MemoryBuffer* pn = nullptr;
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.1 ") + __FUNCTION__, "getNormalsBuffer quad");
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.1.1 ") + __FUNCTION__, "getNormalsBuffer quad");
 		TheWorld_Utils::MemoryBuffer& n = quadTree->getQuadrant()->getNormalsBuffer(true);
 		pn = &n;
 	}
 	TheWorld_Utils::MemoryBuffer& normalsBuffer = *pn;
 	if (normalsBuffer.size() == 0 || quadTree->getQuadrant()->getTerrainEdit()->normalsNeedRegen)
 	{
-		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2 ") + __FUNCTION__, "Single QuadTree");
+		TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.1.2 ") + __FUNCTION__, "Single QuadTree");
 
 		QuadrantPos pos = quadTree->getQuadrant()->getPos();
 		
@@ -3629,7 +3563,7 @@ void GDN_TheWorld_Edit::editModeGenNormals_2(QuadTree* quadTree)
 		TheWorld_Utils::MemoryBuffer& float32HeigthsBuffer = quadTree->getQuadrant()->getFloat32HeightsBuffer(true);
 
 		{
-			TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.2.2 ") + __FUNCTION__, "Single QuadTree - GPU");
+			TheWorld_Utils::GuardProfiler profiler(std::string("EditGenNormals 1.2.1.2.1 ") + __FUNCTION__, "Single QuadTree - GPU");
 
 			TheWorld_Utils::MemoryBuffer* westHeights32Buffer = nullptr;
 			TheWorld_Utils::MemoryBuffer* northHeights32Buffer = nullptr;
