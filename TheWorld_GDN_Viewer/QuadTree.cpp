@@ -2115,7 +2115,7 @@ void ShaderTerrainData::updateMaterialParams(LookDev lookdev)
 			}
 
 			godot::Plane ground_uv_scale = m_viewer->getShaderParamGroundUVScale();
-			if (lookdev == LookDev::NotSet && ground_uv_scale.get_normal() != godot::Vector3(0.0f, 0.0f, 0.0f) && ground_uv_scale.d != 0.0f)
+			if (lookdev == LookDev::NotSet /* && ground_uv_scale.get_normal() != godot::Vector3(0.0f, 0.0f, 0.0f) && ground_uv_scale.d != 0.0f*/)
 			{
 				currentMaterial->set_shader_parameter(SHADER_PARAM_GROUND_UV_SCALE_PER_TEXTURE, ground_uv_scale);
 			}
