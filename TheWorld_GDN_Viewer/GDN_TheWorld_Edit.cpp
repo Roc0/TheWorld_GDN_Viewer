@@ -3301,15 +3301,21 @@ QuadTree* GDN_TheWorld_Edit::prepareHeightsForQuadrantBlend(QuadrantPos* pos, Th
 		quadTree->getQuadrant()->lockInternalData();
 
 		quadTree->getQuadrant()->getTerrainEdit()->serialize(*terrainEditValuesBuffer);
-		heights16Buffer->copyFrom(quadTree->getQuadrant()->getFloat16HeightsBuffer());
-		heights32Buffer->copyFrom(quadTree->getQuadrant()->getFloat32HeightsBuffer());
+		// ATTENZIONE
+		//heights16Buffer->copyFrom(quadTree->getQuadrant()->getFloat16HeightsBuffer());
+		//heights32Buffer->copyFrom(quadTree->getQuadrant()->getFloat32HeightsBuffer());
 
 		quadrantData->meshId = quadTree->getQuadrant()->getMeshCacheBuffer().getMeshId();
 		quadrantData->terrainEditValues = terrainEditValuesBuffer;
 		quadrantData->minHeight = quadTree->getQuadrant()->getTerrainEdit()->minHeight;
 		quadrantData->maxHeight = quadTree->getQuadrant()->getTerrainEdit()->maxHeight;
-		quadrantData->heights16Buffer = heights16Buffer;
-		quadrantData->heights32Buffer = heights32Buffer;
+		// ATTENZIONE
+		//quadrantData->heights16Buffer = heights16Buffer;
+		//quadrantData->heights32Buffer = heights32Buffer;
+		TheWorld_Utils::MemoryBuffer& h16Buffer = quadTree->getQuadrant()->getFloat16HeightsBuffer();
+		quadrantData->heights16Buffer = &h16Buffer;	// ATTENZIONE
+		TheWorld_Utils::MemoryBuffer& h32Buffer = quadTree->getQuadrant()->getFloat32HeightsBuffer();
+		quadrantData->heights32Buffer = &h32Buffer;	// ATTENZIONE
 		quadrantData->normalsBuffer = nullptr;
 		quadrantData->splatmapBuffer = nullptr;
 		quadrantData->colormapBuffer = nullptr;
@@ -3324,8 +3330,10 @@ void GDN_TheWorld_Edit::manageUpdatedHeightsAfterQuadrantBlend(TheWorld_Utils::M
 	if (quadrantData.heightsUpdated)
 	{
 		quadTree->getQuadrant()->getTerrainEdit()->deserialize(terrainEditValuesBuffer);
-		quadTree->getQuadrant()->getFloat16HeightsBuffer().copyFrom(heights16Buffer);
-		quadTree->getQuadrant()->getFloat32HeightsBuffer().copyFrom(heights32Buffer);
+		
+		// ATTENZIONE
+		//quadTree->getQuadrant()->getFloat16HeightsBuffer().copyFrom(heights16Buffer);
+		//quadTree->getQuadrant()->getFloat32HeightsBuffer().copyFrom(heights32Buffer);
 
 		m_mapQuadToSave[quadTree->getQuadrant()->getPos()] = "";
 		quadTree->getQuadrant()->setEmpty(false);

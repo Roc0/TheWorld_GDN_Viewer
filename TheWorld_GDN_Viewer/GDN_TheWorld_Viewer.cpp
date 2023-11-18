@@ -2707,6 +2707,10 @@ void GDN_TheWorld_Viewer::process_updateQuads(Vector3& cameraPosGlobalCoord)
 		Chunk::RefreshChunkAction action(m_visibleInTree);
 		for (MapQuadTree::iterator itQuadTree = m_mapQuadTree.begin(); itQuadTree != m_mapQuadTree.end(); itQuadTree++)
 		{
+			// ATTENZIONE
+			if (itQuadTree->second->getQuadrant()->internalDataLocked())
+				continue;
+
 			itQuadTree->second->ForAllChunk(action);
 		}
 		m_refreshRequired = false;
@@ -2731,6 +2735,10 @@ void GDN_TheWorld_Viewer::process_updateChunks(void)
 			continue;
 
 		if (!itQuadTree->second->isVisible())
+			continue;
+
+		// ATTENZIONE
+		if (itQuadTree->second->getQuadrant()->internalDataLocked())
 			continue;
 
 		// All chunk that need an update (those are chunk that got split or joined)
@@ -2917,7 +2925,8 @@ void GDN_TheWorld_Viewer::process_updateChunks(void)
 				{
 					// take the adjacent quadrant if it exists
 					auto iter = m_mapQuadTree.find(XMinusQuadrantPos);
-					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
+					// ATTENZIONE
+					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase() && !iter->second->getQuadrant()->internalDataLocked())
 					{
 						QuadTree* quadTreeXMinus = iter->second.get();
 						if (quadTreeXMinus->isValid())
@@ -2976,7 +2985,8 @@ void GDN_TheWorld_Viewer::process_updateChunks(void)
 				{
 					// take the adjacent quadrant if it exists
 					auto iter = m_mapQuadTree.find(XPlusQuadrantPos);
-					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
+					// ATTENZIONE
+					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase() && !iter->second->getQuadrant()->internalDataLocked())
 					{
 						QuadTree* quadTreeXPlus = iter->second.get();
 						if (quadTreeXPlus->isValid())
@@ -3035,7 +3045,8 @@ void GDN_TheWorld_Viewer::process_updateChunks(void)
 				{
 					// take the adjacent quadrant if it exists
 					auto iter = m_mapQuadTree.find(ZMinusQuadrantPos);
-					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
+					// ATTENZIONE
+					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase() && !iter->second->getQuadrant()->internalDataLocked())
 					{
 						QuadTree* quadTreeZMinus = iter->second.get();
 						if (quadTreeZMinus->isValid())
@@ -3099,7 +3110,8 @@ void GDN_TheWorld_Viewer::process_updateChunks(void)
 				{
 					// take the adjacent quadrant if it exists
 					auto iter = m_mapQuadTree.find(ZPlusQuadrantPos);
-					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase())
+					// ATTENZIONE
+					if (iter != m_mapQuadTree.end() && !iter->second->statusToErase() && !iter->second->getQuadrant()->internalDataLocked())
 					{
 						QuadTree* quadTreeZPlus = iter->second.get();
 						if (quadTreeZPlus->isValid())
