@@ -444,7 +444,7 @@ void GDN_TheWorld_Drawer::_process(double _delta)
 						}
 					}
 				}
-				else if (item.second->drawingType == Drawing::DrawingType::sphere)
+				else if (item.second->drawingType == Drawing::DrawingType::sphere && item.second->radius != 0.0f)
 					drawSphere(item.second->start, item.second->radius, item.second->color);
 				else if (item.second->drawingType == Drawing::DrawingType::label2d)
 				{

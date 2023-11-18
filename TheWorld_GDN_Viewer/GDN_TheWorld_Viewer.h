@@ -512,8 +512,15 @@ namespace godot
 			if (m_trackingDistance)
 				m_savedPosForTrackingDistance = savedPos;
 			else
-				if (m_positionDrawer != nullptr && m_positionLineIdx != -1)
-					m_positionDrawer->updateLine(m_positionLineIdx, godot::Vector3(), godot::Vector3());
+				if (m_positionDrawer != nullptr)
+				{
+					if (m_positionLineIdx != -1)
+						m_positionDrawer->updateLine(m_positionLineIdx, godot::Vector3(), godot::Vector3());
+					if (m_positionSphereStartIdx != -1)
+						m_positionDrawer->updateSphere(m_positionSphereStartIdx, godot::Vector3(), 0.0f);
+					if (m_positionSphereEndIdx != -1)
+						m_positionDrawer->updateSphere(m_positionSphereEndIdx, godot::Vector3(), 0.0f);
+				}
 		}
 		bool trackedInputEvent(TrackedInputEvent event, std::map<enum class TrackedInputEvent, bool>* inputEvents = nullptr)
 		{

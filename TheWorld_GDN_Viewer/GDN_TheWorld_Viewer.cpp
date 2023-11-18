@@ -2591,8 +2591,8 @@ void GDN_TheWorld_Viewer::trackedMouseHitChanged(QuadTree* quadrantHit, std::lis
 					{
 						float distance = mouseHit.distance_to(m_savedPosForTrackingDistance);
 						m_positionDrawer->updateLine(m_positionLineIdx, m_savedPosForTrackingDistance, mouseHit, std::to_string(distance));
-						m_positionDrawer->updateSphere(m_positionSphereStartIdx, m_savedPosForTrackingDistance);
-						m_positionDrawer->updateSphere(m_positionSphereEndIdx, mouseHit);
+						m_positionDrawer->updateSphere(m_positionSphereStartIdx, m_savedPosForTrackingDistance, 5);
+						m_positionDrawer->updateSphere(m_positionSphereEndIdx, mouseHit, 5);
 					}
 				}
 

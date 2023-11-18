@@ -571,7 +571,7 @@ namespace godot
 				return;
 			
 			if (!visible)
-				m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join (Quadrant::getAltitudeFromHeigthmap): it is kept for performance reason to keep it for visible quadrants and avoid to reload from disk for new chunks
+				m_float16HeigthsBuffer.clear();	// needed to calc aabb of chunks during split/join (Quadrant::getAltitudeFromHeigthmap & Chunk::getGlobalCoordAABB): it is kept for performance reason to keep it for visible quadrants and avoid to reload from disk for new chunks
 			m_float32HeigthsBuffer.clear();
 			m_normalsBuffer.clear();
 			m_splatmapBuffer.clear();
